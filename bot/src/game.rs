@@ -122,6 +122,9 @@ pub struct Stats {
     /// lines live at once.
     pub repeats: u64,
     pub max_wounds: u32,
+    /// Spin clears of any piece by rows cleared (index 1..=3), and plain clears likewise.
+    pub spin_by_lines: [u64; 5],
+    pub plain_by_lines: [u64; 5],
 }
 
 impl Stats {
@@ -150,6 +153,10 @@ impl Stats {
         self.plan_kept += o.plan_kept;
         self.repeats += o.repeats;
         self.max_wounds = self.max_wounds.max(o.max_wounds);
+        for i in 0..5 {
+            self.spin_by_lines[i] += o.spin_by_lines[i];
+            self.plain_by_lines[i] += o.plain_by_lines[i];
+        }
     }
     pub fn app(&self) -> f64 {
         self.attack as f64 / self.pieces.max(1) as f64
@@ -463,6 +470,14 @@ fn count_garbage_rows(colors: &Colors, mask: u64) -> u64 {
 }
 
 fn tally(s: &mut Stats, piece: Piece, spin: Spin, lines: u32) {
+    if lines > 0 {
+        let l = lines.min(4) as usize;
+        if spin != Spin::None {
+            s.spin_by_lines[l] += 1;
+        } else {
+            s.plain_by_lines[l] += 1;
+        }
+    }
     if spin != Spin::None && lines > 0 {
         if piece == Piece::T {
             if spin == Spin::Mini {

@@ -88,6 +88,9 @@ fn rules(a: &Args) -> Rules {
         r.all_spin = false;
     }
     r.wound_clears = a.get("wound-clears", r.wound_clears);
+    if let Some(c) = a.str("b2b-cap") {
+        r.b2b_cap = c.parse().ok();
+    }
     if a.str("b2b") == Some("flat") {
         r.b2b = B2bMode::Flat;
     }
@@ -202,6 +205,19 @@ fn cmd_play(a: &Args) {
         let mean = t.iter().map(|&x| x as f64).sum::<f64>() / t.len() as f64 / 1000.0;
         println!("think time per move (wall clock, {} threads): mean {:.1} ms  p50 {:.1}  p95 {:.1}  p99 {:.1}  max {:.1}",
             threads_used(), mean, pct(0.5), pct(0.95), pct(0.99), pct(1.0));
+    }
+    {
+        let mut t = Stats::default();
+        for s in &st {
+            t.add(s);
+        }
+        let per = |n: u64| 100.0 * n as f64 / t.pieces.max(1) as f64;
+        let spin_lines: u64 = (1..5).map(|l| l as u64 * t.spin_by_lines[l]).sum();
+        let all_lines: u64 = spin_lines + (1..5).map(|l| l as u64 * t.plain_by_lines[l]).sum::<u64>();
+        println!("clears per 100 pieces -- spin singles {:.2}, doubles {:.2}, triples {:.2}; plain 1/2/3/4: {:.2}/{:.2}/{:.2}/{:.2}; attack per line {:.2}",
+            per(t.spin_by_lines[1]), per(t.spin_by_lines[2]), per(t.spin_by_lines[3]),
+            per(t.plain_by_lines[1]), per(t.plain_by_lines[2]), per(t.plain_by_lines[3]), per(t.plain_by_lines[4]),
+            t.attack as f64 / all_lines.max(1) as f64);
     }
     let (checks, kept) = st.iter().fold((0, 0), |(c, k), s| (c + s.plan_checks, k + s.plan_kept));
     if checks > 0 {

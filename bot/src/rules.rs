@@ -184,6 +184,8 @@ pub struct Rules {
     /// Chance a new wound line's hole moves from the previous wound's column
     /// (RuleSet.wound_messiness). High messiness turns expired wounds into cheese.
     pub wound_messiness: f64,
+    /// Experimental: the B2B bonus never exceeds this (None = uncapped).
+    pub b2b_cap: Option<i32>,
 }
 
 impl Default for Rules {
@@ -196,6 +198,7 @@ impl Default for Rules {
             repeat_penalty: false,
             wound_clears: 10,
             wound_messiness: 0.5,
+            b2b_cap: None,
         }
     }
 }
@@ -241,10 +244,11 @@ impl Rules {
             [0, 0, 1, 2, 4][l.min(4)]
         };
         if is_difficult(spin, lines) && b2b_after >= 1 {
-            out += match self.b2b {
+            let bonus = match self.b2b {
                 B2bMode::Flat => 1,
                 B2bMode::Sqrt => (b2b_after as f64).sqrt().floor() as i32,
             };
+            out += self.b2b_cap.map_or(bonus, |c| bonus.min(c));
         }
         if perfect {
             out += self.perfect_clear_bonus;
