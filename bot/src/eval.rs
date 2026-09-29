@@ -12,9 +12,9 @@
 //!     T-slot overhang is punished as a hole and spins can never emerge.
 
 use crate::board::{Board, FULL};
-use crate::rules::{clear_type, Piece, Spin, H, W};
+use crate::rules::{clear_type, Piece, Shapes, Spin, H, W};
 
-pub const NAMES: [&str; 20] = [
+pub const NAMES: [&str; 29] = [
     "holes",       // empty cells with something above them
     "hole_rows",   // rows containing at least one hole
     "cover",       // filled cells above each column's topmost hole
@@ -36,7 +36,19 @@ pub const NAMES: [&str; 20] = [
     // every future difficult clear will earn, so a long chain is worth more to keep.
     "b2b_sqrt",
     "wounds",      // live wound lines (all-spin repeat penalty): a shorter field
-    "ready_repeat", // a ready quad or T slot would repeat the last clear type
+    "ready_repeat", // a ready quad or spin slot would repeat the last clear type
+    // All-spin slots for the other pieces, by family: the best resting, immobile spot
+    // (the all-spin rule) that would clear 1 / 2 / 3 rows. Found by bitmask scan;
+    // reachability is left to the search.
+    "sz_single",
+    "sz_double",
+    "sz_triple",
+    "lj_single",
+    "lj_double",
+    "lj_triple",
+    "i_single",
+    "i_double",
+    "i_triple",
 ];
 pub const NF: usize = NAMES.len();
 
@@ -70,6 +82,9 @@ impl Default for Weights {
                 0.0,   // b2b_sqrt
                 0.0,   // wounds
                 0.0,   // ready_repeat
+                0.0, 0.0, 0.0, // sz_single / double / triple
+                0.0, 0.0, 0.0, // lj_*
+                0.0, 0.0, 0.0, // i_*
             ],
         }
     }
@@ -231,6 +246,93 @@ fn hole_stats(b: &Board) -> (f32, f32, f32) {
     (holes as f32, hole_rows as f32, cover.min(60) as f32)
 }
 
+static SHAPES: std::sync::OnceLock<Shapes> = std::sync::OnceLock::new();
+
+fn shapes() -> &'static Shapes {
+    SHAPES.get_or_init(Shapes::new)
+}
+
+/// Empty cells of row y as a u32 with the ten columns at bits 4..=13; walls, floor and
+/// ceiling (everything outside) count as solid, as Board::fits sees them.
+#[inline]
+fn empty32(b: &Board, y: i32) -> u32 {
+    if !(0..H).contains(&y) {
+        0
+    } else {
+        (!(b.rows[y as usize] as u32) & 0x3FF) << 4
+    }
+}
+
+/// Where a piece rotation fits with its box's top row at y: bit (X + 4) is set when the
+/// box at column X fits. One AND per cell: the cell at (X+dx, y+dy) is empty exactly
+/// when bit X+4 of (empty row y+dy >> dx) is set.
+#[inline]
+pub fn fits_mask(b: &Board, cells: &[(i8, i8); 4], y: i32) -> u32 {
+    let mut m = 0x3FFFF; // X from -4 to 13
+    for &(dx, dy) in cells {
+        m &= empty32(b, y + dy as i32) >> dx;
+    }
+    m
+}
+
+/// A resting spot a piece cannot leave in any direction: the all-spin condition. If a
+/// rotation ends here, it counts as a spin.
+#[derive(Clone, Copy, Debug)]
+pub struct SpinSlot {
+    pub piece: Piece,
+    pub rot: u8,
+    pub x: i32,
+    pub y: i32,
+    pub lines: u32,
+}
+
+/// Immobility mask for one rotation at box row y, from the fits masks of rows y-1, y,
+/// y+1: fits here, not one column left or right, not one row up or down.
+#[inline]
+pub fn immobile_mask(up: u32, here: u32, down: u32) -> u32 {
+    here & !(here << 1) & !(here >> 1) & !up & !down
+}
+
+/// Every immobile spot of S, Z, L, J and I at or near the surface, with the rows it
+/// would clear. Pure bit operations per row; the per-spot line count only runs on hits.
+/// Reachability is NOT checked -- whether a piece can actually rotate in is the
+/// search's job; this estimates potential for V.
+pub fn scan_spin_slots(b: &Board, top: i32, mut hit: impl FnMut(SpinSlot)) {
+    let sh = shapes();
+    let y0 = (top - 4).max(-3);
+    for piece in [Piece::S, Piece::Z, Piece::L, Piece::J, Piece::I] {
+        for rot in 0..4u8 {
+            let cells = &sh.cells[piece as usize][rot as usize];
+            let mut up = fits_mask(b, cells, y0 - 1);
+            let mut here = fits_mask(b, cells, y0);
+            for y in y0..H {
+                let down = fits_mask(b, cells, y + 1);
+                let mut m = immobile_mask(up, here, down);
+                while m != 0 {
+                    let bit = m.trailing_zeros() as i32;
+                    m &= m - 1;
+                    let x = bit - 4;
+                    // Rows the piece would complete: its cells in a row plus what is there.
+                    let mut per_row = [0u32; 4];
+                    for &(_, dy) in cells {
+                        per_row[dy as usize] += 1;
+                    }
+                    let mut lines = 0;
+                    for (dy, &k) in per_row.iter().enumerate() {
+                        let r = y + dy as i32;
+                        if k > 0 && (0..H).contains(&r) && b.rows[r as usize].count_ones() + k == W as u32 {
+                            lines += 1;
+                        }
+                    }
+                    hit(SpinSlot { piece, rot, x, y, lines });
+                }
+                up = here;
+                here = down;
+            }
+        }
+    }
+}
+
 pub fn features(b: &Board, b2b: i32) -> [f32; NF] {
     let mut f = [0f32; NF];
     let h = b.heights();
@@ -342,6 +444,30 @@ pub fn features(b: &Board, b2b: i32) -> [f32; NF] {
             }
         }
         f[19] = rep;
+    }
+    // Best spin slot per family (S/Z, L/J, I): one-hot on the rows it would clear.
+    let mut best: [Option<(u32, Piece)>; 3] = [None; 3];
+    scan_spin_slots(b, top, |s| {
+        if s.lines == 0 {
+            return;
+        }
+        let fam = match s.piece {
+            Piece::S | Piece::Z => 0,
+            Piece::L | Piece::J => 1,
+            _ => 2,
+        };
+        if best[fam].map_or(true, |(l, _)| s.lines > l) {
+            best[fam] = Some((s.lines.min(3), s.piece));
+        }
+    });
+    for (fam, bf) in best.iter().enumerate() {
+        if let Some((lines, piece)) = *bf {
+            f[20 + fam * 3 + lines as usize - 1] = 1.0;
+            // A ready spin of the same type as the last clear would be a repeat.
+            if b.last_clear != 0 && b.last_clear == clear_type(piece, Spin::Full, lines) {
+                f[19] += 1.0;
+            }
+        }
     }
     f
 }

@@ -24,6 +24,7 @@ mod movegen;
 mod parity;
 mod rules;
 mod search;
+mod slots;
 
 use std::collections::HashMap;
 use std::time::Instant;
@@ -366,6 +367,13 @@ fn main() {
         "pros" => {
             let path = a.str("data").unwrap_or("../data/zenith_full.jsonl");
             if let Err(e) = parity::pros(path, !a.has("no-allspin"), a.str("mode") == Some("allspin")) {
+                eprintln!("{}", e);
+                std::process::exit(1);
+            }
+        }
+        "slots" => {
+            let path = a.str("data").unwrap_or("../data/bot/allspin.jsonl");
+            if let Err(e) = slots::run(path, a.get("show", 3usize), a.get("limit", usize::MAX)) {
                 eprintln!("{}", e);
                 std::process::exit(1);
             }
