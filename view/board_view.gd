@@ -37,8 +37,12 @@ const GHOST_EDGE := Color(1, 1, 1, 0.08)
 ## cells already mapped onto the rows of the board as it stands now.
 var plan: Array = []
 var show_plan: bool = true
-const PLAN_ALPHA := 0.16
-const PLAN_LABEL := Color(1, 1, 1, 0.75)
+## Alpha fades with distance into the plan: the next piece is the most certain (it is
+## what the bot will play unless a new preview changes its mind), later ones less so.
+## Both ends stay well below the board's 1.0 so the forecast never reads as stack.
+const PLAN_ALPHA_NEAR := 0.34
+const PLAN_ALPHA_FAR := 0.08
+const PLAN_LABEL := Color(1, 1, 1, 0.8)
 
 const STRUCT_EDGE := Color(1.0, 0.85, 0.35)
 const STRUCT_SEC := 1.2
@@ -197,15 +201,21 @@ func _plan(board: Board) -> void:
 	var cs := float(layout.cell)
 	var font := ThemeDB.fallback_font
 	var size := int(cs * 0.55)
+	var last := 1
+	for step in plan:
+		last = maxi(last, int(step["k"]))
 	for step in plan:
 		var def: PieceDef = step["def"]
 		var cells: Array = step["cells"]
+		var t := 0.0 if last <= 1 else float(int(step["k"]) - 1) / float(last - 1)
+		var alpha := lerpf(PLAN_ALPHA_NEAR, PLAN_ALPHA_FAR, t)
+		var label := Color(PLAN_LABEL.r, PLAN_LABEL.g, PLAN_LABEL.b, PLAN_LABEL.a * lerpf(1.0, 0.55, t))
 		var sum := Vector2.ZERO
 		var shown := 0
 		for c in cells:
 			if c.y < board.buffer_height:
 				continue
-			_piece_cell(board, c, def.color, PLAN_ALPHA)
+			_piece_cell(board, c, def.color, alpha)
 			sum += Vector2(c)
 			shown += 1
 		if shown == 0:
@@ -218,7 +228,7 @@ func _plan(board: Board) -> void:
 				best = c
 		var at := layout.cell_pos(board, best.x, best.y)
 		draw_string(font, at + Vector2(0, cs * 0.5 + size * 0.36), str(step["k"]),
-			HORIZONTAL_ALIGNMENT_CENTER, cs, size, PLAN_LABEL)
+			HORIZONTAL_ALIGNMENT_CENTER, cs, size, label)
 
 func _piece_cell(board: Board, p: Vector2i, col: Color, alpha: float) -> void:
 	if p.y < board.buffer_height:
