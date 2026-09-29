@@ -206,9 +206,11 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
     let mut garbage_left = 0u64; // garbage rows still on the board (approximate: counted by 'G' rows)
 
     let inject = |board: &mut Board, colors: &mut Colors, n: usize, grng: &mut Rng, hole: &mut i32| {
+        // Each batch starts in a new column (one attack = one clean chunk, as in
+        // TETR.IO); `messiness` is the chance each further row in the batch moves.
         let mut holes = Vec::with_capacity(n);
-        for _ in 0..n {
-            if grng.chance(cfg.garbage.messiness) {
+        for i in 0..n {
+            if i == 0 || grng.chance(cfg.garbage.messiness) {
                 let mut h = grng.below(W as u64 - 1) as i32;
                 if h >= *hole {
                     h += 1;

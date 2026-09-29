@@ -137,8 +137,8 @@ fn run_games(sc: &SearchConfig, w: &Weights, r: Rules, g: &GarbageConfig, games:
 
 fn summary_header() {
     println!(
-        "{:<22} {:>6} {:>5} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>5} {:>7}",
-        "config", "APP", "died", "quad%", "TSD%", "TST%", "TSS%", "mini%", "spin%", "1-3%", "gbclr", "b2b", "ms/pc"
+        "{:<22} {:>6} {:>5} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>5} {:>7}",
+        "config", "APP", "died", "pcs", "quad%", "TSD%", "TST%", "TSS%", "mini%", "spin%", "1-3%", "gbclr", "b2b", "ms/pc"
     );
 }
 
@@ -150,11 +150,12 @@ fn summary_row(name: &str, st: &[Stats], secs: f64) {
     let died = st.iter().filter(|s| s.died).count();
     let per = |n: u64| 100.0 * n as f64 / t.pieces.max(1) as f64;
     println!(
-        "{:<22} {:>6.3} {:>2}/{:<2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6} {:>5} {:>7.2}",
+        "{:<22} {:>6.3} {:>2}/{:<2} {:>6.0} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6} {:>5} {:>7.2}",
         name,
         t.app(),
         died,
         st.len(),
+        t.pieces as f64 / st.len().max(1) as f64,
         per(t.quads),
         per(t.tsd),
         per(t.tst),
