@@ -217,9 +217,6 @@ func _clearing(board: Board) -> void:
 		draw_rect(r, CLEARING_BAND)
 		draw_line(r.position, r.position + Vector2(r.size.x, 0), CLEARING_EDGE, 1.0)
 		draw_line(r.end - Vector2(r.size.x, 0), r.end, CLEARING_EDGE, 1.0)
-		# Strike-through: the row is going away.
-		var mid := r.position.y + cs * 0.5
-		draw_line(Vector2(r.position.x, mid), Vector2(r.end.x, mid), CLEARING_EDGE, 2.0)
 
 ## Faint planned pieces, each labelled with its place in the plan (1 = next piece).
 func _plan(board: Board) -> void:
