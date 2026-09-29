@@ -373,7 +373,9 @@ fn main() {
         }
         "slots" => {
             let path = a.str("data").unwrap_or("../data/bot/allspin.jsonl");
-            if let Err(e) = slots::run(path, a.get("show", 3usize), a.get("limit", usize::MAX)) {
+            // --piece Z --lines 3 : find a Z-spin triple slot.
+            let want = a.str("piece").and_then(|s| s.chars().next()).and_then(rules::Piece::from_letter).map(|p| (p, a.get("lines", 1u32)));
+            if let Err(e) = slots::run(path, a.get("show", 3usize), a.get("limit", usize::MAX), want) {
                 eprintln!("{}", e);
                 std::process::exit(1);
             }

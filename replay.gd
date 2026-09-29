@@ -155,6 +155,11 @@ func _seek(to: int) -> void:
 	_attack_so_far = 0
 	for i in index:
 		_lines_so_far += int(steps[i].get("cleared", 0))
+		# Bot replays record the exact attack (B2B, perfect clears included); the harvested
+		# dataset does not, so it is re-derived from the clear, without B2B.
+		if steps[i].has("attack"):
+			_attack_so_far += int(steps[i]["attack"])
+			continue
 		var r := _result_for(steps[i])
 		if r != null:
 			_attack_so_far += game.attack_table.attack_for(r)
@@ -561,8 +566,20 @@ func info_rows() -> Array:
 	]
 	if int(step.get("cleared", 0)) > 0:
 		var res := _result_for(step)
-		rows.append(["clear", res.describe() if res != null else "-",
-			Color(0.65, 0.85, 0.65)])
+		var clear_text := res.describe() if res != null else "-"
+		if step.has("attack"):
+			clear_text += "   +%d" % int(step["attack"])
+		var repeat := bool(step.get("repeat", false))
+		if repeat:
+			clear_text += "   REPEAT: row wounded"
+		rows.append(["clear", clear_text,
+			Color(1.0, 0.55, 0.45) if repeat else Color(0.65, 0.85, 0.65)])
+	if step.has("b2b"):
+		# Chain after this placement, as ClearResult.b2b: -1 none, 0 first difficult
+		# clear, >= 1 live, paying AttackTable.b2b_bonus_for() on the next difficult clear.
+		var chain := int(step["b2b"])
+		var b2b_text := "-" if chain < 0 else "%d   (next bonus +%d)" % [chain, game.attack_table.b2b_bonus_for(chain + 1)]
+		rows.append(["b2b", b2b_text, Color(0.95, 0.8, 0.4) if chain >= 1 else Color(0.55, 0.58, 0.66)])
 	if step.has("plan"):
 		rows.append(["planned", _plan_text(step), Color(0.75, 0.75, 0.95)])
 	if _load_ms > 0.0:

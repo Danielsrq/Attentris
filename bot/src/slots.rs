@@ -37,7 +37,13 @@ fn cells_of(s: &SpinSlot, sh: &Shapes) -> Vec<(i32, i32)> {
     c
 }
 
-pub fn run(path: &str, show: usize, limit: usize) -> Result<(), String> {
+/// `want`: only show examples containing a slot of this piece clearing at least this
+/// many rows (e.g. a Z-spin triple).
+pub fn run(path: &str, show: usize, limit: usize, want: Option<(Piece, u32)>) -> Result<(), String> {
+    let matches = |s: &SpinSlot| match want {
+        Some((p, l)) => s.piece == p && s.lines >= l,
+        None => s.lines > 0,
+    };
     let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {}", path, e))?;
     let sh = Shapes::new();
     let mut mg = MoveGen::new();
@@ -81,7 +87,7 @@ pub fn run(path: &str, show: usize, limit: usize) -> Result<(), String> {
                 }
             }
         }
-        if examples.len() < show && slots.iter().any(|s| s.lines > 0) {
+        if examples.len() < show && slots.iter().enumerate().any(|(i, s)| matches(s) && (want.is_none() || reach_flags[i])) {
             examples.push((b, slots, reach_flags));
         }
     }
@@ -96,17 +102,17 @@ pub fn run(path: &str, show: usize, limit: usize) -> Result<(), String> {
         println!("  MISSED: {}", m);
     }
     for (i, (b, slots, reach)) in examples.iter().enumerate() {
-        print_example(i + 1, b, slots, reach, &sh);
+        print_example(i + 1, b, slots, reach, &sh, &matches);
     }
     Ok(())
 }
 
 /// ASCII view of one board: the board, the raw masks for the best slot's rotation, and
 /// every line-clearing slot drawn over the stack.
-fn print_example(k: usize, b: &Board, slots: &[SpinSlot], reach: &[bool], sh: &Shapes) {
+fn print_example(k: usize, b: &Board, slots: &[SpinSlot], reach: &[bool], sh: &Shapes, matches: &dyn Fn(&SpinSlot) -> bool) {
     let top = top_of(b);
     let from = (top - 2).max(0) as usize;
-    let best = slots.iter().enumerate().filter(|(_, s)| s.lines > 0).max_by_key(|(i, s)| (reach[*i], s.lines)).unwrap();
+    let best = slots.iter().enumerate().filter(|(_, s)| matches(s)).max_by_key(|(i, s)| (reach[*i], s.lines)).unwrap();
     let (bi, bs) = (best.0, *best.1);
     println!("\n==== example {}: best slot {:?} rot {} at box ({}, {}), clears {}, {} ====",
         k, bs.piece, bs.rot, bs.x, bs.y, bs.lines, if reach[bi] { "reachable" } else { "NOT reachable" });
