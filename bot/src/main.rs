@@ -10,7 +10,7 @@
 //!   --games N --pieces N --seed N --threads N
 //!   --beam N --depth N --no-hold --no-chance --chance-top N
 //!   --weights FILE          (see `bot weights` for the format)
-//!   --b2b flat|sqrt         flat = attack_table.gd as shipped (default)
+//!   --b2b sqrt|flat         sqrt = floor(sqrt(chain)) as attack_table.gd (default); flat = +1
 //!   --no-allspin            T-spins only (RuleSet.guideline()); default is all-spin on
 //!   --garbage E,R,M         inject R rows every E pieces, hole moves with prob M
 //!   --cheese N              start with N rows of messy garbage
@@ -77,8 +77,8 @@ fn search_config(a: &Args) -> SearchConfig {
 fn rules(a: &Args) -> Rules {
     let mut r = Rules::default();
     r.all_spin = !a.has("no-allspin");
-    if a.str("b2b") == Some("sqrt") {
-        r.b2b = B2bMode::Sqrt;
+    if a.str("b2b") == Some("flat") {
+        r.b2b = B2bMode::Flat;
     }
     r
 }

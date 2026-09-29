@@ -162,9 +162,9 @@ impl Spin {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum B2bMode {
-    /// attack_table.gd as shipped: +1 while a chain is live.
+    /// The original attack_table.gd: +1 while a chain is live.
     Flat,
-    /// floor(sqrt(chain)) -- the variant described in the design discussion.
+    /// attack_table.gd b2b_bonus_for() with b2b_weight 1.0: floor(sqrt(chain)). Default.
     Sqrt,
 }
 
@@ -179,7 +179,7 @@ pub struct Rules {
 
 impl Default for Rules {
     fn default() -> Self {
-        Rules { b2b: B2bMode::Flat, all_spin: true, perfect_clear_bonus: 10 }
+        Rules { b2b: B2bMode::Sqrt, all_spin: true, perfect_clear_bonus: 10 }
     }
 }
 

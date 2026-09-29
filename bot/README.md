@@ -25,8 +25,9 @@ godot --headless --path .. -s res://tests/bot_replay_check.gd -- --replay=res://
 
     score(node) = attack actually sent on the path  +  V(board at the node)
 
-* **Reward** is exact: `rules.rs` is `attack_table.gd` (B2B flat +1 by default,
-  `--b2b sqrt` for floor(sqrt(chain))).
+* **Reward** is exact: `rules.rs` is `attack_table.gd`. The B2B bonus is
+  floor(sqrt(chain)), as `b2b_bonus_for()` with `b2b_weight` 1.0; `--b2b flat` gives
+  the old +1.
 * **V** (`eval.rs`) is a weighted sum of neutral board measurements: holes, surface,
   height (with a quadratic danger term), rows one I away from a quad, T-slots and how
   full their rows are, B2B alive. The cavity of the best T-slot is not counted as a
