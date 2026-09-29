@@ -63,7 +63,12 @@ pub fn pros(path: &str, all_spin: bool) -> Result<(), String> {
         *chain = next_b2b(*chain, spin, lines);
         let a = per_user.entry(user).or_default();
         a.pieces += 1;
-        a.attack += rules.attack(piece, spin, lines, *chain, false) as i64;
+        // Perfect clear: every cell on the spawn board, plus the piece's four, cleared.
+        let filled: usize = v["board"].as_array().map_or(0, |rows| {
+            rows.iter().map(|r| r.as_str().unwrap_or("").chars().filter(|&c| c != '.').count()).sum()
+        });
+        let perfect = lines > 0 && filled + 4 == 10 * lines as usize;
+        a.attack += rules.attack(piece, spin, lines, *chain, perfect) as i64;
         a.max_b2b = a.max_b2b.max(*chain);
         if lines > 0 {
             match (piece, spin, lines) {
