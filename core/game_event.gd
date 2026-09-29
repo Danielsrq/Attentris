@@ -6,7 +6,7 @@ extends RefCounted
 
 ## Emitted once per lock, in this order:
 ##   PIECE_LOCKED -> [SPIN_DETECTED] -> [LINES_CLEARED] -> [LEVEL_UP]
-##   -> [STRUCTURE_BUILT ...] -> PIECE_SPAWNED
+##   -> [WOUND_HEALED] -> [WOUND_ADDED] -> [STRUCTURE_BUILT ...] -> PIECE_SPAWNED
 ## PIECE_LOCKED always fires and carries the complete ClearResult, so a consumer
 ## that wants to branch on the outcome (audio, the minigame economy) needs to
 ## handle that one event and nothing else.
@@ -21,6 +21,8 @@ enum Type {
 	LEVEL_UP,        ## data: level
 	HOLD_USED,       ## data: held, swapped_in
 	TOP_OUT,         ## data: reason
+	WOUND_ADDED,     ## data: row, left, count -- a repeat clear wounded a row (all-spin)
+	WOUND_HEALED,    ## data: healed, count -- wound lines that came back into play
 }
 
 ## PIECE_MOVED is coalesced: with ARR 0 a wall slide is many cells inside a single

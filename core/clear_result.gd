@@ -17,6 +17,20 @@ var perfect_clear: bool = false
 var level: int = 1
 ## Lines of garbage this clear sends. Filled in by Game from its AttackTable.
 var attack: int = 0
+## All-spin repeat penalty: this clear had the same type as the previous clear and
+## wounded a row; `healed` wound lines came back into play on it.
+var repeat: bool = false
+var healed: int = 0
+
+## Type for the repeat penalty: piece + lines + spin. Non-spin clears of one size share a
+## type whatever the piece (double -> double repeats, single -> double does not); spins
+## are per piece (TSD -> ZSD does not). Empty when nothing cleared.
+func clear_type() -> String:
+	if lines <= 0:
+		return ""
+	if spin == SpinDetect.Kind.NONE:
+		return "plain:%d" % lines
+	return "%s:%d:%d" % [piece_id, spin, lines]
 
 ## Which resource this clear pays into: the group of the piece that SCORED it, not
 ## of the cells destroyed.
@@ -75,6 +89,8 @@ func tags() -> Array:
 		out.append("Combo %d" % combo)
 	if perfect_clear:
 		out.append("Perfect Clear")
+	if repeat:
+		out.append("Repeat - wounded")
 	return out
 
 func b2b_active() -> bool:

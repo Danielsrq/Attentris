@@ -52,6 +52,10 @@ var clearing_rows: Array = []
 const CLEARING_BAND := Color(1, 1, 1, 0.28)
 const CLEARING_EDGE := Color(1, 1, 1, 0.7)
 
+## Wound lines: a dark wash over the row and its counter in muted red.
+const WOUND_TINT := Color(0.0, 0.0, 0.0, 0.35)
+const WOUND_LABEL := Color(1.0, 0.55, 0.5, 0.95)
+
 const STRUCT_EDGE := Color(1.0, 0.85, 0.35)
 const STRUCT_SEC := 1.2
 var _flashes: Array = []   ## [{rect: Rect2i, age: float}]
@@ -73,6 +77,9 @@ func _draw() -> void:
 			var v := board.get_cell(x, y)
 			if v != 0:
 				_cell(layout.cell_pos(board, x, y), game.piece_set.color_for_value(v), 1.0)
+
+	if not board.wounds.is_empty():
+		_wounds(board)
 
 	if show_plan and not plan.is_empty():
 		_plan(board)
@@ -206,6 +213,22 @@ func _outline(board: Board, piece: ActivePiece) -> void:
 			if d == Vector2i.UP and p.y == board.buffer_height:
 				continue
 			draw_line(from, to, ACTIVE_EDGE, 2.0)
+
+## Wound lines (all-spin repeat penalty): the cells are already drawn in the wound grey;
+## this adds each line's clears-until-healed just outside the left edge of the field.
+func _wounds(board: Board) -> void:
+	var cs := float(layout.cell)
+	var font := ThemeDB.fallback_font
+	var size := int(cs * 0.55)
+	var floor_y := board.wound_floor()
+	for i in board.wounds.size():
+		var y := floor_y + i
+		if y < board.buffer_height:
+			continue
+		var at := layout.cell_pos(board, 0, y)
+		draw_rect(Rect2(at, Vector2(board.width * cs, cs)), WOUND_TINT)
+		draw_string(font, at + Vector2(-cs, cs * 0.5 + size * 0.36), str(int(board.wounds[i]["left"])),
+			HORIZONTAL_ALIGNMENT_CENTER, cs * 0.9, size, WOUND_LABEL)
 
 func _clearing(board: Board) -> void:
 	var cs := float(layout.cell)

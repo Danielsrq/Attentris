@@ -29,7 +29,15 @@ var layout: ViewLayout
 
 var reader := InputReader.new(CONTROL_PROFILE)
 var input_state := InputState.new()
-var use_guideline := false
+## Rule presets the handling toggle cycles through.
+const RULE_PRESETS := ["competitive", "guideline", "allspin"]
+var rules_preset := 0
+
+func _preset_rules() -> RuleSet:
+	match RULE_PRESETS[rules_preset]:
+		"guideline": return RuleSet.guideline()
+		"allspin": return RuleSet.allspin()
+		_: return RuleSet.competitive()
 
 ## Right-pane page. GAMEPLAY is the default because the economy is the thing that needs
 ## watching now; the mechanics readout moved to being a page of the same pane rather
@@ -114,7 +122,7 @@ func _ready() -> void:
 func _new_game(seed_v: int = -1) -> void:
 	if seed_v < 0:
 		seed_v = int(Time.get_ticks_usec()) & 0x7FFFFFFF
-	rules = RuleSet.guideline() if use_guideline else RuleSet.competitive()
+	rules = _preset_rules()
 	piece_set = PieceSet.tetrominoes()
 	board = Board.new(BOARD_WIDTH, BOARD_VISIBLE, BOARD_BUFFER)
 	scorer = Scorer.new(ScoreTable.new())
@@ -348,10 +356,10 @@ func _handle_meta_keys() -> void:
 		# slot and check a kick by hand.
 		game.gravity_enabled = not game.gravity_enabled
 	if reader.pressed("toggle_handling"):
-		use_guideline = not use_guideline
+		rules_preset = (rules_preset + 1) % RULE_PRESETS.size()
 		# Swap the ruleset in place so the run in progress is preserved.
 		var keep_gravity := game.gravity_enabled
-		game.rules = RuleSet.guideline() if use_guideline else RuleSet.competitive()
+		game.rules = _preset_rules()
 		rules = game.rules
 		game.gravity_enabled = keep_gravity
 

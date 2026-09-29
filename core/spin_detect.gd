@@ -22,7 +22,14 @@ static func kind_name(k: int) -> String:
 		Kind.FULL: return "FULL"
 		_: return "NONE"
 
+## In all-spin mode (RuleSet.allspin_full) every Mini is promoted to full.
 static func detect(board: Board, p: ActivePiece, rules: RuleSet) -> int:
+	var k := _detect(board, p, rules)
+	if k == Kind.MINI and rules.allspin_full:
+		return Kind.FULL
+	return k
+
+static func _detect(board: Board, p: ActivePiece, rules: RuleSet) -> int:
 	if p == null or not p.last_action_was_rotation:
 		return Kind.NONE
 	if p.def.id == &"T" and rules.t_spin:

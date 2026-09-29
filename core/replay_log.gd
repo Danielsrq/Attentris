@@ -41,6 +41,8 @@ const LETTERS := {
 }
 ## The dataset marks garbage cells 'G'.
 const GARBAGE_CHAR := "G"
+## Bot replays mark wound-line cells 'W' (all-spin repeat penalty).
+const WOUND_CHAR := "W"
 
 var piece_set: PieceSet
 var error: String = ""
@@ -148,7 +150,18 @@ func apply(step: Dictionary, game: Game) -> void:
 			var ch := row[x]
 			if ch == ".":
 				continue
-			board.set_cell(x, y, Board.GARBAGE if ch == GARBAGE_CHAR else _value(ch))
+			if ch == WOUND_CHAR:
+				board.set_cell(x, y, Board.WOUND)
+			else:
+				board.set_cell(x, y, Board.GARBAGE if ch == GARBAGE_CHAR else _value(ch))
+	# Wound lines, oldest first, as the bottom block. Their parked contents are not in
+	# the record (the viewer never heals them itself), so they park as empty rows.
+	for wd in step.get("wounds", []):
+		var parked := PackedByteArray()
+		parked.resize(board.width)
+		var parked_owner := PackedInt32Array()
+		parked_owner.resize(board.width)
+		board.wounds.append({"left": int(wd.get("left", 0)), "cells": parked, "owner": parked_owner})
 
 	# LOCK-time queue and hold, not the sample's spawn-time ones.
 	#

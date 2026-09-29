@@ -41,6 +41,8 @@ func id_for_value(v: int) -> StringName:
 func color_for_value(v: int) -> Color:
 	if v == Board.GARBAGE:
 		return Color(0.42, 0.44, 0.48)
+	if v == Board.WOUND:
+		return Color(0.22, 0.23, 0.27)
 	if v <= 0 or v > defs.size():
 		return Color.WHITE
 	return defs[v - 1].color

@@ -52,6 +52,9 @@ func _ready() -> void:
 	test_structures()
 	test_resources()
 	test_pane_tab()
+	test_allspin_mini_promotion()
+	test_wound_board()
+	test_repeat_penalty()
 
 	print("")
 	print("%d passed, %d failed" % [_pass, _fail])
@@ -2146,3 +2149,132 @@ func test_pane_tab() -> void:
 		eq(gp2.board.get_cell(0, 39), Board.GARBAGE, "uppercase G reads as garbage")
 		eq(gp2.board.get_cell(9, 39), 0, "   and the hole stays empty")
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(probe))
+
+# ------------------------------------------------------------------------------
+# All-spin mode: Mini promotion, wound lines, repeat penalty
+# ------------------------------------------------------------------------------
+
+func test_allspin_mini_promotion() -> void:
+	group("All-spin: Minis promote to full")
+	var rs := RuleSet.allspin()
+	check(rs.all_spin and rs.allspin_full and rs.repeat_penalty, "allspin preset turns on all three flags")
+	eq(rs.wound_clears, 10, "wound lines last 10 clears")
+	# The same position test_tss_mini proves is a Mini under competitive rules.
+	var b := make_board([
+		"...X......",
+		"..........",
+		"...X.X....",
+	])
+	var g := make_game(b, rs)
+	var p := place(g, &"T", 1, Vector2i(3, 37))
+	check(g.try_rotate(0), "R->0 rotation succeeds")
+	eq(SpinDetect.detect(b, p, g.rules), SpinDetect.Kind.FULL, "the Mini is promoted to full")
+
+func test_wound_board() -> void:
+	group("Wound lines on the board")
+	var b := Board.new(10, 20, 20)
+	var bottom := b.total_height - 1
+	# Bottom-up rows A (col 0), B (col 1), C (col 2).
+	b.set_cell(0, bottom, 1)
+	b.set_cell(1, bottom - 1, 2)
+	b.set_cell(2, bottom - 2, 3)
+	b.add_wound(10)
+	eq(b.wounds.size(), 1, "one wound")
+	eq(b.get_cell(5, bottom), Board.WOUND, "the bottom row is now a solid wound line")
+	check(b.is_blocked(5, bottom), "   and pieces cannot enter it")
+	check(b.find_full_rows().is_empty(), "a wound line is never a clearable full row")
+	b.tick_wounds()
+	b.add_wound(10)
+	eq(b.wounds.size(), 2, "second wound (B) after one clear")
+	eq(b.get_cell(2, bottom - 2), 3, "row C is untouched and still in play")
+	for i in 9:
+		b.tick_wounds()
+	eq(b.wounds.size(), 1, "A (oldest) healed first, on its 10th clear")
+	eq(b.get_cell(0, bottom - 1), 1, "A returns next to the play area with its piece")
+	eq(b.tick_wounds(), 1, "B heals on its own 10th clear")
+	eq([b.get_cell(1, bottom), b.get_cell(0, bottom - 1), b.get_cell(2, bottom - 2)], [2, 1, 3],
+		"model A: rows come back as B, A, C")
+
+	var e := Board.new(10, 20, 20)
+	e.set_cell(3, e.total_height - 1, 1)
+	e.add_wound(10)
+	check(e.is_empty(), "wound lines hold no pieces, so a perfect clear is possible")
+	e.push_garbage([4])
+	eq(e.get_cell(0, e.total_height - 1), Board.WOUND, "garbage leaves the wound at the floor")
+	eq(e.get_cell(4, e.total_height - 2), 0, "   and enters above it, hole at column 4")
+	eq(e.get_cell(0, e.total_height - 2), Board.GARBAGE, "   filled elsewhere")
+	var d := e.duplicate_board()
+	eq(d.wounds.size(), 1, "duplicate_board copies the wounds")
+
+## Fills the bottom two rows except columns 0-1, locks an O there: a plain double.
+func _o_double(g: Game) -> ClearResult:
+	var b := g.board
+	for y in [b.total_height - 2, b.total_height - 1]:
+		for x in range(2, 10):
+			b.set_cell(x, y - b.wounds.size(), 9)
+	var p := place(g, &"O", 0, Vector2i(0, b.total_height - 2 - b.wounds.size()))
+	p.last_action_was_rotation = false
+	var ev: Array = []
+	g.lock_piece(ev)
+	_last_events = ev
+	return g.last_result
+
+var _last_events: Array = []
+
+func test_repeat_penalty() -> void:
+	group("Repeat penalty")
+	var g := make_game(Board.new(10, 20, 20), RuleSet.allspin())
+	g.start()
+	var r1 := _o_double(g)
+	eq(r1.lines, 2, "first O double clears two rows")
+	check(not r1.repeat, "   first clear of the game is never a repeat")
+	eq(g.board.wounds.size(), 0, "   no wound")
+	var r2 := _o_double(g)
+	check(r2.repeat, "double -> double is a repeat")
+	eq(g.board.wounds.size(), 1, "   and wounds a row")
+	# Both doubles empty the board, so both are perfect clears (1 + 10).
+	eq(r2.attack, r1.attack, "   the repeat still sends its full attack")
+	var added := false
+	for ev in _last_events:
+		if ev.type == GameEvent.Type.WOUND_ADDED:
+			added = true
+	check(added, "   WOUND_ADDED fires")
+	check(r2.tags().has("Repeat - wounded"), "   and the result is tagged")
+	eq(g.board.get_cell(9, g.board.total_height - 1), Board.WOUND, "the floor row is the wound line")
+	eq(int(g.board.wounds[0]["left"]), 10, "   with 10 clears to go")
+
+	var c := ClearResult.new()
+	c.lines = 1
+	c.piece_id = &"I"
+	var dbl := ClearResult.new()
+	dbl.lines = 2
+	dbl.piece_id = &"T"
+	check(c.clear_type() != dbl.clear_type(), "single -> double is not a repeat")
+	var tsd := ClearResult.new()
+	tsd.lines = 2
+	tsd.piece_id = &"T"
+	tsd.spin = SpinDetect.Kind.FULL
+	var zsd := ClearResult.new()
+	zsd.lines = 2
+	zsd.piece_id = &"Z"
+	zsd.spin = SpinDetect.Kind.FULL
+	var tst := ClearResult.new()
+	tst.lines = 3
+	tst.piece_id = &"T"
+	tst.spin = SpinDetect.Kind.FULL
+	check(tsd.clear_type() != zsd.clear_type(), "TSD -> ZSD is not a repeat")
+	check(tsd.clear_type() != tst.clear_type(), "TSD -> TST is not a repeat")
+	check(tsd.clear_type() != dbl.clear_type(), "TSD -> plain double is not a repeat")
+	var q1 := ClearResult.new()
+	q1.lines = 4
+	q1.piece_id = &"I"
+	var q2 := ClearResult.new()
+	q2.lines = 4
+	q2.piece_id = &"I"
+	eq(q1.clear_type(), q2.clear_type(), "quad -> quad is a repeat")
+
+	var off := make_game(Board.new(10, 20, 20), RuleSet.competitive())
+	off.start()
+	_o_double(off)
+	_o_double(off)
+	eq(off.board.wounds.size(), 0, "competitive rules: no repeat penalty")

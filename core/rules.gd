@@ -42,6 +42,16 @@ enum GravityMode { LEVEL_CURVE, FIXED }
 ## Score non-T all-spins as Mini rather than full.
 @export var non_t_spin_is_mini: bool = false
 
+@export_group("All-spin")
+## Every Mini is promoted to a full spin, so an S-spin double scores like a T-spin
+## double and keeps B2B the same way.
+@export var allspin_full: bool = false
+## Two consecutive clears of the same type (piece + lines + spin; non-spin clears keyed
+## by lines only) wound the bottom in-play row. See Board.add_wound.
+@export var repeat_penalty: bool = false
+## Clears a wound line stays out of play before it heals.
+@export var wound_clears: int = 10
+
 @export_group("Queue")
 @export var next_count: int = 5
 @export var first_piece_excludes: Array[String] = ["S", "Z", "O"]
@@ -57,6 +67,15 @@ static func competitive() -> RuleSet:
 	# is for when you are placing by hand. Stated explicitly rather than left to the
 	# export default so the deviation from guideline() is visible here.
 	r.sdf = 60.0
+	return r
+
+## All-spin: competitive handling, every spin full, repeating a clear type wounds a row.
+static func allspin() -> RuleSet:
+	var r := RuleSet.new()
+	r.preset_name = "allspin"
+	r.all_spin = true
+	r.allspin_full = true
+	r.repeat_penalty = true
 	return r
 
 ## Official-Tetris feel: slower repeat, T-spin only, no 180.

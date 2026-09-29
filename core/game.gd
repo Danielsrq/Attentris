@@ -67,6 +67,9 @@ var last_kick: int = -1
 ## and tags() rather than reassembling the outcome from counters.
 var last_result: ClearResult = null
 var last_points: int = 0
+## Type of the previous line clear (ClearResult.clear_type()), for the all-spin repeat
+## penalty. Placements that clear nothing leave it alone.
+var last_clear_type: String = ""
 
 var _das_left: float = 0.0
 var _arr_left: float = 0.0
@@ -328,6 +331,23 @@ func lock_piece(events: Array, cause: String = "lock_delay") -> void:
 	r.b2b = b2b
 	r.combo = combo
 	r.level = level
+	# All-spin repeat penalty. Order: the lines are gone (and the perfect clear judged),
+	# every wound counts down and the oldest heals at 0, then a repeat wounds the new
+	# bottom in-play row. The repeat still sends its full attack.
+	var wound_events: Array = []
+	if rules.repeat_penalty and r.lines > 0:
+		r.healed = board.tick_wounds()
+		if r.healed > 0:
+			wound_events.append(GameEvent.new(GameEvent.Type.WOUND_HEALED, {
+				"healed": r.healed, "count": board.wounds.size()}))
+		var t := r.clear_type()
+		if t == last_clear_type:
+			r.repeat = true
+			board.add_wound(rules.wound_clears)
+			wound_events.append(GameEvent.new(GameEvent.Type.WOUND_ADDED, {
+				"row": board.total_height - 1, "left": rules.wound_clears,
+				"count": board.wounds.size()}))
+		last_clear_type = t
 
 	# A spin that clears nothing still scores (guideline: a T-Spin is worth 400), so
 	# this deliberately is not gated on r.lines.
@@ -360,6 +380,7 @@ func lock_piece(events: Array, cause: String = "lock_delay") -> void:
 		if new_level != level:
 			level = new_level
 			events.append(GameEvent.new(GameEvent.Type.LEVEL_UP, {"level": level}))
+	events.append_array(wound_events)
 
 	# After the clear, so the scan sees the settled board: dropping rows changes which
 	# pieces are adjacent, so a clear can complete a rectangle by itself.
