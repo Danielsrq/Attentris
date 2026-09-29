@@ -5,28 +5,27 @@ use crate::rules::{Piece, Shapes, Spin, H, W};
 
 pub const FULL: u16 = (1 << W) - 1;
 
-/// One wound line can arrive per clear and each lasts 10 clears, so ten are ever live
-/// at once; two spare for a longer `wound_clears`.
-pub const MAX_WOUNDS: usize = 12;
-
 /// The playfield plus the all-spin repeat-penalty state, which is part of the position:
 /// two boards with the same cells but different wounds or last clear are different
 /// futures.
 ///
-/// Wound lines (all-spin mode) are the bottom `wounds` rows. They are SOLID in `rows`
-/// (FULL, so nothing can enter them) but hold no pieces: the row's real contents are
-/// parked in `wound_row` until it heals. The block is a FIFO: index 0 is the oldest and
-/// sits at the TOP of the block, next to the play area; each new wound takes the
-/// bottom in-play row and goes to the very bottom, pushing the older ones up, so the
-/// oldest is always the next to heal and heals straight back into play.
+/// Wound lines (all-spin mode): a repeat inserts a solid, unclearable line at the very
+/// bottom, pushing the whole stack up one row, exactly as a garbage line would. Each
+/// wound counts down on every clear; at 0 it stays where it is as an ordinary garbage
+/// line, its hole (chosen when it arrived) opening up. Nothing is taken from the
+/// player's rows. Newer wounds enter beneath older ones, so the oldest -- highest --
+/// turns into garbage first.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Board {
     pub rows: [u16; H as usize],
+    /// Live wound lines on the board.
     pub wounds: u8,
-    /// Clears left before each wound heals, oldest first.
-    pub wound_left: [u8; MAX_WOUNDS],
-    /// Parked contents of each wound line, oldest first.
-    pub wound_row: [u16; MAX_WOUNDS],
+    /// Per row: clears left before that row's wound turns into garbage; 0 = not a wound.
+    pub wound_left: [u8; H as usize],
+    /// Per row: the hole the wound line will have once it turns into garbage.
+    pub wound_hole: [u8; H as usize],
+    /// Hole of the most recent wound, for messiness (the chance the next one moves).
+    pub last_wound_hole: u8,
     /// Type of the previous clear (see `rules::clear_type`), 0 = none yet. Only
     /// tracked when the repeat penalty is on.
     pub last_clear: u8,
@@ -34,7 +33,14 @@ pub struct Board {
 
 impl Default for Board {
     fn default() -> Self {
-        Board { rows: [0; H as usize], wounds: 0, wound_left: [0; MAX_WOUNDS], wound_row: [0; MAX_WOUNDS], last_clear: 0 }
+        Board {
+            rows: [0; H as usize],
+            wounds: 0,
+            wound_left: [0; H as usize],
+            wound_hole: [0; H as usize],
+            last_wound_hole: 0,
+            last_clear: 0,
+        }
     }
 }
 
@@ -78,7 +84,7 @@ impl Board {
         while t != 0 {
             let r = t.trailing_zeros() as usize;
             t &= t - 1;
-            if self.rows[r] == FULL {
+            if self.rows[r] == FULL && self.wound_left[r] == 0 {
                 full |= 1 << r;
             }
         }
@@ -90,6 +96,8 @@ impl Board {
 
     fn remove_rows(&mut self, full: u64) {
         let mut out = [0u16; H as usize];
+        let mut out_left = [0u8; H as usize];
+        let mut out_hole = [0u8; H as usize];
         let mut write = H as usize;
         for y in (0..H as usize).rev() {
             if full >> y & 1 != 0 {
@@ -97,64 +105,85 @@ impl Board {
             }
             write -= 1;
             out[write] = self.rows[y];
+            out_left[write] = self.wound_left[y];
+            out_hole[write] = self.wound_hole[y];
         }
         self.rows = out;
+        self.wound_left = out_left;
+        self.wound_hole = out_hole;
+    }
+
+    /// Shift everything up by `n` rows (the top `n` are lost), leaving the bottom `n`
+    /// rows empty and not wounds.
+    fn shift_up(&mut self, n: usize) {
+        let h = H as usize;
+        self.rows.copy_within(n..h, 0);
+        self.wound_left.copy_within(n..h, 0);
+        self.wound_hole.copy_within(n..h, 0);
+        for y in h - n..h {
+            self.rows[y] = 0;
+            self.wound_left[y] = 0;
+            self.wound_hole[y] = 0;
+        }
+        // A wound pushed off the top is gone.
+        self.wounds = self.wound_left.iter().filter(|&&l| l > 0).count() as u8;
     }
 
     /// Board.push_garbage: shift the stack up, fill from the bottom; `holes` is
-    /// bottom-most first. Anything pushed above row 0 is lost. Garbage enters at the
-    /// bottom of the PLAY area, above any wound lines, so the wound block stays at the
-    /// floor and every garbage row stays reachable.
+    /// bottom-most first. Anything pushed above row 0 is lost. Garbage enters at the very
+    /// bottom, beneath any wound lines, pushing them up like everything else.
     pub fn push_garbage(&mut self, holes: &[i32]) {
         let n = holes.len();
         if n == 0 {
             return;
         }
-        let floor = H as usize - self.wounds as usize; // first wound row (or H)
-        for y in 0..floor - n {
-            self.rows[y] = self.rows[y + n];
-        }
+        self.shift_up(n);
         for (i, &hole) in holes.iter().enumerate() {
-            self.rows[floor - 1 - i] = FULL & !(1 << hole);
+            self.rows[H as usize - 1 - i] = FULL & !(1 << hole);
         }
     }
 
-    /// No pieces in play. Wound lines hold no pieces, so they do not block a PC.
+    /// Nothing on the board at all. A wound line is a garbage-like line, so while one is
+    /// present a perfect clear is impossible.
     pub fn is_empty(&self) -> bool {
-        self.rows[..H as usize - self.wounds as usize].iter().all(|&r| r == 0)
+        self.rows.iter().all(|&r| r == 0)
     }
 
-    /// The bottom in-play row becomes a wound line at the bottom of the block.
-    pub fn add_wound(&mut self, clears: u8) {
-        let n = self.wounds as usize;
-        if n >= MAX_WOUNDS {
-            return;
-        }
-        let r = H as usize - 1 - n;
-        self.wound_row[n] = self.rows[r];
-        self.wound_left[n] = clears;
-        self.rows[r] = FULL;
+    /// A repeat: insert a solid wound line at the very bottom, pushing the stack up. It
+    /// turns into garbage with a hole at `hole` after `clears` clears.
+    pub fn add_wound(&mut self, clears: u8, hole: u8) {
+        self.shift_up(1);
+        let b = H as usize - 1;
+        self.rows[b] = FULL;
+        self.wound_left[b] = clears;
+        self.wound_hole[b] = hole;
+        self.last_wound_hole = hole;
         self.wounds += 1;
     }
 
-    /// Called once per clear: every wound counts down; the oldest heals at 0, its
-    /// parked contents returning as the bottom in-play row. Returns how many healed.
+    /// Called once per clear: every wound counts down; at 0 it becomes an ordinary garbage
+    /// line in place, its hole opening. Returns how many turned into garbage.
     pub fn tick_wounds(&mut self) -> u32 {
-        let n = self.wounds as usize;
-        for i in 0..n {
-            self.wound_left[i] = self.wound_left[i].saturating_sub(1);
+        if self.wounds == 0 {
+            return 0;
         }
         let mut healed = 0;
-        while self.wounds > 0 && self.wound_left[0] == 0 {
-            let top = H as usize - self.wounds as usize;
-            self.rows[top] = self.wound_row[0];
-            let n = self.wounds as usize;
-            self.wound_left.copy_within(1..n, 0);
-            self.wound_row.copy_within(1..n, 0);
-            self.wounds -= 1;
-            healed += 1;
+        for y in 0..H as usize {
+            if self.wound_left[y] > 0 {
+                self.wound_left[y] -= 1;
+                if self.wound_left[y] == 0 {
+                    self.rows[y] = FULL & !(1 << self.wound_hole[y]);
+                    healed += 1;
+                }
+            }
         }
+        self.wounds -= healed as u8;
         healed
+    }
+
+    /// Wound rows, top to bottom: (row, clears left, hole).
+    pub fn wound_rows(&self) -> impl Iterator<Item = (usize, u8, u8)> + '_ {
+        (0..H as usize).filter(|&y| self.wound_left[y] > 0).map(move |y| (y, self.wound_left[y], self.wound_hole[y]))
     }
 
     /// Column heights measured from the floor (0 = empty column).
@@ -193,8 +222,8 @@ impl Board {
         }
         if self.wounds > 0 || self.last_clear != 0 {
             let mut v = self.last_clear as u64;
-            for i in 0..self.wounds as usize {
-                v = v.wrapping_mul(31) ^ self.wound_left[i] as u64;
+            for (y, left, _) in self.wound_rows() {
+                v = v.wrapping_mul(31) ^ ((y as u64) << 8 | left as u64);
             }
             h = (h ^ v ^ (self.wounds as u64) << 40).wrapping_mul(0xFF51_AFD7_ED55_8CCD);
             h ^= h >> 29;
@@ -236,53 +265,56 @@ mod tests {
     const B: usize = H as usize - 1; // bottom row index
 
     #[test]
-    fn wound_takes_bottom_row_and_heals_after_ten_clears() {
+    fn wound_is_inserted_at_the_bottom_and_turns_into_garbage() {
         let mut b = Board::default();
-        b.rows[B] = 0b0000011111; // row "A"
-        b.add_wound(10);
+        b.rows[B] = 0b0000011111; // the player's bottom row
+        b.add_wound(10, 6);
         assert_eq!(b.wounds, 1);
         assert_eq!(b.rows[B], FULL, "wound line is solid");
-        assert!(b.is_empty(), "wound lines hold no pieces, so a PC is possible");
+        assert_eq!(b.rows[B - 1], 0b0000011111, "the stack was pushed up, nothing taken");
+        assert!(!b.is_empty(), "a wound line is on the board: no perfect clear");
         for _ in 0..9 {
             assert_eq!(b.tick_wounds(), 0);
         }
-        assert_eq!(b.tick_wounds(), 1, "heals on the 10th clear");
+        assert_eq!(b.tick_wounds(), 1, "turns into garbage on the 10th clear");
         assert_eq!(b.wounds, 0);
-        assert_eq!(b.rows[B], 0b0000011111, "contents come back");
+        assert_eq!(b.rows[B], FULL & !(1 << 6), "   an ordinary garbage line, hole at 6");
     }
 
     #[test]
-    fn fifo_model_a_order() {
-        // Bottom-up rows A, B, C. Wound A, then B: B goes to the very bottom and A
-        // rises; A heals first and comes back above B, so the rows return as B A C.
-        let (a, bb, c) = (0b1, 0b10, 0b100);
+    fn newer_wounds_enter_beneath_older_ones() {
         let mut b = Board::default();
-        b.rows[B] = a;
-        b.rows[B - 1] = bb;
-        b.rows[B - 2] = c;
-        b.add_wound(10);
-        b.tick_wounds(); // one clear in between: A has 9 left
-        b.add_wound(10);
-        assert_eq!((b.wounds, b.rows[B], b.rows[B - 1]), (2, FULL, FULL));
-        assert_eq!(b.rows[B - 2], c);
+        b.add_wound(10, 1);
+        b.tick_wounds();
+        b.add_wound(10, 2);
+        assert_eq!((b.wound_left[B - 1], b.wound_left[B]), (9, 10), "older wound pushed up");
         for _ in 0..9 {
             b.tick_wounds();
         }
-        assert_eq!(b.wounds, 1, "oldest (A) healed first");
-        assert_eq!(b.rows[B - 1], a, "A returns next to the play area");
+        assert_eq!(b.rows[B - 1], FULL & !(1 << 1), "the older (higher) one is garbage first");
+        assert_eq!(b.rows[B], FULL, "   the newer one is still a wound");
         b.tick_wounds();
-        assert_eq!(b.wounds, 0);
-        assert_eq!((b.rows[B], b.rows[B - 1], b.rows[B - 2]), (bb, a, c));
+        assert_eq!(b.rows[B], FULL & !(1 << 2));
     }
 
     #[test]
-    fn garbage_enters_above_wounds() {
+    fn wound_lines_are_never_cleared() {
         let mut b = Board::default();
-        b.rows[B] = 0b11;
-        b.add_wound(10);
+        b.add_wound(10, 0);
+        // Fill the row above except one cell, then complete it: only that row clears.
+        b.rows[B - 1] = FULL & !1;
+        let (lines, _) = b.place(&[(0, 0), (0, -1), (0, -2), (0, -3)], 0, B as i32 - 1);
+        assert_eq!(lines, 1);
+        assert_eq!(b.wounds, 1, "the wound line survived the clear");
+    }
+
+    #[test]
+    fn garbage_enters_beneath_wounds() {
+        let mut b = Board::default();
+        b.add_wound(10, 3);
         b.push_garbage(&[4]);
-        assert_eq!(b.rows[B], FULL, "wound stays at the floor");
-        assert_eq!(b.rows[B - 1], FULL & !(1 << 4), "garbage sits on top of it");
+        assert_eq!(b.rows[B], FULL & !(1 << 4), "garbage at the very bottom");
+        assert_eq!((b.rows[B - 1], b.wound_left[B - 1]), (FULL, 10), "wound pushed up with the stack");
     }
 
     #[test]

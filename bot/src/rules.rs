@@ -181,6 +181,9 @@ pub struct Rules {
     /// wound the bottom in-play row for `wound_clears` clears.
     pub repeat_penalty: bool,
     pub wound_clears: u8,
+    /// Chance a new wound line's hole moves from the previous wound's column
+    /// (RuleSet.wound_messiness). High messiness turns expired wounds into cheese.
+    pub wound_messiness: f64,
 }
 
 impl Default for Rules {
@@ -192,6 +195,7 @@ impl Default for Rules {
             promote_minis: false,
             repeat_penalty: false,
             wound_clears: 10,
+            wound_messiness: 0.5,
         }
     }
 }

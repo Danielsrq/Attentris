@@ -113,7 +113,9 @@ pub fn apply(board: &Board, p: &Placement, b2b: i32, rules: &Rules, shapes: &Sha
         healed = nb.tick_wounds();
         let t = clear_type(p.piece, spin, lines);
         if nb.last_clear == t {
-            nb.add_wound(rules.wound_clears);
+            // The real hole is chosen by the game with messiness; the search assumes the
+            // previous wound's column (it only matters once the line turns to garbage).
+            nb.add_wound(rules.wound_clears, nb.last_wound_hole);
             repeat = true;
         }
         nb.last_clear = t;
