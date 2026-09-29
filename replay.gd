@@ -177,6 +177,7 @@ func _show() -> void:
 		hud.queue_redraw()
 	if board_view != null:
 		board_view.plan = _plan_for(step)
+		board_view.clearing_rows = step.get("cleared_rows", [])
 		board_view.queue_redraw()
 	if info != null:
 		info.queue_redraw()

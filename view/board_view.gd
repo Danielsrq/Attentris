@@ -40,9 +40,17 @@ var show_plan: bool = true
 ## Alpha fades with distance into the plan: the next piece is the most certain (it is
 ## what the bot will play unless a new preview changes its mind), later ones less so.
 ## Both ends stay well below the board's 1.0 so the forecast never reads as stack.
-const PLAN_ALPHA_NEAR := 0.34
-const PLAN_ALPHA_FAR := 0.08
-const PLAN_LABEL := Color(1, 1, 1, 0.8)
+## Eased (quadratic), so the next piece stands clearly apart and the rest drop off
+## fast: with five planned pieces, 0.50 / 0.28 / 0.17 / 0.09 / 0.06.
+const PLAN_ALPHA_NEAR := 0.50
+const PLAN_ALPHA_FAR := 0.06
+const PLAN_LABEL := Color(1, 1, 1, 0.9)
+## Rows the piece being placed is about to clear. The plan is drawn over today's rows,
+## so a planned piece can straddle one of these; marking them makes that read as "this
+## row disappears" rather than as a piece that does not match what gets played.
+var clearing_rows: Array = []
+const CLEARING_BAND := Color(1, 1, 1, 0.28)
+const CLEARING_EDGE := Color(1, 1, 1, 0.7)
 
 const STRUCT_EDGE := Color(1.0, 0.85, 0.35)
 const STRUCT_SEC := 1.2
@@ -79,6 +87,9 @@ func _draw() -> void:
 			_piece_cell(board, game.active.pos + c, col, 1.0)
 		if outline_active:
 			_outline(board, game.active)
+
+	if show_plan and not plan.is_empty():
+		_clearing(board)
 
 	if board.ghost_width > 0:
 		_ghost(board)
@@ -196,6 +207,20 @@ func _outline(board: Board, piece: ActivePiece) -> void:
 				continue
 			draw_line(from, to, ACTIVE_EDGE, 2.0)
 
+func _clearing(board: Board) -> void:
+	var cs := float(layout.cell)
+	for y in clearing_rows:
+		if int(y) < board.buffer_height:
+			continue
+		var at := layout.cell_pos(board, 0, int(y))
+		var r := Rect2(at, Vector2(board.width * cs, cs))
+		draw_rect(r, CLEARING_BAND)
+		draw_line(r.position, r.position + Vector2(r.size.x, 0), CLEARING_EDGE, 1.0)
+		draw_line(r.end - Vector2(r.size.x, 0), r.end, CLEARING_EDGE, 1.0)
+		# Strike-through: the row is going away.
+		var mid := r.position.y + cs * 0.5
+		draw_line(Vector2(r.position.x, mid), Vector2(r.end.x, mid), CLEARING_EDGE, 2.0)
+
 ## Faint planned pieces, each labelled with its place in the plan (1 = next piece).
 func _plan(board: Board) -> void:
 	var cs := float(layout.cell)
@@ -208,7 +233,7 @@ func _plan(board: Board) -> void:
 		var def: PieceDef = step["def"]
 		var cells: Array = step["cells"]
 		var t := 0.0 if last <= 1 else float(int(step["k"]) - 1) / float(last - 1)
-		var alpha := lerpf(PLAN_ALPHA_NEAR, PLAN_ALPHA_FAR, t)
+		var alpha := lerpf(PLAN_ALPHA_FAR, PLAN_ALPHA_NEAR, (1.0 - t) * (1.0 - t))
 		var label := Color(PLAN_LABEL.r, PLAN_LABEL.g, PLAN_LABEL.b, PLAN_LABEL.a * lerpf(1.0, 0.55, t))
 		var sum := Vector2.ZERO
 		var shown := 0
