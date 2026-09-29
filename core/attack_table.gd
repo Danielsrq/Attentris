@@ -19,7 +19,9 @@ extends Resource
 ## Keyed by lines cleared. A T-Spin Double matching a quad at 4 is the usual
 ## trade-off: same damage, far fewer pieces.
 @export var t_spin_attack: Dictionary = {0: 0, 1: 2, 2: 4, 3: 6}
-@export var t_spin_mini_attack: Dictionary = {0: 0, 1: 1, 2: 2}
+## Any piece's Mini (a T-spin Mini, or a non-T spin under RuleSet.non_t_spin_is_mini).
+## TETR.IO-style: a Mini sends nothing but, like every spin that clears, keeps B2B alive.
+@export var t_spin_mini_attack: Dictionary = {0: 0, 1: 0, 2: 0}
 ## All-spin values for S/Z/L/J/I. Not a guideline concept, so these are a starting
 ## point rather than a standard.
 @export var other_spin_attack: Dictionary = {0: 0, 1: 2, 2: 4, 3: 6, 4: 8}
@@ -48,17 +50,18 @@ func attack_for(r: ClearResult) -> int:
 	if r.lines <= 0:
 		return 0
 	var out := 0
-	if r.spin != SpinDetect.Kind.NONE and r.piece_id == &"T":
-		if r.spin == SpinDetect.Kind.FULL:
-			out = int(t_spin_attack.get(r.lines, 0))
-		else:
-			out = int(t_spin_mini_attack.get(r.lines, 0))
+	if r.spin == SpinDetect.Kind.MINI:
+		# Every piece's Mini uses the Mini table.
+		out = int(t_spin_mini_attack.get(r.lines, 0))
+	elif r.spin == SpinDetect.Kind.FULL and r.piece_id == &"T":
+		out = int(t_spin_attack.get(r.lines, 0))
 	elif r.spin != SpinDetect.Kind.NONE:
 		out = int(other_spin_attack.get(r.lines, 0))
 	else:
 		out = int(lines_attack.get(r.lines, 0))
 
-	if r.is_difficult() and r.b2b_active():
+	# A Mini keeps the chain alive (is_difficult) but earns no bonus: it sends nothing.
+	if r.is_difficult() and r.b2b_active() and r.spin != SpinDetect.Kind.MINI:
 		out += b2b_bonus_for(r.b2b)
 	if r.perfect_clear:
 		out += perfect_clear_bonus

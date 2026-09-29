@@ -486,6 +486,9 @@ func test_all_spin_immobility() -> void:
 	var strict := RuleSet.guideline()
 	p.last_action_was_rotation = true
 	eq(SpinDetect.detect(b, p, strict), SpinDetect.Kind.NONE, "all_spin off: S-spin ignored")
+	# Normal rules (the default preset): the same S-spin counts, but only as a Mini.
+	eq(SpinDetect.detect(b, p, RuleSet.normal()), SpinDetect.Kind.MINI, "normal rules: S-spin is a Mini")
+	eq(SpinDetect.detect(b, p, RuleSet.allspin()), SpinDetect.Kind.FULL, "all-spin: the same S-spin is full")
 
 	# Free space is never a spin.
 	var empty := Board.new(10, 20, 20)
@@ -1149,7 +1152,12 @@ func test_attack_table() -> void:
 	eq(t.attack_for(attack_result(2, full, &"T", -1)), 4, "T-spin double matches a quad at 4")
 	eq(t.attack_for(attack_result(3, full, &"T", -1)), 6, "T-spin triple sends 6")
 	eq(t.attack_for(attack_result(0, full, &"T", -1)), 0, "a spin that clears nothing sends nothing")
-	eq(t.attack_for(attack_result(1, SpinDetect.Kind.MINI, &"T", -1)), 1, "T-spin mini single sends 1")
+	eq(t.attack_for(attack_result(1, SpinDetect.Kind.MINI, &"T", -1)), 0, "T-spin mini single sends nothing")
+	eq(t.attack_for(attack_result(2, SpinDetect.Kind.MINI, &"T", -1)), 0, "T-spin mini double sends nothing")
+	eq(t.attack_for(attack_result(2, SpinDetect.Kind.MINI, &"S", -1)), 0, "a non-T Mini sends nothing")
+	eq(t.attack_for(attack_result(2, full, &"S", -1)), 4, "a full non-T spin (all-spin) still sends 4")
+	check(attack_result(1, SpinDetect.Kind.MINI, &"S", -1).is_difficult(), "a Mini that clears keeps B2B alive")
+	eq(t.attack_for(attack_result(1, SpinDetect.Kind.MINI, &"S", 3)), 0, "   but earns no B2B bonus itself")
 
 	# B2B adds to difficult clears only.
 	eq(t.attack_for(attack_result(4, none, &"I", 1)), 5, "b2b quad sends 4 + 1")

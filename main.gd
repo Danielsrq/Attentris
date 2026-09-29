@@ -29,12 +29,13 @@ var layout: ViewLayout
 
 var reader := InputReader.new(CONTROL_PROFILE)
 var input_state := InputState.new()
-## Rule presets the handling toggle cycles through.
-const RULE_PRESETS := ["competitive", "guideline", "allspin"]
+## Rule presets the handling toggle cycles through; "normal" is the default.
+const RULE_PRESETS := ["normal", "competitive", "guideline", "allspin"]
 var rules_preset := 0
 
 func _preset_rules() -> RuleSet:
 	match RULE_PRESETS[rules_preset]:
+		"normal": return RuleSet.normal()
 		"guideline": return RuleSet.guideline()
 		"allspin": return RuleSet.allspin()
 		_: return RuleSet.competitive()

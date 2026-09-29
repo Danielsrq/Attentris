@@ -73,6 +73,16 @@ static func competitive() -> RuleSet:
 	r.sdf = 60.0
 	return r
 
+## Normal rules (TETR.IO-style), the game's default: every piece can spin, but non-T
+## spins always count as Minis. A Mini sends nothing (AttackTable) yet keeps B2B alive,
+## like every spin that clears lines. T-spins keep the 3-corner full/Mini rule.
+static func normal() -> RuleSet:
+	var r := RuleSet.new()
+	r.preset_name = "normal"
+	r.all_spin = true
+	r.non_t_spin_is_mini = true
+	return r
+
 ## All-spin: competitive handling, every spin full, repeating a clear type wounds a row.
 static func allspin() -> RuleSet:
 	var r := RuleSet.new()
