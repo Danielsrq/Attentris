@@ -12,9 +12,9 @@
 //!     T-slot overhang is punished as a hole and spins can never emerge.
 
 use crate::board::{Board, FULL};
-use crate::rules::{H, W};
+use crate::rules::{clear_type, Piece, Spin, H, W};
 
-pub const NAMES: [&str; 18] = [
+pub const NAMES: [&str; 20] = [
     "holes",       // empty cells with something above them
     "hole_rows",   // rows containing at least one hole
     "cover",       // filled cells above each column's topmost hole
@@ -35,6 +35,8 @@ pub const NAMES: [&str; 18] = [
     // sqrt(chain + 1) while a chain is live: the shape of the floor(sqrt(chain)) bonus
     // every future difficult clear will earn, so a long chain is worth more to keep.
     "b2b_sqrt",
+    "wounds",      // live wound lines (all-spin repeat penalty): a shorter field
+    "ready_repeat", // a ready quad or T slot would repeat the last clear type
 ];
 pub const NF: usize = NAMES.len();
 
@@ -66,6 +68,8 @@ impl Default for Weights {
                 1.2,   // b2b
                 0.0,   // b2b_level
                 0.0,   // b2b_sqrt
+                0.0,   // wounds
+                0.0,   // ready_repeat
             ],
         }
     }
@@ -324,5 +328,20 @@ pub fn features(b: &Board, b2b: i32) -> [f32; NF] {
     f[15] = (b2b >= 0) as i32 as f32;
     f[16] = b2b.clamp(0, 8) as f32;
     f[17] = if b2b >= 0 { ((b2b + 1) as f32).sqrt() } else { 0.0 };
+    // All-spin repeat penalty. Both are zero outside that mode (no wounds, no
+    // last_clear), so they cost nothing in the other modes.
+    f[18] = b.wounds as f32;
+    if b.last_clear != 0 {
+        let mut rep = 0.0;
+        if wr >= 4 && b.last_clear == clear_type(Piece::I, Spin::None, 4) {
+            rep += 1.0;
+        }
+        if let Some(s) = slot {
+            if s.lines > 0 && b.last_clear == clear_type(Piece::T, Spin::Full, s.lines) {
+                rep += 1.0;
+            }
+        }
+        f[19] = rep;
+    }
     f
 }
