@@ -47,7 +47,13 @@ godot --headless --path .. -s res://tests/bot_replay_check.gd -- --replay=res://
 * two consecutive clears of the same type (piece + lines + spin; plain clears keyed by
   lines only) wound the bottom in-play row for 10 clears. Wound lines are a FIFO block
   at the floor, oldest on top; garbage enters above them;
-* weights: `weights/allspin.txt` (tuned under these rules on clean boards).
+* weights: `weights/allspin_slots.txt` (with the S/Z, L/J, I spin-slot features;
+  replays in `data/bot/allspin_slots.jsonl`), or the earlier `weights/allspin.txt`.
+  Both are tuned on clean boards and do not survive cheese.
+* `bot slots [--piece Z --lines 3]` checks the spin-slot bitmask scan against the move
+  generator and prints boards and masks as ASCII.
+* `godot --headless --path .. -s res://tests/spin_path_check.gd -- --replay=<jsonl>`
+  re-finds every spin clear with Godot's own kick tables.
 
 ```
 ./target/release/bot play --mode allspin --weights weights/allspin.txt --games 5 --pieces 1000 --out ../data/bot/allspin.jsonl
