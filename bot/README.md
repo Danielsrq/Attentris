@@ -39,6 +39,22 @@ godot --headless --path .. -s res://tests/bot_replay_check.gd -- --replay=res://
   so tucks and kicked spins are reachable. Spin status is decided per rotation, with
   the kick-5 Mini->full upgrade.
 
+## All-spin mode
+
+`--mode allspin` (Godot: `RuleSet.allspin()`, the third preset on the handling toggle):
+
+* every spin is full (Minis promoted); non-T spins score like T-spins (2 / 4 / 6);
+* two consecutive clears of the same type (piece + lines + spin; plain clears keyed by
+  lines only) wound the bottom in-play row for 10 clears. Wound lines are a FIFO block
+  at the floor, oldest on top; garbage enters above them;
+* weights: `weights/allspin.txt` (tuned under these rules on clean boards).
+
+```
+./target/release/bot play --mode allspin --weights weights/allspin.txt --games 5 --pieces 1000 --out ../data/bot/allspin.jsonl
+./target/release/bot pros --mode allspin
+godot --headless --path .. -s res://tests/allspin_parity.gd -- --replay=<allspin jsonl without garbage>
+```
+
 ## Rules switches
 
 * default: `RuleSet.competitive()`: all-spin on (non-T immobile spins score 2/4/6).
