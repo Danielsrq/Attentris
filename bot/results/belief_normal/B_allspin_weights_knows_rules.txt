@@ -1,0 +1,2 @@
+B_allspin_weights_knows_rules  1.315  7/20    449   1.04   5.40   0.00   7.78   0.26  11.59   0.37    0/0   146  0.00    0  142.46
+clears per 100 pieces -- spin singles 17.76, doubles 7.21, triples 0.04; plain 1/2/3/4: 0.32/0.03/0.01/1.04; attack per line 3.57

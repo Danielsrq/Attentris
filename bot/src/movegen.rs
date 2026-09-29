@@ -261,7 +261,9 @@ mod tests {
         assert_eq!(r.attack(Piece::I, Spin::None, 4, 1, false), 5);
         assert_eq!(r.attack(Piece::T, Spin::Full, 2, 0, false), 4);
         assert_eq!(r.attack(Piece::T, Spin::Full, 3, 3, false), 7);
-        assert_eq!(r.attack(Piece::T, Spin::Mini, 1, 0, false), 1);
+        assert_eq!(r.attack(Piece::T, Spin::Mini, 1, 0, false), 0, "a Mini sends nothing");
+        assert_eq!(r.attack(Piece::S, Spin::Mini, 2, 5, false), 0, "   not even the B2B bonus");
+        assert!(crate::rules::is_difficult(Spin::Mini, 1), "   but it keeps the chain alive");
         assert_eq!(r.attack(Piece::S, Spin::Full, 2, 0, false), 4);
         assert_eq!(r.attack(Piece::I, Spin::None, 4, 0, true), 14);
         let sq = Rules { b2b: B2bMode::Sqrt, ..Rules::default() };

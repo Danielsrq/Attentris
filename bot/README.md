@@ -64,6 +64,10 @@ godot --headless --path .. -s res://tests/allspin_parity.gd -- --replay=<allspin
 
 ## Rules switches
 
+* default (`--mode normal`, Godot `RuleSet.normal()`, the game's default preset): every
+  piece can spin, non-T spins are Minis; every Mini sends 0 (no B2B bonus either) but
+  keeps B2B alive.
+
 * default: `RuleSet.competitive()`: all-spin on (non-T immobile spins score 2/4/6).
 * `--no-allspin`: T-spins only, as `RuleSet.guideline()`.
 * `--garbage E,R,M`: R rows every E pieces, hole moves with probability M.

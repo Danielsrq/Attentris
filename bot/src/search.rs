@@ -101,7 +101,13 @@ pub fn apply(board: &Board, p: &Placement, b2b: i32, rules: &Rules, shapes: &Sha
     let cells = p.cells(shapes);
     // Lock-out (Game.lock_piece): the piece rests entirely in the buffer.
     let all_in_buffer = cells.iter().all(|&(_, dy)| (p.y as i32 + dy as i32) < BUFFER);
-    let spin = if rules.promote_minis && p.spin == Spin::Mini { Spin::Full } else { p.spin };
+    let mut spin = p.spin;
+    if rules.non_t_mini && p.piece != Piece::T && spin != Spin::None {
+        spin = Spin::Mini;
+    }
+    if rules.promote_minis && spin == Spin::Mini {
+        spin = Spin::Full;
+    }
     let (lines, cleared) = nb.place(cells, p.x as i32, p.y as i32);
     let nb2 = next_b2b(b2b, spin, lines);
     let perfect = lines > 0 && nb.is_empty();

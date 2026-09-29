@@ -184,6 +184,8 @@ pub struct Rules {
     /// Chance a new wound line's hole moves from the previous wound's column
     /// (RuleSet.wound_messiness). High messiness turns expired wounds into cheese.
     pub wound_messiness: f64,
+    /// Normal rules (RuleSet.non_t_spin_is_mini): non-T spins count only as Minis.
+    pub non_t_mini: bool,
     /// Experimental: the B2B bonus never exceeds this (None = uncapped).
     pub b2b_cap: Option<i32>,
 }
@@ -198,6 +200,7 @@ impl Default for Rules {
             repeat_penalty: false,
             wound_clears: 10,
             wound_messiness: 0.5,
+            non_t_mini: false,
             b2b_cap: None,
         }
     }
@@ -206,6 +209,12 @@ impl Default for Rules {
 impl Rules {
     /// The all-spin preset: every piece spins (O excepted in practice), Minis count as
     /// full, and repeating a clear type wounds a row.
+    /// Normal rules (TETR.IO-style), the default mode: every piece can spin, non-T spins
+    /// are Minis, and a Mini sends nothing but keeps B2B alive.
+    pub fn normal() -> Rules {
+        Rules { all_spin: true, non_t_mini: true, ..Rules::default() }
+    }
+
     pub fn allspin() -> Rules {
         Rules { all_spin: true, promote_minis: true, repeat_penalty: true, ..Rules::default() }
     }
@@ -232,18 +241,18 @@ impl Rules {
             return 0;
         }
         let l = lines as usize;
-        let mut out = if spin != Spin::None && piece == Piece::T {
-            if spin == Spin::Full {
-                [0, 2, 4, 6, 0][l.min(4)]
-            } else {
-                [0, 1, 2, 0, 0][l.min(4)]
-            }
+        let mut out = if spin == Spin::Mini {
+            // Every piece's Mini sends nothing (AttackTable.t_spin_mini_attack).
+            0
+        } else if spin == Spin::Full && piece == Piece::T {
+            [0, 2, 4, 6, 0][l.min(4)]
         } else if spin != Spin::None {
             [0, 2, 4, 6, 8][l.min(4)]
         } else {
             [0, 0, 1, 2, 4][l.min(4)]
         };
-        if is_difficult(spin, lines) && b2b_after >= 1 {
+        // A Mini keeps the chain alive (is_difficult) but earns no bonus itself.
+        if is_difficult(spin, lines) && b2b_after >= 1 && spin != Spin::Mini {
             let bonus = match self.b2b {
                 B2bMode::Flat => 1,
                 B2bMode::Sqrt => (b2b_after as f64).sqrt().floor() as i32,

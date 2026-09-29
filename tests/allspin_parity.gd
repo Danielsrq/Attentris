@@ -13,7 +13,11 @@ extends SceneTree
 
 func _init() -> void:
 	var path := ""
+	# --rules=normal: no repeat penalty (normal rules); default: all-spin.
+	var penalty := true
 	for arg in OS.get_cmdline_user_args():
+		if arg == "--rules=normal":
+			penalty = false
 		if arg.begins_with("--replay="):
 			path = arg.substr("--replay=".length())
 	var f := FileAccess.open(path, FileAccess.READ)
@@ -70,7 +74,7 @@ func _init() -> void:
 			if r.lines > 0:
 				b2b = b2b + 1 if r.is_difficult() else -1
 			r.b2b = b2b
-			if r.lines > 0:
+			if penalty and r.lines > 0:
 				r.healed = b.tick_wounds()
 				var t := r.clear_type()
 				r.repeat = t == last_type

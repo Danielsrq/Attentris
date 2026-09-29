@@ -1,0 +1,2 @@
+C_allspin_weights_believes_as  0.286  0/20    500   0.00   0.03   0.00   2.18   4.66  32.23   0.00    0/0   198  0.00    0  135.14
+clears per 100 pieces -- spin singles 38.52, doubles 0.58, triples 0.00; plain 1/2/3/4: 0.00/0.00/0.00/0.00; attack per line 0.72

@@ -86,8 +86,10 @@ fn rules_for(a: &Args, mode: Option<&str>) -> Rules {
     let mut r = match mode {
         Some("allspin") => Rules::allspin(),
         Some("standard") => Rules { all_spin: false, ..Rules::default() },
-        Some("competitive") | None => Rules::default(),
-        Some(m) => panic!("unknown --mode {} (standard | competitive | allspin)", m),
+        // Normal rules are the default, as in the Godot game.
+        Some("normal") | None => Rules::normal(),
+        Some("competitive") => Rules::default(),
+        Some(m) => panic!("unknown --mode {} (normal | standard | competitive | allspin)", m),
     };
     if a.has("no-allspin") {
         r.all_spin = false;

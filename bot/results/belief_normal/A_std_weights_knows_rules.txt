@@ -1,0 +1,2 @@
+A_std_weights_knows_rules  0.956  0/20    500   3.70   5.38   0.00   3.18   0.55   3.08   3.63    0/0    44  0.00    0  127.90
+clears per 100 pieces -- spin singles 6.28, doubles 5.91, triples 0.00; plain 1/2/3/4: 1.27/1.62/0.74/3.70; attack per line 2.41
