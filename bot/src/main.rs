@@ -365,7 +365,7 @@ fn main() {
         }
         "pros" => {
             let path = a.str("data").unwrap_or("../data/zenith_full.jsonl");
-            if let Err(e) = parity::pros(path, !a.has("no-allspin")) {
+            if let Err(e) = parity::pros(path, !a.has("no-allspin"), a.str("mode") == Some("allspin")) {
                 eprintln!("{}", e);
                 std::process::exit(1);
             }
