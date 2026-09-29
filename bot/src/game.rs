@@ -115,6 +115,9 @@ pub struct Stats {
     pub nodes: u64,
     /// Wall-clock time of each search call, in microseconds.
     pub think_us: Vec<u32>,
+    /// Moves where the previous search had a prediction, and how many it got right.
+    pub plan_checks: u64,
+    pub plan_kept: u64,
 }
 
 impl Stats {
@@ -139,6 +142,8 @@ impl Stats {
         self.max_height = self.max_height.max(o.max_height);
         self.nodes += o.nodes;
         self.think_us.extend_from_slice(&o.think_us);
+        self.plan_checks += o.plan_checks;
+        self.plan_kept += o.plan_kept;
     }
     pub fn app(&self) -> f64 {
         self.attack as f64 / self.pieces.max(1) as f64
@@ -235,6 +240,7 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
     }
 
     let shapes = crate::rules::Shapes::new();
+    let mut expected: Option<(Piece, [(i32, i32); 4])> = None;
     for n in 0..cfg.pieces {
         if cfg.garbage.every > 0 && n > 0 && n % cfg.garbage.every == 0 {
             inject(&mut board, &mut colors, cfg.garbage.rows, &mut grng, &mut garbage_hole);
@@ -261,6 +267,22 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         };
         stats.think_us.push(t0.elapsed().as_micros().min(u32::MAX as u128) as u32);
         stats.nodes += searcher.nodes - nodes_before;
+
+        // Did the bot play what the previous search expected to play here? Only
+        // comparable when nothing (garbage) changed the board in between.
+        let injected = cfg.garbage.every > 0 && n > 0 && n % cfg.garbage.every == 0;
+        if let Some((pp, cells)) = expected.take() {
+            if !injected {
+                stats.plan_checks += 1;
+                if pp == d.placement.piece && cells == sorted_cells(&d.placement, &shapes) {
+                    stats.plan_kept += 1;
+                }
+            }
+        }
+        if let Some(s) = d.plan.get(1) {
+            expected = Some((s.placement.piece, sorted_cells(&s.placement, &shapes)));
+        }
+        let plan_json = if cfg.record { plan_to_json(&board, &d.plan, b2b, searcher, &shapes) } else { String::new() };
 
         // Advance the queue exactly as Game does: the spawned piece is consumed; an
         // empty-hold swap consumes one more.
@@ -300,12 +322,56 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         if cfg.record {
             write_record(&mut out, cfg, n, &spawn_rows,
                 spawned, &queue[1..], spawn_hold, d.use_hold, &p, &shapes, &o, hold,
-                (1..6).map(|i| bag.get(drawn + i - 1)).collect(), garbage_rows_total, h, garbage_left);
+                (1..6).map(|i| bag.get(drawn + i - 1)).collect(), garbage_rows_total, h, garbage_left, &plan_json);
         }
         board = o.board;
         b2b = o.b2b;
     }
     (stats, out)
+}
+
+fn sorted_cells(p: &crate::board::Placement, shapes: &crate::rules::Shapes) -> [(i32, i32); 4] {
+    let mut c = p.abs_cells(shapes);
+    c.sort();
+    c
+}
+
+/// The planned line as JSON, every piece expressed in the rows of the board as it is
+/// NOW. A planned piece that lands after an earlier planned clear sits on a board
+/// whose rows have shifted down; mapping each row back to the row it came from puts
+/// the forecast where it will visually end up, drawn over today's stack.
+fn plan_to_json(board: &Board, plan: &[crate::search::Step], b2b: i32, searcher: &Searcher,
+                shapes: &crate::rules::Shapes) -> String {
+    let mut b = *board;
+    let mut chain = b2b;
+    // origin[y] = row of the current board that row y of the simulated board came
+    // from; rows that scroll in from above the field get ids above the top (negative).
+    let mut origin: Vec<i32> = (0..H).collect();
+    let mut steps = Vec::new();
+    for (k, s) in plan.iter().enumerate() {
+        let p = &s.placement;
+        let cells = p
+            .abs_cells(shapes)
+            .iter()
+            .map(|&(x, y)| format!("[{},{}]", x, origin[y as usize]))
+            .collect::<Vec<_>>()
+            .join(",");
+        let o = apply(&b, p, chain, &searcher.rules, shapes);
+        let name = describe(p.piece, p.spin, o.lines);
+        steps.push(format!(
+            "{{\"k\":{},\"type\":\"{}\",\"hold\":{},\"cells\":[{}],\"clear\":\"{}\",\"attack\":{}}}",
+            k, p.piece.letter(), s.use_hold, cells, name, o.attack
+        ));
+        if o.cleared != 0 {
+            let top = *origin.iter().min().unwrap();
+            let kept: Vec<i32> = (0..H as usize).filter(|&y| o.cleared >> y & 1 == 0).map(|y| origin[y]).collect();
+            let n = H as usize - kept.len();
+            origin = (0..n).map(|i| top - (n - i) as i32).chain(kept).collect();
+        }
+        b = o.board;
+        chain = o.b2b;
+    }
+    format!("[{}]", steps.join(","))
 }
 
 fn count_garbage_rows(colors: &Colors, mask: u64) -> u64 {
@@ -351,7 +417,7 @@ fn tally(s: &mut Stats, piece: Piece, spin: Spin, lines: u32) {
 fn write_record(out: &mut String, cfg: &GameConfig, n: usize, board_rows: &[String], spawned: Piece, previews: &[Piece],
                 spawn_hold: Option<Piece>, used_hold: bool, p: &crate::board::Placement, shapes: &crate::rules::Shapes,
                 o: &crate::search::Outcome, lock_hold: Option<Piece>, lock_queue: Vec<Piece>, garbage_rows: u64,
-                height: i32, garbage_left: u64) {
+                height: i32, garbage_left: u64, plan: &str) {
     let q = |v: &[Piece]| v.iter().map(|p| format!("\"{}\"", p.letter())).collect::<Vec<_>>().join(",");
     let opt = |p: Option<Piece>| p.map_or("null".to_string(), |p| format!("\"{}\"", p.letter()));
     let cells = p.abs_cells(shapes).iter().map(|(x, y)| format!("[{},{}]", x, y)).collect::<Vec<_>>().join(",");
@@ -370,7 +436,7 @@ fn write_record(out: &mut String, cfg: &GameConfig, n: usize, board_rows: &[Stri
 \"place\":{{\"type\":\"{ptype}\",\"x\":{px},\"y\":{py},\"r\":{pr},\"spin\":\"{spin}\",\"kick\":{kick},\"soft\":false,\"cells\":[{cells}]}},\
 \"cleared\":{lines},\"cleared_rows\":[{cleared}],\"spin\":\"{spin}\",\"lock_queue\":[{lq}],\"lock_hold\":{lh},\"lock_hold_locked\":{used},\
 \"sealed\":0,\"height\":{height},\"hole_run\":0,\"q_depth\":{gleft},\"recovered\":false,\"garbage_rows\":{grows},\"q_last_zero\":-1,\
-\"attack\":{attack},\"b2b\":{b2b},\"clear\":\"{name}\"}}",
+\"attack\":{attack},\"b2b\":{b2b},\"clear\":\"{name}\",\"plan\":{plan}}}",
         label = cfg.label,
         seed = cfg.seed,
         n = n,
@@ -397,5 +463,6 @@ fn write_record(out: &mut String, cfg: &GameConfig, n: usize, board_rows: &[Stri
         attack = o.attack,
         b2b = o.b2b,
         name = name,
+        plan = if plan.is_empty() { "[]" } else { plan },
     );
 }

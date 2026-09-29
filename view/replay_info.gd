@@ -67,6 +67,7 @@ func _draw() -> void:
 		["[ ]", "previous / next run"],
 		["r", "restart run"],
 		["g", "grid"],
+		["p", "bot plan overlay"],
 	]:
 		_text(Vector2(x, y), k[0], DIM, 11)
 		_text(Vector2(x + 58.0, y), k[1], TEXT, 11)

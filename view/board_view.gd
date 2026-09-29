@@ -31,6 +31,15 @@ const GHOST_EDGE := Color(1, 1, 1, 0.08)
 ## A completed structure is outlined briefly, because the payout is otherwise invisible:
 ## the cells look no different afterwards, and the player needs to see WHICH rectangle
 ## paid to learn to build another.
+## The bot's forecast: the pieces it expects to play after this one, drawn faint and
+## numbered in play order. Set by the replay viewer from a record's `plan`; empty for
+## human replays. Each entry is {k: int, def: PieceDef, cells: Array[Vector2i]}, with
+## cells already mapped onto the rows of the board as it stands now.
+var plan: Array = []
+var show_plan: bool = true
+const PLAN_ALPHA := 0.16
+const PLAN_LABEL := Color(1, 1, 1, 0.75)
+
 const STRUCT_EDGE := Color(1.0, 0.85, 0.35)
 const STRUCT_SEC := 1.2
 var _flashes: Array = []   ## [{rect: Rect2i, age: float}]
@@ -52,6 +61,9 @@ func _draw() -> void:
 			var v := board.get_cell(x, y)
 			if v != 0:
 				_cell(layout.cell_pos(board, x, y), game.piece_set.color_for_value(v), 1.0)
+
+	if show_plan and not plan.is_empty():
+		_plan(board)
 
 	if game.active != null:
 		var col := game.active.def.color
@@ -179,6 +191,34 @@ func _outline(board: Board, piece: ActivePiece) -> void:
 			if d == Vector2i.UP and p.y == board.buffer_height:
 				continue
 			draw_line(from, to, ACTIVE_EDGE, 2.0)
+
+## Faint planned pieces, each labelled with its place in the plan (1 = next piece).
+func _plan(board: Board) -> void:
+	var cs := float(layout.cell)
+	var font := ThemeDB.fallback_font
+	var size := int(cs * 0.55)
+	for step in plan:
+		var def: PieceDef = step["def"]
+		var cells: Array = step["cells"]
+		var sum := Vector2.ZERO
+		var shown := 0
+		for c in cells:
+			if c.y < board.buffer_height:
+				continue
+			_piece_cell(board, c, def.color, PLAN_ALPHA)
+			sum += Vector2(c)
+			shown += 1
+		if shown == 0:
+			continue
+		# Label the cell nearest the piece's centre, so it sits on the piece itself.
+		var centre := sum / shown
+		var best: Vector2i = cells[0]
+		for c in cells:
+			if c.y >= board.buffer_height and Vector2(c).distance_to(centre) < Vector2(best).distance_to(centre):
+				best = c
+		var at := layout.cell_pos(board, best.x, best.y)
+		draw_string(font, at + Vector2(0, cs * 0.5 + size * 0.36), str(step["k"]),
+			HORIZONTAL_ALIGNMENT_CENTER, cs, size, PLAN_LABEL)
 
 func _piece_cell(board: Board, p: Vector2i, col: Color, alpha: float) -> void:
 	if p.y < board.buffer_height:

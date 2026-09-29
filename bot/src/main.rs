@@ -189,6 +189,11 @@ fn cmd_play(a: &Args) {
         println!("think time per move (wall clock, {} threads): mean {:.1} ms  p50 {:.1}  p95 {:.1}  p99 {:.1}  max {:.1}",
             threads_used(), mean, pct(0.5), pct(0.95), pct(0.99), pct(1.0));
     }
+    let (checks, kept) = st.iter().fold((0, 0), |(c, k), s| (c + s.plan_checks, k + s.plan_kept));
+    if checks > 0 {
+        println!("plan stability: {:.1}% of moves were exactly what the previous search planned ({} / {})",
+            100.0 * kept as f64 / checks as f64, kept, checks);
+    }
     if let Some(p) = a.str("out") {
         write_out(p, &js, a.has("append"));
     }

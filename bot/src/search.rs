@@ -38,6 +38,15 @@ impl Default for SearchConfig {
     }
 }
 
+/// Longest line a node remembers: the known queue is 6 pieces.
+pub const MAX_PLAN: usize = 8;
+
+#[derive(Clone, Copy, Debug)]
+pub struct Step {
+    pub use_hold: bool,
+    pub placement: Placement,
+}
+
 #[derive(Clone, Copy)]
 struct Node {
     board: Board,
@@ -46,14 +55,19 @@ struct Node {
     b2b: i32,
     reward: f32,
     score: f32,
-    root: u16,
     dead: bool,
+    /// The placements that led here from the root; path[0] is the move to play.
+    path: [Step; MAX_PLAN],
+    plen: u8,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct Decision {
     pub use_hold: bool,
     pub placement: Placement,
+    /// The whole best line, starting with this move. Later steps are what the bot
+    /// expects to play if nothing new changes its mind.
+    pub plan: Vec<Step>,
 }
 
 pub struct Searcher {
@@ -100,11 +114,10 @@ impl Searcher {
     }
 
     /// Children of `node` for one piece choice, appended to `out`.
-    fn expand_piece(&mut self, node: &Node, piece: Piece, new_hold: Option<Piece>, next_qi: u8,
-                    root_moves: Option<(&mut Vec<(bool, Placement)>, bool)>, out: &mut Vec<Node>) {
+    fn expand_piece(&mut self, node: &Node, piece: Piece, new_hold: Option<Piece>, next_qi: u8, used_hold: bool,
+                    out: &mut Vec<Node>) {
         let mut buf = std::mem::take(&mut self.buf);
         self.mg.generate(&node.board, piece, &self.shapes, &mut buf);
-        let mut roots = root_moves;
         for p in &buf {
             let o = apply(&node.board, p, node.b2b, &self.rules, &self.shapes);
             if o.lock_out {
@@ -113,46 +126,29 @@ impl Searcher {
             self.nodes += 1;
             let reward = node.reward + o.attack as f32;
             let score = reward + self.value(&o.board, o.b2b);
-            let root = match roots.as_mut() {
-                Some((list, used_hold)) => {
-                    list.push((*used_hold, *p));
-                    (list.len() - 1) as u16
-                }
-                None => node.root,
-            };
-            out.push(Node { board: o.board, hold: new_hold, qi: next_qi, b2b: o.b2b, reward, score, root, dead: false });
+            let mut path = node.path;
+            let mut plen = node.plen;
+            if (plen as usize) < MAX_PLAN {
+                path[plen as usize] = Step { use_hold: used_hold, placement: *p };
+                plen += 1;
+            }
+            out.push(Node { board: o.board, hold: new_hold, qi: next_qi, b2b: o.b2b, reward, score, dead: false, path, plen });
         }
         self.buf = buf;
     }
 
-    fn expand(&mut self, node: &Node, queue: &[Piece], roots: Option<&mut Vec<(bool, Placement)>>, out: &mut Vec<Node>) {
+    fn expand(&mut self, node: &Node, queue: &[Piece], out: &mut Vec<Node>) {
         let qi = node.qi as usize;
         let before = out.len();
         let cur = queue[qi];
-        match roots {
-            Some(list) => {
-                self.expand_piece(node, cur, node.hold, qi as u8 + 1, Some((list, false)), out);
-                if self.cfg.use_hold {
-                    if let Some(h) = node.hold {
-                        if h != cur {
-                            self.expand_piece(node, h, Some(cur), qi as u8 + 1, Some((list, true)), out);
-                        }
-                    } else if qi + 1 < queue.len() {
-                        self.expand_piece(node, queue[qi + 1], Some(cur), qi as u8 + 2, Some((list, true)), out);
-                    }
+        self.expand_piece(node, cur, node.hold, qi as u8 + 1, false, out);
+        if self.cfg.use_hold {
+            if let Some(h) = node.hold {
+                if h != cur {
+                    self.expand_piece(node, h, Some(cur), qi as u8 + 1, true, out);
                 }
-            }
-            None => {
-                self.expand_piece(node, cur, node.hold, qi as u8 + 1, None, out);
-                if self.cfg.use_hold {
-                    if let Some(h) = node.hold {
-                        if h != cur {
-                            self.expand_piece(node, h, Some(cur), qi as u8 + 1, None, out);
-                        }
-                    } else if qi + 1 < queue.len() {
-                        self.expand_piece(node, queue[qi + 1], Some(cur), qi as u8 + 2, None, out);
-                    }
-                }
+            } else if qi + 1 < queue.len() {
+                self.expand_piece(node, queue[qi + 1], Some(cur), qi as u8 + 2, true, out);
             }
         }
         if out.len() == before {
@@ -174,11 +170,11 @@ impl Searcher {
         for &p in bag {
             kids.clear();
             // Either place the new piece, or (if hold is full) place hold and keep it.
-            self.expand_piece(node, p, node.hold, node.qi, None, &mut kids);
+            self.expand_piece(node, p, node.hold, node.qi, false, &mut kids);
             if self.cfg.use_hold {
                 if let Some(h) = node.hold {
                     if h != p {
-                        self.expand_piece(node, h, Some(p), node.qi, None, &mut kids);
+                        self.expand_piece(node, h, Some(p), node.qi, true, &mut kids);
                     }
                 }
             }
@@ -190,11 +186,11 @@ impl Searcher {
 
     /// `queue` = [current, previews...]; `bag` = pieces the first unseen draw can be.
     pub fn search(&mut self, board: &Board, queue: &[Piece], hold: Option<Piece>, b2b: i32, bag: &[Piece]) -> Option<Decision> {
-        let root = Node { board: *board, hold, qi: 0, b2b, reward: 0.0, score: 0.0, root: 0, dead: false };
-        let mut roots: Vec<(bool, Placement)> = Vec::new();
+        let empty = Step { use_hold: false, placement: Placement { piece: Piece::I, rot: 0, x: 0, y: 0, spin: crate::rules::Spin::None, kick: -1 } };
+        let root = Node { board: *board, hold, qi: 0, b2b, reward: 0.0, score: 0.0, dead: false, path: [empty; MAX_PLAN], plen: 0 };
         let mut beam = Vec::new();
-        self.expand(&root, queue, Some(&mut roots), &mut beam);
-        if roots.is_empty() {
+        self.expand(&root, queue, &mut beam);
+        if beam.iter().all(|n| n.dead) {
             return None;
         }
         let plies = self.cfg.depth.max(1).min(queue.len());
@@ -208,7 +204,7 @@ impl Searcher {
                     next.push(*node);
                     continue;
                 }
-                self.expand(node, queue, None, &mut next);
+                self.expand(node, queue, &mut next);
             }
             beam = next;
         }
@@ -225,9 +221,9 @@ impl Searcher {
             }
             beam[..k].sort_by(|a, b| b.score.total_cmp(&a.score));
         }
-        let best = beam[0];
-        let (use_hold, placement) = roots[best.root as usize];
-        Some(Decision { use_hold, placement })
+        let best = &beam[0];
+        let plan = best.path[..best.plen as usize].to_vec();
+        Some(Decision { use_hold: plan[0].use_hold, placement: plan[0].placement, plan })
     }
 }
 

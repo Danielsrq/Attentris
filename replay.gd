@@ -176,10 +176,38 @@ func _show() -> void:
 			hud.on_placement(game.last_result, 0)
 		hud.queue_redraw()
 	if board_view != null:
+		board_view.plan = _plan_for(step)
 		board_view.queue_redraw()
 	if info != null:
 		info.queue_redraw()
 	_refresh_controls()
+
+## The bot's forecast for this record, minus step 0 (the piece actually being placed,
+## which the board already shows). Human replays have no `plan`, so this is empty.
+func _plan_for(step: Dictionary) -> Array:
+	var out: Array = []
+	for s in step.get("plan", []):
+		var k := int(s.get("k", 0))
+		if k == 0:
+			continue
+		var d := log._def(s.get("type", null))
+		if d == null:
+			continue
+		var cells: Array = []
+		for c in s.get("cells", []):
+			cells.append(Vector2i(int(c[0]), int(c[1])))
+		out.append({"k": k, "def": d, "cells": cells})
+	return out
+
+## Planned clears after this piece, e.g. "2 Quad  4 T-Spin Double", for the info panel.
+func _plan_text(step: Dictionary) -> String:
+	var parts: Array = []
+	for s in step.get("plan", []):
+		var k := int(s.get("k", 0))
+		var name := String(s.get("clear", ""))
+		if k > 0 and name != "":
+			parts.append("%d %s" % [k, name])
+	return "  ".join(parts) if not parts.is_empty() else "-"
 
 ## A ClearResult built from the recorded spin and line count, so the existing Hud can
 ## name the outcome ("T-Spin Double") from dataset facts rather than a re-derivation.
@@ -274,6 +302,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_G:
 			if board_view != null:
 				board_view.show_grid = not board_view.show_grid
+				board_view.queue_redraw()
+		KEY_P:
+			if board_view != null:
+				board_view.show_plan = not board_view.show_plan
 				board_view.queue_redraw()
 		_:
 			return
@@ -530,6 +562,8 @@ func info_rows() -> Array:
 		var res := _result_for(step)
 		rows.append(["clear", res.describe() if res != null else "-",
 			Color(0.65, 0.85, 0.65)])
+	if step.has("plan"):
+		rows.append(["planned", _plan_text(step), Color(0.75, 0.75, 0.95)])
 	if _load_ms > 0.0:
 		rows.append(["", ""])
 		rows.append(["dataset", "%d samples, %.0f ms" % [_sample_total, _load_ms]])
