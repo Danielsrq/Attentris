@@ -175,11 +175,45 @@ pub struct Rules {
     /// "guideline" preset, T-spins only.
     pub all_spin: bool,
     pub perfect_clear_bonus: i32,
+    /// All-spin mode (RuleSet.allspin_full): every Mini is promoted to a full spin.
+    pub promote_minis: bool,
+    /// All-spin mode (RuleSet.repeat_penalty): two consecutive clears of the same type
+    /// wound the bottom in-play row for `wound_clears` clears.
+    pub repeat_penalty: bool,
+    pub wound_clears: u8,
 }
 
 impl Default for Rules {
     fn default() -> Self {
-        Rules { b2b: B2bMode::Sqrt, all_spin: true, perfect_clear_bonus: 10 }
+        Rules {
+            b2b: B2bMode::Sqrt,
+            all_spin: true,
+            perfect_clear_bonus: 10,
+            promote_minis: false,
+            repeat_penalty: false,
+            wound_clears: 10,
+        }
+    }
+}
+
+impl Rules {
+    /// The all-spin preset: every piece spins (O excepted in practice), Minis count as
+    /// full, and repeating a clear type wounds a row.
+    pub fn allspin() -> Rules {
+        Rules { all_spin: true, promote_minis: true, repeat_penalty: true, ..Rules::default() }
+    }
+}
+
+/// Clear type for the repeat penalty: piece + lines + spin. All non-spin clears of the
+/// same size share one type whatever the piece (double -> double repeats, single ->
+/// double does not); spins are per piece (TSD -> ZSD does not repeat). 0 = no clear.
+pub fn clear_type(piece: Piece, spin: Spin, lines: u32) -> u8 {
+    if lines == 0 {
+        0
+    } else if spin == Spin::None {
+        lines as u8
+    } else {
+        ((piece as u8 + 1) << 3) | ((spin as u8) << 6) | lines as u8
     }
 }
 

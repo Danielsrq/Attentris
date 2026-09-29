@@ -118,6 +118,10 @@ pub struct Stats {
     /// Moves where the previous search had a prediction, and how many it got right.
     pub plan_checks: u64,
     pub plan_kept: u64,
+    /// All-spin mode: clears that repeated the previous type, and the most wound
+    /// lines live at once.
+    pub repeats: u64,
+    pub max_wounds: u32,
 }
 
 impl Stats {
@@ -144,6 +148,8 @@ impl Stats {
         self.think_us.extend_from_slice(&o.think_us);
         self.plan_checks += o.plan_checks;
         self.plan_kept += o.plan_kept;
+        self.repeats += o.repeats;
+        self.max_wounds = self.max_wounds.max(o.max_wounds);
     }
     pub fn app(&self) -> f64 {
         self.attack as f64 / self.pieces.max(1) as f64
@@ -170,14 +176,48 @@ impl Colors {
         }
         self.0 = out;
     }
-    fn push_garbage(&mut self, holes: &[i32]) {
-        let (w, h, n) = (W as usize, H as usize, holes.len());
-        self.0.copy_within(n * w.., 0);
+    /// Garbage enters above the wound block, as Board::push_garbage.
+    fn push_garbage(&mut self, holes: &[i32], wounds: usize) {
+        let (w, n) = (W as usize, holes.len());
+        let floor = H as usize - wounds;
+        self.0.copy_within(n * w..floor * w, 0);
         for (i, &hole) in holes.iter().enumerate() {
-            let y = h - 1 - i;
+            let y = floor - 1 - i;
             for x in 0..w {
                 self.0[y * w + x] = if x as i32 == hole { b'.' } else { b'G' };
             }
+        }
+    }
+}
+
+/// Colour-grid side of the wound block, mirroring Board::add_wound / tick_wounds:
+/// wound rows show as 'W' and their real colours are parked here, oldest first.
+struct WoundColors(Vec<[u8; W as usize]>);
+
+impl WoundColors {
+    fn wound(&mut self, c: &mut Colors, wounds_before: usize) {
+        let w = W as usize;
+        let r = H as usize - 1 - wounds_before;
+        let mut row = [b'.'; W as usize];
+        row.copy_from_slice(&c.0[r * w..(r + 1) * w]);
+        self.0.push(row);
+        c.0[r * w..(r + 1) * w].fill(b'W');
+    }
+    fn heal(&mut self, c: &mut Colors, wounds_before: usize) {
+        let w = W as usize;
+        let top = H as usize - wounds_before;
+        let row = self.0.remove(0);
+        c.0[top * w..(top + 1) * w].copy_from_slice(&row);
+    }
+}
+
+/// The colour grid must agree with the bitboard cell for cell ('W' rows are solid).
+fn check_colors(c: &Colors, b: &Board) {
+    for y in 0..H as usize {
+        for x in 0..W as usize {
+            let filled = b.rows[y] >> x & 1 != 0;
+            let shown = c.0[y * W as usize + x] != b'.';
+            assert_eq!(filled, shown, "colour grid out of sync at ({}, {})", x, y);
         }
     }
 }
@@ -196,6 +236,7 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
     let mut grng = Rng::new(cfg.seed ^ 0xC0FFEE);
     let mut board = Board::default();
     let mut colors = Colors([b'.'; (W * H) as usize]);
+    let mut wcolors = WoundColors(Vec::new());
     let mut hold: Option<Piece> = None;
     let mut b2b = -1;
     let mut drawn = 0usize; // index of the next piece to spawn
@@ -219,8 +260,8 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
             }
             holes.push(*hole);
         }
+        colors.push_garbage(&holes, board.wounds as usize);
         board.push_garbage(&holes);
-        colors.push_garbage(&holes);
     };
     if cfg.garbage.start_rows > 0 {
         let n = cfg.garbage.start_rows;
@@ -235,7 +276,7 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
             holes.push(h);
         }
         board.push_garbage(&holes);
-        colors.push_garbage(&holes);
+        colors.push_garbage(&holes, 0);
         garbage_rows_total += n as u64;
         garbage_left += n as u64;
         stats.garbage_in += n as u64;
@@ -257,6 +298,11 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         // Board as it stood at SPAWN, which is what the viewer draws the piece onto.
         let spawn_rows: Vec<String> =
             if cfg.record { (0..H as usize).map(|y| colors.row_string(y)).collect() } else { Vec::new() };
+        // Wound lines at spawn, oldest first: board row and clears left before it heals.
+        let wounds_json = (0..board.wounds as usize)
+            .map(|i| format!("{{\"row\":{},\"left\":{}}}", H as usize - board.wounds as usize + i, board.wound_left[i]))
+            .collect::<Vec<_>>()
+            .join(",");
 
         let nodes_before = searcher.nodes;
         let t0 = std::time::Instant::now();
@@ -307,13 +353,25 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         }
         let g_before = count_garbage_rows(&colors, o.cleared);
         colors.clear_rows(o.cleared);
+        // Wounds, in the same order Board applied them: heal, then wound.
+        let mut nw = board.wounds as usize;
+        for _ in 0..o.healed {
+            wcolors.heal(&mut colors, nw);
+            nw -= 1;
+        }
+        if o.repeat {
+            wcolors.wound(&mut colors, nw);
+            stats.repeats += 1;
+        }
+        check_colors(&colors, &o.board);
+        stats.max_wounds = stats.max_wounds.max(o.board.wounds as u32);
         stats.garbage_cleared += g_before;
         garbage_left = garbage_left.saturating_sub(g_before);
 
         stats.pieces += 1;
         stats.attack += o.attack as i64;
         stats.lines += o.lines as u64;
-        tally(&mut stats, p.piece, p.spin, o.lines);
+        tally(&mut stats, p.piece, o.spin, o.lines);
         if o.lines > 0 && o.board.is_empty() {
             stats.perfect += 1;
         }
@@ -324,7 +382,7 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         if cfg.record {
             write_record(&mut out, cfg, n, &spawn_rows,
                 spawned, &queue[1..], spawn_hold, d.use_hold, &p, &shapes, &o, hold,
-                (1..6).map(|i| bag.get(drawn + i - 1)).collect(), garbage_rows_total, h, garbage_left, &plan_json);
+                (1..6).map(|i| bag.get(drawn + i - 1)).collect(), garbage_rows_total, h, garbage_left, &plan_json, &wounds_json);
         }
         board = o.board;
         b2b = o.b2b;
@@ -359,7 +417,7 @@ fn plan_to_json(board: &Board, plan: &[crate::search::Step], b2b: i32, searcher:
             .collect::<Vec<_>>()
             .join(",");
         let o = apply(&b, p, chain, &searcher.rules, shapes);
-        let name = describe(p.piece, p.spin, o.lines);
+        let name = describe(p.piece, o.spin, o.lines);
         steps.push(format!(
             "{{\"k\":{},\"type\":\"{}\",\"hold\":{},\"cells\":[{}],\"clear\":\"{}\",\"attack\":{}}}",
             k, p.piece.letter(), s.use_hold, cells, name, o.attack
@@ -419,7 +477,7 @@ fn tally(s: &mut Stats, piece: Piece, spin: Spin, lines: u32) {
 fn write_record(out: &mut String, cfg: &GameConfig, n: usize, board_rows: &[String], spawned: Piece, previews: &[Piece],
                 spawn_hold: Option<Piece>, used_hold: bool, p: &crate::board::Placement, shapes: &crate::rules::Shapes,
                 o: &crate::search::Outcome, lock_hold: Option<Piece>, lock_queue: Vec<Piece>, garbage_rows: u64,
-                height: i32, garbage_left: u64, plan: &str) {
+                height: i32, garbage_left: u64, plan: &str, wounds: &str) {
     let q = |v: &[Piece]| v.iter().map(|p| format!("\"{}\"", p.letter())).collect::<Vec<_>>().join(",");
     let opt = |p: Option<Piece>| p.map_or("null".to_string(), |p| format!("\"{}\"", p.letter()));
     let cells = p.abs_cells(shapes).iter().map(|(x, y)| format!("[{},{}]", x, y)).collect::<Vec<_>>().join(",");
@@ -430,7 +488,7 @@ fn write_record(out: &mut String, cfg: &GameConfig, n: usize, board_rows: &[Stri
         }
     }
     let board = board_rows.iter().map(|r| format!("\"{}\"", r)).collect::<Vec<_>>().join(",");
-    let name = describe(p.piece, p.spin, o.lines);
+    let name = describe(p.piece, o.spin, o.lines);
     let _ = writeln!(
         out,
         "{{\"replay\":\"{label}_s{seed}\",\"user\":\"bot\",\"mods\":\"{label}\",\"tier\":\"strict\",\"n\":{n},\"frame\":{frame},\
@@ -438,7 +496,7 @@ fn write_record(out: &mut String, cfg: &GameConfig, n: usize, board_rows: &[Stri
 \"place\":{{\"type\":\"{ptype}\",\"x\":{px},\"y\":{py},\"r\":{pr},\"spin\":\"{spin}\",\"kick\":{kick},\"soft\":false,\"cells\":[{cells}]}},\
 \"cleared\":{lines},\"cleared_rows\":[{cleared}],\"spin\":\"{spin}\",\"lock_queue\":[{lq}],\"lock_hold\":{lh},\"lock_hold_locked\":{used},\
 \"sealed\":0,\"height\":{height},\"hole_run\":0,\"q_depth\":{gleft},\"recovered\":false,\"garbage_rows\":{grows},\"q_last_zero\":-1,\
-\"attack\":{attack},\"b2b\":{b2b},\"clear\":\"{name}\",\"plan\":{plan}}}",
+\"attack\":{attack},\"b2b\":{b2b},\"clear\":\"{name}\",\"repeat\":{repeat},\"wounds\":[{wounds}],\"plan\":{plan}}}",
         label = cfg.label,
         seed = cfg.seed,
         n = n,
@@ -452,7 +510,7 @@ fn write_record(out: &mut String, cfg: &GameConfig, n: usize, board_rows: &[Stri
         px = p.x,
         py = p.y,
         pr = p.rot,
-        spin = if o.lines > 0 || p.spin != Spin::None { p.spin.name() } else { "none" },
+        spin = if o.lines > 0 || o.spin != Spin::None { o.spin.name() } else { "none" },
         kick = p.kick,
         cells = cells,
         lines = o.lines,
@@ -466,5 +524,7 @@ fn write_record(out: &mut String, cfg: &GameConfig, n: usize, board_rows: &[Stri
         b2b = o.b2b,
         name = name,
         plan = if plan.is_empty() { "[]" } else { plan },
+        repeat = o.repeat,
+        wounds = wounds,
     );
 }

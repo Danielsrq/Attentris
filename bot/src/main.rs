@@ -12,6 +12,8 @@
 //!   --weights FILE          (see `bot weights` for the format)
 //!   --b2b sqrt|flat         sqrt = floor(sqrt(chain)) as attack_table.gd (default); flat = +1
 //!   --no-allspin            T-spins only (RuleSet.guideline()); default is all-spin on
+//!   --mode allspin          every spin full (Minis promoted), repeat-penalty wound lines
+//!   --wound-clears N        clears a wound line lasts (default 10)
 //!   --garbage E,R,M         inject R rows every E pieces, hole moves with prob M
 //!   --cheese N              start with N rows of messy garbage
 
@@ -75,8 +77,16 @@ fn search_config(a: &Args) -> SearchConfig {
 }
 
 fn rules(a: &Args) -> Rules {
-    let mut r = Rules::default();
-    r.all_spin = !a.has("no-allspin");
+    let mut r = match a.str("mode") {
+        Some("allspin") => Rules::allspin(),
+        Some("standard") => Rules { all_spin: false, ..Rules::default() },
+        Some("competitive") | None => Rules::default(),
+        Some(m) => panic!("unknown --mode {} (standard | competitive | allspin)", m),
+    };
+    if a.has("no-allspin") {
+        r.all_spin = false;
+    }
+    r.wound_clears = a.get("wound-clears", r.wound_clears);
     if a.str("b2b") == Some("flat") {
         r.b2b = B2bMode::Flat;
     }
@@ -137,8 +147,8 @@ fn run_games(sc: &SearchConfig, w: &Weights, r: Rules, g: &GarbageConfig, games:
 
 fn summary_header() {
     println!(
-        "{:<22} {:>6} {:>5} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>5} {:>7}",
-        "config", "APP", "died", "pcs", "quad%", "TSD%", "TST%", "TSS%", "mini%", "spin%", "1-3%", "gbclr", "b2b", "ms/pc"
+        "{:<22} {:>6} {:>5} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>5} {:>5} {:>4} {:>7}",
+        "config", "APP", "died", "pcs", "quad%", "TSD%", "TST%", "TSS%", "mini%", "spin%", "1-3%", "gbclr", "b2b", "rep%", "wnd", "ms/pc"
     );
 }
 
@@ -150,7 +160,7 @@ fn summary_row(name: &str, st: &[Stats], secs: f64) {
     let died = st.iter().filter(|s| s.died).count();
     let per = |n: u64| 100.0 * n as f64 / t.pieces.max(1) as f64;
     println!(
-        "{:<22} {:>6.3} {:>2}/{:<2} {:>6.0} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6} {:>5} {:>7.2}",
+        "{:<22} {:>6.3} {:>2}/{:<2} {:>6.0} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6} {:>5} {:>5.2} {:>4} {:>7.2}",
         name,
         t.app(),
         died,
@@ -165,6 +175,8 @@ fn summary_row(name: &str, st: &[Stats], secs: f64) {
         per(t.singles + t.doubles + t.triples),
         format!("{}/{}", t.garbage_cleared, t.garbage_in),
         t.max_b2b,
+        per(t.repeats),
+        t.max_wounds,
         1000.0 * secs / t.pieces.max(1) as f64 * threads_used() as f64,
     );
 }

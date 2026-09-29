@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use crate::board::{Board, Placement};
 use crate::eval::{features, Weights};
 use crate::movegen::MoveGen;
-use crate::rules::{next_b2b, Piece, Rules, Shapes, BUFFER};
+use crate::rules::{clear_type, next_b2b, Piece, Rules, Shapes, Spin, BUFFER};
 
 #[derive(Clone, Debug)]
 pub struct SearchConfig {
@@ -88,6 +88,12 @@ pub struct Outcome {
     pub attack: i32,
     pub b2b: i32,
     pub lock_out: bool,
+    /// The spin as scored (a Mini promoted to Full in all-spin mode).
+    pub spin: Spin,
+    /// This clear repeated the previous clear's type and wounded a row.
+    pub repeat: bool,
+    /// Wound lines that healed on this clear.
+    pub healed: u32,
 }
 
 pub fn apply(board: &Board, p: &Placement, b2b: i32, rules: &Rules, shapes: &Shapes) -> Outcome {
@@ -95,11 +101,24 @@ pub fn apply(board: &Board, p: &Placement, b2b: i32, rules: &Rules, shapes: &Sha
     let cells = p.cells(shapes);
     // Lock-out (Game.lock_piece): the piece rests entirely in the buffer.
     let all_in_buffer = cells.iter().all(|&(_, dy)| (p.y as i32 + dy as i32) < BUFFER);
+    let spin = if rules.promote_minis && p.spin == Spin::Mini { Spin::Full } else { p.spin };
     let (lines, cleared) = nb.place(cells, p.x as i32, p.y as i32);
-    let nb2 = next_b2b(b2b, p.spin, lines);
+    let nb2 = next_b2b(b2b, spin, lines);
     let perfect = lines > 0 && nb.is_empty();
-    let attack = rules.attack(p.piece, p.spin, lines, nb2, perfect);
-    Outcome { board: nb, lines, cleared, attack, b2b: nb2, lock_out: all_in_buffer && lines == 0 }
+    let attack = rules.attack(p.piece, spin, lines, nb2, perfect);
+    let (mut repeat, mut healed) = (false, 0);
+    if rules.repeat_penalty && lines > 0 {
+        // Order per the rules: lines are gone, every wound counts down (healing the
+        // oldest at 0), then a repeat wounds the new bottom in-play row.
+        healed = nb.tick_wounds();
+        let t = clear_type(p.piece, spin, lines);
+        if nb.last_clear == t {
+            nb.add_wound(rules.wound_clears);
+            repeat = true;
+        }
+        nb.last_clear = t;
+    }
+    Outcome { board: nb, lines, cleared, attack, b2b: nb2, lock_out: all_in_buffer && lines == 0, spin, repeat, healed }
 }
 
 impl Searcher {
