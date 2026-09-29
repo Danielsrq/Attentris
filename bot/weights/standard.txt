@@ -1,0 +1,18 @@
+# tuned by `bot tune`, gen 19, fitness (APP on training seeds) of distribution mean below
+holes        -1.8747
+hole_rows    0.0246
+cover        0.2496
+bump         0.2703
+bump_sq      -0.1714
+row_trans    -0.4696
+col_trans    -0.4510
+max_height   0.1186
+danger       -0.5072
+well_rows    1.1543
+extra_wells  -0.4401
+t_single     0.6277
+t_double     1.7613
+t_triple     0.6422
+t_fill       0.4042
+b2b          3.7631
+b2b_level    0.0425
