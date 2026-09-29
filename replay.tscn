@@ -1,0 +1,23 @@
+[gd_scene format=3 uid="uid://c6jg634ni8oog"]
+
+[ext_resource type="Script" uid="uid://b7nq3d6h5icir" path="res://replay.gd" id="1_replay"]
+[ext_resource type="Script" uid="uid://dj0ewmu2bvd6d" path="res://view/board_view.gd" id="2_boardview"]
+[ext_resource type="Script" uid="uid://c4j0j6j4psjr7" path="res://view/hud.gd" id="3_hud"]
+[ext_resource type="Script" uid="uid://dojhw1qrv1vry" path="res://view/replay_info.gd" id="4_info"]
+[ext_resource type="Script" uid="uid://b0bv2kg3ov1hi" path="res://view/replay_controls.gd" id="5_controls"]
+
+[node name="Replay" type="Node2D" unique_id=356273986]
+script = ExtResource("1_replay")
+dataset_path = "res://data/zenith_recovered.jsonl"
+
+[node name="BoardView" type="Node2D" parent="." unique_id=1313805946]
+script = ExtResource("2_boardview")
+
+[node name="Hud" type="Node2D" parent="." unique_id=972156907]
+script = ExtResource("3_hud")
+
+[node name="ReplayInfo" type="Node2D" parent="." unique_id=670013324]
+script = ExtResource("4_info")
+
+[node name="ReplayControls" type="CanvasLayer" parent="." unique_id=2075311113]
+script = ExtResource("5_controls")

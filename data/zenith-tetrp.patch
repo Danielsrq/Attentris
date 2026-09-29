@@ -1,0 +1,272 @@
+diff --git a/src/attack.js b/src/attack.js
+index 08b1712..45bf408 100644
+--- a/src/attack.js
++++ b/src/attack.js
+@@ -16,12 +16,16 @@ export function send(s, amount, player = 'P1', target = 'P2') {
+   (s.outgoing[target] ??= []).push({ iid, amt: amount });
+   s.outbox.push({ type: 'garbage', from: player, to: target, iid, ackiid: s.incoming[target] ?? 0, amt: amount });
+ }
+-export function receive(s, event) {
++export function receive(s, event, ackCancels = true) {
+   if (typeof event.from !== 'string' || !Number.isInteger(event.iid) || event.iid < 0 || !Number.isInteger(event.amt) || event.amt < 0) throw new TypeError('Invalid interaction');
+   const peer = event.from, ack = event.ackiid ?? 0;
+   let amount = event.amt;
+   s.incoming[peer] = Math.max(s.incoming[peer] ?? 0, event.iid);
+-  s.outgoing[peer] = (s.outgoing[peer] ?? []).filter(record => {
++  // The 1v1 handshake lets attack already in flight annihilate the peer's attack
++  // mid-air. Zenith has no peer: attack goes UP the tower while garbage comes down
++  // from it, so nothing here may absorb an arrival. Cancellation still happens, but
++  // through fight() against pending packets, which is the mechanic players see.
++  if (ackCancels) s.outgoing[peer] = (s.outgoing[peer] ?? []).filter(record => {
+     if (record.iid <= ack) return false;
+     const use = Math.min(record.amt, amount); amount -= use; record.amt -= use;
+     return record.amt > 0;
+@@ -29,7 +33,7 @@ export function receive(s, event) {
+   if (!amount) return null;
+   const cid = ++s.cid;
+   s.pending.push({ cid, sender: peer, iid: event.iid, ackiid: ack, amt: amount, active: false,
+-    hardened: false, shielded: false, column: null, status: 'spawn', confirmFrame: null, activeFrame: null });
++    hardened: false, shielded: false, column: event.column ?? null, status: 'spawn', confirmFrame: null, activeFrame: null });
+   return cid;
+ }
+ export function fight(s, amount, rules, holes, player = 'P1', target = 'P2') {
+diff --git a/src/engine.js b/src/engine.js
+index 30b663c..94dc996 100644
+--- a/src/engine.js
++++ b/src/engine.js
+@@ -29,7 +29,10 @@ export class Engine {
+       bag: createBag(seed), holes: createHoles(seed), hold: { piece: null, locked: false },
+       piece: null, input: { held: {}, left: { das: 0, arr: h.arr }, right: { das: 0, arr: h.arr }, last: null },
+       initial: { irs: 0, ihs: false }, waiting: [], nextWillTank: false, garbageLockedUntil: 0,
+-      attack: mode === 'tl' ? A.createAttack() : null, g: mode === 'blitz' ? blitzGravity(1) : config.g, glock: 0,
++      // Zenith is solo but receives garbage, so it needs attack state. Its
++      // conformance markers stay 'unknown': the tl attack/B2B values are inherited,
++      // not verified for this mode.
++      attack: (mode === 'tl' || config.zenith) ? A.createAttack() : null, g: mode === 'blitz' ? blitzGravity(1) : config.g, glock: 0,
+       stats: { pieces: 0, lines: 0, score: mode === 'tl' ? 0 : null, dropScore: 0, holds: 0, level: 1, levelLines: 0 },
+       lastClear: false, lastReceived: 0, playing: true, success: false, reason: null,
+     };
+@@ -53,7 +56,10 @@ export class Engine {
+     if (s.subframe >= 1 || !s.input || !s.handling || !s.stats || !s.initial || !s.hold || !s.conformance) throw new TypeError('Incomplete checkpoint');
+     const solo = s.rules.mode !== 'tl';
+     for (const key of ['aggregateScore','attack','b2b']) if (s.conformance[key] !== (solo ? 'unknown' : 'covered-tl')) throw new TypeError('Invalid conformance marker');
+-    if (solo ? s.attack !== null || s.stats.score !== null || s.nextWillTank : !s.attack || typeof s.stats.score !== 'number') throw new TypeError('Invalid mode-specific checkpoint');
++    const soloNoGarbage = solo && !s.rules.zenith;
++    if (soloNoGarbage ? s.attack !== null || s.stats.score !== null || s.nextWillTank
++        : solo ? !s.attack || s.stats.score !== null
++        : !s.attack || typeof s.stats.score !== 'number') throw new TypeError('Invalid mode-specific checkpoint');
+     if (typeof s.stats.dropScore !== 'number' || s.stats.dropScore < 0) throw new TypeError('Invalid drop score');
+     if (!Array.isArray(s.queuedInputs) || s.eventCursor > s.queuedInputs.length || !Array.isArray(s.waiting) || s.waiting.some(w => !Number.isInteger(w.target) || !['are','incoming-attack-hit'].includes(w.type))) throw new TypeError('Invalid checkpoint events');
+     if (solo && s.waiting.some(w => w.type !== 'are')) throw new TypeError('Unsupported solo garbage wait');
+@@ -280,9 +286,14 @@ export class Engine {
+     } else throw new TypeError('Unsupported wait in checkpoint');
+   }
+   requireTL() {
++    // Zenith is solo but DOES take garbage, so it needs this machinery. The values
++    // solo.json declines to supply (attack/B2B) are inherited from tl here, which is
++    // exactly what this guard was warning against -- so any divergence in cancellation
++    // or B2B is expected to surface as a mismatch, not to pass silently.
++    if (this.state.rules.zenith) return;
+     if (this.state.rules.mode !== 'tl') throw new UnknownBehavior('Solo attack/garbage semantics are unsupported');
+   }
+-  receive(event) { this.requireTL(); return A.receive(this.state.attack,event); }
++  receive(event) { this.requireTL(); return A.receive(this.state.attack,event,!this.state.rules.zenith); }
+   confirm(cid) {
+     this.requireTL();
+     const s = this.state, packet = s.attack.pending.find(p => p.cid === cid);
+@@ -323,7 +334,9 @@ export class Engine {
+     if (lines) this.emit('remove-lines',{rows,allClear});
+     s.lastClear = lines > 0; s.lastReceived = 0; s.stats.lines += lines;
+     // Geometry/counters/progression are independent of unknown solo aggregates.
+-    const delay = s.rules.mode === 'tl' ? this.resolveTLPlacement(lines,allClear,garbageRows)
++    // Zenith needs the full placement resolution: without it nothing sets
++    // nextWillTank, so received garbage never enters the board at all.
++    const delay = (s.rules.mode === 'tl' || s.rules.zenith) ? this.resolveTLPlacement(lines,allClear,garbageRows)
+       : (lines ? s.rules.lineclear_are : s.rules.are);
+     if (lockout && !s.rules.nolockout && (!lines || !s.rules.clutch)) { this.die('lockout'); return; }
+     if (s.rules.levels) {
+@@ -345,7 +358,8 @@ export class Engine {
+     if (s.rules.garbageentry === 'delayed') delay = Math.max(delay,s.lastReceived*s.rules.garbageare);
+     // Score tables are specified; exact finesse indexing is intentionally deferred.
+     const scoreTable = p.spin === 'full' ? [400,800,1200,1600,2600] : p.spin === 'mini' ? [100,200,400,800,1600] : [0,100,300,500,800];
+-    s.stats.score += ((scoreTable[lines] ?? 0)*(result.b2bBonus ? 1.5 : 1) + 50*Math.max(0,s.attack.combo-1) + (allClear ? 3500 : 0))*s.stats.level;
++    // Solo score stays null: Zenith scores altitude, not this table.
++    if (s.stats.score !== null) s.stats.score += ((scoreTable[lines] ?? 0)*(result.b2bBonus ? 1.5 : 1) + 50*Math.max(0,s.attack.combo-1) + (allClear ? 3500 : 0))*s.stats.level;
+     return delay;
+   }
+ }
+diff --git a/src/replay/parser.js b/src/replay/parser.js
+index b7f3b67..b073668 100644
+--- a/src/replay/parser.js
++++ b/src/replay/parser.js
+@@ -57,15 +57,15 @@ function stream(value, path) {
+     }
+     if (e.type === 'ige') {
+       for(const key of Object.keys(e.data))if(!['id','frame','type','data'].includes(key))fail('UNSUPPORTED_SCHEMA',p,`Unknown IGE field ${key}`);
+-      if (!['target','allow_targeting','interaction','interaction_confirm'].includes(e.data.type)) fail('UNSUPPORTED_EVENT',p,`ige:${e.data.type}`);
++      if (!['target','allow_targeting','interaction','interaction_confirm','kev'].includes(e.data.type)) fail('UNSUPPORTED_EVENT',p,`ige:${e.data.type}`);
+       integer(e.data.id,`${p}.data.id`); integer(e.data.frame,`${p}.data.frame`); object(e.data.data,`${p}.data.data`);
+       const d = e.data.data;
+       if (e.data.type === 'target' && (!Array.isArray(d.targets) || d.targets.some(t=>!Number.isSafeInteger(t)))) fail('MALFORMED',p,'Invalid targets');
+       if (e.data.type === 'allow_targeting' && typeof d.value !== 'boolean') fail('MALFORMED',p,'Invalid targeting flag');
+       if (e.data.type.startsWith('interaction')) {
+-        for(const key of Object.keys(d))if(!['type','amt','gameid','frame','cid','iid','ackiid','x','y','size'].includes(key))fail('UNSUPPORTED_SCHEMA',p,`Unknown interaction field ${key}`);
++        for(const key of Object.keys(d))if(!['type','amt','gameid','frame','cid','iid','ackiid','x','y','size','zthalt'].includes(key))fail('UNSUPPORTED_SCHEMA',p,`Unknown interaction field ${key}`);
+         if (d.type !== 'garbage') fail('UNSUPPORTED_EVENT',p,`interaction:${d.type}`);
+-        for (const k of ['amt','gameid','frame','cid','iid','ackiid']) integer(d[k],`${p}.data.data.${k}`);
++        for (const k of ['amt','gameid','frame','cid','iid','ackiid']) if (k in d) integer(d[k],`${p}.data.data.${k}`);
+         if('size' in d && d.size!==1)fail('UNSUPPORTED_SCHEMA',p,'Only unit-size garbage interactions supported');
+       }
+     }
+@@ -84,7 +84,7 @@ export function parseReplay(text) {
+   try { data = JSON.parse(text); } catch { fail('MALFORMED_JSON','$','Invalid JSON'); }
+   object(data,'$');
+   if (data.version !== 1) fail('UNSUPPORTED_VERSION','$.version','Expected container v1');
+-  if (!['40l','league'].includes(data.gamemode)) fail('UNSUPPORTED_MODE','$.gamemode',String(data.gamemode));
++  if (!['40l','league','zenith'].includes(data.gamemode)) fail('UNSUPPORTED_MODE','$.gamemode',String(data.gamemode));
+   object(data.replay,'$.replay');
+   const multi = data.gamemode === 'league';
+   if (multi && (!Array.isArray(data.replay.rounds) || !data.replay.rounds.length)) fail('MALFORMED','$.replay.rounds','Expected rounds');
+diff --git a/src/replay/profile.js b/src/replay/profile.js
+index 2188735..265e942 100644
+--- a/src/replay/profile.js
++++ b/src/replay/profile.js
+@@ -62,16 +62,31 @@ export function projectAnchor(data, {preSpawn=false, solo=false} = {}) {
+ /** v19 compatibility behavior for observed v15 solo and v19 1v1 variants. */
+ export function prepareReplay(player) {
+   const stream=player.stream, raw=orderedEvents(player), end=raw.find(e=>e.type==='end');
+-  const mode=player.gamemode==='league'?'tl':player.gamemode==='40l'?'40l':null;
+-  if(!mode || mode==='tl' && stream.options.version!==19 || mode==='40l' && stream.options.version!==15)fail('gamemode/version','Unsupported profile combination');
++  const isZenith=player.gamemode==='zenith';
++  // Zenith is pseudo-versus: hasgarbage, attack, B2B and cancellation are all the
++  // TL machinery, and its options declare hasgarbage:true exactly as league does.
++  // Mapping it to the solo 40l profile starved it of placement resolution.
++  const mode=(player.gamemode==='league'||isZenith)?'tl':player.gamemode==='40l'?'40l':null;
++  if(!mode || mode==='tl' && stream.options.version!==19 || mode==='40l' && ![15,19].includes(stream.options.version))fail('gamemode/version','Unsupported profile combination');
+   if (![15,19].includes(stream.options.version)) fail('options.version','Unsupported gameplay version');
+   const options={...stream.options,...end.data.options};
+   for(const key of Object.keys(stream.options)) if(end.data.options && key in end.data.options && JSON.stringify(stream.options[key])!==JSON.stringify(end.data.options[key])) fail(`options.${key}`,'Initial/end option disagreement');
+   const base=ruleset(mode), rules={};
+   for(const [key,value] of Object.entries(options)) {
+     if(['version','seed','handling','gameid','anchorseed','no_szo','stride'].includes(key)) continue;
++    // Zenith mode flags and garbage-GENERATION settings. Every garbage arrival is
++    // recorded explicitly (column, amount, frame), so the rules that produced them
++    // are replayed, not re-derived.
++    // Zenith mode flags plus the options that only govern how garbage is GENERATED.
++    // Every arrival is recorded with its own column and amount, so generation is
++    // replayed rather than re-derived. Options that govern how received garbage
++    // ENTERS the board (garbageentry/cap/speed) and gravity (gincrease) are NOT
++    // skipped -- they change the board and must pass through.
++    if(isZenith && (key==='zenith'||key.startsWith('zenith_')||key.startsWith('TEMP_zenith')||
++      key.startsWith('messiness_')||
++      ['receivemultiplier','cancelmultiplier','passthrough','openerphase','roundmode'].includes(key))) continue;
+     if(metadata.has(key)) continue;
+-    if(key==='hasgarbage'){if(value!==(mode==='tl'))fail(key,'Mode/garbage disagreement');continue;}
++    if(key==='hasgarbage'){if(!isZenith && value!==(mode==='tl'))fail(key,'Mode/garbage disagreement');continue;}
+     if(key==='objective_type' && value==='none'){rules.objective_type=null;continue;}
+     if(['objective_count','objective_time'].includes(key) && value===0)continue;
+     if(key==='levels' && value===false)continue;
+@@ -121,16 +136,38 @@ export function prepareReplay(player) {
+       const d=e.data;
+       if(seen.has(d.id)){events.push({...position,type:'metadata',kind:'duplicate-ige',ige:d});continue;}seen.add(d.id);
+       if(d.type==='target'){
+-        if(d.data.targets.length!==1)fail(`events[${e.sourceIndex}]`,'Only 1v1 targeting supported');
+-        targets.add(d.data.targets[0]);if(targets.size>1)fail('target','Changing target unsupported');
++        // Zenith is solo: there is nobody to target, so the list is empty and is
++        // re-emitted whenever the tower's population changes.
++        if(!isZenith && d.data.targets.length!==1)fail(`events[${e.sourceIndex}]`,'Only 1v1 targeting supported');
++        // Zenith retargets as the tower's population changes; who this player was
++        // aiming at has no effect on their own board.
++        if(!isZenith && d.data.targets.length===1){
++          targets.add(d.data.targets[0]);if(targets.size>1)fail('target','Changing target unsupported');
++        }
+         events.push({...position,type:'metadata',kind:'target',ige:d});
+       }else if(d.type==='allow_targeting'){
+         if(d.data.value)fail('allow_targeting','Interactive targeting unsupported');
+         events.push({...position,type:'metadata',kind:'allow_targeting',ige:d});
++      }else if(d.type==='kev'){
++        // Knockout notice -- who eliminated whom elsewhere in the tower. Carries no
++        // amt and never touches this player's board.
++        events.push({...position,type:'metadata',kind:'kev',ige:d});
+       }else{
+-        if(!targets.has(d.data.gameid))fail('interaction.gameid','Sender is not the single opponent');
+-        events.push({...position,type:d.type==='interaction'?'receive':'confirm',remoteCid:d.data.cid,
+-          data:{from:'P2',iid:d.data.iid,ackiid:d.data.ackiid,amt:d.data.amt},correlation:structuredClone(d)});
++        // In Zenith garbage arrives from the tower, i.e. from many different gameids,
++        // so there is no single opponent to check the sender against.
++        if(!isZenith && !targets.has(d.data.gameid))fail('interaction.gameid','Sender is not the single opponent');
++        // Solo garbage has no peer connection, so no cid. The key must be ABSENT, not
++        // present-and-undefined: reconstruction validates with .
++        events.push({...position,type:d.type==='interaction'?'receive':'confirm',
++          ...(d.data.cid===undefined?{}:{remoteCid:d.data.cid}),
++          data:{from:'P2',iid:d.data.iid,ackiid:d.data.ackiid,amt:d.data.amt,
++            // Zenith records the hole column per packet. Using it bypasses the hole
++            // RNG completely, so the messiness settings never need reproducing.
++            // ZENITH ONLY. League records x as well, but tetrp reproduces its columns
++            // from the holes RNG and is byte-perfect doing so -- forcing the recorded
++            // column there skips nextHole's draw and desyncs every later column.
++            // x = -1 is a sentinel for 'no fixed column'; fall back to the hole RNG.
++            ...(isZenith&&Number.isInteger(d.data.x)&&d.data.x>=0?{column:d.data.x}:{})},correlation:structuredClone(d)});
+       }continue;
+     }
+     if(e.type==='end'){
+diff --git a/src/replay/reconstruction.js b/src/replay/reconstruction.js
+index cdf83db..3e06f67 100644
+--- a/src/replay/reconstruction.js
++++ b/src/replay/reconstruction.js
+@@ -19,6 +19,7 @@ function validate(timeline) {
+     if (e.type === 'terminal' && (typeof e.reason!=='string' || 'subframe' in e && (!Number.isFinite(e.subframe)||e.subframe<0||e.subframe>=1))) bad('Invalid terminal');
+     if ('remoteCid' in e && (!Number.isSafeInteger(e.remoteCid)||e.remoteCid<0))bad('Invalid remote cid');
+     if (e.type === 'receive' && (!e.data || typeof e.data.from !== 'string' || !['iid','ackiid','amt'].every(k=>Number.isSafeInteger(e.data[k]) && e.data[k]>=0))) bad('Invalid receive');
++    if (e.type === 'receive' && 'column' in e.data && (!Number.isSafeInteger(e.data.column) || e.data.column < 0)) bad('Invalid receive column');
+     if (e.type === 'confirm' && (!Number.isSafeInteger(e.remoteCid??e.cid) || (e.remoteCid??e.cid)<0)) bad('Invalid confirm');
+   }
+ }
+@@ -62,6 +63,10 @@ export class Reconstruction {
+         case 'receive': {
+           const id=this.engine.receive(event.data);
+           if(event.remoteCid!==undefined)this.packetIds[event.remoteCid]=id;
++          // Zenith garbage comes from the tower, not a peer, so there is no
++          // interaction_confirm to pair with. The interaction IS the arrival --
++          // without this every packet sits pending and nothing ever lands.
++          else if(s.rules.zenith && id!==null && id!==undefined)this.engine.confirm(id);
+           break;
+         }
+         case 'confirm': {
+diff --git a/src/rules.js b/src/rules.js
+index 7c69f6c..5e12cf2 100644
+--- a/src/rules.js
++++ b/src/rules.js
+@@ -10,18 +10,31 @@ export function ruleset(mode = 'tl', overrides = {}) {
+     ...tl,
+     buffer: 20, mode, hold: true, infinite_hold: false,
+     garbageare: 0, garbagearebump: 0, objective_type: null,
++    zenith: false,
+   };
+   if (mode !== 'tl') {
+     Object.assign(base, solo[mode], { gincrease: 0, garbageincrease_per_second: 0 });
+     // Solo attack/B2B inherited defaults are not supplied. Do not substitute TL.
+   }
+   const result = { ...base, ...overrides };
++  // HYPOTHESIS UNDER TEST: Zenith's bag is ordinary 7-bag, and its garbage-
++  // generation settings are inert because arrivals are replayed from the record.
++  // tetrp verifies against the replay's own outcome, so a wrong guess diverges.
++  if (result.bagtype === 'zenith') {
++    result.zenith = true;
++    result.bagtype = '7-bag';
++    result.roundmode = 'down';
++    result.messiness_change = 1;
++    result.messiness_inner = 0;
++    result.passthrough = 'zero';
++  }
+   for (const key of Object.keys(overrides)) if (!(key in base)) throw new TypeError(`Unknown ruleset option: ${key}`);
+   if (result.lineclear_are !== 0) throw new Error('Unknown line-clear ARE RNG jitter; nonzero lineclear_are is unsupported');
+   for (const [key, expected] of Object.entries({ bagtype: '7-bag', kickset: 'SRS+', passthrough: 'zero', garbagephase_frames: 0, garbagequeue: false, receivemultiplier: 1, cancelmultiplier: 1, messiness_change: 1, messiness_inner: 0, roundmode: 'down', garbageabsolutecap: 0, garbagetargetbonus: 'none', combotable: 'multiplier', garbagecapincrease_per_second: 0 })) {
+     if (result[key] !== expected) throw new Error(`Unsupported ruleset option: ${key}`);
+   }
+-  if (!['instant', 'delayed'].includes(result.garbageentry)) throw new Error('Unsupported garbage entry');
++  // 'continuous' drives Engine.continuousGarbage(), which is already implemented.
++  if (!['instant', 'delayed', 'continuous'].includes(result.garbageentry)) throw new Error('Unsupported garbage entry');
+   if (!['combo blocking','limited blocking','none'].includes(result.garbageblocking)) throw new Error('Unsupported garbage blocking');
+   for (const name of ['g','gincrease','garbagemultiplier','garbageincrease_per_second','garbagecap','garbagecapmax','garbageattackcap','locktime_frames']) {
+     if (!Number.isFinite(result[name]) || result[name] < 0) throw new RangeError(`Invalid ${name}`);

@@ -1,0 +1,8 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Nested clone with its own git history
+vendor/tetrp/
+# Rust build output
+target/

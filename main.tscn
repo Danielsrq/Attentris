@@ -1,0 +1,30 @@
+[gd_scene format=3 uid="uid://t885ds7we24v"]
+
+[ext_resource type="Script" uid="uid://dfbmexrhrsg11" path="res://main.gd" id="1_main"]
+[ext_resource type="Script" uid="uid://dj0ewmu2bvd6d" path="res://view/board_view.gd" id="2_boardview"]
+[ext_resource type="Script" uid="uid://c4j0j6j4psjr7" path="res://view/hud.gd" id="3_hud"]
+[ext_resource type="Script" uid="uid://cgq2jsvlqpu32" path="res://view/debug_overlay.gd" id="4_overlay"]
+[ext_resource type="Script" uid="uid://bbafucb2mc0am" path="res://view/audio_bus.gd" id="5_audio"]
+[ext_resource type="Script" uid="uid://c00wj6ci0vvan" path="res://view/hint_view.gd" id="6_hint"]
+
+[node name="Main" type="Node2D" unique_id=1375788954]
+script = ExtResource("1_main")
+preview_stack = PackedInt32Array(4, 6, 5, 8, 3, 7, 5, 9, 6, 4)
+
+[node name="BoardView" type="Node2D" parent="." unique_id=552849110]
+script = ExtResource("2_boardview")
+
+[node name="HintView" type="Node2D" parent="." unique_id=764957969]
+script = ExtResource("6_hint")
+
+[node name="Hud" type="Node2D" parent="." unique_id=1395571422]
+script = ExtResource("3_hud")
+
+[node name="DebugOverlay" type="Node2D" parent="." unique_id=2114751713]
+script = ExtResource("4_overlay")
+
+[node name="Audio" type="Node" parent="." unique_id=1699760870]
+script = ExtResource("5_audio")
+master_db = -4.5
+gain_move = -6.0
+gain_combo_break = -6.0

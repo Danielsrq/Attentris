@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tests/replay_check.gd" id="1_check"]
+
+[node name="ReplayCheck" type="Node"]
+script = ExtResource("1_check")
