@@ -25,8 +25,20 @@ extends Resource
 @export var other_spin_attack: Dictionary = {0: 0, 1: 2, 2: 4, 3: 6, 4: 8}
 
 @export_group("Bonuses")
-## Added to any difficult clear while a back-to-back chain is live.
-@export var b2b_bonus: int = 1
+## Back-to-back bonus, as floor(sqrt(b2b) * b2b_weight).
+##
+## Square-rooted rather than flat or linear: a live chain should always be worth keeping,
+## but each further line of bonus has to cost quadratically more, so a long chain cannot
+## run away with the game the way a linear bonus would.
+##
+## `b2b` counts the difficult clears AFTER the first (ClearResult.b2b: -1 none, 0 first,
+## >=1 chain), so the first difficult clear pays nothing extra and the second pays +1:
+##
+##     b2b     1-3   4-8   9-15   16-24   25-35   36-48   49-63
+##     bonus    +1    +2     +3      +4      +5      +6      +7
+##
+## A 27-chain is therefore +5.
+@export var b2b_weight: float = 1.0
 @export var perfect_clear_bonus: int = 10
 ## Combos are ignored for now; flip this on and fill the table when they matter.
 @export var use_combo: bool = false
@@ -47,10 +59,17 @@ func attack_for(r: ClearResult) -> int:
 		out = int(lines_attack.get(r.lines, 0))
 
 	if r.is_difficult() and r.b2b_active():
-		out += b2b_bonus
+		out += b2b_bonus_for(r.b2b)
 	if r.perfect_clear:
 		out += perfect_clear_bonus
 	if use_combo and r.combo >= 1:
 		var i: int = mini(r.combo, combo_attack.size() - 1)
 		out += combo_attack[i]
 	return out
+
+## Bonus for a chain of length `b2b`. Exposed separately so a solver can price a chain
+## it is considering without building a ClearResult for it.
+func b2b_bonus_for(b2b: int) -> int:
+	if b2b < 1:
+		return 0
+	return int(floor(sqrt(float(b2b)) * b2b_weight))

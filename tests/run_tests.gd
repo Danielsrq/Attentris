@@ -2043,3 +2043,106 @@ func test_pane_tab() -> void:
 	var cells_per_tick := rc.gravity_cells_per_tick(1, 60.0) * rc.sdf
 	check(absf(cells_per_tick - 1.0) < 0.0001,
 		"at level 1 soft drop moves exactly one cell per tick")
+
+	group("AttackTable: back-to-back is floor(sqrt(b2b))")
+	var at := AttackTable.new()
+	# No chain pays nothing: -1 is "no b2b", 0 is the first difficult clear, which starts
+	# the chain rather than being rewarded by it.
+	eq(at.b2b_bonus_for(-1), 0, "no chain pays nothing")
+	eq(at.b2b_bonus_for(0), 0, "the first difficult clear starts the chain, no bonus")
+	for pair in [[1, 1], [2, 1], [3, 1], [4, 2], [8, 2], [9, 3], [15, 3], [16, 4],
+			[24, 4], [25, 5], [27, 5], [35, 5], [36, 6], [48, 6], [49, 7]]:
+		eq(at.b2b_bonus_for(int(pair[0])), int(pair[1]),
+			"b2b %d pays +%d" % [int(pair[0]), int(pair[1])])
+	# Each step up costs quadratically more than the last, which is the point of sqrt.
+	var steps: Array = []
+	var last := 0
+	for n in range(1, 50):
+		var v := at.b2b_bonus_for(n)
+		if v != last:
+			steps.append(n)
+			last = v
+	eq(steps, [1, 4, 9, 16, 25, 36, 49], "the bonus steps at the perfect squares")
+
+	# And it reaches attack_for: a quad on a 27-chain is 4 + 5.
+	var qr := ClearResult.new()
+	qr.lines = 4
+	qr.piece_id = &"I"
+	qr.b2b = 27
+	eq(at.attack_for(qr), 9, "a quad on a 27-chain sends 4 + 5 = 9")
+	qr.b2b = 0
+	eq(at.attack_for(qr), 4, "the same quad starting a chain sends just 4")
+	# A single is not difficult, so it never collects a chain bonus even if one is passed.
+	var sr := ClearResult.new()
+	sr.lines = 1
+	sr.piece_id = &"I"
+	sr.b2b = 27
+	eq(at.attack_for(sr), 0, "a single collects no chain bonus -- it is not a difficult clear")
+
+	# docs/replay_format.md claims five fields are enough to view a record. Prove it, by
+	# writing a minimal file and loading it -- a contract doc nobody tests is a guess.
+	group("ReplayLog: the documented minimal record")
+	var blank_row := "."
+	blank_row = blank_row.repeat(10)
+	var rows: Array = []
+	for i in 40:
+		rows.append(blank_row)
+	# A flat T on the floor: three cells on row 39, the nub on row 38.
+	var lines_out: Array = []
+	for placement in 2:
+		var rec := {
+			"replay": "contract_probe",
+			"n": placement,
+			"board": rows,
+			"piece": "t",
+			"place": {"type": "t", "cells": [[3, 39], [4, 39], [5, 39], [4, 38]]},
+		}
+		lines_out.append(JSON.stringify(rec))
+	var probe := "user://_contract_probe.jsonl"
+	var fh := FileAccess.open(probe, FileAccess.WRITE)
+	check(fh != null, "the probe file can be written")
+	if fh != null:
+		fh.store_string("
+".join(lines_out) + "
+")
+		fh.close()
+		var rl := ReplayLog.new(PieceSet.tetrominoes())
+		check(rl.load_file(probe), "a file of minimal records loads: %s" % rl.error)
+		eq(rl.run_count(), 1, "   and holds one run")
+		eq(rl.names[0], "contract_probe", "   named by the replay field")
+		var recs := rl.steps_for("contract_probe")
+		eq(recs.size(), 2, "   with both records")
+		if recs.size() == 2:
+			var gp := make_game(Board.new(10, 20, 20))
+			gp.start()
+			rl.apply(recs[0], gp)
+			check(gp.active != null, "   the placed piece is recovered from absolute cells")
+			if gp.active != null:
+				eq(gp.active.def.id, &"T", "      as a T")
+				var got := {}
+				for c in gp.active.board_cells():
+					got[c] = true
+				var want_cells := [Vector2i(3, 39), Vector2i(4, 39), Vector2i(5, 39), Vector2i(4, 38)]
+				var all_there := true
+				for c in want_cells:
+					if not got.has(c):
+						all_there = false
+				check(all_there, "      at exactly the cells given")
+			eq(gp.pieces_placed, 0, "   and n becomes the placement number")
+		# Garbage must be uppercase G; lowercase is not a piece letter and reads as empty.
+		var grows: Array = rows.duplicate()
+		grows[39] = "GGGGGGGGG."
+		var g1 := {"replay": "g_probe", "n": 0, "board": grows, "piece": "t",
+			"place": {"type": "t", "cells": [[3, 38], [4, 38], [5, 38], [4, 37]]}}
+		var fh2 := FileAccess.open(probe, FileAccess.WRITE)
+		fh2.store_string(JSON.stringify(g1) + "
+")
+		fh2.close()
+		var rl2 := ReplayLog.new(PieceSet.tetrominoes())
+		check(rl2.load_file(probe), "a record with garbage loads")
+		var gp2 := make_game(Board.new(10, 20, 20))
+		gp2.start()
+		rl2.apply(rl2.steps_for("g_probe")[0], gp2)
+		eq(gp2.board.get_cell(0, 39), Board.GARBAGE, "uppercase G reads as garbage")
+		eq(gp2.board.get_cell(9, 39), 0, "   and the hole stays empty")
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(probe))

@@ -43,7 +43,7 @@ func _ready() -> void:
 	print("slots took = placements where the solver actually played the spin.")
 	print("T-eff = T pieces that produced a spin clear / T pieces placed.")
 	print("I-eff = I pieces that produced a quad / I pieces placed.")
-	print("atk = garbage sent. Single 0, double 1, triple 2, quad 4, +1 while b2b is live.")
+	print("atk = garbage sent. Single 0, double 1, triple 2, quad 4, +floor(sqrt(b2b)) on a chain.")
 	print("atk/pc = attack per piece -- the efficiency the minigame economy will spend.")
 	get_tree().quit(0)
 
