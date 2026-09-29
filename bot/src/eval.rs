@@ -14,7 +14,7 @@
 use crate::board::{Board, FULL};
 use crate::rules::{H, W};
 
-pub const NAMES: [&str; 17] = [
+pub const NAMES: [&str; 18] = [
     "holes",       // empty cells with something above them
     "hole_rows",   // rows containing at least one hole
     "cover",       // filled cells above each column's topmost hole
@@ -32,6 +32,9 @@ pub const NAMES: [&str; 17] = [
     "t_fill",      // fill fraction of the best T slot's rows (the gradient towards it)
     "b2b",         // back-to-back chain is live
     "b2b_level",   // min(chain, 8): for bonuses that grow with the chain
+    // sqrt(chain + 1) while a chain is live: the shape of the floor(sqrt(chain)) bonus
+    // every future difficult clear will earn, so a long chain is worth more to keep.
+    "b2b_sqrt",
 ];
 pub const NF: usize = NAMES.len();
 
@@ -62,6 +65,7 @@ impl Default for Weights {
                 1.2,   // t_fill
                 1.2,   // b2b
                 0.0,   // b2b_level
+                0.0,   // b2b_sqrt
             ],
         }
     }
@@ -319,5 +323,6 @@ pub fn features(b: &Board, b2b: i32) -> [f32; NF] {
     }
     f[15] = (b2b >= 0) as i32 as f32;
     f[16] = b2b.clamp(0, 8) as f32;
+    f[17] = if b2b >= 0 { ((b2b + 1) as f32).sqrt() } else { 0.0 };
     f
 }
