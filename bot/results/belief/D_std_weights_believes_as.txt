@@ -1,0 +1,3 @@
+D_std_weights_believes_as  0.496  0/20    500   0.21   1.97   0.00   1.72   5.02   0.00  21.49    0/0     4  0.00    0  127.95
+clears per 100 pieces -- spin singles 6.74, doubles 1.97, triples 0.00; plain 1/2/3/4: 15.27/5.75/0.47/0.21; attack per line 1.25
+phantom spins (believed spins scored as plain clears): 18.05 per 100 pieces

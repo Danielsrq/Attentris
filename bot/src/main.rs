@@ -78,7 +78,12 @@ fn search_config(a: &Args) -> SearchConfig {
 }
 
 fn rules(a: &Args) -> Rules {
-    let mut r = match a.str("mode") {
+    rules_for(a, a.str("mode"))
+}
+
+/// Rules for a mode name, with the shared flags (--b2b, --no-allspin, ...) applied.
+fn rules_for(a: &Args, mode: Option<&str>) -> Rules {
+    let mut r = match mode {
         Some("allspin") => Rules::allspin(),
         Some("standard") => Rules { all_spin: false, ..Rules::default() },
         Some("competitive") | None => Rules::default(),
@@ -121,8 +126,9 @@ fn weights(a: &Args) -> Weights {
 
 /// Plays `games` games (seeds seed..seed+games) across threads. Returns per-game stats
 /// and the concatenated JSONL when recording.
-fn run_games(sc: &SearchConfig, w: &Weights, r: Rules, g: &GarbageConfig, games: usize, pieces: usize, seed: u64,
-             threads: usize, label: &str, record: bool) -> (Vec<Stats>, String) {
+/// `r` = the rules the bot searches with; `env` = the rules the game applies, if different.
+fn run_games(sc: &SearchConfig, w: &Weights, r: Rules, env: Option<Rules>, g: &GarbageConfig, games: usize, pieces: usize,
+             seed: u64, threads: usize, label: &str, record: bool) -> (Vec<Stats>, String) {
     let results: Vec<(usize, Stats, String)> = std::thread::scope(|s| {
         let mut handles = Vec::new();
         for t in 0..threads.min(games).max(1) {
@@ -133,7 +139,7 @@ fn run_games(sc: &SearchConfig, w: &Weights, r: Rules, g: &GarbageConfig, games:
                 let mut searcher = Searcher::new(sc, w, r);
                 let mut i = t;
                 while i < games {
-                    let cfg = GameConfig { pieces, seed: seed + i as u64, garbage: g.clone(), label: label.clone(), record };
+                    let cfg = GameConfig { pieces, seed: seed + i as u64, garbage: g.clone(), label: label.clone(), record, env_rules: env };
                     let (st, js) = game::play(&mut searcher, &cfg);
                     out.push((i, st, js));
                     i += threads;
@@ -195,7 +201,14 @@ fn cmd_play(a: &Args) {
     let (games, pieces, seed) = (a.get("games", 4usize), a.get("pieces", 500usize), a.get("seed", 1u64));
     let label = a.str("label").map(|s| s.to_string()).unwrap_or(format!("beam{}_d{}{}", sc.beam, sc.depth, if sc.chance { "_ch" } else { "" }));
     let t0 = Instant::now();
-    let (st, js) = run_games(&sc, &weights(a), rules(a), &garbage(a), games, pieces, seed, threads_used(), &label, a.has("out"));
+    // --believe MODE: the bot searches as if the rules were MODE, while the game applies
+    // --mode. Without it the bot knows the real rules.
+    let real = rules(a);
+    let (belief, env) = match a.str("believe") {
+        Some(m) => (rules_for(a, Some(m)), Some(real)),
+        None => (real, None),
+    };
+    let (st, js) = run_games(&sc, &weights(a), belief, env, &garbage(a), games, pieces, seed, threads_used(), &label, a.has("out"));
     summary_header();
     summary_row(&label, &st, t0.elapsed().as_secs_f64());
     let mut t: Vec<u32> = st.iter().flat_map(|s| s.think_us.iter().copied()).collect();
@@ -218,6 +231,9 @@ fn cmd_play(a: &Args) {
             per(t.spin_by_lines[1]), per(t.spin_by_lines[2]), per(t.spin_by_lines[3]),
             per(t.plain_by_lines[1]), per(t.plain_by_lines[2]), per(t.plain_by_lines[3]), per(t.plain_by_lines[4]),
             t.attack as f64 / all_lines.max(1) as f64);
+        if t.phantom_spins > 0 {
+            println!("phantom spins (believed spins scored as plain clears): {:.2} per 100 pieces", per(t.phantom_spins));
+        }
     }
     let (checks, kept) = st.iter().fold((0, 0), |(c, k), s| (c + s.plan_checks, k + s.plan_kept));
     if checks > 0 {
@@ -261,7 +277,7 @@ fn cmd_bench(a: &Args) {
     for (name, sc) in configs {
         let t0 = Instant::now();
         let label = name.replace([' ', '(', ')'], "").replace('+', "_");
-        let (st, js) = run_games(&sc, &w, r, &g, games, pieces, seed, threads_used(), &label, out.is_some());
+        let (st, js) = run_games(&sc, &w, r, None, &g, games, pieces, seed, threads_used(), &label, out.is_some());
         summary_row(&name, &st, t0.elapsed().as_secs_f64());
         // Keep only the first game per config: enough to watch side by side.
         let first = format!("{}_s{}", label, seed);
@@ -322,7 +338,7 @@ fn cmd_tune(a: &Args) {
                                 let mut searcher = Searcher::new(sc.clone(), w.clone(), r);
                                 let mut atk = 0i64;
                                 for k in 0..games {
-                                    let cfg = GameConfig { pieces, seed: seed + k as u64, garbage: g.clone(), label: String::new(), record: false };
+                                    let cfg = GameConfig { pieces, seed: seed + k as u64, garbage: g.clone(), label: String::new(), record: false, env_rules: None };
                                     atk += game::play(&mut searcher, &cfg).0.attack;
                                 }
                                 atk as f64 / (games * pieces) as f64

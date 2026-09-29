@@ -3,3 +3,4 @@ results/b2b_sweep/*.tmp
 results/b2b_sweep/*.part
 results/b2b_sweep/sweep.log
 results/b2b_sweep/STOP
+results/belief/*.part

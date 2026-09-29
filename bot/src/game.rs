@@ -124,6 +124,8 @@ pub struct Stats {
     pub max_wounds: u32,
     /// Spin clears of any piece by rows cleared (index 1..=3), and plain clears likewise.
     pub spin_by_lines: [u64; 5],
+    /// Clears the bot believed were spins that the real rules scored as plain clears.
+    pub phantom_spins: u64,
     pub plain_by_lines: [u64; 5],
 }
 
@@ -153,6 +155,7 @@ impl Stats {
         self.plan_kept += o.plan_kept;
         self.repeats += o.repeats;
         self.max_wounds = self.max_wounds.max(o.max_wounds);
+        self.phantom_spins += o.phantom_spins;
         for i in 0..5 {
             self.spin_by_lines[i] += o.spin_by_lines[i];
             self.plain_by_lines[i] += o.plain_by_lines[i];
@@ -232,9 +235,13 @@ pub struct GameConfig {
     pub label: String,
     /// Collect viewer JSONL.
     pub record: bool,
+    /// The rules the game actually applies, when they differ from the rules the bot
+    /// searches with (`--believe`). None = the bot knows the real rules.
+    pub env_rules: Option<crate::rules::Rules>,
 }
 
 pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
+    let env = cfg.env_rules.unwrap_or(searcher.rules);
     let mut bag = Bag::new(cfg.seed);
     let mut grng = Rng::new(cfg.seed ^ 0xC0FFEE);
     let mut board = Board::default();
@@ -344,8 +351,22 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
             }
             hold = Some(spawned);
         }
-        let p = d.placement;
-        let o = apply(&board, &p, b2b, &searcher.rules, &shapes);
+        let mut p = d.placement;
+        if cfg.env_rules.is_some() {
+            // The bot chose this move believing its own rules; the game scores it by
+            // the real ones. Re-detect the spin: only a rotation can make one, and
+            // under the real rules a non-T immobile spot may not count.
+            p.spin = if p.kick < 0 {
+                crate::rules::Spin::None
+            } else {
+                let cells = &shapes.cells[p.piece as usize][p.rot as usize];
+                crate::movegen::detect_spin(&board, p.piece, cells, p.rot as usize, p.x as i32, p.y as i32, p.kick as i32, env.all_spin)
+            };
+        }
+        let o = apply(&board, &p, b2b, &env, &shapes);
+        if o.lines > 0 && d.placement.spin != crate::rules::Spin::None && o.spin == crate::rules::Spin::None {
+            stats.phantom_spins += 1;
+        }
         if o.lock_out {
             stats.died = true;
             break;
@@ -363,7 +384,7 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         if o.repeat {
             // The real hole: messiness is the chance it moves from the previous wound's.
             let prev = board.last_wound_hole;
-            let hole = if board.wounds == 0 && stats.repeats == 0 || grng.chance(searcher.rules.wound_messiness) {
+            let hole = if board.wounds == 0 && stats.repeats == 0 || grng.chance(env.wound_messiness) {
                 let mut h = grng.below(W as u64 - 1) as u8;
                 if h >= prev {
                     h += 1;
