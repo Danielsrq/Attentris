@@ -1,0 +1,2 @@
+allspin_cap_none        4.579  0/20    500   0.00   0.11   0.00   7.14   0.00  33.94   0.00  245/0   208  2.65    4  136.76
+clears per 100 pieces -- spin singles 40.47, doubles 0.72, triples 0.00; plain 1/2/3/4: 0.00/0.00/0.00/0.00; attack per line 10.93
