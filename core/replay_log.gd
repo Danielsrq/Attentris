@@ -154,14 +154,12 @@ func apply(step: Dictionary, game: Game) -> void:
 				board.set_cell(x, y, Board.WOUND)
 			else:
 				board.set_cell(x, y, Board.GARBAGE if ch == GARBAGE_CHAR else _value(ch))
-	# Wound lines, oldest first, as the bottom block. Their parked contents are not in
-	# the record (the viewer never heals them itself), so they park as empty rows.
+	# Wound lines: each record lists its row, clears left and future hole.
 	for wd in step.get("wounds", []):
-		var parked := PackedByteArray()
-		parked.resize(board.width)
-		var parked_owner := PackedInt32Array()
-		parked_owner.resize(board.width)
-		board.wounds.append({"left": int(wd.get("left", 0)), "cells": parked, "owner": parked_owner})
+		var y := int(wd.get("row", -1))
+		if y >= 0 and y < board.total_height:
+			board.wound_left[y] = int(wd.get("left", 0))
+			board.wound_hole[y] = int(wd.get("hole", 0))
 
 	# LOCK-time queue and hold, not the sample's spawn-time ones.
 	#

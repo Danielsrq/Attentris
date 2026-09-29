@@ -55,13 +55,10 @@ func _board(r: Dictionary) -> Board:
 				b.set_cell(x, y, Board.WOUND)
 			elif ch != ".":
 				b.set_cell(x, y, 1)
-	# Register the wound block too, or its solid rows would read as full lines.
+	# Register the wound lines too, or their solid rows would read as full lines.
 	for wd in r.get("wounds", []):
-		var parked := PackedByteArray()
-		parked.resize(10)
-		var parked_owner := PackedInt32Array()
-		parked_owner.resize(10)
-		b.wounds.append({"left": int(wd["left"]), "cells": parked, "owner": parked_owner})
+		b.wound_left[int(wd["row"])] = int(wd["left"])
+		b.wound_hole[int(wd["row"])] = int(wd.get("hole", 0))
 	return b
 
 func _cells_at(def: PieceDef, rot: int, pos: Vector2i) -> Dictionary:

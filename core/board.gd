@@ -14,16 +14,18 @@ extends RefCounted
 ## can colour it distinctly and the solver treats it as ordinary filled space.
 const GARBAGE := 255
 
-## Cell value for a wound line (all-spin repeat penalty): solid, never clearable,
-## holding no piece. The row's real contents are parked in `wounds` until it heals.
+## Cell value for a wound line (all-spin repeat penalty): a solid, unclearable line.
 const WOUND := 254
 
-## Wound lines, oldest first. They occupy the bottom `wounds.size()` rows as a block,
-## oldest at the TOP of the block next to the play area. A new wound takes the bottom
-## in-play row and goes to the very bottom, pushing older wounds up, so the oldest is
-## always the next to heal and heals straight back into play. Each entry:
-##   {"left": clears until it heals, "cells": parked row, "owner": parked owners}
-var wounds: Array = []
+## Wound lines, per row. A repeat inserts a wound line at the very bottom, pushing the
+## whole stack up one row, like a garbage line. It cannot be cleared; it counts down on
+## every clear, and at 0 it stays where it is as an ordinary garbage line whose hole
+## (chosen when it arrived) opens up. Newer wounds enter beneath older ones, so the
+## oldest -- highest -- turns into garbage first.
+##   wound_left[y]: clears left before row y's wound turns to garbage; 0 = not a wound
+##   wound_hole[y]: the hole that row gets when it turns to garbage
+var wound_left: PackedInt32Array
+var wound_hole: PackedInt32Array
 
 ## Which PLACEMENT laid each cell, parallel to `cells`; 0 for empty and for garbage.
 ##
@@ -68,48 +70,64 @@ func _init(w: int = 10, vis: int = 20, buf: int = 20) -> void:
 	cells = PackedByteArray()
 	cells.resize(width * total_height)
 	owner.resize(width * total_height)
+	wound_left.resize(total_height)
+	wound_hole.resize(total_height)
 	ghost.resize(0)
 	clear()
 
 func clear() -> void:
 	cells.fill(0)
 	owner.fill(0)
-	wounds.clear()
+	wound_left.fill(0)
+	wound_hole.fill(0)
 
-## First row of the wound block, or total_height when there are none. Rows at or below
-## this are out of play.
-func wound_floor() -> int:
-	return total_height - wounds.size()
+## Live wound lines on the board.
+func wound_count() -> int:
+	var n := 0
+	for y in total_height:
+		if wound_left[y] > 0:
+			n += 1
+	return n
 
-## The bottom in-play row becomes a wound line at the bottom of the block for `clears`
-## clears. Its cells are parked, not lost; the row turns solid.
-func add_wound(clears: int) -> void:
-	var y := wound_floor() - 1
-	if y < 0:
-		return
-	var w := width
-	var parked := cells.slice(y * w, (y + 1) * w)
-	var parked_owner := owner.slice(y * w, (y + 1) * w)
-	for x in w:
-		cells[y * w + x] = WOUND
-		owner[y * w + x] = 0
-	wounds.append({"left": clears, "cells": parked, "owner": parked_owner})
+func is_wound(y: int) -> bool:
+	return y >= 0 and y < total_height and wound_left[y] > 0
 
-## Called once per clear: every wound counts down, and the oldest heals at 0, its parked
-## cells returning as the bottom in-play row. Returns how many healed.
-func tick_wounds() -> int:
-	for wd in wounds:
-		wd["left"] = maxi(0, int(wd["left"]) - 1)
-	var healed := 0
-	while not wounds.is_empty() and int(wounds[0]["left"]) <= 0:
-		var y := wound_floor()   # top of the block = the oldest
-		var wd: Dictionary = wounds.pop_front()
-		var parked: PackedByteArray = wd["cells"]
-		var parked_owner: PackedInt32Array = wd["owner"]
+## Shift everything up `n` rows (the top `n` are lost), leaving the bottom `n` rows empty.
+func _shift_up(n: int) -> void:
+	for y in range(0, total_height - n):
 		for x in width:
-			cells[y * width + x] = parked[x]
-			owner[y * width + x] = parked_owner[x]
-		healed += 1
+			cells[y * width + x] = cells[(y + n) * width + x]
+			owner[y * width + x] = owner[(y + n) * width + x]
+		wound_left[y] = wound_left[y + n]
+		wound_hole[y] = wound_hole[y + n]
+	for y in range(total_height - n, total_height):
+		for x in width:
+			cells[y * width + x] = 0
+			owner[y * width + x] = 0
+		wound_left[y] = 0
+		wound_hole[y] = 0
+
+## A repeat: insert a solid wound line at the very bottom, pushing the stack up. It turns
+## into a garbage line with its hole at `hole` after `clears` clears.
+func add_wound(clears: int, hole: int) -> void:
+	_shift_up(1)
+	var y := total_height - 1
+	for x in width:
+		cells[y * width + x] = WOUND
+	wound_left[y] = clears
+	wound_hole[y] = hole
+
+## Called once per clear: every wound counts down, and at 0 becomes an ordinary garbage
+## line in place, its hole opening. Returns how many turned into garbage.
+func tick_wounds() -> int:
+	var healed := 0
+	for y in total_height:
+		if wound_left[y] > 0:
+			wound_left[y] -= 1
+			if wound_left[y] == 0:
+				for x in width:
+					cells[y * width + x] = 0 if x == wound_hole[y] else GARBAGE
+				healed += 1
 	return healed
 
 func idx(x: int, y: int) -> int:
@@ -192,10 +210,9 @@ func can_place_in_play(piece_cells: Array, pos: Vector2i) -> bool:
 func full_rows_among(candidate_rows: Array) -> Array:
 	var out: Array = []
 	var w := width
-	var floor_y := wound_floor()
 	for y in candidate_rows:
-		# Wound lines are solid but out of play: never a clearable full row.
-		if y < 0 or y >= floor_y:
+		# Wound lines are solid but never a clearable full row.
+		if y < 0 or y >= total_height or wound_left[y] > 0:
 			continue
 		var full := true
 		var base: int = y * w
@@ -223,7 +240,9 @@ func lock_cells(piece_cells: Array, pos: Vector2i, value: int, owner_id: int = 0
 
 func find_full_rows() -> Array:
 	var out: Array = []
-	for y in wound_floor():
+	for y in total_height:
+		if wound_left[y] > 0:
+			continue
 		var full := true
 		for x in width:
 			if cells[idx(x, y)] == 0:
@@ -247,6 +266,10 @@ func clear_rows(rows: Array) -> int:
 	var out_owner := PackedInt32Array()
 	out_owner.resize(owner.size())
 	out_owner.fill(0)
+	var out_left := PackedInt32Array()
+	out_left.resize(total_height)
+	var out_hole := PackedInt32Array()
+	out_hole.resize(total_height)
 	var write := total_height - 1
 	for y in range(total_height - 1, -1, -1):
 		if doomed.has(y):
@@ -254,9 +277,13 @@ func clear_rows(rows: Array) -> int:
 		for x in width:
 			out[write * width + x] = cells[y * width + x]
 			out_owner[write * width + x] = owner[y * width + x]
+		out_left[write] = wound_left[y]
+		out_hole[write] = wound_hole[y]
 		write -= 1
 	cells = out
 	owner = out_owner
+	wound_left = out_left
+	wound_hole = out_hole
 	return doomed.size()
 
 ## Exposed separately from clear_rows so the planned "destroy a row" powerup can
@@ -272,19 +299,14 @@ func remove_row(y: int) -> void:
 ## rows makes "clean" garbage -- effectively a free well. Varying it makes "cheese",
 ## which is the case that actually tests downstacking.
 ##
-## With wound lines present, garbage enters at the bottom of the PLAY area, above the
-## wound block, so the block stays at the floor and every garbage row stays reachable.
+## Garbage enters at the very bottom, beneath any wound lines, pushing them up too.
 func push_garbage(holes: Array, value: int = GARBAGE) -> void:
 	var n := holes.size()
 	if n <= 0:
 		return
-	var floor_y := wound_floor()
-	for y in range(0, floor_y - n):
-		for x in width:
-			cells[y * width + x] = cells[(y + n) * width + x]
-			owner[y * width + x] = owner[(y + n) * width + x]
+	_shift_up(n)
 	for i in n:
-		var y := floor_y - 1 - i
+		var y := total_height - 1 - i
 		var hole: int = holes[i]
 		for x in width:
 			cells[y * width + x] = 0 if x == hole else value
@@ -296,9 +318,10 @@ func row_is_empty(y: int) -> bool:
 			return false
 	return true
 
-## No pieces in play. Wound lines hold no pieces, so they never block a perfect clear.
+## Nothing on the board. A wound line is a garbage-like line, so while one is present a
+## perfect clear is impossible.
 func is_empty() -> bool:
-	for i in wound_floor() * width:
+	for i in cells.size():
 		if cells[i] != 0:
 			return false
 	return true
@@ -307,6 +330,6 @@ func duplicate_board() -> Board:
 	var b := Board.new(width, visible_height, buffer_height)
 	b.cells = cells.duplicate()
 	b.owner = owner.duplicate()
-	for wd in wounds:
-		b.wounds.append({"left": wd["left"], "cells": wd["cells"].duplicate(), "owner": wd["owner"].duplicate()})
+	b.wound_left = wound_left.duplicate()
+	b.wound_hole = wound_hole.duplicate()
 	return b

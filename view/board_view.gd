@@ -78,7 +78,7 @@ func _draw() -> void:
 			if v != 0:
 				_cell(layout.cell_pos(board, x, y), game.piece_set.color_for_value(v), 1.0)
 
-	if not board.wounds.is_empty():
+	if board.wound_count() > 0:
 		_wounds(board)
 
 	if show_plan and not plan.is_empty():
@@ -215,19 +215,17 @@ func _outline(board: Board, piece: ActivePiece) -> void:
 			draw_line(from, to, ACTIVE_EDGE, 2.0)
 
 ## Wound lines (all-spin repeat penalty): the cells are already drawn in the wound grey;
-## this adds each line's clears-until-healed just outside the left edge of the field.
+## this adds each line's clears-until-it-turns-to-garbage just left of the field.
 func _wounds(board: Board) -> void:
 	var cs := float(layout.cell)
 	var font := ThemeDB.fallback_font
 	var size := int(cs * 0.55)
-	var floor_y := board.wound_floor()
-	for i in board.wounds.size():
-		var y := floor_y + i
-		if y < board.buffer_height:
+	for y in range(board.buffer_height, board.total_height):
+		if not board.is_wound(y):
 			continue
 		var at := layout.cell_pos(board, 0, y)
 		draw_rect(Rect2(at, Vector2(board.width * cs, cs)), WOUND_TINT)
-		draw_string(font, at + Vector2(-cs, cs * 0.5 + size * 0.36), str(int(board.wounds[i]["left"])),
+		draw_string(font, at + Vector2(-cs, cs * 0.5 + size * 0.36), str(board.wound_left[y]),
 			HORIZONTAL_ALIGNMENT_CENTER, cs * 0.9, size, WOUND_LABEL)
 
 func _clearing(board: Board) -> void:

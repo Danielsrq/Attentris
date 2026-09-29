@@ -70,6 +70,24 @@ var last_points: int = 0
 ## Type of the previous line clear (ClearResult.clear_type()), for the all-spin repeat
 ## penalty. Placements that clear nothing leave it alone.
 var last_clear_type: String = ""
+## Hole of the most recent wound line, -1 before the first. RuleSet.wound_messiness is
+## the chance the next one moves; its own RNG so the piece sequence is unaffected.
+var last_wound_hole: int = -1
+var _wound_rng := RandomNumberGenerator.new()
+
+## Hole column for a new wound line: the previous wound's column, or with probability
+## `wound_messiness` (and always for the first) a different one.
+func _next_wound_hole() -> int:
+	if _wound_rng.seed == 0:
+		_wound_rng.seed = seed_value * 2654435761 + 97
+	var hole := last_wound_hole
+	if hole < 0 or _wound_rng.randf() < rules.wound_messiness:
+		var h := _wound_rng.randi_range(0, board.width - 2)
+		if hole >= 0 and h >= hole:
+			h += 1
+		hole = h
+	last_wound_hole = hole
+	return hole
 
 var _das_left: float = 0.0
 var _arr_left: float = 0.0
@@ -332,21 +350,22 @@ func lock_piece(events: Array, cause: String = "lock_delay") -> void:
 	r.combo = combo
 	r.level = level
 	# All-spin repeat penalty. Order: the lines are gone (and the perfect clear judged),
-	# every wound counts down and the oldest heals at 0, then a repeat wounds the new
-	# bottom in-play row. The repeat still sends its full attack.
+	# every wound counts down and turns into garbage at 0, then a repeat inserts a new
+	# wound line at the bottom. The repeat still sends its full attack.
 	var wound_events: Array = []
 	if rules.repeat_penalty and r.lines > 0:
 		r.healed = board.tick_wounds()
 		if r.healed > 0:
 			wound_events.append(GameEvent.new(GameEvent.Type.WOUND_HEALED, {
-				"healed": r.healed, "count": board.wounds.size()}))
+				"healed": r.healed, "count": board.wound_count()}))
 		var t := r.clear_type()
 		if t == last_clear_type:
 			r.repeat = true
-			board.add_wound(rules.wound_clears)
+			r.wound_hole = _next_wound_hole()
+			board.add_wound(rules.wound_clears, r.wound_hole)
 			wound_events.append(GameEvent.new(GameEvent.Type.WOUND_ADDED, {
 				"row": board.total_height - 1, "left": rules.wound_clears,
-				"count": board.wounds.size()}))
+				"hole": r.wound_hole, "count": board.wound_count()}))
 		last_clear_type = t
 
 	# A spin that clears nothing still scores (guideline: a T-Spin is worth 400), so

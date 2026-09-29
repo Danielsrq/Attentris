@@ -7,7 +7,7 @@ extends SceneTree
 ## Replays every placement of a bot run (made with `bot play --mode allspin`) through
 ## GODOT's Board, wound lines, ClearResult.clear_type() and AttackTable, starting from an
 ## empty board, and checks after each placement that Godot arrives at exactly the board
-## the Rust engine recorded next: every cell, the wound block, each wound's counter, the
+## the Rust engine recorded next: every cell, each wound line's row, counter and hole, the
 ## lines cleared, the repeat flag and the attack. Spin labels are taken from the record
 ## (spin detection itself is covered by the move-generator parity against real play).
 
@@ -75,7 +75,8 @@ func _init() -> void:
 				var t := r.clear_type()
 				r.repeat = t == last_type
 				if r.repeat:
-					b.add_wound(10)
+					# The hole is chosen by messiness in the engine; take the recorded one.
+					b.add_wound(10, int(step.get("wound_hole", 0)))
 				last_type = t
 			var atk := table.attack_for(r)
 			var problems: Array = []
@@ -113,11 +114,12 @@ func _compare(b: Board, step: Dictionary) -> String:
 			if ch != "." and ch != "W" and (v == 0 or v == Board.WOUND):
 				return "cell (%d,%d) is a piece in Rust, %d in Godot" % [x, y, v]
 	var want: Array = step.get("wounds", [])
-	if want.size() != b.wounds.size():
-		return "%d wounds in Rust, %d in Godot" % [want.size(), b.wounds.size()]
-	for i in want.size():
-		if int(want[i]["left"]) != int(b.wounds[i]["left"]):
-			return "wound %d has %d left in Rust, %d in Godot" % [i, int(want[i]["left"]), int(b.wounds[i]["left"])]
-		if int(want[i]["row"]) != b.wound_floor() + i:
-			return "wound %d on row %d in Rust, %d in Godot" % [i, int(want[i]["row"]), b.wound_floor() + i]
+	if want.size() != b.wound_count():
+		return "%d wounds in Rust, %d in Godot" % [want.size(), b.wound_count()]
+	for wd in want:
+		var y := int(wd["row"])
+		if int(wd["left"]) != b.wound_left[y]:
+			return "wound on row %d has %d left in Rust, %d in Godot" % [y, int(wd["left"]), b.wound_left[y]]
+		if int(wd["hole"]) != b.wound_hole[y]:
+			return "wound on row %d has hole %d in Rust, %d in Godot" % [y, int(wd["hole"]), b.wound_hole[y]]
 	return ""

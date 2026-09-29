@@ -18,9 +18,11 @@ var level: int = 1
 ## Lines of garbage this clear sends. Filled in by Game from its AttackTable.
 var attack: int = 0
 ## All-spin repeat penalty: this clear had the same type as the previous clear and
-## wounded a row; `healed` wound lines came back into play on it.
+## inserted a wound line; `healed` wound lines turned into garbage on it.
 var repeat: bool = false
 var healed: int = 0
+## Hole of the wound line this repeat inserted (it opens when the wound turns to garbage).
+var wound_hole: int = -1
 
 ## Type for the repeat penalty: piece + lines + spin. Non-spin clears of one size share a
 ## type whatever the piece (double -> double repeats, single -> double does not); spins

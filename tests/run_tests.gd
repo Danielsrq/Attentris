@@ -2174,45 +2174,47 @@ func test_wound_board() -> void:
 	group("Wound lines on the board")
 	var b := Board.new(10, 20, 20)
 	var bottom := b.total_height - 1
-	# Bottom-up rows A (col 0), B (col 1), C (col 2).
 	b.set_cell(0, bottom, 1)
-	b.set_cell(1, bottom - 1, 2)
-	b.set_cell(2, bottom - 2, 3)
-	b.add_wound(10)
-	eq(b.wounds.size(), 1, "one wound")
-	eq(b.get_cell(5, bottom), Board.WOUND, "the bottom row is now a solid wound line")
-	check(b.is_blocked(5, bottom), "   and pieces cannot enter it")
-	check(b.find_full_rows().is_empty(), "a wound line is never a clearable full row")
+	b.add_wound(10, 6)
+	eq(b.wound_count(), 1, "one wound")
+	eq(b.get_cell(5, bottom), Board.WOUND, "a solid wound line at the very bottom")
+	eq(b.get_cell(0, bottom - 1), 1, "   the stack was pushed up, nothing taken")
+	check(b.is_blocked(5, bottom), "   pieces cannot enter it")
+	check(b.find_full_rows().is_empty(), "   and it is never a clearable full row")
+	check(not b.is_empty(), "no perfect clear while a wound line is on the board")
 	b.tick_wounds()
-	b.add_wound(10)
-	eq(b.wounds.size(), 2, "second wound (B) after one clear")
-	eq(b.get_cell(2, bottom - 2), 3, "row C is untouched and still in play")
-	for i in 9:
+	b.add_wound(10, 2)
+	eq([b.wound_left[bottom - 1], b.wound_left[bottom]], [9, 10], "a newer wound enters beneath, pushing the older up")
+	for i in 8:
 		b.tick_wounds()
-	eq(b.wounds.size(), 1, "A (oldest) healed first, on its 10th clear")
-	eq(b.get_cell(0, bottom - 1), 1, "A returns next to the play area with its piece")
-	eq(b.tick_wounds(), 1, "B heals on its own 10th clear")
-	eq([b.get_cell(1, bottom), b.get_cell(0, bottom - 1), b.get_cell(2, bottom - 2)], [2, 1, 3],
-		"model A: rows come back as B, A, C")
+	eq(b.tick_wounds(), 1, "the older wound turns into garbage on its 10th clear")
+	eq(b.get_cell(6, bottom - 1), 0, "   its hole opens at column 6")
+	eq(b.get_cell(0, bottom - 1), Board.GARBAGE, "   the rest is ordinary garbage")
+	check(not b.is_wound(bottom - 1), "   and it is no longer a wound")
+	eq(b.get_cell(2, bottom), Board.WOUND, "the newer one is still a wound")
+	b.tick_wounds()
+	eq(b.get_cell(2, bottom), 0, "   until its own 10th clear (hole at 2)")
 
 	var e := Board.new(10, 20, 20)
-	e.set_cell(3, e.total_height - 1, 1)
-	e.add_wound(10)
-	check(e.is_empty(), "wound lines hold no pieces, so a perfect clear is possible")
+	e.add_wound(10, 3)
 	e.push_garbage([4])
-	eq(e.get_cell(0, e.total_height - 1), Board.WOUND, "garbage leaves the wound at the floor")
-	eq(e.get_cell(4, e.total_height - 2), 0, "   and enters above it, hole at column 4")
-	eq(e.get_cell(0, e.total_height - 2), Board.GARBAGE, "   filled elsewhere")
+	eq(e.get_cell(4, e.total_height - 1), 0, "garbage enters beneath the wound, hole at 4")
+	check(e.is_wound(e.total_height - 2), "   the wound line was pushed up with the stack")
+	# A clear above the wound drops rows onto it; the wound stays put and stays a wound.
+	for x in 10:
+		e.set_cell(x, e.total_height - 3, 1)
+	e.clear_rows(e.find_full_rows())
+	check(e.is_wound(e.total_height - 2), "clearing a row above leaves the wound in place")
 	var d := e.duplicate_board()
-	eq(d.wounds.size(), 1, "duplicate_board copies the wounds")
+	eq(d.wound_count(), 1, "duplicate_board copies the wounds")
 
 ## Fills the bottom two rows except columns 0-1, locks an O there: a plain double.
 func _o_double(g: Game) -> ClearResult:
 	var b := g.board
 	for y in [b.total_height - 2, b.total_height - 1]:
 		for x in range(2, 10):
-			b.set_cell(x, y - b.wounds.size(), 9)
-	var p := place(g, &"O", 0, Vector2i(0, b.total_height - 2 - b.wounds.size()))
+			b.set_cell(x, y - b.wound_count(), 9)
+	var p := place(g, &"O", 0, Vector2i(0, b.total_height - 2 - b.wound_count()))
 	p.last_action_was_rotation = false
 	var ev: Array = []
 	g.lock_piece(ev)
@@ -2228,10 +2230,10 @@ func test_repeat_penalty() -> void:
 	var r1 := _o_double(g)
 	eq(r1.lines, 2, "first O double clears two rows")
 	check(not r1.repeat, "   first clear of the game is never a repeat")
-	eq(g.board.wounds.size(), 0, "   no wound")
+	eq(g.board.wound_count(), 0, "   no wound")
 	var r2 := _o_double(g)
 	check(r2.repeat, "double -> double is a repeat")
-	eq(g.board.wounds.size(), 1, "   and wounds a row")
+	eq(g.board.wound_count(), 1, "   and inserts a wound line")
 	# Both doubles empty the board, so both are perfect clears (1 + 10).
 	eq(r2.attack, r1.attack, "   the repeat still sends its full attack")
 	var added := false
@@ -2241,7 +2243,8 @@ func test_repeat_penalty() -> void:
 	check(added, "   WOUND_ADDED fires")
 	check(r2.tags().has("Repeat - wounded"), "   and the result is tagged")
 	eq(g.board.get_cell(9, g.board.total_height - 1), Board.WOUND, "the floor row is the wound line")
-	eq(int(g.board.wounds[0]["left"]), 10, "   with 10 clears to go")
+	eq(g.board.wound_left[g.board.total_height - 1], 10, "   with 10 clears to go")
+	check(r2.wound_hole >= 0 and r2.wound_hole < 10, "   and a hole chosen for later")
 
 	var c := ClearResult.new()
 	c.lines = 1
@@ -2277,4 +2280,4 @@ func test_repeat_penalty() -> void:
 	off.start()
 	_o_double(off)
 	_o_double(off)
-	eq(off.board.wounds.size(), 0, "competitive rules: no repeat penalty")
+	eq(off.board.wound_count(), 0, "competitive rules: no repeat penalty")

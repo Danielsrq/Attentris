@@ -47,10 +47,14 @@ enum GravityMode { LEVEL_CURVE, FIXED }
 ## double and keeps B2B the same way.
 @export var allspin_full: bool = false
 ## Two consecutive clears of the same type (piece + lines + spin; non-spin clears keyed
-## by lines only) wound the bottom in-play row. See Board.add_wound.
+## by lines only) insert an unclearable wound line at the bottom. See Board.add_wound.
 @export var repeat_penalty: bool = false
 ## Clears a wound line stays out of play before it heals.
 @export var wound_clears: int = 10
+## Chance a new wound line's hole moves from the previous wound's column. The hole only
+## opens once the wound turns into garbage, so high messiness turns a stack of expired
+## wound lines into cheese.
+@export_range(0.0, 1.0, 0.05) var wound_messiness: float = 0.5
 
 @export_group("Queue")
 @export var next_count: int = 5
