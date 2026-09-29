@@ -181,6 +181,14 @@ fn cmd_play(a: &Args) {
     let (st, js) = run_games(&sc, &weights(a), rules(a), &garbage(a), games, pieces, seed, threads_used(), &label, a.has("out"));
     summary_header();
     summary_row(&label, &st, t0.elapsed().as_secs_f64());
+    let mut t: Vec<u32> = st.iter().flat_map(|s| s.think_us.iter().copied()).collect();
+    if !t.is_empty() {
+        t.sort_unstable();
+        let pct = |p: f64| t[((t.len() - 1) as f64 * p) as usize] as f64 / 1000.0;
+        let mean = t.iter().map(|&x| x as f64).sum::<f64>() / t.len() as f64 / 1000.0;
+        println!("think time per move (wall clock, {} threads): mean {:.1} ms  p50 {:.1}  p95 {:.1}  p99 {:.1}  max {:.1}",
+            threads_used(), mean, pct(0.5), pct(0.95), pct(0.99), pct(1.0));
+    }
     if let Some(p) = a.str("out") {
         write_out(p, &js, a.has("append"));
     }

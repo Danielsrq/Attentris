@@ -113,6 +113,8 @@ pub struct Stats {
     pub garbage_cleared: u64,
     pub max_height: i32,
     pub nodes: u64,
+    /// Wall-clock time of each search call, in microseconds.
+    pub think_us: Vec<u32>,
 }
 
 impl Stats {
@@ -136,6 +138,7 @@ impl Stats {
         self.garbage_cleared += o.garbage_cleared;
         self.max_height = self.max_height.max(o.max_height);
         self.nodes += o.nodes;
+        self.think_us.extend_from_slice(&o.think_us);
     }
     pub fn app(&self) -> f64 {
         self.attack as f64 / self.pieces.max(1) as f64
@@ -248,6 +251,7 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
             if cfg.record { (0..H as usize).map(|y| colors.row_string(y)).collect() } else { Vec::new() };
 
         let nodes_before = searcher.nodes;
+        let t0 = std::time::Instant::now();
         let d = match searcher.search(&board, &queue, hold, b2b, &bag_next) {
             Some(d) => d,
             None => {
@@ -255,6 +259,7 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
                 break;
             }
         };
+        stats.think_us.push(t0.elapsed().as_micros().min(u32::MAX as u128) as u32);
         stats.nodes += searcher.nodes - nodes_before;
 
         // Advance the queue exactly as Game does: the spawned piece is consumed; an
