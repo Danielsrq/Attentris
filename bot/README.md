@@ -45,8 +45,9 @@ godot --headless --path .. -s res://tests/bot_replay_check.gd -- --replay=res://
 
 * every spin is full (Minis promoted); non-T spins score like T-spins (2 / 4 / 6);
 * two consecutive clears of the same type (piece + lines + spin; plain clears keyed by
-  lines only) wound the bottom in-play row for 10 clears. Wound lines are a FIFO block
-  at the floor, oldest on top; garbage enters above them;
+  lines only) insert an unclearable wound line at the bottom, pushing the stack up. It
+  counts down per clear and at 0 becomes an ordinary garbage line; its hole follows
+  `wound_messiness` (default 0.5). Garbage enters beneath wounds;
 * weights: `weights/allspin_slots.txt` (with the S/Z, L/J, I spin-slot features;
   replays in `data/bot/allspin_slots.jsonl`), or the earlier `weights/allspin.txt`.
   Both are tuned on clean boards and do not survive cheese.
