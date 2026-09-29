@@ -1,0 +1,245 @@
+//! Game rules, ported one-to-one from the Godot project so the bot optimises the game
+//! that actually ships:
+//!
+//!   core/piece_data.gd   -- shapes, boxes, spawn orientation
+//!   core/piece_set.gd    -- the rotate_cw primitive (x, y) -> (box-1-y, x)
+//!   core/kick_tables.gd  -- SRS + the SRS+ 180 table (written y-up, flipped here)
+//!   core/spin_detect.gd  -- 3-corner T-spins with the kick-5 upgrade, all-spin by immobility
+//!   core/attack_table.gd -- lines / spins / B2B / perfect clear
+//!   core/game.gd         -- spawn position, B2B bookkeeping, lock-out
+//!
+//! Board space matches the Godot board: y = 0 is the TOP, 40 rows total, the top 20 are
+//! the buffer. A piece position is the top-left of its bounding box.
+
+pub const W: i32 = 10;
+pub const H: i32 = 40;
+pub const BUFFER: i32 = 20;
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
+#[repr(u8)]
+pub enum Piece {
+    I = 0,
+    O,
+    T,
+    S,
+    Z,
+    J,
+    L,
+}
+
+pub const ALL_PIECES: [Piece; 7] = [Piece::I, Piece::O, Piece::T, Piece::S, Piece::Z, Piece::J, Piece::L];
+
+impl Piece {
+    pub fn letter(self) -> char {
+        b"iotszjl"[self as usize] as char
+    }
+    pub fn from_letter(c: char) -> Option<Piece> {
+        match c.to_ascii_lowercase() {
+            'i' => Some(Piece::I),
+            'o' => Some(Piece::O),
+            't' => Some(Piece::T),
+            's' => Some(Piece::S),
+            'z' => Some(Piece::Z),
+            'j' => Some(Piece::J),
+            'l' => Some(Piece::L),
+            _ => None,
+        }
+    }
+    pub fn box_size(self) -> i32 {
+        match self {
+            Piece::I => 4,
+            Piece::O => 2,
+            _ => 3,
+        }
+    }
+    /// Spawn-state cells inside the bounding box, straight from PieceData.tetrominoes().
+    fn base_cells(self) -> [(i32, i32); 4] {
+        match self {
+            Piece::I => [(0, 1), (1, 1), (2, 1), (3, 1)],
+            Piece::O => [(0, 0), (1, 0), (0, 1), (1, 1)],
+            Piece::T => [(1, 0), (0, 1), (1, 1), (2, 1)],
+            Piece::S => [(1, 0), (2, 0), (0, 1), (1, 1)],
+            Piece::Z => [(0, 0), (1, 0), (1, 1), (2, 1)],
+            Piece::J => [(0, 0), (0, 1), (1, 1), (2, 1)],
+            Piece::L => [(2, 0), (0, 1), (1, 1), (2, 1)],
+        }
+    }
+    fn first_filled_row(self) -> i32 {
+        if self == Piece::I { 1 } else { 0 }
+    }
+    /// Game.spawn_pos_for: centred, first filled row on the first visible row.
+    pub fn spawn(self) -> (i32, i32) {
+        ((W - self.box_size()) / 2, BUFFER - self.first_filled_row())
+    }
+}
+
+/// cells[piece][rot] = the four occupied offsets, y-down.
+pub struct Shapes {
+    pub cells: [[[(i8, i8); 4]; 4]; 7],
+}
+
+impl Shapes {
+    pub fn new() -> Shapes {
+        let mut cells = [[[(0i8, 0i8); 4]; 4]; 7];
+        for p in ALL_PIECES {
+            let b = p.box_size();
+            let mut cur = p.base_cells();
+            for r in 0..4 {
+                let mut sorted = cur;
+                sorted.sort_by_key(|&(x, y)| (y, x));
+                for i in 0..4 {
+                    cells[p as usize][r][i] = (sorted[i].0 as i8, sorted[i].1 as i8);
+                }
+                // PieceSet.rotate_cw: a visually clockwise turn in y-down space.
+                for c in cur.iter_mut() {
+                    *c = (b - 1 - c.1, c.0);
+                }
+            }
+        }
+        Shapes { cells }
+    }
+}
+
+/// Kick offsets in y-down board space, tried in order. Index 4 is the "1x2 tuck"
+/// that upgrades a T-spin Mini to full.
+pub fn kicks(piece: Piece, from: usize, to: usize) -> &'static [(i8, i8)] {
+    // Tables are y-up as in kick_tables.gd; the y sign is flipped at the literal so
+    // every entry below reads (x, -y_up).
+    macro_rules! k {
+        ($(($x:expr, $y:expr)),*) => { &[$(($x, -$y)),*] };
+    }
+    match piece {
+        Piece::O => &[(0, 0)],
+        Piece::I => match (from, to) {
+            (0, 1) => k!((0, 0), (-2, 0), (1, 0), (-2, -1), (1, 2)),
+            (1, 0) => k!((0, 0), (2, 0), (-1, 0), (2, 1), (-1, -2)),
+            (1, 2) => k!((0, 0), (-1, 0), (2, 0), (-1, 2), (2, -1)),
+            (2, 1) => k!((0, 0), (1, 0), (-2, 0), (1, -2), (-2, 1)),
+            (2, 3) => k!((0, 0), (2, 0), (-1, 0), (2, 1), (-1, -2)),
+            (3, 2) => k!((0, 0), (-2, 0), (1, 0), (-2, -1), (1, 2)),
+            (3, 0) => k!((0, 0), (1, 0), (-2, 0), (1, -2), (-2, 1)),
+            (0, 3) => k!((0, 0), (-1, 0), (2, 0), (-1, 2), (2, -1)),
+            (0, 2) => k!((0, 0), (0, 1), (0, -1)),
+            (2, 0) => k!((0, 0), (0, -1), (0, 1)),
+            (1, 3) => k!((0, 0), (1, 0), (-1, 0)),
+            (3, 1) => k!((0, 0), (-1, 0), (1, 0)),
+            _ => &[(0, 0)],
+        },
+        _ => match (from, to) {
+            (0, 1) => k!((0, 0), (-1, 0), (-1, 1), (0, -2), (-1, -2)),
+            (1, 0) => k!((0, 0), (1, 0), (1, -1), (0, 2), (1, 2)),
+            (1, 2) => k!((0, 0), (1, 0), (1, -1), (0, 2), (1, 2)),
+            (2, 1) => k!((0, 0), (-1, 0), (-1, 1), (0, -2), (-1, -2)),
+            (2, 3) => k!((0, 0), (1, 0), (1, 1), (0, -2), (1, -2)),
+            (3, 2) => k!((0, 0), (-1, 0), (-1, -1), (0, 2), (-1, 2)),
+            (3, 0) => k!((0, 0), (-1, 0), (-1, -1), (0, 2), (-1, 2)),
+            (0, 3) => k!((0, 0), (1, 0), (1, 1), (0, -2), (1, -2)),
+            (0, 2) => k!((0, 0), (0, 1), (1, 1), (-1, 1), (1, 0), (-1, 0)),
+            (2, 0) => k!((0, 0), (0, -1), (-1, -1), (1, -1), (-1, 0), (1, 0)),
+            (1, 3) => k!((0, 0), (1, 0), (1, 2), (1, 1), (0, 2), (0, 1)),
+            (3, 1) => k!((0, 0), (-1, 0), (-1, 2), (-1, 1), (0, 2), (0, 1)),
+            _ => &[(0, 0)],
+        },
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+pub enum Spin {
+    None = 0,
+    Mini = 1,
+    Full = 2,
+}
+
+impl Spin {
+    pub fn name(self) -> &'static str {
+        match self {
+            Spin::None => "none",
+            Spin::Mini => "mini",
+            Spin::Full => "full",
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum B2bMode {
+    /// attack_table.gd as shipped: +1 while a chain is live.
+    Flat,
+    /// floor(sqrt(chain)) -- the variant described in the design discussion.
+    Sqrt,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Rules {
+    pub b2b: B2bMode,
+    /// RuleSet.all_spin: immobility spins for S, Z, L, J, I (and O). Off = the
+    /// "guideline" preset, T-spins only.
+    pub all_spin: bool,
+    pub perfect_clear_bonus: i32,
+}
+
+impl Default for Rules {
+    fn default() -> Self {
+        Rules { b2b: B2bMode::Flat, all_spin: true, perfect_clear_bonus: 10 }
+    }
+}
+
+impl Rules {
+    /// AttackTable.attack_for. `b2b_after` is the chain value after this clear was
+    /// counted (Game.lock_piece updates b2b before scoring).
+    pub fn attack(&self, piece: Piece, spin: Spin, lines: u32, b2b_after: i32, perfect: bool) -> i32 {
+        if lines == 0 {
+            return 0;
+        }
+        let l = lines as usize;
+        let mut out = if spin != Spin::None && piece == Piece::T {
+            if spin == Spin::Full {
+                [0, 2, 4, 6, 0][l.min(4)]
+            } else {
+                [0, 1, 2, 0, 0][l.min(4)]
+            }
+        } else if spin != Spin::None {
+            [0, 2, 4, 6, 8][l.min(4)]
+        } else {
+            [0, 0, 1, 2, 4][l.min(4)]
+        };
+        if is_difficult(spin, lines) && b2b_after >= 1 {
+            out += match self.b2b {
+                B2bMode::Flat => 1,
+                B2bMode::Sqrt => (b2b_after as f64).sqrt().floor() as i32,
+            };
+        }
+        if perfect {
+            out += self.perfect_clear_bonus;
+        }
+        out
+    }
+}
+
+/// ClearResult.is_difficult: quads and any spin that cleared lines keep B2B alive.
+pub fn is_difficult(spin: Spin, lines: u32) -> bool {
+    lines == 4 || (lines > 0 && spin != Spin::None)
+}
+
+/// Game.lock_piece's chain update: -1 none, 0 first difficult clear, >= 1 chain.
+pub fn next_b2b(b2b: i32, spin: Spin, lines: u32) -> i32 {
+    if lines == 0 {
+        b2b
+    } else if is_difficult(spin, lines) {
+        b2b + 1
+    } else {
+        -1
+    }
+}
+
+/// Human-readable clear name, as ClearResult.describe().
+pub fn describe(piece: Piece, spin: Spin, lines: u32) -> String {
+    let count = ["Zero", "Single", "Double", "Triple", "Quad"][lines.min(4) as usize];
+    if spin != Spin::None {
+        let mini = if spin == Spin::Mini { " Mini" } else { "" };
+        format!("{}-Spin{} {}", piece.letter().to_ascii_uppercase(), mini, count)
+    } else if lines > 0 {
+        count.to_string()
+    } else {
+        String::new()
+    }
+}
