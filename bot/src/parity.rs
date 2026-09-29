@@ -13,6 +13,91 @@ use crate::board::Board;
 use crate::movegen::MoveGen;
 use crate::rules::{Piece, Shapes, Spin};
 
+/// Pro baseline: the same statistics `bench` prints, computed from the dataset's
+/// recorded clears and scored with OUR attack table. With `all_spin` off, non-T spins
+/// are scored as plain clears (standard rules). Only the garbage-free `strict` climb
+/// is used, so it compares like with like: no incoming garbage, the player's own stack.
+pub fn pros(path: &str, all_spin: bool) -> Result<(), String> {
+    use crate::rules::{next_b2b, Rules};
+    let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {}", path, e))?;
+    let rules = Rules { all_spin, ..Rules::default() };
+    #[derive(Default, Clone)]
+    struct Acc {
+        pieces: u64,
+        attack: i64,
+        quad: u64,
+        tsd: u64,
+        tst: u64,
+        tss: u64,
+        mini: u64,
+        other: u64,
+        plain: u64,
+        max_b2b: i32,
+    }
+    let mut per_user: std::collections::BTreeMap<String, Acc> = Default::default();
+    let mut b2b: std::collections::HashMap<String, i32> = Default::default();
+    for line in text.lines() {
+        let v: Value = match serde_json::from_str(line) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+        if v["tier"].as_str() != Some("strict") {
+            continue;
+        }
+        let replay = v["replay"].as_str().unwrap_or("").to_string();
+        let user = v["user"].as_str().unwrap_or("?").to_string();
+        let piece = match v["place"]["type"].as_str().and_then(|s| s.chars().next()).and_then(Piece::from_letter) {
+            Some(p) => p,
+            None => continue,
+        };
+        let lines = v["cleared"].as_u64().unwrap_or(0) as u32;
+        let mut spin = match v["spin"].as_str() {
+            Some("full") => Spin::Full,
+            Some("mini") => Spin::Mini,
+            _ => Spin::None,
+        };
+        if piece != Piece::T && !all_spin {
+            spin = Spin::None;
+        }
+        let chain = b2b.entry(replay).or_insert(-1);
+        *chain = next_b2b(*chain, spin, lines);
+        let a = per_user.entry(user).or_default();
+        a.pieces += 1;
+        a.attack += rules.attack(piece, spin, lines, *chain, false) as i64;
+        a.max_b2b = a.max_b2b.max(*chain);
+        if lines > 0 {
+            match (piece, spin, lines) {
+                (_, Spin::None, 4) => a.quad += 1,
+                (_, Spin::None, _) => a.plain += 1,
+                (Piece::T, Spin::Mini, _) => a.mini += 1,
+                (Piece::T, Spin::Full, 1) => a.tss += 1,
+                (Piece::T, Spin::Full, 2) => a.tsd += 1,
+                (Piece::T, Spin::Full, _) => a.tst += 1,
+                _ => a.other += 1,
+            }
+        }
+    }
+    println!("pro baseline from {} (strict tier), scored with this project's attack table, all-spin {}",
+        path, if all_spin { "on" } else { "off" });
+    println!("{:<22} {:>6} {:>7} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>5}",
+        "player", "APP", "pieces", "quad%", "TSD%", "TST%", "TSS%", "mini%", "spin%", "1-3%", "b2b");
+    let mut all = Acc::default();
+    let rows: Vec<(String, Acc)> = per_user.into_iter().collect();
+    for (u, a) in rows.iter().map(|(u, a)| (u.as_str(), a)).chain(std::iter::once(("ALL", &Acc::default()))) {
+        let a = if u == "ALL" { &all } else {
+            all.pieces += a.pieces; all.attack += a.attack; all.quad += a.quad; all.tsd += a.tsd; all.tst += a.tst;
+            all.tss += a.tss; all.mini += a.mini; all.other += a.other; all.plain += a.plain;
+            all.max_b2b = all.max_b2b.max(a.max_b2b);
+            a
+        };
+        let per = |n: u64| 100.0 * n as f64 / a.pieces.max(1) as f64;
+        println!("{:<22} {:>6.3} {:>7} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>5}",
+            u, a.attack as f64 / a.pieces.max(1) as f64, a.pieces, per(a.quad), per(a.tsd), per(a.tst), per(a.tss),
+            per(a.mini), per(a.other), per(a.plain), a.max_b2b);
+    }
+    Ok(())
+}
+
 pub fn run(path: &str, strict_only: bool, limit: usize) -> Result<(), String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {}", path, e))?;
     let shapes = Shapes::new();

@@ -112,6 +112,12 @@ func _ready() -> void:
 	if controls != null:
 		controls.setup(self)
 
+	# `godot --path . res://replay.tscn -- --replay=res://data/bot/standard.jsonl` opens
+	# any file in the dataset schema, e.g. the Rust bot's output, without editing the scene.
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--replay="):
+			dataset_path = arg.substr("--replay=".length())
+
 	var t0 := Time.get_ticks_usec()
 	log = ReplayLog.new(piece_set)
 	if not log.load_file(dataset_path):

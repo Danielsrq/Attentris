@@ -337,7 +337,14 @@ fn main() {
                 std::process::exit(1);
             }
         }
-        "weights" => print!("{}", weights(&a).to_text()),
+        "pros" => {
+            let path = a.str("data").unwrap_or("../data/zenith_full.jsonl");
+            if let Err(e) = parity::pros(path, !a.has("no-allspin")) {
+                eprintln!("{}", e);
+                std::process::exit(1);
+            }
+        }
+        "weights" =>print!("{}", weights(&a).to_text()),
         other => {
             eprintln!("unknown command {}", other);
             std::process::exit(2);
