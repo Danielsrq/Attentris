@@ -1,0 +1,2 @@
+tuned_d3                0.651  0/20    300   3.97   2.78   0.05   4.53   0.50   5.47   3.15    0/0    34  0.00    0   33.84
+clears per 100 pieces -- spin singles 9.13, doubles 4.13, triples 0.07; plain 1/2/3/4: 1.27/1.22/0.67/3.97; attack per line 1.66

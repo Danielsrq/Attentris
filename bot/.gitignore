@@ -5,3 +5,7 @@ results/b2b_sweep/sweep.log
 results/b2b_sweep/STOP
 results/belief/*.part
 results/belief_normal/*.part
+results/ablation/*.tmp
+results/ablation/*.part
+results/ablation/run.log
+results/ablation/STOP

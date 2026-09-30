@@ -1,0 +1,2 @@
+hand_set_d3             0.393  0/20    300   1.35   2.30   0.47   3.22   0.90   4.02   9.12    0/0     8  0.00    0   32.86
+clears per 100 pieces -- spin singles 7.55, doubles 2.88, triples 0.47; plain 1/2/3/4: 2.42/3.98/2.72/1.35; attack per line 1.02

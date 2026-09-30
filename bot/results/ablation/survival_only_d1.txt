@@ -1,0 +1,2 @@
+survival_only_d1        0.168  8/20    247   1.50   0.10   0.00   0.08   0.36   0.08  20.00    0/0     1  0.00    0    0.12
+clears per 100 pieces -- spin singles 0.47, doubles 0.16, triples 0.00; plain 1/2/3/4: 12.22/5.71/2.06/1.50; attack per line 0.46
