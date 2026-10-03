@@ -22,6 +22,7 @@ mod cpu;
 mod eval;
 mod game;
 mod movegen;
+mod opt;
 mod parity;
 mod rules;
 mod search;
@@ -294,193 +295,6 @@ fn cmd_bench(a: &Args) {
     }
 }
 
-/// Cross-entropy method over the weight vector. Fitness is attack per piece over a
-/// fixed set of seeds (common random numbers, so candidates are compared on the same
-/// piece sequences); topping out forfeits the remaining pieces' attack.
-///
-/// Resumable: after every generation the full state (means, spreads, RNG, best) is
-/// written to <save>.state and the learning curve appended to <save>.log. Re-running
-/// the same command continues from the last finished generation (--fresh restarts).
-fn cmd_tune(a: &Args) {
-    let gens = a.get("gens", 20usize);
-    let pop = a.get("pop", 32usize);
-    let elite = a.get("elite", 8usize);
-    let games = a.get("games", 6usize);
-    let pieces = a.get("pieces", 300usize);
-    let sc = SearchConfig { beam: a.get("beam", 16), depth: a.get("depth", 3), chance: false, ..search_config(a) };
-    let r = rules(a);
-    let g = garbage(a);
-    let save = a.str("save").unwrap_or("weights/tuned.txt").to_string();
-    let state_path = format!("{}.state", save);
-    let log_path = format!("{}.log", save);
-    if let Some(dir) = std::path::Path::new(&save).parent() {
-        let _ = std::fs::create_dir_all(dir);
-    }
-
-    let mut mean = weights(a).w;
-    let mut sd: Vec<f32> = mean.iter().map(|m| m.abs() * 0.5 + 0.2).collect();
-    let mut rng = game::Rng::new(a.get("seed", 7u64));
-    let mut best_ever = (f64::NEG_INFINITY, Weights { w: mean });
-    let mut start = 0usize;
-    if !a.has("fresh") {
-        if let Ok(text) = std::fs::read_to_string(&state_path) {
-            let (s, m, d, bf, bw, rs) = parse_state(&text);
-            start = s;
-            mean = m;
-            sd = d;
-            best_ever = (bf, Weights { w: bw });
-            rng = game::Rng::from_state(rs);
-            println!("resuming {} from generation {}", save, start);
-        }
-    }
-    if start == 0 {
-        let _ = std::fs::write(&log_path, "gen best elite_mean incumbent seconds spread\n");
-    }
-    println!("tuning: {} gens x {} candidates x {} games x {} pieces, search beam {} depth {}{}", gens, pop, games, pieces, sc.beam,
-        sc.depth, if eval::RAW_FEATURES.load(std::sync::atomic::Ordering::Relaxed) { "  [raw features]" } else { "" });
-    let progress_path = format!("{}.progress", save);
-    let session = Instant::now();
-    let done_session = std::sync::atomic::AtomicUsize::new(0);
-    // Optional early stop: no elite-mean gain above --min-gain for --stop-after gens.
-    let stop_after = a.get("stop-after", 0usize);
-    let min_gain = a.get("min-gain", 0.005f64);
-    let mut best_elite = f64::NEG_INFINITY;
-    let mut stale = 0usize;
-    for g_i in start..gens {
-        let seed = 1000 + g_i as u64 * 101;
-        let mut cands: Vec<Weights> = vec![Weights { w: mean }];
-        while cands.len() < pop {
-            let mut w = mean;
-            for i in 0..eval::NF {
-                w[i] += sd[i] * gauss(&mut rng);
-            }
-            cands.push(Weights { w });
-        }
-        let t0 = Instant::now();
-        let fits: Vec<f64> = std::thread::scope(|s| {
-            let per = cands.len().div_ceil(threads_used());
-            let hs: Vec<_> = cands
-                .chunks(per)
-                .map(|chunk| {
-                    let (sc, g) = (sc.clone(), g.clone());
-                    let (done_session, progress_path, session) = (&done_session, &progress_path, &session);
-                    s.spawn(move || {
-                        chunk
-                            .iter()
-                            .map(|w| {
-                                let mut searcher = Searcher::new(sc.clone(), w.clone(), r);
-                                let mut atk = 0i64;
-                                for k in 0..games {
-                                    let cfg = GameConfig { pieces, seed: seed + k as u64, garbage: g.clone(), label: String::new(), record: false, env_rules: None };
-                                    atk += game::play(&mut searcher, &cfg).0.attack;
-                                }
-                                let n = done_session.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
-                                write_progress(&progress_path, g_i, gens, pop, start, n, session.elapsed().as_secs_f64());
-                                atk as f64 / (games * pieces) as f64
-                            })
-                            .collect::<Vec<f64>>()
-                    })
-                })
-                .collect();
-            hs.into_iter().flat_map(|h| h.join().unwrap()).collect()
-        });
-        let mut order: Vec<usize> = (0..cands.len()).collect();
-        order.sort_by(|&x, &y| fits[y].total_cmp(&fits[x]));
-        let el: Vec<&Weights> = order[..elite].iter().map(|&i| &cands[i]).collect();
-        for i in 0..eval::NF {
-            let m = el.iter().map(|w| w.w[i]).sum::<f32>() / elite as f32;
-            let v = el.iter().map(|w| (w.w[i] - m).powi(2)).sum::<f32>() / elite as f32;
-            mean[i] = m;
-            // Noise floor that decays, so the search does not collapse early.
-            sd[i] = v.sqrt() + 0.1 * (1.0 - g_i as f32 / gens as f32);
-        }
-        let top = fits[order[0]];
-        if top > best_ever.0 {
-            best_ever = (top, cands[order[0]].clone());
-        }
-        let elite_mean = order[..elite].iter().map(|&i| fits[i]).sum::<f64>() / elite as f64;
-        let secs = t0.elapsed().as_secs_f64();
-        let spread = sd.iter().sum::<f32>() / sd.len() as f32;
-        let per_gen = session.elapsed().as_secs_f64() / (g_i + 1 - start) as f64;
-        let eta = per_gen * (gens - g_i - 1) as f64;
-        println!("gen {:>2}/{}: best {:.3}  elite mean {:.3}  (incumbent {:.3})  spread {:.3}  {:.0}s  eta {}",
-            g_i + 1, gens, top, elite_mean, fits[0], spread, secs, fmt_dur(eta));
-        let header = format!("# tuned by `bot tune`, gen {}, fitness (APP on training seeds) of distribution mean below\n", g_i);
-        std::fs::write(&save, header + &Weights { w: mean }.to_text()).unwrap();
-        // State last, written atomically: a stop mid-write leaves the previous state.
-        let tmp = format!("{}.tmp", state_path);
-        std::fs::write(&tmp, format_state(g_i + 1, &mean, &sd, best_ever.0, &best_ever.1.w, rng.state())).unwrap();
-        std::fs::rename(&tmp, &state_path).unwrap();
-        use std::io::Write;
-        if let Ok(mut f) = std::fs::OpenOptions::new().append(true).create(true).open(&log_path) {
-            let _ = writeln!(f, "{} {:.4} {:.4} {:.4} {:.0} {:.4}", g_i, top, elite_mean, fits[0], secs, spread);
-        }
-        if elite_mean > best_elite + min_gain {
-            best_elite = elite_mean;
-            stale = 0;
-        } else {
-            stale += 1;
-        }
-        if stop_after > 0 && stale >= stop_after {
-            println!("early stop: elite mean has not improved by more than {} for {} generations", min_gain, stop_after);
-            break;
-        }
-    }
-    let _ = std::fs::write(&progress_path, "finished\n");
-    println!("\nsaved distribution mean to {} (best single candidate scored {:.3})", save, best_ever.0);
-}
-
-/// One line, overwritten after every candidate, for watching a tune from outside:
-/// `cat <save>.progress`.
-fn write_progress(path: &str, g_i: usize, gens: usize, pop: usize, start: usize, done_session: usize, secs: f64) {
-    let in_gen = (done_session - 1) % pop + 1;
-    let total = (gens - start) * pop;
-    let frac = (g_i * pop + in_gen) as f64 / (gens * pop) as f64;
-    let bar: String = (0..20).map(|i| if (i as f64) < frac * 20.0 { '#' } else { '-' }).collect();
-    let eta = secs / done_session as f64 * total.saturating_sub(done_session) as f64;
-    let _ = std::fs::write(path, format!("gen {}/{}  candidate {}/{}  [{}] {:.0}% of run  elapsed {}  eta {}\n",
-        g_i + 1, gens, in_gen, pop, bar, frac * 100.0, fmt_dur(secs), fmt_dur(eta)));
-}
-
-fn fmt_dur(secs: f64) -> String {
-    let m = (secs / 60.0).round() as u64;
-    if m >= 60 { format!("{}h{:02}m", m / 60, m % 60) } else { format!("{}m", m) }
-}
-
-fn gauss(rng: &mut game::Rng) -> f32 {
-    // Box-Muller.
-    let u1 = ((rng.next() >> 11) as f64 + 1.0) / (1u64 << 53) as f64;
-    let u2 = (rng.next() >> 11) as f64 / (1u64 << 53) as f64;
-    ((-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()) as f32
-}
-
-fn format_state(next_gen: usize, mean: &[f32], sd: &[f32], best: f64, best_w: &[f32], rng: u64) -> String {
-    let row = |v: &[f32]| v.iter().map(|x| format!("{:e}", x)).collect::<Vec<_>>().join(" ");
-    format!("gen {}\nbest {:e}\nmean {}\nsd {}\nbest_w {}\nrng {}\n", next_gen, best, row(mean), row(sd), row(best_w), rng)
-}
-
-#[allow(clippy::type_complexity)]
-fn parse_state(text: &str) -> (usize, [f32; eval::NF], Vec<f32>, f64, [f32; eval::NF], u64) {
-    let field = |k: &str| -> Vec<&str> {
-        text.lines().find(|l| l.starts_with(&format!("{} ", k))).map(|l| l.split_whitespace().skip(1).collect()).unwrap_or_default()
-    };
-    let arr = |k: &str| -> [f32; eval::NF] {
-        let mut a = [0f32; eval::NF];
-        for (i, v) in field(k).iter().enumerate().take(eval::NF) {
-            a[i] = v.parse().unwrap();
-        }
-        a
-    };
-    (
-        field("gen")[0].parse().unwrap(),
-        arr("mean"),
-        arr("sd").to_vec(),
-        field("best")[0].parse().unwrap(),
-        arr("best_w"),
-        field("rng")[0].parse().unwrap(),
-    )
-}
-
 fn main() {
     let argv: Vec<String> = std::env::args().skip(1).collect();
     if argv.is_empty() {
@@ -506,7 +320,11 @@ fn main() {
     match argv[0].as_str() {
         "play" => cmd_play(&a),
         "bench" => cmd_bench(&a),
-        "tune" => cmd_tune(&a),
+        "tune" => opt::cmd_tune(&a),
+        "landscape" => {
+            let what = argv.get(1).cloned().unwrap_or_default();
+            opt::cmd_landscape(&Args::parse(&argv[2.min(argv.len())..]), &what);
+        }
         "parity" => {
             let path = a.str("data").unwrap_or("../data/zenith_full.jsonl");
             if let Err(e) = parity::run(path, a.has("strict"), a.get("limit", usize::MAX)) {

@@ -85,6 +85,25 @@ pub const NORMALISED_MARKER: &str = "#! features normalised";
 pub static RAW_FEATURES: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 #[inline]
+/// Weights in the active units (normalised unless --raw-features) to normalised units,
+/// the units every log and weight file uses.
+pub fn to_normalised(w: &[f32; NF]) -> [f32; NF] {
+    let mut out = *w;
+    for i in 0..NF {
+        out[i] = w[i] / scale(i) * SCALE[i];
+    }
+    out
+}
+
+/// Normalised units to the active units.
+pub fn from_normalised(w: &[f32; NF]) -> [f32; NF] {
+    let mut out = *w;
+    for i in 0..NF {
+        out[i] = w[i] / SCALE[i] * scale(i);
+    }
+    out
+}
+
 fn scale(i: usize) -> f32 {
     if RAW_FEATURES.load(std::sync::atomic::Ordering::Relaxed) { 1.0 } else { SCALE[i] }
 }
