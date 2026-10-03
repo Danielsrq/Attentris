@@ -1,0 +1,2 @@
+cma                     1.212  0/20    500   5.46   4.98   0.00   6.24   0.12   1.03   0.03    0/0    95  0.00    0   60.87
+clears per 100 pieces -- spin singles 7.16, doubles 5.21, triples 0.00; plain 1/2/3/4: 0.02/0.00/0.01/5.46; attack per line 3.07

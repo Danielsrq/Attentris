@@ -105,9 +105,8 @@ def main():
                 run["trajectory"] = json.load(f)
                 names = run["trajectory"]["names"]
         data["runs"][key] = run
-    earlier = read_log(path("..", "cem_norm_vs_raw", "normalised.txt.log"))
-    if earlier:
-        data["runs"]["cem0"] = {"label": "CEM (earlier run)", "log": earlier, "dist": None}
+    # The earlier CEM run (../cem_norm_vs_raw) is reproduced exactly by cem.txt -- tuning
+    # is deterministic -- so it is not plotted as a separate series.
 
     slices = read_csv(path("slices.csv"))
     if slices:

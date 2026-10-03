@@ -1,0 +1,31 @@
+# tuned by `bot tune --algo cma`, gen 19, distribution mean
+#! features normalised
+holes        -8.4608
+hole_rows    -0.3098
+cover        1.4094
+bump         11.9649
+bump_sq      -4.3885
+row_trans    -34.6857
+col_trans    -12.8842
+max_height   1.0865
+danger       -32.1058
+well_rows    11.7818
+extra_wells  -3.4492
+t_single     1.1236
+t_double     2.2373
+t_triple     0.5094
+t_fill       0.0919
+b2b          10.8049
+b2b_level    0.6393
+b2b_next     0.1071
+wounds       0.5132
+ready_repeat 0.3435
+sz_single    -0.1455
+sz_double    0.2046
+sz_triple    0.0276
+lj_single    0.1033
+lj_double    0.4319
+lj_triple    -0.4173
+i_single     -0.0530
+i_double     -0.0704
+i_triple     0.1353
