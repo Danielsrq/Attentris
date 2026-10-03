@@ -135,6 +135,64 @@ fn weights(a: &Args) -> Weights {
     }
 }
 
+/// `bot probe --boards NAME=ROWS;NAME=ROWS --weights a.txt,b.txt [--detail b.txt]`
+/// V of each board (rows top to bottom, '/'-separated, 'X' or '#' filled, bottom-aligned
+/// on an empty field; no B2B chain) under each weights file, and the per-feature
+/// breakdown (normalised feature x normalised weight) for the `--detail` file.
+fn cmd_probe(a: &Args) {
+    let boards: Vec<(String, board::Board)> = a.str("boards").expect("--boards").split(';').map(|spec| {
+        let (name, rows) = spec.split_once('=').expect("NAME=ROWS");
+        let rows: Vec<&str> = rows.split('/').collect();
+        let mut b = board::Board::default();
+        let base = rules::H as usize - rows.len();
+        for (i, r) in rows.iter().enumerate() {
+            for (x, ch) in r.chars().enumerate() {
+                if ch == 'X' || ch == '#' {
+                    b.rows[base + i] |= 1 << x;
+                }
+            }
+        }
+        (name.to_string(), b)
+    }).collect();
+    let files: Vec<&str> = a.str("weights").expect("--weights").split(',').collect();
+    let load = |p: &str| Weights::parse(&std::fs::read_to_string(p).unwrap_or_else(|e| panic!("{}: {}", p, e))).unwrap();
+    let mode = B2bMode::Fibonacci;
+    print!("{:<34}", "V(board)");
+    for (n, _) in &boards {
+        print!(" {:>10}", n);
+    }
+    println!();
+    for f in &files {
+        let w = load(f);
+        print!("{:<34}", f);
+        for (_, b) in &boards {
+            print!(" {:>10.3}", w.value(&eval::features(b, -1, mode)));
+        }
+        println!();
+    }
+    if let Some(d) = a.str("detail") {
+        let w = load(d);
+        let wn = eval::to_normalised(&w.w);
+        let feats: Vec<[f32; eval::NF]> = boards.iter().map(|(_, b)| eval::features(b, -1, mode)).collect();
+        println!("\nbreakdown under {}: raw feature value, then contribution (weight x normalised feature)", d);
+        print!("{:<13} {:>8}", "feature", "weight");
+        for (n, _) in &boards {
+            print!(" {:>8} {:>8}", n, "contrib");
+        }
+        println!();
+        for i in 0..eval::NF {
+            if feats.iter().all(|f| f[i] == 0.0) || w.w[i] == 0.0 {
+                continue;
+            }
+            print!("{:<13} {:>8.2}", eval::NAMES[i], wn[i]);
+            for f in &feats {
+                print!(" {:>8.2} {:>8.3}", f[i] * eval::SCALE[i], w.w[i] * f[i]);
+            }
+            println!();
+        }
+    }
+}
+
 /// Plays `games` games (seeds seed..seed+games) across threads. Returns per-game stats
 /// and the concatenated JSONL when recording.
 /// `r` = the rules the bot searches with; `env` = the rules the game applies, if different.
@@ -435,6 +493,7 @@ fn main() {
             }
         }
         "weights" =>print!("{}", weights(&a).to_text()),
+        "probe" => cmd_probe(&a),
         other => {
             eprintln!("unknown command {}", other);
             std::process::exit(2);
