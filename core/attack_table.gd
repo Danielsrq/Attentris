@@ -27,19 +27,25 @@ extends Resource
 @export var other_spin_attack: Dictionary = {0: 0, 1: 2, 2: 4, 3: 6, 4: 8}
 
 @export_group("Bonuses")
-## Back-to-back bonus, as floor(sqrt(b2b) * b2b_weight).
+## How the back-to-back bonus grows with the chain. `b2b` counts the difficult clears
+## AFTER the first (ClearResult.b2b: -1 none, 0 first, >= 1 chain).
 ##
-## Square-rooted rather than flat or linear: a live chain should always be worth keeping,
-## but each further line of bonus has to cost quadratically more, so a long chain cannot
-## run away with the game the way a linear bonus would.
+##   FIBONACCI (default): +1 at each chain that is a squared Fibonacci number, capped:
+##       b2b     1-3   4-8   9-24   25-63   64-168   169-440   441+
+##       bonus    +1    +2     +3      +4       +5        +6     +7
+##   PRIME (power-up): +1 at each squared prime, capped; chains 1-3 earn nothing:
+##       b2b     4-8   9-24   25-48   49-120   121-168   169-288   289+
+##       bonus    +1     +2      +3       +4        +5        +6     +7
+##   SQUARES (legacy): floor(sqrt(b2b) * b2b_weight), uncapped.
+##   FLAT (original): +1 while a chain is live.
 ##
-## `b2b` counts the difficult clears AFTER the first (ClearResult.b2b: -1 none, 0 first,
-## >=1 chain), so the first difficult clear pays nothing extra and the second pays +1:
-##
-##     b2b     1-3   4-8   9-15   16-24   25-35   36-48   49-63
-##     bonus    +1    +2     +3      +4      +5      +6      +7
-##
-## A 27-chain is therefore +5.
+## Bounded growth matters: with every spin able to keep a chain alive, an uncapped bonus
+## lets one chain run the whole game (a 380-chain paid +19 per clear under SQUARES).
+enum B2bScaling { FIBONACCI, PRIME, SQUARES, FLAT }
+const FIBONACCI_STEPS := [1, 4, 9, 25, 64, 169, 441]
+const PRIME_STEPS := [4, 9, 25, 49, 121, 169, 289]
+@export var b2b_scaling: B2bScaling = B2bScaling.FIBONACCI
+## Only used by SQUARES.
 @export var b2b_weight: float = 1.0
 @export var perfect_clear_bonus: int = 10
 ## Combos are ignored for now; flip this on and fill the table when they matter.
@@ -75,4 +81,19 @@ func attack_for(r: ClearResult) -> int:
 func b2b_bonus_for(b2b: int) -> int:
 	if b2b < 1:
 		return 0
-	return int(floor(sqrt(float(b2b)) * b2b_weight))
+	match b2b_scaling:
+		B2bScaling.FIBONACCI:
+			return _steps_reached(FIBONACCI_STEPS, b2b)
+		B2bScaling.PRIME:
+			return _steps_reached(PRIME_STEPS, b2b)
+		B2bScaling.FLAT:
+			return 1
+		_:
+			return int(floor(sqrt(float(b2b)) * b2b_weight))
+
+static func _steps_reached(steps: Array, b2b: int) -> int:
+	var n := 0
+	for s in steps:
+		if b2b >= s:
+			n += 1
+	return n

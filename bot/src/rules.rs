@@ -164,8 +164,41 @@ impl Spin {
 pub enum B2bMode {
     /// The original attack_table.gd: +1 while a chain is live.
     Flat,
-    /// attack_table.gd b2b_bonus_for() with b2b_weight 1.0: floor(sqrt(chain)). Default.
-    Sqrt,
+    /// Legacy b2b_squares: floor(sqrt(chain)), uncapped.
+    Squares,
+    /// Default b2b_fibonacci: +1 at each chain that is a squared Fibonacci number
+    /// (1, 4, 9, 25, 64, 169, 441), so +1..+7, capped at +7.
+    Fibonacci,
+    /// Power-up b2b_prime: +1 at each squared prime (4, 9, 25, 49, 121, 169, 289),
+    /// capped at +7. Chains 1-3 earn nothing.
+    Prime,
+}
+
+pub const FIBONACCI_STEPS: [i32; 7] = [1, 4, 9, 25, 64, 169, 441];
+pub const PRIME_STEPS: [i32; 7] = [4, 9, 25, 49, 121, 169, 289];
+
+impl B2bMode {
+    /// Bonus for a chain of length `chain` (ClearResult.b2b: -1 none, 0 first, >= 1).
+    pub fn bonus(self, chain: i32) -> i32 {
+        if chain < 1 {
+            return 0;
+        }
+        match self {
+            B2bMode::Flat => 1,
+            B2bMode::Squares => (chain as f64).sqrt().floor() as i32,
+            B2bMode::Fibonacci => FIBONACCI_STEPS.iter().filter(|&&s| chain >= s).count() as i32,
+            B2bMode::Prime => PRIME_STEPS.iter().filter(|&&s| chain >= s).count() as i32,
+        }
+    }
+    pub fn parse(s: &str) -> Option<B2bMode> {
+        match s {
+            "flat" => Some(B2bMode::Flat),
+            "squares" | "sqrt" => Some(B2bMode::Squares),
+            "fibonacci" | "fib" => Some(B2bMode::Fibonacci),
+            "prime" => Some(B2bMode::Prime),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -193,7 +226,7 @@ pub struct Rules {
 impl Default for Rules {
     fn default() -> Self {
         Rules {
-            b2b: B2bMode::Sqrt,
+            b2b: B2bMode::Fibonacci,
             all_spin: true,
             perfect_clear_bonus: 10,
             promote_minis: false,
@@ -253,10 +286,7 @@ impl Rules {
         };
         // A Mini keeps the chain alive (is_difficult) but earns no bonus itself.
         if is_difficult(spin, lines) && b2b_after >= 1 && spin != Spin::Mini {
-            let bonus = match self.b2b {
-                B2bMode::Flat => 1,
-                B2bMode::Sqrt => (b2b_after as f64).sqrt().floor() as i32,
-            };
+            let bonus = self.b2b.bonus(b2b_after);
             out += self.b2b_cap.map_or(bonus, |c| bonus.min(c));
         }
         if perfect {

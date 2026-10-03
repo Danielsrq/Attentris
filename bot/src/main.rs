@@ -10,7 +10,7 @@
 //!   --games N --pieces N --seed N --threads N
 //!   --beam N --depth N --no-hold --no-chance --chance-top N
 //!   --weights FILE          (see `bot weights` for the format)
-//!   --b2b sqrt|flat         sqrt = floor(sqrt(chain)) as attack_table.gd (default); flat = +1
+//!   --b2b fibonacci|squares|prime|flat   B2B bonus scaling (default fibonacci, capped +7)
 //!   --no-allspin            T-spins only (RuleSet.guideline()); default is all-spin on
 //!   --mode allspin          every spin full (Minis promoted), repeat-penalty wound lines
 //!   --wound-clears N        clears a wound line lasts (default 10)
@@ -98,8 +98,9 @@ fn rules_for(a: &Args, mode: Option<&str>) -> Rules {
     if let Some(c) = a.str("b2b-cap") {
         r.b2b_cap = c.parse().ok();
     }
-    if a.str("b2b") == Some("flat") {
-        r.b2b = B2bMode::Flat;
+    // --b2b fibonacci (default) | squares (legacy) | prime (power-up) | flat
+    if let Some(m) = a.str("b2b") {
+        r.b2b = B2bMode::parse(m).unwrap_or_else(|| panic!("unknown --b2b {} (fibonacci | squares | prime | flat)", m));
     }
     r
 }

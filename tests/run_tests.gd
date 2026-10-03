@@ -2055,8 +2055,9 @@ func test_pane_tab() -> void:
 	check(absf(cells_per_tick - 1.0) < 0.0001,
 		"at level 1 soft drop moves exactly one cell per tick")
 
-	group("AttackTable: back-to-back is floor(sqrt(b2b))")
+	group("AttackTable: legacy b2b_squares is floor(sqrt(b2b))")
 	var at := AttackTable.new()
+	at.b2b_scaling = AttackTable.B2bScaling.SQUARES
 	# No chain pays nothing: -1 is "no b2b", 0 is the first difficult clear, which starts
 	# the chain rather than being rewarded by it.
 	eq(at.b2b_bonus_for(-1), 0, "no chain pays nothing")
@@ -2089,6 +2090,20 @@ func test_pane_tab() -> void:
 	sr.piece_id = &"I"
 	sr.b2b = 27
 	eq(at.attack_for(sr), 0, "a single collects no chain bonus -- it is not a difficult clear")
+
+	group("AttackTable: b2b_fibonacci (default) and b2b_prime")
+	var fib := AttackTable.new()
+	check(fib.b2b_scaling == AttackTable.B2bScaling.FIBONACCI, "fibonacci is the default")
+	for pair in [[0, 0], [1, 1], [3, 1], [4, 2], [8, 2], [9, 3], [24, 3], [25, 4], [63, 4],
+			[64, 5], [168, 5], [169, 6], [440, 6], [441, 7], [10000, 7]]:
+		eq(fib.b2b_bonus_for(int(pair[0])), int(pair[1]), "fibonacci: b2b %d pays +%d" % [int(pair[0]), int(pair[1])])
+	var pr := AttackTable.new()
+	pr.b2b_scaling = AttackTable.B2bScaling.PRIME
+	for pair in [[1, 0], [3, 0], [4, 1], [9, 2], [25, 3], [48, 3], [49, 4], [121, 5], [169, 6],
+			[289, 7], [10000, 7]]:
+		eq(pr.b2b_bonus_for(int(pair[0])), int(pair[1]), "prime: b2b %d pays +%d" % [int(pair[0]), int(pair[1])])
+	qr.b2b = 70
+	eq(fib.attack_for(qr), 9, "fibonacci: a quad on a 70-chain sends 4 + 5")
 
 	# docs/replay_format.md claims five fields are enough to view a record. Prove it, by
 	# writing a minimal file and loading it -- a contract doc nobody tests is a guess.

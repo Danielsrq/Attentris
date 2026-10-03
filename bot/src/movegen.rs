@@ -266,7 +266,14 @@ mod tests {
         assert!(crate::rules::is_difficult(Spin::Mini, 1), "   but it keeps the chain alive");
         assert_eq!(r.attack(Piece::S, Spin::Full, 2, 0, false), 4);
         assert_eq!(r.attack(Piece::I, Spin::None, 4, 0, true), 14);
-        let sq = Rules { b2b: B2bMode::Sqrt, ..Rules::default() };
+        // Fibonacci (default): +1 at chains 1, 4, 9, 25, 64, 169, 441, capped at +7.
+        let fib = B2bMode::Fibonacci;
+        assert_eq!([0, 1, 3, 4, 8, 9, 24, 25, 63, 64, 168, 169, 440, 441, 10_000].map(|c| fib.bonus(c)),
+                   [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7]);
+        let prime = B2bMode::Prime;
+        assert_eq!([1, 3, 4, 9, 25, 48, 49, 121, 169, 289, 10_000].map(|c| prime.bonus(c)),
+                   [0, 0, 1, 2, 3, 3, 4, 5, 6, 7, 7]);
+        let sq = Rules { b2b: B2bMode::Squares, ..Rules::default() };
         assert_eq!(sq.attack(Piece::T, Spin::Full, 2, 4, false), 6);
         assert_eq!(sq.attack(Piece::T, Spin::Full, 2, 8, false), 6);
         assert_eq!(sq.attack(Piece::T, Spin::Full, 2, 9, false), 7);
