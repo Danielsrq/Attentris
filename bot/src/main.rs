@@ -333,10 +333,18 @@ fn cmd_tune(a: &Args) {
         }
     }
     if start == 0 {
-        let _ = std::fs::write(&log_path, "gen best elite_mean incumbent seconds\n");
+        let _ = std::fs::write(&log_path, "gen best elite_mean incumbent seconds spread\n");
     }
     println!("tuning: {} gens x {} candidates x {} games x {} pieces, search beam {} depth {}{}", gens, pop, games, pieces, sc.beam,
         sc.depth, if eval::RAW_FEATURES.load(std::sync::atomic::Ordering::Relaxed) { "  [raw features]" } else { "" });
+    let progress_path = format!("{}.progress", save);
+    let session = Instant::now();
+    let done_session = std::sync::atomic::AtomicUsize::new(0);
+    // Optional early stop: no elite-mean gain above --min-gain for --stop-after gens.
+    let stop_after = a.get("stop-after", 0usize);
+    let min_gain = a.get("min-gain", 0.005f64);
+    let mut best_elite = f64::NEG_INFINITY;
+    let mut stale = 0usize;
     for g_i in start..gens {
         let seed = 1000 + g_i as u64 * 101;
         let mut cands: Vec<Weights> = vec![Weights { w: mean }];
@@ -354,6 +362,7 @@ fn cmd_tune(a: &Args) {
                 .chunks(per)
                 .map(|chunk| {
                     let (sc, g) = (sc.clone(), g.clone());
+                    let (done_session, progress_path, session) = (&done_session, &progress_path, &session);
                     s.spawn(move || {
                         chunk
                             .iter()
@@ -364,6 +373,8 @@ fn cmd_tune(a: &Args) {
                                     let cfg = GameConfig { pieces, seed: seed + k as u64, garbage: g.clone(), label: String::new(), record: false, env_rules: None };
                                     atk += game::play(&mut searcher, &cfg).0.attack;
                                 }
+                                let n = done_session.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+                                write_progress(&progress_path, g_i, gens, pop, start, n, session.elapsed().as_secs_f64());
                                 atk as f64 / (games * pieces) as f64
                             })
                             .collect::<Vec<f64>>()
@@ -388,7 +399,11 @@ fn cmd_tune(a: &Args) {
         }
         let elite_mean = order[..elite].iter().map(|&i| fits[i]).sum::<f64>() / elite as f64;
         let secs = t0.elapsed().as_secs_f64();
-        println!("gen {:>2}: best {:.3}  elite mean {:.3}  (incumbent mean {:.3})  {:.0}s", g_i, top, elite_mean, fits[0], secs);
+        let spread = sd.iter().sum::<f32>() / sd.len() as f32;
+        let per_gen = session.elapsed().as_secs_f64() / (g_i + 1 - start) as f64;
+        let eta = per_gen * (gens - g_i - 1) as f64;
+        println!("gen {:>2}/{}: best {:.3}  elite mean {:.3}  (incumbent {:.3})  spread {:.3}  {:.0}s  eta {}",
+            g_i + 1, gens, top, elite_mean, fits[0], spread, secs, fmt_dur(eta));
         let header = format!("# tuned by `bot tune`, gen {}, fitness (APP on training seeds) of distribution mean below\n", g_i);
         std::fs::write(&save, header + &Weights { w: mean }.to_text()).unwrap();
         // State last, written atomically: a stop mid-write leaves the previous state.
@@ -397,10 +412,38 @@ fn cmd_tune(a: &Args) {
         std::fs::rename(&tmp, &state_path).unwrap();
         use std::io::Write;
         if let Ok(mut f) = std::fs::OpenOptions::new().append(true).create(true).open(&log_path) {
-            let _ = writeln!(f, "{} {:.4} {:.4} {:.4} {:.0}", g_i, top, elite_mean, fits[0], secs);
+            let _ = writeln!(f, "{} {:.4} {:.4} {:.4} {:.0} {:.4}", g_i, top, elite_mean, fits[0], secs, spread);
+        }
+        if elite_mean > best_elite + min_gain {
+            best_elite = elite_mean;
+            stale = 0;
+        } else {
+            stale += 1;
+        }
+        if stop_after > 0 && stale >= stop_after {
+            println!("early stop: elite mean has not improved by more than {} for {} generations", min_gain, stop_after);
+            break;
         }
     }
+    let _ = std::fs::write(&progress_path, "finished\n");
     println!("\nsaved distribution mean to {} (best single candidate scored {:.3})", save, best_ever.0);
+}
+
+/// One line, overwritten after every candidate, for watching a tune from outside:
+/// `cat <save>.progress`.
+fn write_progress(path: &str, g_i: usize, gens: usize, pop: usize, start: usize, done_session: usize, secs: f64) {
+    let in_gen = (done_session - 1) % pop + 1;
+    let total = (gens - start) * pop;
+    let frac = (g_i * pop + in_gen) as f64 / (gens * pop) as f64;
+    let bar: String = (0..20).map(|i| if (i as f64) < frac * 20.0 { '#' } else { '-' }).collect();
+    let eta = secs / done_session as f64 * total.saturating_sub(done_session) as f64;
+    let _ = std::fs::write(path, format!("gen {}/{}  candidate {}/{}  [{}] {:.0}% of run  elapsed {}  eta {}\n",
+        g_i + 1, gens, in_gen, pop, bar, frac * 100.0, fmt_dur(secs), fmt_dur(eta)));
+}
+
+fn fmt_dur(secs: f64) -> String {
+    let m = (secs / 60.0).round() as u64;
+    if m >= 60 { format!("{}h{:02}m", m / 60, m % 60) } else { format!("{}m", m) }
 }
 
 fn gauss(rng: &mut game::Rng) -> f32 {
