@@ -1,0 +1,10 @@
+Gate rules with clean, mostly aligned garbage: --garbage 15,4,0,0.2 (every 15 pieces 4
+clean rows; with chance 0.2 a batch's hole moves to an ADJACENT column, else it stays).
+20 games x 500 pieces, full search. Weights tuned without garbage.
+
+weights  APP    deaths  garbage cleared  quad/100  TSD/100  plain/100  vertical: IC / STSD / TST  chains: fractal / V->F / offset / F->V
+gate3    0.208   0/20   2574/2640        5.49      7.46     17.07      112 / 3 / 4                 89 / 89 /  63 / 1
+gate2    0.231   1/20   2514/2592        5.35      7.67     17.48       19 / 2 / 1                146 / 16 / 100 / 2
+burst2   0.085  15/20   1372/1588        6.68      4.34      1.60        4 / 0 / 2                 42 /  0 /  13 / 3
+
+Earlier mix (--garbage 10,1-4,mix): gate3 0.142, gate2 0.144, burst2 0.032 (16 deaths).

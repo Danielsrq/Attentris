@@ -131,6 +131,8 @@ fn garbage(a: &Args) -> GarbageConfig {
             Some(&"mix") => g.mix = true,
             m => g.messiness = m.and_then(|x| x.parse().ok()).unwrap_or(0.3),
         }
+        // Optional 4th field: chance a batch moves from the previous batch's column.
+        g.batch_move = p.get(3).and_then(|x| x.parse().ok()).unwrap_or(1.0);
     }
     g.start_rows = a.get("cheese", 0);
     g

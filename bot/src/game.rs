@@ -93,13 +93,16 @@ pub struct GarbageConfig {
     pub messiness: f64,
     /// Each batch is clean (messiness 0) or cheese (messiness 1), with even odds.
     pub mix: bool,
+    /// Chance a batch's first row moves from the previous batch's hole column (1 = every
+    /// batch in a new column, as TETR.IO; lower keeps the garbage well aligned).
+    pub batch_move: f64,
     /// Rows of cheese on the starting board.
     pub start_rows: usize,
 }
 
 impl Default for GarbageConfig {
     fn default() -> Self {
-        GarbageConfig { every: 0, rows: 0, rows_min: 0, messiness: 0.0, mix: false, start_rows: 0 }
+        GarbageConfig { every: 0, rows: 0, rows_min: 0, messiness: 0.0, mix: false, batch_move: 1.0, start_rows: 0 }
     }
 }
 
@@ -291,11 +294,25 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
     let mut garbage_left = 0u64; // garbage rows still on the board (approximate: counted by 'G' rows)
 
     let inject = |board: &mut Board, colors: &mut Colors, n: usize, grng: &mut Rng, hole: &mut i32, messiness: f64| {
-        // Each batch starts in a new column (one attack = one clean chunk, as in
-        // TETR.IO); `messiness` is the chance each further row in the batch moves.
+        // A batch starts in a new column with chance `batch_move` (1 = always, as TETR.IO:
+        // one attack = one clean chunk); `messiness` is the chance each further row moves.
         let mut holes = Vec::with_capacity(n);
         for i in 0..n {
-            if i == 0 || grng.chance(messiness) {
+            // With batch_move < 1 (an aligned well), a batch that moves goes to an adjacent
+            // column -- inward at a wall; otherwise any other column, as before.
+            let aligned = cfg.garbage.batch_move < 1.0;
+            let moves = if i == 0 { !aligned || grng.chance(cfg.garbage.batch_move) } else { grng.chance(messiness) };
+            if moves && i == 0 && aligned && *hole >= 0 && *hole < W {
+                *hole = if *hole == 0 {
+                    1
+                } else if *hole == W - 1 {
+                    W - 2
+                } else if grng.chance(0.5) {
+                    *hole - 1
+                } else {
+                    *hole + 1
+                };
+            } else if moves {
                 let mut h = grng.below(W as u64 - 1) as i32;
                 if h >= *hole {
                     h += 1;
