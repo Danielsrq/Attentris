@@ -241,6 +241,13 @@ pub struct TSlot {
     /// A vertical slot the T can also be turned 180 in (the cell behind the stem open,
     /// both corners there filled): the imperial cross's turn. Its cells, if so.
     pub flip: Option<[(i32, i32); 4]>,
+    /// Static prophecy: the cells the SECOND T of a known two-T structure will fill, in
+    /// today's board (no rows cleared yet). Vertical family (STSD, C-spin): the lane row
+    /// plus the first empty cell under the lane side. Fractal: the flat slot two rows
+    /// below. `flip_second`: the same for the 180 twin (imperial cross: the lane row
+    /// plus the cell the twisted-in nub left).
+    pub second: Option<[(i32, i32); 4]>,
+    pub flip_second: Option<[(i32, i32); 4]>,
 }
 
 /// Everything the T-slot scan finds: the best slot, and the best follow-up fill over the
@@ -248,7 +255,6 @@ pub struct TSlot {
 #[derive(Clone, Copy, Default, Debug)]
 pub struct TSlots {
     pub best: Option<TSlot>,
-    pub followup: f32,
     /// Best vertical template slot (STSD / TST / C-spin), for the diagnostics.
     pub vertical: Option<TSlot>,
 }
@@ -290,14 +296,18 @@ pub fn best_tslot(b: &Board, top: i32) -> Option<TSlot> {
 ///   the slot (tests: `vertical_template_matches_movegen`). Reachability from the spawn
 ///   is otherwise not checked -- the search checks the real thing.
 ///
-/// `followup` is the fill of the TSD a vertical slot leaves behind: once the first clear
-/// is cashed, the lane row lands on the row holding h (or g), and the cap becomes the new
-/// slot's corner. 0..1, 1 = that TSD would clear 2 rows.
+/// Each vertical slot also carries its static prophecy (`TSlot::second`): once the first
+/// clear is cashed, the lane row lands on the row holding h (or g), and the cap becomes
+/// the new TSD's corner.
 pub fn scan_tslots(b: &Board, top: i32) -> TSlots {
+    scan_rows(b, (top - 3).max(1), H - 1)
+}
+
+/// `scan_tslots` over slot rows y_from..y_to only (the chain's banded rescan).
+pub fn scan_rows(b: &Board, y_from: i32, y_to: i32) -> TSlots {
     let mut best: Option<TSlot> = None;
     let mut vertical: Option<TSlot> = None;
-    let mut followup = 0f32;
-    let y0 = (top - 3).max(1);
+    let y0 = y_from.max(1);
     let pop = |y: i32| -> u32 { if (0..H).contains(&y) { b.rows[y as usize].count_ones() } else { 10 } };
     // Walls, floor and ceiling count as filled.
     let filled = |x: i32, y: i32| -> bool { b.blocked(x, y) };
@@ -310,7 +320,7 @@ pub fn scan_tslots(b: &Board, top: i32) -> TSlots {
             *best = Some(slot);
         }
     };
-    for y in y0..H - 1 {
+    for y in y0..y_to.min(H - 1) {
         let pm = padded(b, y - 1);
         let p0 = padded(b, y);
         let p1 = padded(b, y + 1);
@@ -328,7 +338,8 @@ pub fn scan_tslots(b: &Board, top: i32) -> TSlots {
             let a = pop(y) + 3;
             let bb = pop(y + 1) + 1;
             let lines = (a == 10) as u32 + (bb == 10) as u32;
-            consider(TSlot { lines, fill: (a + bb) as f32 / 20.0, cells: [(x - 1, y), (x, y), (x + 1, y), (x, y + 1)], flip: None }, &mut best);
+            let cells = [(x - 1, y), (x, y), (x + 1, y), (x, y + 1)];
+            consider(TSlot { lines, fill: (a + bb) as f32 / 20.0, cells, ..Default::default() }, &mut best);
         }
         if y < 3 {
             continue;
@@ -363,27 +374,65 @@ pub fn scan_tslots(b: &Board, top: i32) -> TSlots {
                 let cells = [(x, y - 1), (x, y), (x + s, y), (x, y + 1)];
                 let flip = (!filled(x - s, y) && filled(x - s, y - 1) && filled(x - s, y + 1))
                     .then_some([(x, y - 1), (x, y), (x - s, y), (x, y + 1)]);
-                let slot = TSlot { lines, fill: (a + bb + cc) as f32 / 30.0, cells, flip };
+                let slot = TSlot { lines, fill: (a + bb + cc) as f32 / 30.0, cells, flip, ..Default::default() };
                 consider(slot, &mut best);
                 consider(slot, &mut vertical);
-                // The follow-up TSD: lane row (7 cells outside the lane) + the hole's row (9
-                // cells besides the hole; the stem's own cell there counts, the T fills it).
-                let hole_row = if !filled(x + s, y + 1) {
-                    Some(y + 1)
-                } else if !filled(x + s, y + 2) {
-                    Some(y + 2)
-                } else {
-                    None
-                };
-                if let Some(hy) = hole_row {
-                    let lane = pop(y - 2);
-                    let hole = pop(hy) + (hy == y + 1) as u32;
-                    followup = followup.max((lane + hole) as f32 / 16.0);
-                }
             }
         }
     }
-    TSlots { best, followup, vertical }
+    // The static prophecies, for the two slots a chain can start from only.
+    TSlots { best: best.map(|s| annotate(b, s)), vertical: vertical.map(|s| annotate(b, s)) }
+}
+
+/// Adds a slot's static prophecy (`TSlot::second`, `flip_second`).
+fn annotate(b: &Board, mut s: TSlot) -> TSlot {
+    let filled = |x: i32, y: i32| -> bool { b.blocked(x, y) };
+    let [c0, c1, c2, _] = s.cells;
+    if c0.1 == c1.1 {
+        // Flat (cells: left, centre, right, nub). Fractal: the same TSD shape two rows
+        // down, its top corner supplied by the row above this one once this has cleared.
+        let (x, y) = c1;
+        if !filled(x - 1, y + 2) && !filled(x, y + 2) && !filled(x + 1, y + 2) && !filled(x, y + 3)
+            && filled(x - 1, y + 3) && filled(x + 1, y + 3) && (filled(x - 1, y - 1) || filled(x + 1, y - 1))
+        {
+            s.second = Some([(x - 1, y + 2), (x, y + 2), (x + 1, y + 2), (x, y + 3)]);
+        }
+    } else {
+        // Vertical (cells: stem top, stem middle, nub, stem bottom). The second T: a TSD in
+        // the lane row, its nub in the first empty cell under the lane side -- h (STSD), g
+        // (C-spin), or, turned 180, the cell the twisted-in nub left (imperial cross).
+        let (x, y) = c1;
+        let side = c2.0 - x;
+        let lane = [(x, y - 2), (x + side, y - 2), (x + 2 * side, y - 2)];
+        let hole = if !filled(x + side, y + 1) {
+            Some(y + 1)
+        } else if !filled(x + side, y + 2) {
+            Some(y + 2)
+        } else {
+            None
+        };
+        s.second = hole.map(|hy| [lane[0], lane[1], lane[2], (x + side, hy)]);
+        s.flip_second = s.flip.map(|_| [lane[0], lane[1], lane[2], (x + side, y)]);
+    }
+    s
+}
+
+/// Readiness (0..1) of a prophesied second T: the fill of its rows, counting the first
+/// T's cells as filled; 1 = both rows complete once the two T's are in.
+fn prophecy_fill(b: &Board, first: &[(i32, i32); 4], second: &[(i32, i32); 4]) -> f32 {
+    let (mut have, mut need) = (0u32, 0u32);
+    let mut rows: Vec<i32> = second.iter().map(|c| c.1).collect();
+    rows.sort_unstable();
+    rows.dedup();
+    for y in rows {
+        if !(0..H).contains(&y) {
+            return 0.0;
+        }
+        let mine = second.iter().filter(|c| c.1 == y).count() as u32;
+        have += b.rows[y as usize].count_ones() + first.iter().filter(|c| c.1 == y).count() as u32;
+        need += W as u32 - mine;
+    }
+    have as f32 / need.max(1) as f32
 }
 
 /// The board after cashing the T-spin chain -- the best slot, then the best slot that
@@ -409,13 +458,77 @@ fn cash_one(b: &Board, first: Option<TSlot>) -> (Board, f32) {
         let rel: [(i8, i8); 4] = std::array::from_fn(|i| (cells[i].0 as i8, cells[i].1 as i8));
         nb.place(&rel, 0, 0);
     };
-    let chain = |cells: &[(i32, i32); 4]| -> (Board, f32) {
+    let chain = |cells: &[(i32, i32); 4], second: Option<[(i32, i32); 4]>| -> (Board, f32) {
         let mut nb = *b;
-        fill(&mut nb, cells);
-        // A slot that clears nothing starts no chain: just its own cavity is exempt.
         if s.lines == 0 {
+            // A slot that clears nothing starts no chain: just its own cavity is exempt.
+            for &(x, y) in cells {
+                nb.rows[y as usize] |= 1 << x;
+            }
             return (nb, 0.0);
         }
+        if let Some(sec) = second {
+            // Static prophecy: both T's cells count as filled and the rows they complete
+            // drop out, as after the real chain -- no rescan.
+            for &(x, y) in cells.iter().chain(sec.iter()) {
+                if (0..H).contains(&y) && (0..W).contains(&x) {
+                    nb.rows[y as usize] |= 1 << x;
+                }
+            }
+            let mut write = H as usize;
+            for y in (0..H as usize).rev() {
+                if nb.rows[y] == FULL && nb.wound_left[y] == 0 {
+                    continue;
+                }
+                write -= 1;
+                nb.rows[write] = nb.rows[y];
+            }
+            for y in 0..write {
+                nb.rows[y] = 0;
+            }
+            return (nb, prophecy_fill(b, cells, &sec));
+        }
+        // Dynamic: cash it, then rescan the rows around it for the slot it leaves. Only
+        // a ready double or triple starts a chain worth looking for (the gate and burst
+        // rules open on those); a weaker slot just has its own cavity exempt.
+        if s.lines < 2 {
+            for &(x, y) in cells {
+                nb.rows[y as usize] |= 1 << x;
+            }
+            return (nb, 0.0);
+        }
+        fill(&mut nb, cells);
+        let lo = cells.iter().map(|c| c.1).min().unwrap() - 4;
+        let hi = cells.iter().map(|c| c.1).max().unwrap() + 3;
+        match scan_rows(&nb, lo, hi).best {
+            Some(s2) => {
+                fill(&mut nb, &s2.cells);
+                (nb, s2.fill)
+            }
+            None => (nb, 0.0),
+        }
+    };
+    let a = chain(&s.cells, s.second);
+    match s.flip {
+        // Whichever way round leaves the better second slot (an imperial cross is turned).
+        Some(f) => {
+            let b2 = chain(&f, s.flip_second);
+            if b2.1 > a.1 { b2 } else { a }
+        }
+        None => a,
+    }
+}
+
+/// The chain's health board and follow-up, computed the dynamic way only (cash, clear,
+/// rescan the whole board) -- the reference the static prophecy is tested against.
+pub fn cash_chain_dynamic(b: &Board, first: TSlot) -> (Board, f32) {
+    let fill = |nb: &mut Board, cells: &[(i32, i32); 4]| {
+        let rel: [(i8, i8); 4] = std::array::from_fn(|i| (cells[i].0 as i8, cells[i].1 as i8));
+        nb.place(&rel, 0, 0);
+    };
+    let run = |cells: &[(i32, i32); 4]| {
+        let mut nb = *b;
+        fill(&mut nb, cells);
         let top = H - *nb.heights().iter().max().unwrap();
         match best_tslot(&nb, top) {
             Some(s2) => {
@@ -425,12 +538,11 @@ fn cash_one(b: &Board, first: Option<TSlot>) -> (Board, f32) {
             None => (nb, 0.0),
         }
     };
-    let a = chain(&s.cells);
-    match s.flip {
-        // Whichever way round leaves the better second slot (an imperial cross is turned).
+    let a = run(&first.cells);
+    match first.flip {
         Some(f) => {
-            let b2 = chain(&f);
-            if b2.1 > a.1 { b2 } else { a }
+            let c = run(&f);
+            if c.1 > a.1 { c } else { a }
         }
         None => a,
     }

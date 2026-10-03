@@ -344,16 +344,20 @@ mod tests {
     /// The follow-up fill reaches 1 on the full chains: STSD -> TSD and TST (C-spin) -> TSD.
     #[test]
     fn followup_fill() {
+        let follow = |b: &Board| {
+            let s = crate::eval::scan_tslots(b, 34);
+            crate::eval::cash_chain_from(b, s.best, s.vertical).1
+        };
         for fixed in [STSD_ROWS, CSPIN_ROWS] {
             let mut rows = vec!["XXXX..XXXX", "XXX...XXXX"];
             rows.extend_from_slice(&fixed);
             let b = board_from(&rows);
-            assert_eq!(crate::eval::scan_tslots(&b, 34).followup, 1.0);
-            assert_eq!(crate::eval::scan_tslots(&mirrored(&b), 34).followup, 1.0);
+            assert_eq!(follow(&b), 1.0);
+            assert_eq!(follow(&mirrored(&b)), 1.0);
         }
         // Lower fill when the rows around the follow-up TSD are still open.
         let b = board_from(&["XXXX......", "XXX.......", "XXX.XXXXXX", "XXX..XXXXX", "XXX..XXXXX", "XXXXXXXXX."]);
-        let f = crate::eval::scan_tslots(&b, 34).followup;
+        let f = follow(&b);
         assert!(f > 0.0 && f < 1.0, "{}", f);
     }
 
@@ -447,9 +451,20 @@ mod tests {
             let slot = slots.best;
             let (after, follow) = crate::eval::cash_chain_from(&b, slot, slots.vertical);
             let (before_holes, _, _) = crate::eval::hole_stats_pub(&b);
-            let (after_holes, _, _) = crate::eval::hole_stats_pub(&after);
-            println!("{:<15} first {:?}  follow {:.2}  holes {} -> {}", name, slot.map(|s| s.lines), follow, before_holes, after_holes);
+            let (after_holes, after_rows, after_cover) = crate::eval::hole_stats_pub(&after);
+            // The reference: cash, clear and rescan the whole board, from whichever first
+            // slot the fast path used (best or the vertical one).
+            let first = [slots.best, slots.vertical].into_iter().flatten()
+                .map(|s| (s, crate::eval::cash_chain_dynamic(&b, s)))
+                .max_by(|x, y| x.1 .1.total_cmp(&y.1 .1)).unwrap();
+            let (dyn_board, dyn_follow) = first.1;
+            let dyn_stats = crate::eval::hole_stats_pub(&dyn_board);
+            let path = if first.0.second.is_some() || first.0.flip_second.is_some() { "static" } else { "dynamic" };
+            println!("{:<15} first {:?}  {:<7} follow {:.2} (reference {:.2})  holes {} -> {} (reference {})",
+                name, slot.map(|s| s.lines), path, follow, dyn_follow, before_holes, after_holes, dyn_stats.0);
             assert_eq!(follow, 1.0, "{}: the second slot is ready", name);
+            assert_eq!(follow, dyn_follow, "{}: same follow-up as the reference", name);
+            assert_eq!((after_holes, after_rows, after_cover), dyn_stats, "{}: same holes as the reference", name);
             assert!(after_holes < before_holes || before_holes == 0.0, "{}", name);
         }
     }
