@@ -134,6 +134,9 @@ pub struct Stats {
     /// Clears the bot believed were spins that the real rules scored as plain clears.
     pub phantom_spins: u64,
     pub plain_by_lines: [u64; 5],
+    /// Per game, per piece: (attack, flags) with bit 0 = a burst-qualifying clear and
+    /// bit 1 = its base attack was doubled. For window APP and burst metrics.
+    pub seqs: Vec<Vec<(u16, u8)>>,
 }
 
 impl Stats {
@@ -163,6 +166,7 @@ impl Stats {
         self.repeats += o.repeats;
         self.max_wounds = self.max_wounds.max(o.max_wounds);
         self.phantom_spins += o.phantom_spins;
+        self.seqs.extend(o.seqs.iter().cloned());
         for i in 0..5 {
             self.spin_by_lines[i] += o.spin_by_lines[i];
             self.plain_by_lines[i] += o.plain_by_lines[i];
@@ -412,6 +416,11 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         stats.garbage_cleared += g_before;
         garbage_left = garbage_left.saturating_sub(g_before);
 
+        if stats.seqs.is_empty() {
+            stats.seqs.push(Vec::new());
+        }
+        let qual = crate::rules::burst_qualifies(o.spin, o.lines) as u8;
+        stats.seqs[0].push((o.attack.max(0) as u16, qual | (o.burst as u8) << 1));
         stats.pieces += 1;
         stats.attack += o.attack as i64;
         stats.lines += o.lines as u64;
@@ -554,7 +563,7 @@ fn write_record(out: &mut String, cfg: &GameConfig, n: usize, board_rows: &[Stri
 \"place\":{{\"type\":\"{ptype}\",\"x\":{px},\"y\":{py},\"r\":{pr},\"spin\":\"{spin}\",\"kick\":{kick},\"soft\":false,\"cells\":[{cells}]}},\
 \"cleared\":{lines},\"cleared_rows\":[{cleared}],\"spin\":\"{spin}\",\"lock_queue\":[{lq}],\"lock_hold\":{lh},\"lock_hold_locked\":{used},\
 \"sealed\":0,\"height\":{height},\"hole_run\":0,\"q_depth\":{gleft},\"recovered\":false,\"garbage_rows\":{grows},\"q_last_zero\":-1,\
-\"attack\":{attack},\"b2b\":{b2b},\"clear\":\"{name}\",\"repeat\":{repeat},\"wound_hole\":{whole},\"wounds\":[{wounds}],\"plan\":{plan}}}",
+\"attack\":{attack},\"b2b\":{b2b},\"clear\":\"{name}\",\"repeat\":{repeat},\"burst\":{burst},\"wound_hole\":{whole},\"wounds\":[{wounds}],\"plan\":{plan}}}",
         label = cfg.label,
         seed = cfg.seed,
         n = n,
@@ -583,6 +592,7 @@ fn write_record(out: &mut String, cfg: &GameConfig, n: usize, board_rows: &[Stri
         name = name,
         plan = if plan.is_empty() { "[]" } else { plan },
         repeat = o.repeat,
+        burst = o.burst,
         whole = wound_hole.map_or("null".to_string(), |h| h.to_string()),
         wounds = wounds,
     );

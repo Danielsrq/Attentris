@@ -23,6 +23,9 @@ var repeat: bool = false
 var healed: int = 0
 ## Hole of the wound line this repeat inserted (it opens when the wound turns to garbage).
 var wound_hole: int = -1
+## Burst rules: the previous placement was a qualifying clear too, so this clear's base
+## attack is doubled (AttackTable.attack_for).
+var burst: bool = false
 
 ## Type for the repeat penalty: piece + lines + spin. Non-spin clears of one size share a
 ## type whatever the piece (double -> double repeats, single -> double does not); spins
@@ -93,7 +96,18 @@ func tags() -> Array:
 		out.append("Perfect Clear")
 	if repeat:
 		out.append("Repeat - wounded")
+	if burst:
+		out.append("Burst x2")
 	return out
+
+## Burst rules: clears that start or extend a burst -- full spins, quads, and Minis that
+## clear 2 or 3 rows (worth 0 themselves). Mini singles and plain clears break it.
+func qualifies_burst() -> bool:
+	if spin == SpinDetect.Kind.FULL:
+		return lines > 0
+	if spin == SpinDetect.Kind.MINI:
+		return lines == 2 or lines == 3
+	return lines == 4
 
 func b2b_active() -> bool:
 	return b2b >= 1

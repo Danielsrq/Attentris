@@ -14,7 +14,7 @@
 use crate::board::{Board, FULL};
 use crate::rules::{clear_type, B2bMode, Piece, Shapes, Spin, H, W};
 
-pub const NAMES: [&str; 29] = [
+pub const NAMES: [&str; 30] = [
     "holes",       // empty cells with something above them
     "hole_rows",   // rows containing at least one hole
     "cover",       // filled cells above each column's topmost hole
@@ -49,6 +49,9 @@ pub const NAMES: [&str; 29] = [
     "i_single",
     "i_double",
     "i_triple",
+    // Burst rules: the last placement was a qualifying clear, so the next one is
+    // doubled. A fact about the position, not a plan; 0 in every other mode.
+    "burst_armed",
 ];
 pub const NF: usize = NAMES.len();
 
@@ -77,7 +80,21 @@ pub const SCALE: [f32; NF] = [
     10.0,  // wounds
     2.0,   // ready_repeat
     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, // spin-slot flags
+    1.0,   // burst_armed: flag
 ];
+
+/// Features that carry no information in a mode, frozen at 0 by `tune --freeze` and in
+/// Shapley runs: the non-T spin slots (Minis send nothing outside all-spin), max_height
+/// (danger covers it), and the all-spin repeat-penalty pair.
+pub const FROZEN_OUTSIDE_ALLSPIN: [&str; 12] = [
+    "max_height", "wounds", "ready_repeat",
+    "sz_single", "sz_double", "sz_triple", "lj_single", "lj_double", "lj_triple",
+    "i_single", "i_double", "i_triple",
+];
+
+pub fn index_of(name: &str) -> Option<usize> {
+    NAMES.iter().position(|&k| k == name)
+}
 
 pub const NORMALISED_MARKER: &str = "#! features normalised";
 
@@ -142,6 +159,7 @@ impl Default for Weights {
                 0.0, 0.0, 0.0, // sz_single / double / triple
                 0.0, 0.0, 0.0, // lj_*
                 0.0, 0.0, 0.0, // i_*
+                0.0,   // burst_armed
             ],
         };
         for i in 0..NF {
@@ -540,6 +558,7 @@ pub fn features(b: &Board, b2b: i32, b2b_mode: B2bMode) -> [f32; NF] {
             }
         }
     }
+    f[29] = b.burst_armed as i32 as f32;
     for i in 0..NF {
         f[i] /= scale(i);
     }

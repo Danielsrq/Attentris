@@ -65,6 +65,9 @@ func attack_for(r: ClearResult) -> int:
 		out = int(other_spin_attack.get(r.lines, 0))
 	else:
 		out = int(lines_attack.get(r.lines, 0))
+	# Burst rules: the base doubles; the B2B bonus below is added after, undoubled.
+	if r.burst:
+		out *= 2
 
 	# A Mini keeps the chain alive (is_difficult) but earns no bonus: it sends nothing.
 	if r.is_difficult() and r.b2b_active() and r.spin != SpinDetect.Kind.MINI:
@@ -75,6 +78,11 @@ func attack_for(r: ClearResult) -> int:
 		var i: int = mini(r.combo, combo_attack.size() - 1)
 		out += combo_attack[i]
 	return out
+
+## Apply the rule set's attack-relevant values (the burst T-spin triple).
+func configure(rules: RuleSet) -> void:
+	t_spin_attack = t_spin_attack.duplicate()
+	t_spin_attack[3] = rules.tst_attack
 
 ## Bonus for a chain of length `b2b`. Exposed separately so a solver can price a chain
 ## it is considering without building a ClearResult for it.

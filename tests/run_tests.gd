@@ -1188,6 +1188,49 @@ func test_attack_table() -> void:
 	eq(g.attack_sent, 9, "two quads send 4 then 5 with the b2b bonus")
 	eq(g.last_result.attack, 5, "the result carries its own attack value")
 
+	# Burst rules: the spec's worked examples, B2B off so only the doubling shows.
+	group("burst attack")
+	var bt := AttackTable.new()
+	bt.configure(RuleSet.burst())
+	var burst_atk := func(lines: int, spin: int, piece: StringName, doubled: bool, chain: int = -1) -> int:
+		var r := attack_result(lines, spin, piece, chain)
+		r.burst = doubled
+		return bt.attack_for(r)
+	eq(burst_atk.call(3, full, &"T", false), 10, "TST is 10 under burst rules")
+	eq(burst_atk.call(4, none, &"I", false) + burst_atk.call(4, none, &"I", true), 12, "quad -> quad = 4 + 4x2")
+	eq(burst_atk.call(2, full, &"T", false) + burst_atk.call(3, full, &"T", true), 24, "TSD -> TST = 4 + 20")
+	eq(burst_atk.call(3, full, &"T", false) + burst_atk.call(2, full, &"T", true), 18, "TST -> TSD = 10 + 8")
+	eq(burst_atk.call(1, full, &"T", false) + burst_atk.call(2, full, &"T", true), 10, "TSS -> TSD = 2 + 8")
+	eq(burst_atk.call(2, full, &"T", false) + burst_atk.call(1, full, &"T", true), 8, "TSD -> TSS = 4 + 4")
+	eq(burst_atk.call(2, full, &"T", true, 4), 10, "the B2B bonus is added after, undoubled: 8 + 2")
+	eq(t.attack_for(attack_result(3, full, &"T", -1)), 6, "TST stays 6 outside burst rules")
+	check(attack_result(2, SpinDetect.Kind.MINI, &"S", -1).qualifies_burst(), "a Mini double qualifies")
+	check(attack_result(3, SpinDetect.Kind.MINI, &"T", -1).qualifies_burst(), "a Mini triple qualifies")
+	check(not attack_result(1, SpinDetect.Kind.MINI, &"T", -1).qualifies_burst(), "a Mini single does not")
+	check(not attack_result(3, none, &"L", -1).qualifies_burst(), "a plain triple does not")
+
+	# Through the lock path: quad, quad (doubled), a non-clearing placement, quad.
+	group("burst through Game")
+	var bg := make_game(Board.new(10, 20, 20), RuleSet.burst())
+	var sent: Array = []
+	for step in ["quad", "quad", "drop", "quad"]:
+		if step == "quad":
+			for y in range(36, 40):
+				for x in range(1, 10):
+					bg.board.set_cell(x, y, 1)
+			bg.board.set_cell(5, 34, 1)
+			place(bg, &"I", 1, Vector2i(-2, 36))
+		else:
+			place(bg, &"O", 0, Vector2i(7, 38))
+		var ev: Array = []
+		var before := bg.attack_sent
+		bg.lock_piece(ev)
+		sent.append(bg.attack_sent - before)
+		if step == "quad":
+			bg.board.clear()
+	# 4; then 4x2 + 1 (chain 1); the drop breaks the burst; then 4 + 1 (chain 2).
+	eq(sent, [4, 9, 0, 5], "quad 4, doubled quad 9, a drop breaks it, the next quad 5")
+
 ## Board with one 1-wide notch at `col`, `depth` deep, and the neighbours set so the
 ## left and right overhangs are exactly as asked.
 func notch_board(col: int, left_ov: int, right_ov: int) -> Board:

@@ -56,6 +56,14 @@ enum GravityMode { LEVEL_CURVE, FIXED }
 ## wound lines into cheese.
 @export_range(0.0, 1.0, 0.05) var wound_messiness: float = 0.5
 
+@export_group("Burst")
+## Burst rules: a qualifying clear (ClearResult.qualifies_burst) placed straight after
+## another one has its BASE attack doubled; the B2B bonus is added after, undoubled.
+## A placement that clears nothing, a plain clear or a Mini single breaks it.
+@export var burst_doubling: bool = false
+## Base attack of a full T-spin triple (AttackTable.t_spin_attack[3]); 10 under burst.
+@export var tst_attack: int = 6
+
 @export_group("Queue")
 @export var next_count: int = 5
 @export var first_piece_excludes: Array[String] = ["S", "Z", "O"]
@@ -90,6 +98,15 @@ static func allspin() -> RuleSet:
 	r.all_spin = true
 	r.allspin_full = true
 	r.repeat_penalty = true
+	return r
+
+## Burst: normal rules, a T-spin triple worth 10, and back-to-back PLACEMENTS of
+## qualifying clears (full T-spins, quads, Mini doubles/triples) double the second one.
+static func burst() -> RuleSet:
+	var r := RuleSet.normal()
+	r.preset_name = "burst"
+	r.burst_doubling = true
+	r.tst_attack = 10
 	return r
 
 ## Official-Tetris feel: slower repeat, T-spin only, no 180.

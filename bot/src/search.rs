@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use crate::board::{Board, Placement};
 use crate::eval::{features, Weights};
 use crate::movegen::MoveGen;
-use crate::rules::{clear_type, next_b2b, Piece, Rules, Shapes, Spin, BUFFER};
+use crate::rules::{burst_qualifies, clear_type, next_b2b, Piece, Rules, Shapes, Spin, BUFFER};
 
 #[derive(Clone, Debug)]
 pub struct SearchConfig {
@@ -94,6 +94,8 @@ pub struct Outcome {
     pub repeat: bool,
     /// Wound lines that healed on this clear.
     pub healed: u32,
+    /// Burst rules: this clear's base attack was doubled.
+    pub burst: bool,
 }
 
 pub fn apply(board: &Board, p: &Placement, b2b: i32, rules: &Rules, shapes: &Shapes) -> Outcome {
@@ -111,7 +113,11 @@ pub fn apply(board: &Board, p: &Placement, b2b: i32, rules: &Rules, shapes: &Sha
     let (lines, cleared) = nb.place(cells, p.x as i32, p.y as i32);
     let nb2 = next_b2b(b2b, spin, lines);
     let perfect = lines > 0 && nb.is_empty();
-    let attack = rules.attack(p.piece, spin, lines, nb2, perfect);
+    let attack = rules.attack_with(p.piece, spin, lines, nb2, perfect, board.burst_armed);
+    let burst = rules.burst && board.burst_armed && burst_qualifies(spin, lines);
+    if rules.burst {
+        nb.burst_armed = burst_qualifies(spin, lines);
+    }
     let (mut repeat, mut healed) = (false, 0);
     if rules.repeat_penalty && lines > 0 {
         // Order per the rules: lines are gone, every wound counts down (healing the
@@ -126,7 +132,7 @@ pub fn apply(board: &Board, p: &Placement, b2b: i32, rules: &Rules, shapes: &Sha
         }
         nb.last_clear = t;
     }
-    Outcome { board: nb, lines, cleared, attack, b2b: nb2, lock_out: all_in_buffer && lines == 0, spin, repeat, healed }
+    Outcome { board: nb, lines, cleared, attack, b2b: nb2, lock_out: all_in_buffer && lines == 0, spin, repeat, healed, burst }
 }
 
 impl Searcher {

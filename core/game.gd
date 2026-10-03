@@ -74,6 +74,8 @@ var last_clear_type: String = ""
 ## the chance the next one moves; its own RNG so the piece sequence is unaffected.
 var last_wound_hole: int = -1
 var _wound_rng := RandomNumberGenerator.new()
+## Burst rules: the previous placement was a qualifying clear (any placement updates it).
+var burst_armed: bool = false
 
 ## Hole column for a new wound line: the previous wound's column, or with probability
 ## `wound_messiness` (and always for the first) a different one.
@@ -101,6 +103,7 @@ func _init(rs: RuleSet, ps: PieceSet, b: Board, sc: Scorer, seed_v: int = 0) -> 
 	board = b
 	scorer = sc
 	seed_value = seed_v
+	attack_table.configure(rules)
 	randomizer = Randomizer.new(ps, seed_v, rules.first_piece_excludes)
 	for _i in rules.next_count:
 		next_queue.append(randomizer.next())
@@ -347,6 +350,9 @@ func lock_piece(events: Array, cause: String = "lock_delay") -> void:
 	else:
 		combo = -1
 	r.b2b = b2b
+	if rules.burst_doubling:
+		r.burst = burst_armed and r.qualifies_burst()
+		burst_armed = r.qualifies_burst()
 	r.combo = combo
 	r.level = level
 	# All-spin repeat penalty. Order: the lines are gone (and the perfect clear judged),

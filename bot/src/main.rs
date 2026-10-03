@@ -13,6 +13,7 @@
 //!   --b2b fibonacci|squares|prime|flat   B2B bonus scaling (default fibonacci, capped +7)
 //!   --no-allspin            T-spins only (RuleSet.guideline()); default is all-spin on
 //!   --mode allspin          every spin full (Minis promoted), repeat-penalty wound lines
+//!   --mode burst            normal + TST 10 + x2 base for back-to-back qualifying clears
 //!   --wound-clears N        clears a wound line lasts (default 10)
 //!   --garbage E,R,M         inject R rows every E pieces, hole moves with prob M
 //!   --cheese N              start with N rows of messy garbage
@@ -87,11 +88,12 @@ fn rules(a: &Args) -> Rules {
 fn rules_for(a: &Args, mode: Option<&str>) -> Rules {
     let mut r = match mode {
         Some("allspin") => Rules::allspin(),
+        Some("burst") => Rules::burst(),
         Some("standard") => Rules { all_spin: false, ..Rules::default() },
         // Normal rules are the default, as in the Godot game.
         Some("normal") | None => Rules::normal(),
         Some("competitive") => Rules::default(),
-        Some(m) => panic!("unknown --mode {} (normal | standard | competitive | allspin)", m),
+        Some(m) => panic!("unknown --mode {} (normal | burst | standard | competitive | allspin)", m),
     };
     if a.has("no-allspin") {
         r.all_spin = false;
@@ -196,6 +198,48 @@ fn summary_row(name: &str, st: &[Stats], secs: f64) {
     );
 }
 
+/// Burstiness: rolling APP over 7- and 14-piece windows (mean of each game's best
+/// window, and the 90th percentile of all windows), the share of qualifying clears that
+/// followed another one (pair rate), and the share of attack sent by burst pairs (both
+/// clears of each doubled pair).
+fn burst_line(seqs: &[Vec<(u16, u8)>]) -> String {
+    let mut parts = Vec::new();
+    for w in [7usize, 14] {
+        let (mut best_sum, mut all) = (0.0, Vec::new());
+        for s in seqs {
+            let mut best = 0.0f64;
+            for win in s.windows(w) {
+                let app = win.iter().map(|x| x.0 as f64).sum::<f64>() / w as f64;
+                best = best.max(app);
+                all.push(app);
+            }
+            best_sum += best;
+        }
+        all.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let p90 = if all.is_empty() { 0.0 } else { all[(all.len() - 1) * 9 / 10] };
+        parts.push(format!("{}-pc window APP best {:.2} p90 {:.2}", w, best_sum / seqs.len().max(1) as f64, p90));
+    }
+    let (mut qual, mut doubled, mut total, mut pair_atk) = (0u64, 0u64, 0u64, 0u64);
+    for s in seqs {
+        for (i, &(atk, fl)) in s.iter().enumerate() {
+            total += atk as u64;
+            qual += (fl & 1) as u64;
+            // A pair: this placement and the previous one both qualifying clears -- the
+            // clears burst rules double, counted the same way under any rules.
+            if fl & 1 != 0 && i > 0 && s[i - 1].1 & 1 != 0 {
+                doubled += 1;
+                pair_atk += atk as u64;
+                // The first clear of the pair, unless it closed a pair itself (counted already).
+                if !(i > 1 && s[i - 2].1 & 1 != 0) {
+                    pair_atk += s[i - 1].0 as u64;
+                }
+            }
+        }
+    }
+    format!("burst -- {}; pair rate {:.1}% of {} qualifying clears; burst-pair attack share {:.1}%",
+        parts.join(", "), 100.0 * doubled as f64 / qual.max(1) as f64, qual, 100.0 * pair_atk as f64 / total.max(1) as f64)
+}
+
 static mut THREADS: usize = 1;
 fn threads_used() -> usize {
     unsafe { THREADS }
@@ -236,6 +280,18 @@ fn cmd_play(a: &Args) {
             per(t.spin_by_lines[1]), per(t.spin_by_lines[2]), per(t.spin_by_lines[3]),
             per(t.plain_by_lines[1]), per(t.plain_by_lines[2]), per(t.plain_by_lines[3]), per(t.plain_by_lines[4]),
             t.attack as f64 / all_lines.max(1) as f64);
+        println!("{}", burst_line(&t.seqs));
+        if let Some(path) = a.str("seq-out") {
+            let mut out = String::from("game,n,attack,qualifying,doubled
+");
+            for (g, seq) in t.seqs.iter().enumerate() {
+                for (n, &(atk, fl)) in seq.iter().enumerate() {
+                    out += &format!("{},{},{},{},{}
+", g, n, atk, fl & 1, fl >> 1 & 1);
+                }
+            }
+            std::fs::write(path, out).expect("write --seq-out");
+        }
         if t.phantom_spins > 0 {
             println!("phantom spins (believed spins scored as plain clears): {:.2} per 100 pieces", per(t.phantom_spins));
         }

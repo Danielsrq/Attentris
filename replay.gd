@@ -174,7 +174,9 @@ func _show() -> void:
 	game.attack_sent = _attack_so_far
 	game.last_result = _result_for(step)
 	if game.last_result != null:
-		game.last_result.attack = game.attack_table.attack_for(game.last_result)
+		game.last_result.burst = bool(step.get("burst", false))
+		# Bot replays carry the exact attack (burst doubling, B2B, TST 10 included).
+		game.last_result.attack = int(step["attack"]) if step.has("attack") else game.attack_table.attack_for(game.last_result)
 	game.last_points = 0
 	if hud != null:
 		if game.last_result != null:
@@ -569,6 +571,8 @@ func info_rows() -> Array:
 		var clear_text := res.describe() if res != null else "-"
 		if step.has("attack"):
 			clear_text += "   +%d" % int(step["attack"])
+		if bool(step.get("burst", false)):
+			clear_text += "   BURST x2"
 		var repeat := bool(step.get("repeat", false))
 		if repeat:
 			clear_text += "   REPEAT: row wounded"

@@ -29,6 +29,9 @@ pub struct Board {
     /// Type of the previous clear (see `rules::clear_type`), 0 = none yet. Only
     /// tracked when the repeat penalty is on.
     pub last_clear: u8,
+    /// Burst rules: the previous placement was a qualifying clear, so the next
+    /// qualifying clear has its base attack doubled. Always false in other modes.
+    pub burst_armed: bool,
 }
 
 impl Default for Board {
@@ -40,6 +43,7 @@ impl Default for Board {
             wound_hole: [0; H as usize],
             last_wound_hole: 0,
             last_clear: 0,
+            burst_armed: false,
         }
     }
 }
@@ -227,6 +231,9 @@ impl Board {
             }
             h = (h ^ v ^ (self.wounds as u64) << 40).wrapping_mul(0xFF51_AFD7_ED55_8CCD);
             h ^= h >> 29;
+        }
+        if self.burst_armed {
+            h = (h ^ 0xB5).wrapping_mul(0xC4CE_B9FE_1A85_EC53);
         }
         h
     }

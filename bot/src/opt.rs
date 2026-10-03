@@ -323,6 +323,19 @@ fn load_state(path: &str, s: &mut TuneState) -> bool {
     true
 }
 
+/// `--freeze default` (the features that carry nothing outside all-spin, see
+/// eval::FROZEN_OUTSIDE_ALLSPIN) or `--freeze name,name,...`: weights pinned at 0.
+pub fn frozen_mask(a: &Args) -> [bool; NF] {
+    let mut m = [false; NF];
+    if let Some(spec) = a.str("freeze") {
+        let names: Vec<&str> = if spec == "default" { eval::FROZEN_OUTSIDE_ALLSPIN.to_vec() } else { spec.split(',').collect() };
+        for name in names {
+            m[eval::index_of(name).unwrap_or_else(|| panic!("--freeze: unknown feature {}", name))] = true;
+        }
+    }
+    m
+}
+
 pub fn cmd_tune(a: &Args) {
     let algo = a.str("algo").unwrap_or("cem").to_string();
     let gens = a.get("gens", 20usize);
@@ -338,8 +351,20 @@ pub fn cmd_tune(a: &Args) {
     let u = unit_factor();
     let n = NF;
 
-    let start_w: Vec<f64> = weights(a).w.iter().map(|&x| x as f64).collect();
-    let init_sd: Vec<f64> = start_w.iter().map(|m| m.abs() * 0.5 + 0.2).collect();
+    let frozen = frozen_mask(a);
+    let mut start_w: Vec<f64> = weights(a).w.iter().map(|&x| x as f64).collect();
+    let mut init_sd: Vec<f64> = start_w.iter().map(|m| m.abs() * 0.5 + 0.2).collect();
+    for i in 0..n {
+        if frozen[i] {
+            start_w[i] = 0.0;
+            init_sd[i] = 0.0;
+        }
+    }
+    assert!(algo == "cem" || !frozen.iter().any(|&x| x), "--freeze is only supported with --algo cem");
+    if frozen.iter().any(|&x| x) {
+        let names: Vec<&str> = (0..n).filter(|&i| frozen[i]).map(|i| eval::NAMES[i]).collect();
+        println!("frozen at 0: {}", names.join(" "));
+    }
     let mut st = TuneState {
         generation: 0,
         mean: start_w.clone(),
@@ -427,6 +452,10 @@ pub fn cmd_tune(a: &Args) {
                     st.mean[i] = m;
                     // Noise floor that decays, so the search does not collapse early.
                     st.sd[i] = v.sqrt() + 0.1 * (1.0 - g_i as f64 / gens as f64);
+                    if frozen[i] {
+                        st.mean[i] = 0.0;
+                        st.sd[i] = 0.0;
+                    }
                 }
             }
         }

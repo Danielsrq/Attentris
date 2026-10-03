@@ -221,6 +221,11 @@ pub struct Rules {
     pub non_t_mini: bool,
     /// Experimental: the B2B bonus never exceeds this (None = uncapped).
     pub b2b_cap: Option<i32>,
+    /// Burst rules (RuleSet.burst): a qualifying clear straight after another doubles
+    /// its base attack (see `burst_qualifies`); the B2B bonus is added after, undoubled.
+    pub burst: bool,
+    /// Base attack of a full T-spin triple (6; 10 under burst rules).
+    pub tst_attack: i32,
 }
 
 impl Default for Rules {
@@ -235,6 +240,8 @@ impl Default for Rules {
             wound_messiness: 0.5,
             non_t_mini: false,
             b2b_cap: None,
+            burst: false,
+            tst_attack: 6,
         }
     }
 }
@@ -246,6 +253,12 @@ impl Rules {
     /// are Minis, and a Mini sends nothing but keeps B2B alive.
     pub fn normal() -> Rules {
         Rules { all_spin: true, non_t_mini: true, ..Rules::default() }
+    }
+
+    /// Burst rules: normal rules, TST worth 10, and back-to-back *placements* of
+    /// qualifying clears double the second one's base attack.
+    pub fn burst() -> Rules {
+        Rules { burst: true, tst_attack: 10, ..Rules::normal() }
     }
 
     pub fn allspin() -> Rules {
@@ -270,6 +283,12 @@ impl Rules {
     /// AttackTable.attack_for. `b2b_after` is the chain value after this clear was
     /// counted (Game.lock_piece updates b2b before scoring).
     pub fn attack(&self, piece: Piece, spin: Spin, lines: u32, b2b_after: i32, perfect: bool) -> i32 {
+        self.attack_with(piece, spin, lines, b2b_after, perfect, false)
+    }
+
+    /// `attack`, plus the burst state: `armed` = the previous placement was a
+    /// qualifying clear. Only used when `self.burst` is on.
+    pub fn attack_with(&self, piece: Piece, spin: Spin, lines: u32, b2b_after: i32, perfect: bool, armed: bool) -> i32 {
         if lines == 0 {
             return 0;
         }
@@ -278,12 +297,15 @@ impl Rules {
             // Every piece's Mini sends nothing (AttackTable.t_spin_mini_attack).
             0
         } else if spin == Spin::Full && piece == Piece::T {
-            [0, 2, 4, 6, 0][l.min(4)]
+            [0, 2, 4, self.tst_attack, 0][l.min(4)]
         } else if spin != Spin::None {
             [0, 2, 4, 6, 8][l.min(4)]
         } else {
             [0, 0, 1, 2, 4][l.min(4)]
         };
+        if self.burst && armed && burst_qualifies(spin, lines) {
+            out *= 2;
+        }
         // A Mini keeps the chain alive (is_difficult) but earns no bonus itself.
         if is_difficult(spin, lines) && b2b_after >= 1 && spin != Spin::Mini {
             let bonus = self.b2b.bonus(b2b_after);
@@ -299,6 +321,17 @@ impl Rules {
 /// ClearResult.is_difficult: quads and any spin that cleared lines keep B2B alive.
 pub fn is_difficult(spin: Spin, lines: u32) -> bool {
     lines == 4 || (lines > 0 && spin != Spin::None)
+}
+
+/// Burst rules: clears that start or extend a burst -- full spins, quads, and Minis
+/// that clear 2 or 3 rows (worth 0 themselves). Mini singles, plain clears and
+/// placements that clear nothing break it.
+pub fn burst_qualifies(spin: Spin, lines: u32) -> bool {
+    match spin {
+        Spin::Full => lines > 0,
+        Spin::Mini => lines == 2 || lines == 3,
+        Spin::None => lines == 4,
+    }
 }
 
 /// Game.lock_piece's chain update: -1 none, 0 first difficult clear, >= 1 chain.
@@ -322,5 +355,38 @@ pub fn describe(piece: Piece, spin: Spin, lines: u32) -> String {
         count.to_string()
     } else {
         String::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The worked examples from the burst-rules spec. B2B is off (chain 0) so the
+    /// base-attack doubling is isolated, then checked with a live chain.
+    #[test]
+    fn burst_attack() {
+        let r = Rules::burst();
+        let (t, i, s) = (Piece::T, Piece::I, Piece::S);
+        let at = |p, sp, l, armed| r.attack_with(p, sp, l, 0, false, armed);
+        assert_eq!(at(t, Spin::Full, 3, false), 10, "TST is 10");
+        assert_eq!(at(i, Spin::None, 4, false) + at(i, Spin::None, 4, true), 4 + 8, "quad -> quad");
+        assert_eq!(at(t, Spin::Full, 2, false) + at(t, Spin::Full, 2, true), 4 + 8, "TSD -> TSD");
+        assert_eq!(at(t, Spin::Full, 2, false) + at(t, Spin::Full, 3, true), 24, "TSD -> TST");
+        assert_eq!(at(t, Spin::Full, 3, false) + at(t, Spin::Full, 2, true), 18, "TST -> TSD");
+        assert_eq!(at(t, Spin::Full, 1, false) + at(t, Spin::Full, 2, true), 10, "TSS -> TSD");
+        assert_eq!(at(t, Spin::Full, 2, false) + at(t, Spin::Full, 1, true), 8, "TSD -> TSS");
+        assert_eq!(at(s, Spin::Mini, 2, true), 0, "a Mini is 0, doubled or not");
+        assert_eq!(at(t, Spin::None, 2, true), 1, "plain clears are never doubled");
+        // The B2B bonus is added after the doubling: TSD doubled (8) + chain-4 bonus (2).
+        assert_eq!(r.attack_with(t, Spin::Full, 2, 4, false, true), 10);
+        // And not in normal rules.
+        assert_eq!(Rules::normal().attack_with(t, Spin::Full, 2, 0, false, true), 4);
+        assert_eq!(Rules::normal().attack(t, Spin::Full, 3, 0, false), 6);
+
+        assert!(burst_qualifies(Spin::Mini, 2) && burst_qualifies(Spin::Mini, 3));
+        assert!(!burst_qualifies(Spin::Mini, 1), "Mini singles break the chain");
+        assert!(!burst_qualifies(Spin::None, 3) && !burst_qualifies(Spin::Full, 0));
+        assert!(burst_qualifies(Spin::None, 4) && burst_qualifies(Spin::Full, 1));
     }
 }

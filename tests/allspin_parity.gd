@@ -15,9 +15,13 @@ func _init() -> void:
 	var path := ""
 	# --rules=normal: no repeat penalty (normal rules); default: all-spin.
 	var penalty := true
+	# --rules=burst: normal rules plus the burst doubling and TST 10.
+	var burst := false
 	for arg in OS.get_cmdline_user_args():
-		if arg == "--rules=normal":
+		if arg == "--rules=normal" or arg == "--rules=burst":
 			penalty = false
+		if arg == "--rules=burst":
+			burst = true
 		if arg.begins_with("--replay="):
 			path = arg.substr("--replay=".length())
 	var f := FileAccess.open(path, FileAccess.READ)
@@ -39,13 +43,15 @@ func _init() -> void:
 
 	var ps := PieceSet.tetrominoes()
 	var table := AttackTable.new()
+	table.configure(RuleSet.burst() if burst else RuleSet.normal())
 	var bad := 0
-	var totals := {"placements": 0, "repeats": 0, "healed": 0, "attack": 0}
+	var totals := {"placements": 0, "repeats": 0, "healed": 0, "attack": 0, "bursts": 0}
 	for name in order:
 		var steps: Array = runs[name]
 		var b := Board.new(10, 20, 20)
 		var b2b := -1
 		var last_type := ""
+		var armed := false
 		for i in steps.size():
 			var step: Dictionary = steps[i]
 			var why := _compare(b, step)
@@ -74,6 +80,9 @@ func _init() -> void:
 			if r.lines > 0:
 				b2b = b2b + 1 if r.is_difficult() else -1
 			r.b2b = b2b
+			if burst:
+				r.burst = armed and r.qualifies_burst()
+				armed = r.qualifies_burst()
 			if penalty and r.lines > 0:
 				r.healed = b.tick_wounds()
 				var t := r.clear_type()
@@ -88,6 +97,8 @@ func _init() -> void:
 				problems.append("lines %d vs %d" % [r.lines, int(step["cleared"])])
 			if r.repeat != bool(step.get("repeat", false)):
 				problems.append("repeat %s vs %s" % [r.repeat, step.get("repeat")])
+			if r.burst != bool(step.get("burst", false)):
+				problems.append("burst %s vs %s" % [r.burst, step.get("burst")])
 			if atk != int(step["attack"]):
 				problems.append("attack %d vs %d" % [atk, int(step["attack"])])
 			if not problems.is_empty():
@@ -98,9 +109,10 @@ func _init() -> void:
 			totals["repeats"] += int(r.repeat)
 			totals["healed"] += r.healed
 			totals["attack"] += atk
+			totals["bursts"] += int(r.burst)
 		print("%s: %d placements checked" % [name, steps.size()])
-	print("placements %d, repeats %d, wound lines healed %d, attack %d -- problems %d" % [
-		totals["placements"], totals["repeats"], totals["healed"], totals["attack"], bad])
+	print("placements %d, repeats %d, wound lines healed %d, bursts %d, attack %d -- problems %d" % [
+		totals["placements"], totals["repeats"], totals["healed"], totals["bursts"], totals["attack"], bad])
 	quit(0 if bad == 0 else 1)
 
 ## "" when Godot's board matches the record's spawn-time board and wound list.
