@@ -290,6 +290,11 @@ fn cmd_play(a: &Args) {
             per(t.plain_by_lines[1]), per(t.plain_by_lines[2]), per(t.plain_by_lines[3]), per(t.plain_by_lines[4]),
             t.attack as f64 / all_lines.max(1) as f64);
         println!("{}", burst_line(&t.seqs));
+        let [ev, seen, ready] = t.tmpl_search;
+        println!("STSD/TST template -- in search: {:.2}% of {} V evals saw a slot, {:.2}% a ready one; on the board: ready before {} moves, \
+cashed {} (followed by a TSD {}); vertical T-spin doubles/triples {}, {} of them found by the template beforehand",
+            100.0 * seen as f64 / ev.max(1) as f64, ev, 100.0 * ready as f64 / ev.max(1) as f64,
+            t.tmpl_ready, t.tmpl_cashed, t.tmpl_followups, t.vert_spins, t.vert_spins_seen);
         if let Some(path) = a.str("seq-out") {
             let mut out = String::from("game,n,attack,qualifying,doubled
 ");

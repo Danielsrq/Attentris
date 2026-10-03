@@ -137,6 +137,18 @@ pub struct Stats {
     /// Per game, per piece: (attack, flags) with bit 0 = a burst-qualifying clear and
     /// bit 1 = its base attack was doubled. For window APP and burst metrics.
     pub seqs: Vec<Vec<(u16, u8)>>,
+    /// Vertical T-slot template diagnostics. In search: V evaluations, how many saw a
+    /// template slot, how many a ready one (2+ lines).
+    pub tmpl_search: [u64; 3],
+    /// On the real board before each move: a ready template slot was there; the bot then
+    /// placed a T exactly into it; a T-spin double followed within 2 placements.
+    pub tmpl_ready: u64,
+    pub tmpl_cashed: u64,
+    pub tmpl_followups: u64,
+    /// Full vertical T-spins clearing 2+ rows the bot made, and how many of them the
+    /// template had found on the board beforehand.
+    pub vert_spins: u64,
+    pub vert_spins_seen: u64,
 }
 
 impl Stats {
@@ -167,6 +179,14 @@ impl Stats {
         self.max_wounds = self.max_wounds.max(o.max_wounds);
         self.phantom_spins += o.phantom_spins;
         self.seqs.extend(o.seqs.iter().cloned());
+        for i in 0..3 {
+            self.tmpl_search[i] += o.tmpl_search[i];
+        }
+        self.tmpl_ready += o.tmpl_ready;
+        self.tmpl_cashed += o.tmpl_cashed;
+        self.tmpl_followups += o.tmpl_followups;
+        self.vert_spins += o.vert_spins;
+        self.vert_spins_seen += o.vert_spins_seen;
         for i in 0..5 {
             self.spin_by_lines[i] += o.spin_by_lines[i];
             self.plain_by_lines[i] += o.plain_by_lines[i];
@@ -304,6 +324,8 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
 
     let shapes = crate::rules::Shapes::new();
     let mut expected: Option<(Piece, [(i32, i32); 4])> = None;
+    let counts_at_start = crate::eval::template_counts();
+    let mut followup_left = 0u8;
     for n in 0..cfg.pieces {
         if cfg.garbage.every > 0 && n > 0 && n % cfg.garbage.every == 0 {
             inject(&mut board, &mut colors, cfg.garbage.rows, &mut grng, &mut garbage_hole);
@@ -375,6 +397,30 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
             };
         }
         let o = apply(&board, &p, b2b, &env, &shapes);
+        // Template diagnostics on the real board.
+        {
+            let top = H - *board.heights().iter().max().unwrap();
+            let pre = crate::eval::scan_tslots(&board, top).vertical;
+            let mut slot_cells = pre.map(|s| s.cells);
+            if let Some(c) = slot_cells.as_mut() {
+                c.sort();
+            }
+            let into_slot = p.piece == Piece::T && slot_cells == Some(sorted_cells(&p, &shapes));
+            let ready = pre.map_or(false, |s| s.lines >= 2);
+            stats.tmpl_ready += ready as u64;
+            if ready && into_slot && o.lines >= 2 {
+                stats.tmpl_cashed += 1;
+                followup_left = 3;
+            } else if followup_left > 0 && p.piece == Piece::T && o.spin == Spin::Full && o.lines == 2 && p.rot == 2 {
+                stats.tmpl_followups += 1;
+                followup_left = 0;
+            }
+            followup_left = followup_left.saturating_sub(1);
+            if p.piece == Piece::T && o.spin == Spin::Full && (p.rot == 1 || p.rot == 3) && o.lines >= 2 {
+                stats.vert_spins += 1;
+                stats.vert_spins_seen += into_slot as u64;
+            }
+        }
         if o.lines > 0 && d.placement.spin != crate::rules::Spin::None && o.spin == crate::rules::Spin::None {
             stats.phantom_spins += 1;
         }
@@ -439,6 +485,10 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         }
         board = o_board;
         b2b = o.b2b;
+    }
+    let counts = crate::eval::template_counts();
+    for i in 0..3 {
+        stats.tmpl_search[i] = counts[i] - counts_at_start[i];
     }
     (stats, out)
 }

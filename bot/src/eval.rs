@@ -246,6 +246,19 @@ pub struct TSlot {
 pub struct TSlots {
     pub best: Option<TSlot>,
     pub followup: f32,
+    /// Best vertical template slot (STSD / TST / C-spin), for the diagnostics.
+    pub vertical: Option<TSlot>,
+}
+
+thread_local! {
+    /// Diagnostics: V evaluations on this thread, and how many found a vertical template
+    /// slot / a ready one (2+ lines). Thread-local, so counting costs no synchronisation.
+    static TEMPLATE_COUNTS: std::cell::Cell<[u64; 3]> = const { std::cell::Cell::new([0; 3]) };
+}
+
+/// This thread's (evaluations, vertical slot seen, vertical slot ready) so far.
+pub fn template_counts() -> [u64; 3] {
+    TEMPLATE_COUNTS.with(|c| c.get())
 }
 
 /// Best T-spin slot on the board.
@@ -279,6 +292,7 @@ pub fn best_tslot(b: &Board, top: i32) -> Option<TSlot> {
 /// slot's corner. 0..1, 1 = that TSD would clear 2 rows.
 pub fn scan_tslots(b: &Board, top: i32) -> TSlots {
     let mut best: Option<TSlot> = None;
+    let mut vertical: Option<TSlot> = None;
     let mut followup = 0f32;
     let y0 = (top - 3).max(1);
     let pop = |y: i32| -> u32 { if (0..H).contains(&y) { b.rows[y as usize].count_ones() } else { 10 } };
@@ -343,7 +357,9 @@ pub fn scan_tslots(b: &Board, top: i32) -> TSlots {
                 let bb = pop(y) + 2;
                 let cc = pop(y + 1) + 1;
                 let lines = (a == 10) as u32 + (bb == 10) as u32 + (cc == 10) as u32;
-                consider(lines, (a + bb + cc) as f32 / 30.0, [(x, y - 1), (x, y), (x + s, y), (x, y + 1)], &mut best);
+                let cells = [(x, y - 1), (x, y), (x + s, y), (x, y + 1)];
+                consider(lines, (a + bb + cc) as f32 / 30.0, cells, &mut best);
+                consider(lines, (a + bb + cc) as f32 / 30.0, cells, &mut vertical);
                 // The follow-up TSD: lane row (7 cells outside the lane) + the hole's row (9
                 // cells besides the hole; the stem's own cell there counts, the T fills it).
                 let hole_row = if !filled(x + s, y + 1) {
@@ -361,7 +377,7 @@ pub fn scan_tslots(b: &Board, top: i32) -> TSlots {
             }
         }
     }
-    TSlots { best, followup }
+    TSlots { best, followup, vertical }
 }
 
 /// Holes, hole rows and cover on `b`.
@@ -494,6 +510,15 @@ pub fn features(b: &Board, b2b: i32, b2b_mode: B2bMode) -> [f32; NF] {
 
     let slots = scan_tslots(b, top);
     let slot = slots.best;
+    TEMPLATE_COUNTS.with(|c| {
+        let mut v = c.get();
+        v[0] += 1;
+        if let Some(s) = slots.vertical {
+            v[1] += 1;
+            v[2] += (s.lines >= 2) as u64;
+        }
+        c.set(v);
+    });
     // Holes are measured as if the best slot were cashed, so the slot's own cavity is
     // not double-charged: it is an asset (t_*), not a hole.
     let (holes, hole_rows, cover) = match slot {
