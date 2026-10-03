@@ -1,0 +1,96 @@
+== CEM under burst rules, from normal.txt (masked)
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+frozen at 0: max_height wounds ready_repeat sz_single sz_double sz_triple lj_single lj_double lj_triple i_single i_double i_triple
+tuning (cem): 30 gens x 32 candidates x 6 games x 300 pieces, search beam 24 depth 4
+gen  1/30: best 0.924  elite mean 0.876  (incumbent 0.923)  spread 2.706  44s  eta 21m
+gen  2/30: best 0.980  elite mean 0.942  (incumbent 0.924)  spread 2.404  46s  eta 21m
+gen  3/30: best 1.008  elite mean 0.964  (incumbent 0.901)  spread 2.690  47s  eta 21m
+gen  4/30: best 1.017  elite mean 0.980  (incumbent 0.967)  spread 1.897  47s  eta 20m
+gen  5/30: best 1.001  elite mean 0.974  (incumbent 1.001)  spread 1.233  48s  eta 19m
+gen  6/30: best 0.992  elite mean 0.971  (incumbent 0.936)  spread 0.894  47s  eta 19m
+gen  7/30: best 1.010  elite mean 0.969  (incumbent 0.946)  spread 0.928  48s  eta 18m
+gen  8/30: best 1.028  elite mean 0.969  (incumbent 0.943)  spread 0.864  48s  eta 17m
+gen  9/30: best 0.998  elite mean 0.973  (incumbent 0.943)  spread 0.751  47s  eta 16m
+gen 10/30: best 0.990  elite mean 0.968  (incumbent 0.948)  spread 0.832  47s  eta 16m
+gen 11/30: best 0.989  elite mean 0.980  (incumbent 0.938)  spread 0.696  48s  eta 15m
+gen 12/30: best 1.024  elite mean 0.990  (incumbent 0.978)  spread 0.660  47s  eta 14m
+gen 13/30: best 1.028  elite mean 0.989  (incumbent 0.954)  spread 0.610  48s  eta 13m
+gen 14/30: best 1.008  elite mean 0.987  (incumbent 0.908)  spread 0.557  48s  eta 13m
+gen 15/30: best 1.013  elite mean 1.002  (incumbent 0.924)  spread 0.532  48s  eta 12m
+gen 16/30: best 1.029  elite mean 0.999  (incumbent 0.889)  spread 0.539  48s  eta 11m
+gen 17/30: best 1.012  elite mean 0.995  (incumbent 0.967)  spread 0.466  48s  eta 10m
+gen 18/30: best 1.004  elite mean 0.981  (incumbent 0.952)  spread 0.450  48s  eta 9m
+gen 19/30: best 1.007  elite mean 0.990  (incumbent 0.931)  spread 0.390  48s  eta 9m
+gen 20/30: best 1.033  elite mean 0.993  (incumbent 0.983)  spread 0.356  48s  eta 8m
+gen 21/30: best 1.028  elite mean 0.987  (incumbent 0.947)  spread 0.358  48s  eta 7m
+gen 22/30: best 1.047  elite mean 1.007  (incumbent 0.973)  spread 0.334  48s  eta 6m
+gen 23/30: best 1.010  elite mean 0.995  (incumbent 0.948)  spread 0.337  48s  eta 6m
+gen 24/30: best 1.016  elite mean 0.996  (incumbent 0.968)  spread 0.329  48s  eta 5m
+gen 25/30: best 1.008  elite mean 0.992  (incumbent 0.974)  spread 0.292  48s  eta 4m
+gen 26/30: best 0.975  elite mean 0.965  (incumbent 0.904)  spread 0.298  48s  eta 3m
+gen 27/30: best 1.046  elite mean 1.002  (incumbent 0.940)  spread 0.275  47s  eta 2m
+gen 28/30: best 1.023  elite mean 1.000  (incumbent 0.881)  spread 0.226  47s  eta 2m
+gen 29/30: best 1.024  elite mean 0.995  (incumbent 1.006)  spread 0.155  47s  eta 1m
+gen 30/30: best 1.017  elite mean 1.001  (incumbent 0.967)  spread 0.124  47s  eta 0m
+
+saved distribution mean to C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/bot/results/burst/burst.txt (best single candidate scored 1.047)
+== control: CEM under normal rules, same mask and start
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+frozen at 0: max_height wounds ready_repeat sz_single sz_double sz_triple lj_single lj_double lj_triple i_single i_double i_triple
+tuning (cem): 30 gens x 32 candidates x 6 games x 300 pieces, search beam 24 depth 4
+gen  1/30: best 0.916  elite mean 0.833  (incumbent 0.916)  spread 2.777  47s  eta 23m
+gen  2/30: best 0.910  elite mean 0.876  (incumbent 0.872)  spread 2.415  47s  eta 22m
+gen  3/30: best 0.904  elite mean 0.891  (incumbent 0.860)  spread 2.147  47s  eta 21m
+gen  4/30: best 0.927  elite mean 0.906  (incumbent 0.899)  spread 1.872  47s  eta 20m
+gen  5/30: best 0.925  elite mean 0.906  (incumbent 0.925)  spread 1.549  47s  eta 20m
+gen  6/30: best 0.914  elite mean 0.907  (incumbent 0.914)  spread 1.226  47s  eta 19m
+gen  7/30: best 0.934  elite mean 0.920  (incumbent 0.860)  spread 1.262  46s  eta 18m
+gen  8/30: best 0.934  elite mean 0.918  (incumbent 0.920)  spread 1.013  46s  eta 17m
+gen  9/30: best 0.934  elite mean 0.917  (incumbent 0.911)  spread 0.751  46s  eta 16m
+gen 10/30: best 0.943  elite mean 0.920  (incumbent 0.881)  spread 0.697  47s  eta 16m
+gen 11/30: best 0.966  elite mean 0.930  (incumbent 0.948)  spread 0.564  46s  eta 15m
+gen 12/30: best 0.956  elite mean 0.936  (incumbent 0.901)  spread 0.608  47s  eta 14m
+gen 13/30: best 0.956  elite mean 0.941  (incumbent 0.956)  spread 0.546  47s  eta 13m
+gen 14/30: best 0.969  elite mean 0.950  (incumbent 0.969)  spread 0.434  47s  eta 12m
+gen 15/30: best 0.969  elite mean 0.948  (incumbent 0.914)  spread 0.387  47s  eta 12m
+gen 16/30: best 0.946  elite mean 0.934  (incumbent 0.933)  spread 0.352  48s  eta 11m
+gen 17/30: best 0.991  elite mean 0.943  (incumbent 0.878)  spread 0.329  47s  eta 10m
+gen 18/30: best 0.964  elite mean 0.950  (incumbent 0.927)  spread 0.312  46s  eta 9m
+gen 19/30: best 0.961  elite mean 0.943  (incumbent 0.892)  spread 0.282  47s  eta 9m
+gen 20/30: best 0.965  elite mean 0.944  (incumbent 0.927)  spread 0.265  47s  eta 8m
+gen 21/30: best 0.967  elite mean 0.947  (incumbent 0.932)  spread 0.231  47s  eta 7m
+gen 22/30: best 0.964  elite mean 0.942  (incumbent 0.859)  spread 0.207  47s  eta 6m
+gen 23/30: best 0.942  elite mean 0.934  (incumbent 0.918)  spread 0.204  47s  eta 5m
+gen 24/30: best 0.949  elite mean 0.940  (incumbent 0.946)  spread 0.167  47s  eta 5m
+gen 25/30: best 0.944  elite mean 0.936  (incumbent 0.848)  spread 0.148  47s  eta 4m
+gen 26/30: best 0.969  elite mean 0.942  (incumbent 0.886)  spread 0.126  47s  eta 3m
+gen 27/30: best 0.959  elite mean 0.933  (incumbent 0.879)  spread 0.122  47s  eta 2m
+gen 28/30: best 0.967  elite mean 0.950  (incumbent 0.936)  spread 0.101  47s  eta 2m
+gen 29/30: best 0.964  elite mean 0.941  (incumbent 0.933)  spread 0.097  47s  eta 1m
+gen 30/30: best 0.970  elite mean 0.948  (incumbent 0.922)  spread 0.092  47s  eta 0m
+
+saved distribution mean to C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/bot/results/burst/normal_frozen.txt (best single candidate scored 0.991)
+== held-out under burst rules
+burst                   1.331  0/20    500   5.86   2.82   0.01   8.07   0.04   1.78   0.02    0/0    97  0.00    0   60.85
+clears per 100 pieces -- spin singles 9.60, doubles 3.11, triples 0.01; plain 1/2/3/4: 0.02/0.00/0.00/5.86; attack per line 3.39
+burst -- 7-pc window APP best 4.05 p90 2.57, 14-pc window APP best 2.82 p90 1.93; pair rate 21.3% of 1705 qualifying clears; burst-pair attack share 46.1%
+normal_frozen           1.287  0/20    500   5.25   3.91   0.00   7.22   0.15   2.42   0.18    0/0    99  0.00    0   60.91
+clears per 100 pieces -- spin singles 9.34, doubles 4.36, triples 0.00; plain 1/2/3/4: 0.06/0.10/0.02/5.25; attack per line 3.27
+burst -- 7-pc window APP best 3.96 p90 2.57, 14-pc window APP best 2.69 p90 1.93; pair rate 16.2% of 1683 qualifying clears; burst-pair attack share 34.7%
+normal_txt              1.353  0/20    500   5.22   4.41   0.00   8.05   0.06   1.32   0.03    0/0    99  0.00    0   61.22
+clears per 100 pieces -- spin singles 9.24, doubles 4.60, triples 0.00; plain 1/2/3/4: 0.01/0.01/0.01/5.22; attack per line 3.44
+burst -- 7-pc window APP best 3.98 p90 2.57, 14-pc window APP best 2.70 p90 1.93; pair rate 14.7% of 1787 qualifying clears; burst-pair attack share 32.9%
+== held-out under normal rules
+burst                   1.195  0/20    500   5.93   3.17   0.00   7.53   0.07   1.51   0.01    0/0    97  0.00    0   60.83
+clears per 100 pieces -- spin singles 8.96, doubles 3.32, triples 0.00; plain 1/2/3/4: 0.01/0.00/0.00/5.93; attack per line 3.04
+burst -- 7-pc window APP best 3.51 p90 2.29, 14-pc window APP best 2.44 p90 1.71; pair rate 5.6% of 1678 qualifying clears; burst-pair attack share 11.2%
+normal_frozen           1.205  0/20    500   5.03   4.54   0.00   6.66   0.16   2.55   0.21    0/0   100  0.00    0   60.81
+clears per 100 pieces -- spin singles 8.95, doubles 4.96, triples 0.00; plain 1/2/3/4: 0.06/0.11/0.04/5.03; attack per line 3.06
+burst -- 7-pc window APP best 3.51 p90 2.29, 14-pc window APP best 2.37 p90 1.79; pair rate 4.4% of 1665 qualifying clears; burst-pair attack share 8.3%
+normal_txt              1.255  0/20    500   5.29   4.32   0.00   7.93   0.05   1.29   0.03    0/0    99  0.00    0   63.95
+clears per 100 pieces -- spin singles 9.07, doubles 4.52, triples 0.00; plain 1/2/3/4: 0.01/0.01/0.01/5.29; attack per line 3.19
+burst -- 7-pc window APP best 3.41 p90 2.29, 14-pc window APP best 2.38 p90 1.79; pair rate 5.5% of 1774 qualifying clears; burst-pair attack share 11.1%
+== Shapley: burst weights under burst rules
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+shapley: 18 players, 32 permutations, 12 games x 300 pieces each, beam 24 depth 4
+players: holes hole_rows cover bump bump_sq row_trans col_trans danger well_rows extra_wells t_single t_double t_triple t_fill b2b b2b_level b2b_next burst_armed
