@@ -18,6 +18,7 @@
 //!   --cheese N              start with N rows of messy garbage
 
 mod board;
+mod cpu;
 mod eval;
 mod game;
 mod movegen;
@@ -488,6 +489,13 @@ fn main() {
     }
     let a = Args::parse(&argv[1..]);
     let t = a.get("threads", std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4));
+    // Stay on the performance cores of a hybrid CPU (see cpu.rs); --any-cores opts out.
+    if !a.has("any-cores") && argv[0] != "cpus" {
+        let note = cpu::prefer_performance_cores();
+        if !note.is_empty() {
+            eprintln!("cpu: {}", note);
+        }
+    }
     // Experimental control: evaluate with the raw, unscaled features (before weights load).
     if a.has("raw-features") {
         eval::RAW_FEATURES.store(true, std::sync::atomic::Ordering::Relaxed);
@@ -511,6 +519,18 @@ fn main() {
             if let Err(e) = parity::pros(path, !a.has("no-allspin"), a.str("mode") == Some("allspin")) {
                 eprintln!("{}", e);
                 std::process::exit(1);
+            }
+        }
+        "cpus" => {
+            let sets = cpu::cpu_sets();
+            let top = sets.iter().map(|&(_, c)| c).max().unwrap_or(0);
+            println!("logical processor  efficiency class");
+            for (i, c) in &sets {
+                println!("{:>17}  {}{}", i, c, if *c == top { "   performance" } else { "   efficiency" });
+            }
+            match cpu::performance_mask() {
+                Some(m) => println!("performance mask {:#x} ({} logical processors)", m, m.count_ones()),
+                None => println!("not a hybrid CPU: no restriction"),
             }
         }
         "slots" => {
