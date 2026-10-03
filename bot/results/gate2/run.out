@@ -1,0 +1,60 @@
+== CEM under gate rules (round 2), from the burst2 weights
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+frozen at 0: max_height b2b b2b_level b2b_next wounds ready_repeat sz_single sz_double sz_triple lj_single lj_double lj_triple i_single i_double i_triple
+tuning (cem): 30 gens x 32 candidates x 12 games x 300 pieces, search beam 24 depth 4
+gen  1/30: best 0.078  elite mean 0.040  (incumbent 0.004)  spread 2.197  100s  eta 48m
+gen  2/30: best 0.073  elite mean 0.061  (incumbent 0.033)  spread 1.807  105s  eta 48m
+gen  3/30: best 0.100  elite mean 0.080  (incumbent 0.100)  spread 1.368  100s  eta 46m
+gen  4/30: best 0.127  elite mean 0.095  (incumbent 0.091)  spread 1.268  104s  eta 44m
+gen  5/30: best 0.168  elite mean 0.122  (incumbent 0.102)  spread 0.901  103s  eta 43m
+gen  6/30: best 0.153  elite mean 0.127  (incumbent 0.127)  spread 0.695  103s  eta 41m
+gen  7/30: best 0.176  elite mean 0.160  (incumbent 0.156)  spread 0.531  102s  eta 39m
+gen  8/30: best 0.178  elite mean 0.166  (incumbent 0.169)  spread 0.505  103s  eta 38m
+gen  9/30: best 0.204  elite mean 0.182  (incumbent 0.170)  spread 0.497  103s  eta 36m
+gen 10/30: best 0.191  elite mean 0.184  (incumbent 0.191)  spread 0.429  104s  eta 34m
+gen 11/30: best 0.209  elite mean 0.196  (incumbent 0.182)  spread 0.406  103s  eta 33m
+gen 12/30: best 0.209  elite mean 0.192  (incumbent 0.187)  spread 0.359  103s  eta 31m
+gen 13/30: best 0.199  elite mean 0.192  (incumbent 0.168)  spread 0.377  101s  eta 29m
+gen 14/30: best 0.196  elite mean 0.187  (incumbent 0.187)  spread 0.308  101s  eta 27m
+gen 15/30: best 0.199  elite mean 0.188  (incumbent 0.184)  spread 0.271  101s  eta 26m
+gen 16/30: best 0.214  elite mean 0.192  (incumbent 0.169)  spread 0.266  102s  eta 24m
+gen 17/30: best 0.211  elite mean 0.198  (incumbent 0.164)  spread 0.247  103s  eta 22m
+gen 18/30: best 0.207  elite mean 0.198  (incumbent 0.188)  spread 0.220  103s  eta 20m
+gen 19/30: best 0.216  elite mean 0.203  (incumbent 0.187)  spread 0.196  102s  eta 19m
+gen 20/30: best 0.214  elite mean 0.202  (incumbent 0.180)  spread 0.181  102s  eta 17m
+gen 21/30: best 0.202  elite mean 0.195  (incumbent 0.184)  spread 0.177  103s  eta 15m
+gen 22/30: best 0.207  elite mean 0.197  (incumbent 0.173)  spread 0.172  103s  eta 14m
+gen 23/30: best 0.220  elite mean 0.198  (incumbent 0.200)  spread 0.155  103s  eta 12m
+gen 24/30: best 0.208  elite mean 0.202  (incumbent 0.182)  spread 0.139  102s  eta 10m
+gen 25/30: best 0.221  elite mean 0.200  (incumbent 0.188)  spread 0.153  103s  eta 9m
+gen 26/30: best 0.218  elite mean 0.202  (incumbent 0.185)  spread 0.139  103s  eta 7m
+gen 27/30: best 0.208  elite mean 0.201  (incumbent 0.176)  spread 0.145  103s  eta 5m
+gen 28/30: best 0.223  elite mean 0.206  (incumbent 0.177)  spread 0.133  103s  eta 3m
+gen 29/30: best 0.211  elite mean 0.204  (incumbent 0.180)  spread 0.122  103s  eta 2m
+gen 30/30: best 0.233  elite mean 0.213  (incumbent 0.182)  spread 0.099  103s  eta 0m
+
+saved distribution mean to C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/bot/results/gate2/gate2.txt (best single candidate scored 0.233)
+== held-out under gate rules
+gate2                   0.320  0/20    500   0.00   8.39   0.00   0.19   0.18   2.05  17.72    0/0     6  0.00    0   68.20
+clears per 100 pieces -- spin singles 2.15, doubles 8.66, triples 0.00; plain 1/2/3/4: 15.66/2.03/0.03/0.00; attack per line 0.81
+burst -- 7-pc window APP best 1.31 p90 1.14, 14-pc window APP best 1.06 p90 0.57; pair rate 5.4% of 885 qualifying clears; burst-pair attack share 11.8%; doubled 403 clears sending 100.0% of attack
+STSD/TST template -- in search: 0.69% of 155966109 V evals saw a slot, 0.43% a ready one; on the board: ready before 73 moves, cashed 19 (followed by a TSD 12); vertical T-spin doubles/triples 19, 19 of them found by the template beforehand
+== held-out under burst2 rules
+gate2                   0.893  0/20    500   0.13  10.46   0.03   1.52   0.04   3.36   8.88    0/0    20  0.00    0   64.20
+clears per 100 pieces -- spin singles 4.01, doubles 11.37, triples 0.03; plain 1/2/3/4: 6.01/2.60/0.27/0.13; attack per line 2.27
+burst -- 7-pc window APP best 3.31 p90 2.00, 14-pc window APP best 2.12 p90 1.43; pair rate 4.4% of 1305 qualifying clears; burst-pair attack share 7.4%; doubled 336 clears sending 32.4% of attack
+STSD/TST template -- in search: 0.69% of 153122241 V evals saw a slot, 0.47% a ready one; on the board: ready before 145 moves, cashed 56 (followed by a TSD 23); vertical T-spin doubles/triples 56, 56 of them found by the template beforehand
+== held-out under normal rules
+gate2                   0.769  0/20    500   0.12  10.12   0.02   1.88   0.06   2.52   9.70    0/0    10  0.00    0   64.84
+clears per 100 pieces -- spin singles 4.31, doubles 10.27, triples 0.02; plain 1/2/3/4: 5.80/3.39/0.51/0.12; attack per line 1.95
+burst -- 7-pc window APP best 2.83 p90 1.57, 14-pc window APP best 1.77 p90 1.21; pair rate 2.4% of 1229 qualifying clears; burst-pair attack share 3.3%; doubled 0 clears sending 0.0% of attack
+STSD/TST template -- in search: 0.96% of 152230508 V evals saw a slot, 0.64% a ready one; on the board: ready before 123 moves, cashed 70 (followed by a TSD 6); vertical T-spin doubles/triples 70, 70 of them found by the template beforehand
+burst2                  0.030  0/20    500   3.86   1.34   0.00   1.81   0.32  13.15   0.00    0/0   134  0.00    0   72.77
+clears per 100 pieces -- spin singles 10.27, doubles 6.31, triples 0.04; plain 1/2/3/4: 0.00/0.00/0.00/3.86; attack per line 0.08
+burst -- 7-pc window APP best 0.69 p90 0.00, 14-pc window APP best 0.34 p90 0.00; pair rate 3.5% of 1202 qualifying clears; burst-pair attack share 13.5%; doubled 37 clears sending 100.0% of attack
+STSD/TST template -- in search: 0.16% of 154995653 V evals saw a slot, 0.06% a ready one; on the board: ready before 1 moves, cashed 0 (followed by a TSD 0); vertical T-spin doubles/triples 1, 0 of them found by the template beforehand
+== replays: gate2 bot under gate rules
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+plan stability: 69.8% of moves were exactly what the previous search planned (1741 / 2495)
+wrote C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/bot/results/gate2/../../../data/bot/gate2.jsonl (2500 placements)
+all done
