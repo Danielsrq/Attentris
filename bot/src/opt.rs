@@ -760,6 +760,98 @@ fn row_f(v: &[f64]) -> String {
     v.iter().map(|x| format!("{:.5}", x)).collect::<Vec<_>>().join(",")
 }
 
+// ---------------------------------------------------------------------------------
+// Synthetic benchmark: CEM vs CMA-ES on standard functions at our budget
+// ---------------------------------------------------------------------------------
+
+/// Minimise f from x0 with `gens` x `pop` evaluations; returns the best TRUE value of
+/// the final mean (noise affects selection only, as in tuning).
+fn synth_run(algo: &str, f: &dyn Fn(&[f64]) -> f64, noise: f64, x0: &[f64], gens: usize, pop: usize, seed: u64) -> f64 {
+    let n = x0.len();
+    let mut rng = game::Rng::new(seed);
+    let mut mean = x0.to_vec();
+    let init_sd: Vec<f64> = mean.iter().map(|m| m.abs() * 0.5 + 0.2).collect();
+    let mut sd = init_sd.clone();
+    let mut cma = if algo == "cma" { Some(Cma::new(n, pop - 1, &init_sd)) } else { None };
+    for g in 0..gens {
+        let mut cands = vec![mean.clone()];
+        let mut ys = vec![vec![0.0; n]];
+        while cands.len() < pop {
+            match &cma {
+                Some(c) => {
+                    let y = c.sample_y(&mut rng);
+                    cands.push((0..n).map(|i| mean[i] + c.sigma * y[i]).collect());
+                    ys.push(y);
+                }
+                None => cands.push((0..n).map(|i| mean[i] + sd[i] * gauss(&mut rng)).collect()),
+            }
+        }
+        // Noisy fitness, as with a handful of games: relative noise on a positive scale.
+        let fit: Vec<f64> = cands.iter().map(|c| { let v = f(c); v * (1.0 + noise * gauss(&mut rng)) }).collect();
+        let first = if cma.is_some() { 1 } else { 0 };
+        let mut order: Vec<usize> = (first..pop).collect();
+        order.sort_by(|&a, &b| fit[a].total_cmp(&fit[b]));
+        match cma.as_mut() {
+            Some(c) => {
+                let ranked: Vec<Vec<f64>> = order.iter().map(|&i| ys[i].clone()).collect();
+                c.update(&mut mean, &ranked);
+            }
+            None => {
+                let e = 8;
+                for i in 0..n {
+                    let m = order[..e].iter().map(|&k| cands[k][i]).sum::<f64>() / e as f64;
+                    let v = order[..e].iter().map(|&k| (cands[k][i] - m).powi(2)).sum::<f64>() / e as f64;
+                    mean[i] = m;
+                    sd[i] = v.sqrt() + 0.1 * (1.0 - g as f64 / gens as f64);
+                }
+            }
+        }
+    }
+    f(&mean)
+}
+
+pub fn cmd_synth(a: &Args) {
+    let n = a.get("dims", NF);
+    let gens = a.get("gens", 20usize);
+    let pop = a.get("pop", 32usize);
+    let reps = a.get("reps", 15u64);
+    // A fixed random rotation for the non-separable variants.
+    let mut rng = game::Rng::new(99);
+    let mut s = vec![0.0; n * n];
+    for i in 0..n {
+        for j in i..n {
+            let v = gauss(&mut rng);
+            s[i * n + j] = v;
+            s[j * n + i] = v;
+        }
+    }
+    let (_, rot) = jacobi(&s, n);
+    let rotate = |x: &[f64]| -> Vec<f64> { (0..n).map(|i| (0..n).map(|j| rot[j * n + i] * x[j]).sum()).collect() };
+    let cond = |i: usize| 1e3f64.powf(i as f64 / (n - 1) as f64);
+    let fs: Vec<(&str, Box<dyn Fn(&[f64]) -> f64>)> = vec![
+        ("sphere (separable, well scaled)", Box::new(|x: &[f64]| x.iter().map(|v| v * v).sum())),
+        ("ellipsoid (separable, 1:1000 scales)", Box::new(move |x: &[f64]| (0..n).map(|i| cond(i) * x[i] * x[i]).sum())),
+        ("rotated ellipsoid (correlated, 1:1000)", Box::new(move |x: &[f64]| { let y = rotate(x); (0..n).map(|i| cond(i) * y[i] * y[i]).sum() })),
+        ("rosenbrock (curved valley)", Box::new(|x: &[f64]| (0..x.len() - 1).map(|i| 100.0 * (x[i + 1] - x[i] * x[i]).powi(2) + (1.0 - x[i]).powi(2)).sum())),
+    ];
+    let x0 = vec![2.0; n];
+    println!("{} dims, {} gens x {} candidates = {} evaluations per run, median of {} runs (final mean's true value, lower is better)", n, gens, pop, gens * pop, reps);
+    println!("{:<40} {:>8} {:>12} {:>12} {:>8}", "function", "noise", "CEM", "CMA-ES", "winner");
+    for (name, f) in &fs {
+        for &noise in &[0.0, 0.1] {
+            let med = |algo: &str| -> f64 {
+                let mut v: Vec<f64> = (0..reps).map(|r| synth_run(algo, f.as_ref(), noise, &x0, gens, pop, 1 + r)).collect();
+                v.sort_by(|a, b| a.total_cmp(b));
+                v[v.len() / 2]
+            };
+            let (c, m) = (med("cem"), med("cma"));
+            println!("{:<40} {:>7.0}% {:>12.4e} {:>12.4e} {:>8}", name, noise * 100.0, c, m, if c < m { "CEM" } else { "CMA-ES" });
+        }
+    }
+    let start = fs[0].1(&x0);
+    println!("(sphere at the start point: {:.1})", start);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,0 +1,11 @@
+29 dims, 400 gens x 32 candidates = 12800 evaluations per run, median of 5 runs (final mean's true value, lower is better)
+function                                    noise          CEM       CMA-ES   winner
+sphere (separable, well scaled)                0%    2.6322e-4   3.2963e-19   CMA-ES
+sphere (separable, well scaled)               10%    3.2705e-4   4.8637e-18   CMA-ES
+ellipsoid (separable, 1:1000 scales)           0%    4.4850e-1    2.4323e-4   CMA-ES
+ellipsoid (separable, 1:1000 scales)          10%    5.6657e-1    2.0311e-2   CMA-ES
+rotated ellipsoid (correlated, 1:1000)         0%     8.9621e0    9.4196e-4   CMA-ES
+rotated ellipsoid (correlated, 1:1000)        10%     8.8782e0    7.8881e-2   CMA-ES
+rosenbrock (curved valley)                     0%     2.6788e1     2.1112e1   CMA-ES
+rosenbrock (curved valley)                    10%     2.9642e1     2.9192e1   CMA-ES
+(sphere at the start point: 116.0)

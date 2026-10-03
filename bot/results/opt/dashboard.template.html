@@ -1,0 +1,556 @@
+<title>Bot Weight Landscape</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: an instrument panel. Summary first, then one full-width section per view;
+   CEM and CMA-ES keep the same two hues on every chart, fitness uses one slate ramp. */
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --ink: #12161c;
+  --ink-2: #4a5462;
+  --ink-3: #7a8494;
+  --rule: #dfe3e9;
+  --grid: #eceff3;
+  --cem: #2a78d6;
+  --cma: #eb6834;
+  --cem0: #1baf7a;
+  --heat-lo: #f1f5f7;
+  --heat-hi: #2c4c5c;
+  --good: #0ca30c;
+  --bad: #d03b3b;
+  --focus: #2a78d6;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101317; --surface: #181c21; --ink: #edf0f4; --ink-2: #b4bcc8; --ink-3: #848e9c;
+    --rule: #2b3139; --grid: #232830; --cem: #3987e5; --cma: #d95926; --cem0: #199e70;
+    --heat-lo: #1d252b; --heat-hi: #9fc6d6; --focus: #3987e5; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101317; --surface: #181c21; --ink: #edf0f4; --ink-2: #b4bcc8; --ink-3: #848e9c;
+  --rule: #2b3139; --grid: #232830; --cem: #3987e5; --cma: #d95926; --cem0: #199e70;
+  --heat-lo: #1d252b; --heat-hi: #9fc6d6; --focus: #3987e5; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); padding-inline: clamp(16px, 4vw, 40px); padding-block: 28px 56px; }
+main { max-width: 1180px; margin: 0 auto; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; letter-spacing: .01em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 4vw, 40px); line-height: 1.05; }
+h2 { font-size: 22px; }
+h3 { font-size: 16px; color: var(--ink-2); }
+p { margin: 0; max-width: 68ch; color: var(--ink-2); }
+.eyebrow { font: 500 12px/1 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); }
+header { display: grid; gap: 10px; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 18px; font: 13px/1.4 var(--mono); color: var(--ink-3); }
+section { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 20px; display: grid; gap: 14px; min-width: 0; }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+.row > * { min-width: 0; }
+.chart { width: 100%; position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; font-size: 14px; color: var(--ink-2); }
+.controls label { display: inline-flex; align-items: center; gap: 8px; }
+.controls input[type=range] { width: min(320px, 60vw); accent-color: var(--ink-2); }
+.controls select, .controls input { font: inherit; color: var(--ink); background: var(--surface); }
+.controls output { font: 500 13px var(--mono); color: var(--ink); min-width: 9ch; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 8px; font: 12px/1.45 var(--mono); box-shadow: 0 2px 10px rgb(0 0 0 / .12); white-space: nowrap; z-index: 5; }
+.tip b { font-weight: 500; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 14px; }
+.tablewrap { overflow-x: auto; }
+th, td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+td.best { font-weight: 600; }
+.mult { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px 16px; }
+.mult figure { margin: 0; min-width: 0; }
+.mult figcaption { font: 12px/1.3 var(--mono); color: var(--ink-2); display: flex; justify-content: space-between; gap: 8px; }
+.mult figcaption em { font-style: normal; color: var(--ink-3); }
+.note { font-size: 13px; color: var(--ink-3); max-width: 80ch; }
+.axis text, .lbl { fill: var(--ink-3); font: 11px var(--mono); }
+.axis line, .axis path { stroke: var(--rule); }
+.gridl { stroke: var(--grid); }
+.empty { padding: 28px; text-align: center; color: var(--ink-3); border: 1px dashed var(--rule); border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<main>
+  <header>
+    <div class="eyebrow">Tetris bot · weight tuning</div>
+    <h1>Weight landscape</h1>
+    <p>How the two tuners moved through weight space, and what the fitness surface looks like around the weights they found. Fitness is attack per piece (APP) under normal rules with Fibonacci back-to-back bonuses.</p>
+    <div class="facts" id="facts"></div>
+  </header>
+
+  <section id="s-heldout">
+    <h2>Held-out results</h2>
+    <p>20 fresh games of 500 pieces at full search (beam 64, depth 6 and the chance ply), on seeds no tune ever saw.</p>
+    <div class="tablewrap" id="heldout"></div>
+  </section>
+
+  <section id="s-conv">
+    <h2>Convergence</h2>
+    <p>Training fitness per generation: the average of each generation's elite, on that generation's own seeded games. Spread is the average per-weight standard deviation of the search cloud in normalised units.</p>
+    <div class="legend" id="legend-conv"></div>
+    <div class="row">
+      <div><h3>Elite mean APP</h3><div class="chart" id="c-elite"></div></div>
+      <div><h3>Search spread</h3><div class="chart" id="c-spread"></div></div>
+    </div>
+  </section>
+
+  <section id="s-synth">
+    <h2>CEM or CMA-ES at this budget?</h2>
+    <p>The same two algorithms on standard test functions in 29 dimensions, starting 2.0 from the optimum, with and without 10% fitness noise. Each cell is the median final value over repeated runs; lower is better. CMA-ES needs enough generations to learn its covariance.</p>
+    <div class="tablewrap" id="synth"></div>
+  </section>
+
+  <section id="s-traj">
+    <h2>Trajectory</h2>
+    <p>Each run projected onto its own plane: the horizontal axis runs from the starting weights to the final mean, the vertical axis is the main other direction its samples varied in. Dots are sampled candidates (filled = elite), ellipses are the search cloud at two standard deviations, the line is the mean's path. The background is fitness measured on a grid over the plane.</p>
+    <div class="controls">
+      <label for="gen">Up to generation <input type="range" id="gen" min="0" max="20" value="20" step="1"><output id="gen-out">20</output></label>
+      <label for="stride">Cloud every <select id="stride"><option value="1">1</option><option value="2">2</option><option value="4" selected>4</option><option value="5">5</option></select> generations</label>
+      <label for="show-samples"><input type="checkbox" id="show-samples" checked> samples</label>
+      <label for="show-bg"><input type="checkbox" id="show-bg" checked> fitness background</label>
+    </div>
+    <div class="row" id="traj"></div>
+    <div class="legend" id="legend-heat"></div>
+  </section>
+
+  <section id="s-slices">
+    <h2>One weight at a time</h2>
+    <p>Fitness when a single weight of the tuned normal-rules weights moves and everything else stays put. All panels share one vertical scale, so a flat panel is a weight that barely matters here. Sorted by how much fitness changes across the range. The open dot is the tuned value.</p>
+    <div class="mult" id="slices"></div>
+  </section>
+
+  <section id="s-plane">
+    <h2>Plane through three solutions</h2>
+    <p>Fitness on the plane through the starting weights and the two earlier CEM results (normalised and raw features). Distances are in units of the start-to-CEM-normalised step.</p>
+    <div class="row">
+      <div class="chart" id="c-plane"></div>
+      <div class="note" id="plane-note"></div>
+    </div>
+  </section>
+
+  <section id="s-shape">
+    <h2>Shape of the search cloud</h2>
+    <p>Standard deviation along each principal axis of the search cloud, widest first, per generation. CEM's cloud has no correlations, so its axes are the weights themselves; CMA-ES learns a full covariance, so its axes are mixtures and its narrow axes mark steep directions of the landscape.</p>
+    <div class="row" id="spectra"></div>
+    <div class="row" id="loadings"></div>
+  </section>
+
+  <section id="s-paths">
+    <h2>Weight paths</h2>
+    <p>The cloud's mean for each weight, generation by generation, in normalised units.</p>
+    <div class="legend" id="legend-paths"></div>
+    <div class="mult" id="paths"></div>
+  </section>
+</main>
+
+<script>
+const DATA = /*__DATA__*/null;
+const NS = "http://www.w3.org/2000/svg";
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const COLORS = { cem: "--cem", cma: "--cma", cem0: "--cem0" };
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function scale(d0, d1, r0, r1) {
+  const f = (v) => r0 + ((v - d0) / ((d1 - d0) || 1)) * (r1 - r0);
+  f.d = [d0, d1];
+  return f;
+}
+function niceTicks(a, b, n = 5) {
+  if (a === b) { a -= 1; b += 1; }
+  const step0 = (b - a) / n, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= step0);
+  const out = [];
+  for (let v = Math.ceil(a / step) * step; v <= b + step * 1e-9; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+function extent(vals, pad = 0) {
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const p = (hi - lo || 1) * pad;
+  return [lo - p, hi + p];
+}
+function tipFor(container) {
+  let t = container.querySelector(".tip");
+  if (!t) { t = document.createElement("div"); t.className = "tip"; t.hidden = true; container.appendChild(t); }
+  return t;
+}
+function showTip(container, html, x, y) {
+  const t = tipFor(container);
+  t.innerHTML = html;
+  t.hidden = false;
+  const w = container.clientWidth;
+  t.style.left = Math.min(Math.max(0, x + 12), w - t.offsetWidth) + "px";
+  t.style.top = Math.max(0, y - t.offsetHeight - 10) + "px";
+}
+function hideTip(container) { tipFor(container).hidden = true; }
+const f3 = (v) => (v == null ? "–" : v.toFixed(3));
+
+// Mix two hex colours (for the fitness ramp).
+function hex2rgb(h) { h = h.replace("#", ""); return [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16)); }
+function mix(a, b, t) {
+  const A = hex2rgb(a), B = hex2rgb(b);
+  return "rgb(" + A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(",") + ")";
+}
+
+// ---------------------------------------------------------------- line chart
+function lineChart(container, { series, xLabel, yLabel, yFmt = f3, height = 240 }) {
+  container.innerHTML = "";
+  const W = 560, H = height, m = { l: 48, r: 92, t: 10, b: 34 };
+  const xs = series.flatMap((s) => s.points.map((p) => p[0]));
+  const ys = series.flatMap((s) => s.points.map((p) => p[1]));
+  const [x0, x1] = extent(xs), [y0, y1] = extent(ys, 0.06);
+  const X = scale(x0, x1, m.l, W - m.r), Y = scale(y0, y1, H - m.b, m.t);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": yLabel + " by " + xLabel }, container);
+  const ax = el("g", { class: "axis" }, svg);
+  for (const t of niceTicks(y0, y1, 4)) {
+    el("line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), class: "gridl" }, ax);
+    el("text", { x: m.l - 8, y: Y(t) + 4, "text-anchor": "end" }, ax).textContent = yFmt(t);
+  }
+  for (const t of niceTicks(x0, x1, 6)) {
+    el("text", { x: X(t), y: H - m.b + 18, "text-anchor": "middle" }, ax).textContent = t;
+  }
+  el("text", { x: (m.l + W - m.r) / 2, y: H - 4, "text-anchor": "middle", class: "lbl" }, svg).textContent = xLabel;
+  for (const s of series) {
+    const d = s.points.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + "," + Y(p[1]).toFixed(1)).join("");
+    el("path", { d, fill: "none", stroke: `var(${s.color})`, "stroke-width": 2, "stroke-dasharray": s.dash || "", "stroke-linejoin": "round" }, svg);
+    const last = s.points[s.points.length - 1];
+    el("circle", { cx: X(last[0]), cy: Y(last[1]), r: 4, fill: `var(${s.color})`, stroke: "var(--surface)", "stroke-width": 2 }, svg);
+    el("text", { x: X(last[0]) + 8, y: Y(last[1]) + 4, class: "lbl", style: "fill:var(--ink-2)" }, svg).textContent = s.short || s.label;
+  }
+  // Crosshair + tooltip.
+  const cross = el("line", { y1: m.t, y2: H - m.b, stroke: "var(--ink-3)", "stroke-width": 1, visibility: "hidden" }, svg);
+  const hit = el("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent" }, svg);
+  const move = (ev) => {
+    const r = svg.getBoundingClientRect(), px = ((ev.clientX - r.left) / r.width) * W;
+    const xv = Math.round(x0 + ((px - m.l) / (W - m.l - m.r)) * (x1 - x0));
+    cross.setAttribute("x1", X(xv)); cross.setAttribute("x2", X(xv)); cross.setAttribute("visibility", "visible");
+    const rows = series.map((s) => { const p = s.points.find((q) => q[0] === xv); return p ? `<span style="color:var(${s.color})">■</span> ${s.label}: <b>${yFmt(p[1])}</b>` : ""; }).filter(Boolean);
+    const cr = container.getBoundingClientRect();
+    showTip(container, `<b>${xLabel} ${xv}</b><br>` + rows.join("<br>"), ev.clientX - cr.left, ev.clientY - cr.top);
+  };
+  hit.addEventListener("pointermove", move);
+  hit.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); hideTip(container); });
+}
+
+function legend(target, items) {
+  target.innerHTML = items.map((s) => `<span><i style="background:var(${s.color})"></i>${s.label}</span>`).join("");
+}
+
+// ---------------------------------------------------------------- header & table
+function renderHeader() {
+  const runs = DATA.runs;
+  const g = runs.cem ? runs.cem.log.length : runs.cma ? runs.cma.log.length : 0;
+  const facts = [
+    `${g} generations × 32 candidates`,
+    "fitness: 6 seeded games × 300 pieces",
+    "tuning search: beam 24, depth 4",
+    `${DATA.names.length} weights, normalised units`,
+  ];
+  document.getElementById("facts").innerHTML = facts.map((f) => `<span>${f}</span>`).join("");
+}
+function renderHeldout() {
+  const box = document.getElementById("heldout");
+  const rows = DATA.heldout || [];
+  if (!rows.length) { box.innerHTML = '<div class="empty">The held-out benchmark has not been run yet.</div>'; return; }
+  const best = Math.max(...rows.map((r) => r.app));
+  const label = { start_standard: "Start (standard.txt)", cem: "CEM (this run)", cma: "CMA-ES (this run)", normal_txt: "normal.txt (earlier CEM)" };
+  box.innerHTML = `<table><thead><tr><th>Weights</th><th>APP</th><th>Deaths</th><th>Quads /100</th><th>TSDs /100</th><th>T-spin singles /100</th><th>Plain clears /100</th><th>Longest B2B</th></tr></thead><tbody>` +
+    rows.map((r) => `<tr><td>${label[r.name] || r.name}</td><td class="${r.app === best ? "best" : ""}">${r.app.toFixed(3)}</td><td>${r.died}</td><td>${r.quad.toFixed(2)}</td><td>${r.tsd.toFixed(2)}</td><td>${r.tss.toFixed(2)}</td><td>${r.plain.toFixed(2)}</td><td>${r.b2b}</td></tr>`).join("") +
+    `</tbody></table>`;
+}
+
+function renderSynth() {
+  const box = document.getElementById("synth");
+  const rows = DATA.synth || [];
+  if (!rows.length) { box.innerHTML = '<div class="empty">The synthetic benchmark has not been run yet.</div>'; return; }
+  const budgets = [...new Set(rows.map((r) => r.gens))].sort((a, b) => a - b);
+  const keys = [...new Set(rows.map((r) => r.fn + "|" + r.noise))];
+  const fmt = (v) => (v < 1e-3 ? v.toExponential(1) : v < 100 ? v.toPrecision(3) : v.toFixed(0));
+  let h = `<table><thead><tr><th>Function</th><th>Noise</th>` + budgets.map((g) => `<th>${g} gens · CEM</th><th>${g} gens · CMA-ES</th>`).join("") + `</tr></thead><tbody>`;
+  for (const k of keys) {
+    const [fn, noise] = k.split("|");
+    h += `<tr><td>${fn}</td><td>${noise}%</td>`;
+    for (const g of budgets) {
+      const r = rows.find((x) => x.gens === g && x.fn + "|" + x.noise === k);
+      if (!r) { h += "<td>–</td><td>–</td>"; continue; }
+      h += `<td class="${r.cem <= r.cma ? "best" : ""}">${fmt(r.cem)}</td><td class="${r.cma < r.cem ? "best" : ""}">${fmt(r.cma)}</td>`;
+    }
+    h += "</tr>";
+  }
+  box.innerHTML = h + "</tbody></table>" + `<p class="note" style="margin-top:8px">Bold = the better of the pair. Our Tetris tunes run 20 generations.</p>`;
+}
+
+// ---------------------------------------------------------------- convergence
+function renderConvergence() {
+  const series = [], spread = [];
+  for (const key of ["cem0", "cem", "cma"]) {
+    const r = DATA.runs[key];
+    if (!r) continue;
+    series.push({ key, label: r.label, short: key === "cem0" ? "CEM earlier" : r.label, color: COLORS[key], dash: key === "cem0" ? "4 4" : "", points: r.log.map((p) => [p.gen + 1, p.elite_mean]) });
+    if (r.log[0] && r.log[0].spread != null) spread.push({ key, label: r.label, short: r.label, color: COLORS[key], points: r.log.map((p) => [p.gen + 1, p.spread]) });
+  }
+  legend(document.getElementById("legend-conv"), series);
+  lineChart(document.getElementById("c-elite"), { series, xLabel: "generation", yLabel: "elite mean APP" });
+  if (spread.length) lineChart(document.getElementById("c-spread"), { series: spread, xLabel: "generation", yLabel: "spread", yFmt: (v) => v.toFixed(2) });
+}
+
+// ---------------------------------------------------------------- trajectory
+function ellipse(cov, k = 2) {
+  const [a, b, c] = cov, tr = (a + c) / 2, det = Math.sqrt(((a - c) / 2) ** 2 + b * b);
+  const l1 = Math.max(tr + det, 0), l2 = Math.max(tr - det, 0);
+  return { rx: k * Math.sqrt(l1), ry: k * Math.sqrt(l2), ang: (0.5 * Math.atan2(2 * b, a - c) * 180) / Math.PI };
+}
+function renderTrajectories() {
+  const host = document.getElementById("traj");
+  host.innerHTML = "";
+  const upTo = +document.getElementById("gen").value, stride = +document.getElementById("stride").value;
+  const showS = document.getElementById("show-samples").checked, showBg = document.getElementById("show-bg").checked;
+  document.getElementById("gen-out").value = upTo;
+  const lo = css("--heat-lo"), hi = css("--heat-hi");
+  let fmin = Infinity, fmax = -Infinity;
+  for (const key of ["cem", "cma"]) {
+    const g = DATA.runs[key] && DATA.runs[key].trajectory && DATA.runs[key].trajectory.grid;
+    if (g) { fmin = Math.min(fmin, ...g.fitness); fmax = Math.max(fmax, ...g.fitness); }
+  }
+  for (const key of ["cem", "cma"]) {
+    const run = DATA.runs[key];
+    const wrap = document.createElement("div");
+    host.appendChild(wrap);
+    const h = document.createElement("h3"); h.textContent = run ? run.label : (key === "cem" ? "CEM" : "CMA-ES"); wrap.appendChild(h);
+    const box = document.createElement("div"); box.className = "chart"; wrap.appendChild(box);
+    if (!run || !run.trajectory) { box.innerHTML = '<div class="empty">This run has not finished yet.</div>'; continue; }
+    const T = run.trajectory, grid = T.grid;
+    const all = T.gens.flatMap((g) => g.samples);
+    const xr = grid ? grid.x : extent(all.map((s) => s[0]), 0.05), yr = grid ? grid.y : extent(all.map((s) => s[1]), 0.05);
+    const W = 520, H = 400, m = { l: 44, r: 12, t: 10, b: 34 };
+    const X = scale(xr[0], xr[1], m.l, W - m.r), Y = scale(yr[0], yr[1], H - m.b, m.t);
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": run.label + " trajectory" }, box);
+    const clip = "clip-" + key;
+    const defs = el("defs", {}, svg);
+    el("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b }, el("clipPath", { id: clip }, defs));
+    const plot = el("g", { "clip-path": `url(#${clip})` }, svg);
+    el("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "var(--surface)" }, plot);
+    if (grid && showBg) {
+      const n = grid.n, cw = (W - m.l - m.r) / (n - 1), ch = (H - m.t - m.b) / (n - 1);
+      for (let iy = 0; iy < n; iy++) for (let ix = 0; ix < n; ix++) {
+        const fv = grid.fitness[iy * n + ix], gx = xr[0] + ((xr[1] - xr[0]) * ix) / (n - 1), gy = yr[0] + ((yr[1] - yr[0]) * iy) / (n - 1);
+        const cell = el("rect", { x: X(gx) - cw / 2, y: Y(gy) - ch / 2, width: cw + 0.5, height: ch + 0.5, fill: mix(lo, hi, (fv - fmin) / ((fmax - fmin) || 1)) }, plot);
+        cell.addEventListener("pointermove", (ev) => { const cr = box.getBoundingClientRect(); showTip(box, `grid fitness <b>${f3(fv)}</b> APP`, ev.clientX - cr.left, ev.clientY - cr.top); });
+        cell.addEventListener("pointerleave", () => hideTip(box));
+      }
+    }
+    const color = `var(${COLORS[key]})`;
+    const gens = T.gens.filter((g) => g.gen <= upTo);
+    // Clouds every `stride` generations (always the first and the current).
+    gens.forEach((g, i) => {
+      if (!(g.gen % stride === 0 || g.gen === upTo)) return;
+      const e = ellipse(g.cov), age = upTo ? g.gen / upTo : 1;
+      el("ellipse", { cx: X(g.mean[0]), cy: Y(g.mean[1]), rx: Math.abs(X(e.rx) - X(0)), ry: Math.abs(Y(e.ry) - Y(0)),
+        transform: `rotate(${-e.ang} ${X(g.mean[0])} ${Y(g.mean[1])})`, fill: "none", stroke: color, "stroke-width": g.gen === upTo ? 2 : 1.2, "stroke-opacity": 0.25 + 0.75 * age }, plot);
+      if (showS) for (const s of g.samples) {
+        const dot = el("circle", { cx: X(s[0]), cy: Y(s[1]), r: s[3] ? 4 : 3, fill: s[3] ? color : "var(--surface)", stroke: color, "stroke-width": 1.2, "fill-opacity": 0.35 + 0.65 * age, "stroke-opacity": 0.35 + 0.65 * age }, plot);
+        dot.addEventListener("pointermove", (ev) => { const cr = box.getBoundingClientRect(); showTip(box, `gen ${g.gen + 1}${s[3] ? " · elite" : ""}<br>fitness <b>${f3(s[2])}</b> APP`, ev.clientX - cr.left, ev.clientY - cr.top); });
+        dot.addEventListener("pointerleave", () => hideTip(box));
+      }
+    });
+    const path = gens.map((g, i) => (i ? "L" : "M") + X(g.mean[0]).toFixed(1) + "," + Y(g.mean[1]).toFixed(1)).join("");
+    el("path", { d: path, fill: "none", stroke: "var(--ink)", "stroke-width": 2, "stroke-linejoin": "round" }, plot);
+    for (const g of gens) el("circle", { cx: X(g.mean[0]), cy: Y(g.mean[1]), r: 2.5, fill: "var(--ink)" }, plot);
+    const s0 = gens[0], sN = gens[gens.length - 1];
+    el("text", { x: X(s0.mean[0]) + 6, y: Y(s0.mean[1]) - 6, class: "lbl", style: "fill:var(--ink)" }, plot).textContent = "start";
+    if (sN !== s0) el("text", { x: X(sN.mean[0]) + 6, y: Y(sN.mean[1]) - 6, class: "lbl", style: "fill:var(--ink)" }, plot).textContent = "gen " + sN.gen;
+    const ax = el("g", { class: "axis" }, svg);
+    for (const t of niceTicks(xr[0], xr[1], 5)) el("text", { x: X(t), y: H - m.b + 16, "text-anchor": "middle" }, ax).textContent = t;
+    for (const t of niceTicks(yr[0], yr[1], 5)) el("text", { x: m.l - 6, y: Y(t) + 4, "text-anchor": "end" }, ax).textContent = t;
+    el("text", { x: (m.l + W - m.r) / 2, y: H - 4, "text-anchor": "middle", class: "lbl" }, svg).textContent = "toward the final mean";
+    const note = document.createElement("div"); note.className = "note";
+    note.textContent = `Vertical axis: the samples' main other direction (${(T.e2_variance_share * 100).toFixed(0)}% of their remaining variation).`;
+    wrap.appendChild(note);
+  }
+  const lg = document.getElementById("legend-heat");
+  if (isFinite(fmin)) {
+    lg.innerHTML = `<span><i style="background:${mix(lo, hi, 0)};height:10px;width:22px"></i>${f3(fmin)} APP</span><span><i style="background:${mix(lo, hi, 0.5)};height:10px;width:22px"></i>${f3((fmin + fmax) / 2)}</span><span><i style="background:${mix(lo, hi, 1)};height:10px;width:22px"></i>${f3(fmax)} APP</span>`;
+  }
+}
+
+// ---------------------------------------------------------------- slices
+function renderSlices() {
+  const host = document.getElementById("slices");
+  if (!DATA.slices) { host.innerHTML = '<div class="empty">The slices have not been computed yet.</div>'; return; }
+  const items = DATA.slices.map((s) => { const f = s.points.map((p) => p[2]); return { ...s, range: Math.max(...f) - Math.min(...f) }; });
+  items.sort((a, b) => b.range - a.range);
+  const [y0, y1] = extent(items.flatMap((s) => s.points.map((p) => p[2])), 0.05);
+  host.innerHTML = "";
+  for (const s of items) {
+    const fig = document.createElement("figure");
+    fig.innerHTML = `<figcaption><span>${s.feature}</span><em>Δ ${s.range.toFixed(3)}</em></figcaption>`;
+    const box = document.createElement("div"); box.className = "chart"; fig.appendChild(box); host.appendChild(fig);
+    const W = 200, H = 96, m = { l: 4, r: 4, t: 6, b: 16 };
+    const [x0, x1] = extent(s.points.map((p) => p[1]));
+    const X = scale(x0, x1, m.l, W - m.r), Y = scale(y0, y1, H - m.b, m.t);
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `fitness as ${s.feature} varies` }, box);
+    for (const t of niceTicks(y0, y1, 3)) el("line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), class: "gridl" }, svg);
+    el("path", { d: s.points.map((p, i) => (i ? "L" : "M") + X(p[1]).toFixed(1) + "," + Y(p[2]).toFixed(1)).join(""), fill: "none", stroke: "var(--cem)", "stroke-width": 2 }, svg);
+    for (const p of s.points) {
+      const c = el("circle", { cx: X(p[1]), cy: Y(p[2]), r: p[0] === 0 ? 4 : 2.5, fill: p[0] === 0 ? "var(--surface)" : "var(--cem)", stroke: "var(--cem)", "stroke-width": p[0] === 0 ? 2 : 0 }, svg);
+      const hit = el("circle", { cx: X(p[1]), cy: Y(p[2]), r: 9, fill: "transparent" }, svg);
+      hit.addEventListener("pointermove", (ev) => { const cr = box.getBoundingClientRect(); showTip(box, `${s.feature} = ${p[1].toFixed(2)}${p[0] === 0 ? " (tuned)" : ""}<br>fitness <b>${f3(p[2])}</b> APP`, ev.clientX - cr.left, ev.clientY - cr.top); });
+      hit.addEventListener("pointerleave", () => hideTip(box));
+    }
+    el("text", { x: m.l, y: H - 3, class: "lbl" }, svg).textContent = x0.toFixed(1);
+    el("text", { x: W - m.r, y: H - 3, class: "lbl", "text-anchor": "end" }, svg).textContent = x1.toFixed(1);
+  }
+}
+
+// ---------------------------------------------------------------- plane
+function renderPlane() {
+  const box = document.getElementById("c-plane");
+  if (!DATA.plane) { box.innerHTML = '<div class="empty">The plane has not been computed yet.</div>'; return; }
+  const grid = DATA.plane.filter((p) => p.kind === "grid"), anchors = DATA.plane.filter((p) => p.kind !== "grid");
+  const n = Math.round(Math.sqrt(grid.length));
+  const xs = [...new Set(grid.map((p) => p.x))].sort((a, b) => a - b), ys = [...new Set(grid.map((p) => p.y))].sort((a, b) => a - b);
+  const W = 520, H = 380, m = { l: 44, r: 12, t: 10, b: 34 };
+  const X = scale(xs[0], xs[xs.length - 1], m.l, W - m.r), Y = scale(ys[0], ys[ys.length - 1], H - m.b, m.t);
+  const fv = grid.map((p) => p.f), fmin = Math.min(...fv), fmax = Math.max(...fv);
+  const lo = css("--heat-lo"), hi = css("--heat-hi");
+  box.innerHTML = "";
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "fitness on the plane through three solutions" }, box);
+  const cw = (W - m.l - m.r) / (n - 1), ch = (H - m.t - m.b) / (n - 1);
+  for (const p of grid) {
+    const r = el("rect", { x: X(p.x) - cw / 2, y: Y(p.y) - ch / 2, width: cw + 0.5, height: ch + 0.5, fill: mix(lo, hi, (p.f - fmin) / ((fmax - fmin) || 1)) }, svg);
+    r.addEventListener("pointermove", (ev) => { const cr = box.getBoundingClientRect(); showTip(box, `(${p.x.toFixed(2)}, ${p.y.toFixed(2)})<br>fitness <b>${f3(p.f)}</b> APP`, ev.clientX - cr.left, ev.clientY - cr.top); });
+    r.addEventListener("pointerleave", () => hideTip(box));
+  }
+  const name = { A: "start", B: "CEM normalised", C: "CEM raw" };
+  for (const a of anchors) {
+    el("circle", { cx: X(a.x), cy: Y(a.y), r: 6, fill: "var(--surface)", stroke: "var(--ink)", "stroke-width": 2 }, svg);
+    el("text", { x: X(a.x) + 9, y: Y(a.y) + 4, class: "lbl", style: "fill:var(--ink)" }, svg).textContent = `${name[a.kind]} ${f3(a.f)}`;
+  }
+  const ax = el("g", { class: "axis" }, svg);
+  for (const t of niceTicks(xs[0], xs[xs.length - 1], 5)) el("text", { x: X(t), y: H - m.b + 16, "text-anchor": "middle" }, ax).textContent = t;
+  for (const t of niceTicks(ys[0], ys[ys.length - 1], 4)) el("text", { x: m.l - 6, y: Y(t) + 4, "text-anchor": "end" }, ax).textContent = t;
+  const A = anchors.find((a) => a.kind === "A"), B = anchors.find((a) => a.kind === "B"), C = anchors.find((a) => a.kind === "C");
+  // Is there a dip between the two tuned solutions? Sample the grid along the segment.
+  let minBetween = Infinity;
+  for (const p of grid) {
+    const t = ((p.x - B.x) * (C.x - B.x) + (p.y - B.y) * (C.y - B.y)) / (((C.x - B.x) ** 2 + (C.y - B.y) ** 2) || 1);
+    const qx = B.x + t * (C.x - B.x), qy = B.y + t * (C.y - B.y);
+    if (t > 0 && t < 1 && Math.hypot(p.x - qx, p.y - qy) < Math.max(cw / (X(1) - X(0)), 0.15)) minBetween = Math.min(minBetween, p.f);
+  }
+  document.getElementById("plane-note").innerHTML =
+    `<p>Start ${f3(A.f)}, CEM normalised ${f3(B.f)}, CEM raw ${f3(C.f)} APP on these 12 games. ` +
+    (isFinite(minBetween) ? `The lowest grid value between the two tuned solutions is ${f3(minBetween)}; ` +
+      (minBetween > Math.min(B.f, C.f) - 0.03 ? "no real dip, so they sit on one broad ridge." : "a dip, so they found separate peaks.") : "") +
+    `</p><p style="margin-top:8px">Range on this plane: ${f3(fmin)} to ${f3(fmax)} APP.</p>`;
+}
+
+// ---------------------------------------------------------------- shape
+function renderShape() {
+  const host = document.getElementById("spectra"), lhost = document.getElementById("loadings");
+  host.innerHTML = ""; lhost.innerHTML = "";
+  const lo = css("--heat-lo"), hi = css("--heat-hi");
+  for (const key of ["cem", "cma"]) {
+    const run = DATA.runs[key];
+    const wrap = document.createElement("div"); host.appendChild(wrap);
+    wrap.innerHTML = `<h3>${run ? run.label : key}: std per principal axis</h3>`;
+    const box = document.createElement("div"); box.className = "chart"; wrap.appendChild(box);
+    if (!run || !run.dist) { box.innerHTML = '<div class="empty">This run has not finished yet.</div>'; continue; }
+    const sp = run.dist.spectrum, G = sp.length, N = sp[0].length;
+    const all = sp.flat().filter((v) => v > 0), lmin = Math.log10(Math.min(...all)), lmax = Math.log10(Math.max(...all));
+    const W = 520, H = 220, m = { l: 44, r: 10, t: 6, b: 30 };
+    const cw = (W - m.l - m.r) / G, ch = (H - m.t - m.b) / N;
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "covariance spectrum by generation" }, box);
+    for (let g = 0; g < G; g++) for (let k = 0; k < N; k++) {
+      const v = sp[g][k], t = v > 0 ? (Math.log10(v) - lmin) / ((lmax - lmin) || 1) : 0;
+      const r = el("rect", { x: m.l + g * cw, y: m.t + k * ch, width: cw + 0.3, height: ch + 0.3, fill: mix(lo, hi, t) }, svg);
+      r.addEventListener("pointermove", (ev) => { const cr = box.getBoundingClientRect(); showTip(box, `gen ${run.dist.gens[g]} · axis ${k + 1}<br>std <b>${v.toFixed(3)}</b>`, ev.clientX - cr.left, ev.clientY - cr.top); });
+      r.addEventListener("pointerleave", () => hideTip(box));
+    }
+    const ax = el("g", { class: "axis" }, svg);
+    for (const g of niceTicks(0, G - 1, 5)) el("text", { x: m.l + (g + 0.5) * cw, y: H - 12, "text-anchor": "middle" }, ax).textContent = g;
+    el("text", { x: m.l - 6, y: m.t + 10, "text-anchor": "end" }, ax).textContent = "widest";
+    el("text", { x: m.l - 6, y: H - m.b, "text-anchor": "end" }, ax).textContent = "narrowest";
+    el("text", { x: (m.l + W - m.r) / 2, y: H - 1, "text-anchor": "middle", class: "lbl" }, svg).textContent = "generation";
+    const ratio = sp[G - 1][0] / sp[G - 1][N - 1];
+    const note = document.createElement("div"); note.className = "note";
+    note.textContent = `Final widest / narrowest axis: ${ratio.toFixed(1)}×. Darker = wider (log scale, ${Math.pow(10, lmin).toFixed(3)} to ${Math.pow(10, lmax).toFixed(2)}).`;
+    wrap.appendChild(note);
+  }
+  const cma = DATA.runs.cma;
+  if (cma && cma.dist) {
+    for (const [title, vec] of [["CMA-ES final narrowest axis: the steepest direction", cma.dist.axis_narrowest], ["CMA-ES final widest axis: the flattest direction", cma.dist.axis_widest]]) {
+      const wrap = document.createElement("div"); lhost.appendChild(wrap);
+      wrap.innerHTML = `<h3>${title}</h3>`;
+      const box = document.createElement("div"); box.className = "chart"; wrap.appendChild(box);
+      const items = DATA.names.map((nm, i) => ({ nm, v: vec[i] })).sort((a, b) => Math.abs(b.v) - Math.abs(a.v)).slice(0, 8);
+      const W = 520, H = 30 + items.length * 24, m = { l: 108, r: 50 };
+      const vmax = Math.max(...items.map((i) => Math.abs(i.v)));
+      const X = scale(-vmax, vmax, m.l, W - m.r);
+      const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": title }, box);
+      el("line", { x1: X(0), x2: X(0), y1: 4, y2: H - 18, stroke: "var(--rule)" }, svg);
+      items.forEach((it, i) => {
+        const y = 8 + i * 24;
+        el("text", { x: m.l - 8, y: y + 12, "text-anchor": "end", class: "lbl", style: "fill:var(--ink-2)" }, svg).textContent = it.nm;
+        const x0 = Math.min(X(0), X(it.v)), w = Math.abs(X(it.v) - X(0));
+        el("rect", { x: x0, y, width: Math.max(w, 1), height: 16, rx: 3, fill: "var(--cma)" }, svg);
+        el("text", { x: it.v >= 0 ? X(it.v) + 6 : X(it.v) - 6, y: y + 12, "text-anchor": it.v >= 0 ? "start" : "end", class: "lbl", style: "fill:var(--ink-2)" }, svg).textContent = it.v.toFixed(2);
+      });
+      el("text", { x: X(0), y: H - 4, "text-anchor": "middle", class: "lbl" }, svg).textContent = "loading (8 largest)";
+    }
+  }
+}
+
+// ---------------------------------------------------------------- weight paths
+function renderPaths() {
+  const host = document.getElementById("paths");
+  const runs = ["cem", "cma"].filter((k) => DATA.runs[k] && DATA.runs[k].dist);
+  if (!runs.length) { host.innerHTML = '<div class="empty">No run has finished yet.</div>'; return; }
+  legend(document.getElementById("legend-paths"), runs.map((k) => ({ label: DATA.runs[k].label, color: COLORS[k] })));
+  host.innerHTML = "";
+  DATA.names.forEach((nm, i) => {
+    const fig = document.createElement("figure");
+    const finals = runs.map((k) => { const mm = DATA.runs[k].dist.mean; return mm[mm.length - 1][i]; });
+    fig.innerHTML = `<figcaption><span>${nm}</span><em>${finals.map((v) => v.toFixed(1)).join(" / ")}</em></figcaption>`;
+    const box = document.createElement("div"); box.className = "chart"; fig.appendChild(box); host.appendChild(fig);
+    const W = 200, H = 80, m = { l: 4, r: 4, t: 6, b: 6 };
+    const vals = runs.flatMap((k) => DATA.runs[k].dist.mean.map((mm) => mm[i]));
+    const [y0, y1] = extent(vals, 0.1), G = Math.max(...runs.map((k) => DATA.runs[k].dist.mean.length));
+    const X = scale(0, G - 1, m.l, W - m.r), Y = scale(y0, y1, H - m.b, m.t);
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `${nm} by generation` }, box);
+    if (y0 < 0 && y1 > 0) el("line", { x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0), class: "gridl" }, svg);
+    for (const k of runs) {
+      const mm = DATA.runs[k].dist.mean;
+      el("path", { d: mm.map((v, g) => (g ? "L" : "M") + X(g).toFixed(1) + "," + Y(v[i]).toFixed(1)).join(""), fill: "none", stroke: `var(${COLORS[k]})`, "stroke-width": 2 }, svg);
+    }
+  });
+}
+
+function renderAll() {
+  if (!DATA) return;
+  renderHeader(); renderHeldout(); renderSynth(); renderConvergence(); renderTrajectories(); renderSlices(); renderPlane(); renderShape(); renderPaths();
+}
+for (const id of ["gen", "stride", "show-samples", "show-bg"]) document.getElementById(id).addEventListener("input", renderTrajectories);
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+new MutationObserver(renderAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+if (DATA) {
+  const G = Math.max(0, ...["cem", "cma"].map((k) => (DATA.runs[k] && DATA.runs[k].trajectory ? DATA.runs[k].trajectory.gens.length - 1 : 0)));
+  const s = document.getElementById("gen"); s.max = G; s.value = G;
+}
+renderAll();
+</script>

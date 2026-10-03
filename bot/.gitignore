@@ -14,3 +14,9 @@ results/cem_norm_vs_raw/*.tmp
 results/cem_norm_vs_raw/*.state
 results/cem_norm_vs_raw/*.progress
 results/cem_norm_vs_raw/*.part
+results/opt/*.cache
+results/opt/*.progress
+results/opt/*.state
+results/opt/*.tmp
+results/opt/run.log
+results/opt/dashboard.html
