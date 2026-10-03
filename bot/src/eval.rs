@@ -334,7 +334,10 @@ pub fn scan_rows(b: &Board, y_from: i32, y_to: i32) -> TSlots {
         let em = !pm & 0xFFF;
 
         // Nub down (rot 2): the classic TSD. Cells (c-1,y) (c,y) (c+1,y) (c,y+1).
-        let m2 = e0 & (e0 << 1) & (e0 >> 1) & e1 & ((p1 << 1) & (p1 >> 1)) & ((pm << 1) | (pm >> 1)) & 0x7FE;
+        // The cell above the slot's centre must be open (`em`): that is where the T comes
+        // in. Without it a piece laid over the slot (an L as a lid) makes an unreachable
+        // cavity that the chain cash would otherwise excuse as a slot.
+        let m2 = e0 & (e0 << 1) & (e0 >> 1) & e1 & ((p1 << 1) & (p1 >> 1)) & ((pm << 1) | (pm >> 1)) & em & 0x7FE;
         let mut m = m2;
         while m != 0 {
             let c = m.trailing_zeros() as i32;
