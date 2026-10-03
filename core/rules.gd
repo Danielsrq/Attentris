@@ -137,8 +137,8 @@ func burst_step(left: int, r: ClearResult) -> Array:
 ## Gate rules: normal rules, but a clear only scores as part of a chain. A full spin
 ## double or triple opens a gate; within `burst_window` placements, spin doubles/triples
 ## and quads join the chain and restart the window; anything else just uses up a
-## placement. A chain of two or more pays the sum of its members (TSD 4, TST 10, quad 1);
-## a lone opener pays nothing. No B2B, no perfect-clear bonus.
+## placement. The chain pays the sum of its members (TSD 4, TST 10, quad 1) once it holds
+## TWO spin clears: a quad keeps the gate open but cannot complete a chain. No B2B, no PC.
 static func gate_rules() -> RuleSet:
 	var r := RuleSet.normal()
 	r.preset_name = "gate"
@@ -157,21 +157,28 @@ func gate_value(r: ClearResult) -> int:
 		return 1
 	return 0
 
-## One placement under gate rules. `st` = [placements left, clears in the chain, the
-## opener's value]. Returns [attack credited now, new state]. A chain's payout is certain
-## once it has two members, so it is credited then, and each later member as it joins.
+## One placement under gate rules. `st` = [placements left, spin clears in the chain,
+## value held until it has two]. Returns [attack credited now, new state]. A chain's
+## payout is certain once it holds two spin clears, so it is credited then, and each later
+## member as it joins.
 func gate_step(st: Array, r: ClearResult) -> Array:
 	var left: int = st[0]
-	var n: int = st[1]
-	var pending: int = st[2]
+	var spins: int = st[1]
+	var held: int = st[2]
 	var v := gate_value(r)
+	var is_spin := 1 if r.spin == SpinDetect.Kind.FULL else 0
 	if left > 0:
 		if v > 0:
-			return [pending + v if n == 1 else v, [burst_window, n + 1, 0]]
+			var n := spins + is_spin
+			if spins >= 2:
+				return [v, [burst_window, n, 0]]
+			if n >= 2:
+				return [held + v, [burst_window, n, 0]]
+			return [0, [burst_window, n, held + v]]
 		if left == 1:
 			return [0, [0, 0, 0]]
-		return [0, [left - 1, n, pending]]
-	if v > 0 and r.spin == SpinDetect.Kind.FULL:
+		return [0, [left - 1, spins, held]]
+	if v > 0 and is_spin == 1:
 		return [0, [burst_window, 1, v]]
 	return [0, [0, 0, 0]]
 

@@ -1277,7 +1277,9 @@ func test_attack_table() -> void:
 	eq(credits.call([g_tst, g_tsd]), [0, 14], "C-spin: TST then TSD pays 10 + 4")
 	eq(credits.call([g_tst, g_drop, g_tsd]), [0, 0, 14], "one placement in between is fine")
 	eq(credits.call([g_tst, g_drop, g_drop, g_tsd]), [0, 0, 0, 0], "the window runs out")
-	eq(credits.call([g_tsd, g_quad, g_quad]), [0, 5, 1], "quads join for 1 each")
+	eq(credits.call([g_tsd, g_quad, g_quad]), [0, 0, 0], "quads alone cannot complete a chain")
+	eq(credits.call([g_tsd, g_quad, g_tsd]), [0, 0, 9], "but they hold the gate open and add 1")
+	eq(credits.call([g_tsd, g_tsd, g_quad]), [0, 8, 1], "and add 1 to a complete chain")
 	eq(credits.call([g_quad, g_tsd]), [0, 0], "a quad does not open a gate")
 	eq(credits.call([[1, full], g_tsd]), [0, 0], "a T-spin single does not open one either")
 

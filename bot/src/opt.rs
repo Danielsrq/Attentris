@@ -324,11 +324,13 @@ fn load_state(path: &str, s: &mut TuneState) -> bool {
 }
 
 /// `--freeze default` (the features that carry nothing outside all-spin, see
-/// eval::FROZEN_OUTSIDE_ALLSPIN) or `--freeze name,name,...`: weights pinned at 0.
+/// eval::FROZEN_OUTSIDE_ALLSPIN), `--freeze name,name,...`, or both (`default,b2b`):
+/// weights pinned at 0.
 pub fn frozen_mask(a: &Args) -> [bool; NF] {
     let mut m = [false; NF];
     if let Some(spec) = a.str("freeze") {
-        let names: Vec<&str> = if spec == "default" { eval::FROZEN_OUTSIDE_ALLSPIN.to_vec() } else { spec.split(',').collect() };
+        // "default" expands to the features that carry nothing outside all-spin.
+        let names: Vec<&str> = spec.split(',').flat_map(|n| if n == "default" { eval::FROZEN_OUTSIDE_ALLSPIN.to_vec() } else { vec![n] }).collect();
         for name in names {
             m[eval::index_of(name).unwrap_or_else(|| panic!("--freeze: unknown feature {}", name))] = true;
         }
