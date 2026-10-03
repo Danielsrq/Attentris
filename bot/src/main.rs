@@ -118,8 +118,19 @@ fn garbage(a: &Args) -> GarbageConfig {
     if let Some(s) = a.str("garbage") {
         let p: Vec<&str> = s.split(',').collect();
         g.every = p.first().and_then(|x| x.parse().ok()).unwrap_or(0);
-        g.rows = p.get(1).and_then(|x| x.parse().ok()).unwrap_or(1);
-        g.messiness = p.get(2).and_then(|x| x.parse().ok()).unwrap_or(0.3);
+        // Rows: N, or MIN-MAX for a uniform draw per batch.
+        match p.get(1).and_then(|x| x.split_once('-')) {
+            Some((lo, hi)) => {
+                g.rows_min = lo.parse().unwrap_or(1);
+                g.rows = hi.parse().unwrap_or(g.rows_min);
+            }
+            None => g.rows = p.get(1).and_then(|x| x.parse().ok()).unwrap_or(1),
+        }
+        // Messiness: a chance, or "mix" for clean and cheese batches with even odds.
+        match p.get(2) {
+            Some(&"mix") => g.mix = true,
+            m => g.messiness = m.and_then(|x| x.parse().ok()).unwrap_or(0.3),
+        }
     }
     g.start_rows = a.get("cheese", 0);
     g

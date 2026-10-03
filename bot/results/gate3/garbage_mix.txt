@@ -1,0 +1,8 @@
+Gate rules with garbage: --garbage 10,1-4,mix (every 10 pieces a batch of 1-4 rows,
+each batch clean or cheese with even odds). 20 games x 500 pieces, full search. Weights
+tuned without garbage.
+
+weights  APP    deaths  garbage cleared  plain/100  vertical: IC / STSD / TST  chains: offset / fractal / V->F / F->V
+gate3    0.142   0/20   2433/2475        30.33      53 / 5 / 6                 87 / 44 / 43 / 1
+gate2    0.144   2/20   2345/2422        31.64       5 / 1 / 0                116 / 51 /  4 / 2
+burst2   0.032  16/20    888/1186        11.54       1 / 0 / 0                 11 /  7 /  1 / 0

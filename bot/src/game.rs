@@ -86,16 +86,20 @@ impl Bag {
 pub struct GarbageConfig {
     /// Inject every `every` pieces (0 = off).
     pub every: usize,
+    /// Rows per batch: `rows`, or a uniform draw from rows_min..=rows when rows_min < rows.
     pub rows: usize,
+    pub rows_min: usize,
     /// Chance each subsequent row moves its hole (0 = clean, 1 = full cheese).
     pub messiness: f64,
+    /// Each batch is clean (messiness 0) or cheese (messiness 1), with even odds.
+    pub mix: bool,
     /// Rows of cheese on the starting board.
     pub start_rows: usize,
 }
 
 impl Default for GarbageConfig {
     fn default() -> Self {
-        GarbageConfig { every: 0, rows: 0, messiness: 0.0, start_rows: 0 }
+        GarbageConfig { every: 0, rows: 0, rows_min: 0, messiness: 0.0, mix: false, start_rows: 0 }
     }
 }
 
@@ -286,12 +290,12 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
     let mut garbage_hole = grng.below(W as u64) as i32;
     let mut garbage_left = 0u64; // garbage rows still on the board (approximate: counted by 'G' rows)
 
-    let inject = |board: &mut Board, colors: &mut Colors, n: usize, grng: &mut Rng, hole: &mut i32| {
+    let inject = |board: &mut Board, colors: &mut Colors, n: usize, grng: &mut Rng, hole: &mut i32, messiness: f64| {
         // Each batch starts in a new column (one attack = one clean chunk, as in
         // TETR.IO); `messiness` is the chance each further row in the batch moves.
         let mut holes = Vec::with_capacity(n);
         for i in 0..n {
-            if i == 0 || grng.chance(cfg.garbage.messiness) {
+            if i == 0 || grng.chance(messiness) {
                 let mut h = grng.below(W as u64 - 1) as i32;
                 if h >= *hole {
                     h += 1;
@@ -328,10 +332,13 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
     let mut followup_left = 0u8;
     for n in 0..cfg.pieces {
         if cfg.garbage.every > 0 && n > 0 && n % cfg.garbage.every == 0 {
-            inject(&mut board, &mut colors, cfg.garbage.rows, &mut grng, &mut garbage_hole);
-            garbage_rows_total += cfg.garbage.rows as u64;
-            garbage_left += cfg.garbage.rows as u64;
-            stats.garbage_in += cfg.garbage.rows as u64;
+            let g = &cfg.garbage;
+            let n_rows = if g.rows_min > 0 && g.rows_min < g.rows { g.rows_min + grng.below((g.rows - g.rows_min + 1) as u64) as usize } else { g.rows };
+            let messiness = if g.mix { if grng.chance(0.5) { 0.0 } else { 1.0 } } else { g.messiness };
+            inject(&mut board, &mut colors, n_rows, &mut grng, &mut garbage_hole, messiness);
+            garbage_rows_total += n_rows as u64;
+            garbage_left += n_rows as u64;
+            stats.garbage_in += n_rows as u64;
         }
         let spawned = bag.get(drawn);
         let queue: Vec<Piece> = (0..6).map(|i| bag.get(drawn + i)).collect();
