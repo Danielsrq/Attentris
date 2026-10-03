@@ -193,6 +193,53 @@ fn cmd_probe(a: &Args) {
     }
 }
 
+/// `bot plan --board ROWS --queue LJTSZO [--hold T] --weights W [--mode M] [--beam N]`
+/// The line the search would play from a given position: each step's piece, clear and
+/// attack, the board after it, and V of the final board. ROWS as in `probe`.
+fn cmd_plan(a: &Args) {
+    let rows: Vec<&str> = a.str("board").expect("--board").split('/').collect();
+    let mut b = board::Board::default();
+    let base = rules::H as usize - rows.len();
+    for (i, r) in rows.iter().enumerate() {
+        for (x, ch) in r.chars().enumerate() {
+            if ch == 'X' || ch == '#' {
+                b.rows[base + i] |= 1 << x;
+            }
+        }
+    }
+    let piece = |c: char| rules::Piece::from_letter(c).unwrap_or_else(|| panic!("bad piece {}", c));
+    let queue: Vec<rules::Piece> = a.str("queue").expect("--queue").chars().map(piece).collect();
+    let hold = a.str("hold").and_then(|h| h.chars().next()).map(piece);
+    let r = rules(a);
+    let mut sc = search_config(a);
+    sc.chance = false;
+    let mut s = Searcher::new(sc, weights(a), r);
+    let shapes = rules::Shapes::new();
+    let d = s.search(&b, &queue, hold, -1, &rules::ALL_PIECES).expect("no move");
+    let show = |b: &board::Board| {
+        let top = (0..rules::H as usize).find(|&y| b.rows[y] != 0).unwrap_or(rules::H as usize).min(rules::H as usize - 1);
+        for y in top.saturating_sub(1)..rules::H as usize {
+            println!("      {}", (0..10).map(|x| if b.rows[y] >> x & 1 != 0 { '#' } else { '.' }).collect::<String>());
+        }
+    };
+    let mut cur = b;
+    let mut chain = -1;
+    let mut total = 0;
+    println!("start (V {:.3})", s.weights.value(&eval::features(&cur, -1, r.b2b)));
+    show(&cur);
+    for (k, st) in d.plan.iter().enumerate() {
+        let o = search::apply(&cur, &st.placement, chain, &r, &shapes);
+        total += o.attack;
+        println!("step {}: {}{} {}  attack {}  -> V {:.3}", k + 1, st.placement.piece.letter().to_ascii_uppercase(),
+            if st.use_hold { " (hold)" } else { "" }, rules::describe(st.placement.piece, o.spin, o.lines), o.attack,
+            s.weights.value(&eval::features(&o.board, o.b2b, r.b2b)));
+        cur = o.board;
+        chain = o.b2b;
+        show(&cur);
+    }
+    println!("planned attack {}, nodes {}", total, s.nodes);
+}
+
 /// Plays `games` games (seeds seed..seed+games) across threads. Returns per-game stats
 /// and the concatenated JSONL when recording.
 /// `r` = the rules the bot searches with; `env` = the rules the game applies, if different.
@@ -494,6 +541,7 @@ fn main() {
         }
         "weights" =>print!("{}", weights(&a).to_text()),
         "probe" => cmd_probe(&a),
+        "plan" => cmd_plan(&a),
         other => {
             eprintln!("unknown command {}", other);
             std::process::exit(2);
