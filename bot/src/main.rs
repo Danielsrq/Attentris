@@ -378,6 +378,7 @@ fn main() {
         "bench" => cmd_bench(&a),
         "tune" => opt::cmd_tune(&a),
         "synth" => opt::cmd_synth(&a),
+        "shapley" => opt::cmd_shapley(&a),
         "landscape" => {
             let what = argv.get(1).cloned().unwrap_or_default();
             opt::cmd_landscape(&Args::parse(&argv[2.min(argv.len())..]), &what);

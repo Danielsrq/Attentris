@@ -950,3 +950,140 @@ mod tests {
         assert!(best < 1e-8, "CMA-ES reached {:e}", best);
     }
 }
+
+// ---------------------------------------------------------------------------------
+// Shapley values
+// ---------------------------------------------------------------------------------
+
+/// Monte Carlo Shapley values of each weight's contribution to fitness.
+///
+///   bot shapley --weights W --baseline B --save DIR/NAME [--perms 32] [--freeze default]
+///
+/// The players are the weights that differ between W and B (frozen ones are held at W's
+/// value throughout). A coalition S plays with W's weights on S and B's elsewhere, so
+/// v(empty) = fitness(B) and v(all) = fitness(W), and the values sum to the difference.
+/// Each permutation adds the players one at a time and credits each with the change
+/// it made; permutations come in antithetic pairs (an order and its reverse). Every
+/// coalition plays the same seeded games (common random numbers). Resumable: coalition
+/// fitnesses are cached in NAME.cache, the running estimate is NAME.csv.
+pub fn cmd_shapley(a: &Args) {
+    let f = fitness_from_args(a, 12);
+    let seed = a.get("seed", 5000u64);
+    let perms = (a.get("perms", 32usize) / 2 * 2).max(2);
+    let save = a.str("save").expect("--save DIR/NAME").to_string();
+    if let Some(dir) = std::path::Path::new(&save).parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let w = normalised_weights_file(a.str("weights").expect("--weights"));
+    let mut b = normalised_weights_file(a.str("baseline").expect("--baseline"));
+    let frozen = frozen_mask(a);
+    for i in 0..NF {
+        if frozen[i] {
+            b[i] = w[i];
+        }
+    }
+    let players: Vec<usize> = (0..NF).filter(|&i| !frozen[i] && (w[i] - b[i]).abs() > 1e-9).collect();
+    let n = players.len();
+    assert!(n > 0 && n < 64);
+    println!("shapley: {} players, {} permutations, {} games x {} pieces each, beam {} depth {}", n, perms, f.games, f.pieces, f.sc.beam, f.sc.depth);
+    println!("players: {}", players.iter().map(|&i| eval::NAMES[i]).collect::<Vec<_>>().join(" "));
+
+    let cache_path = format!("{}.cache", save);
+    let mut cache: std::collections::HashMap<u64, f64> = std::collections::HashMap::new();
+    if let Ok(t) = std::fs::read_to_string(&cache_path) {
+        for l in t.lines() {
+            let mut it = l.split_whitespace();
+            if let (Some(m), Some(v)) = (it.next(), it.next()) {
+                if let (Ok(m), Ok(v)) = (u64::from_str_radix(m, 16), v.parse::<f64>()) {
+                    cache.insert(m, v);
+                }
+            }
+        }
+        println!("resuming: {} coalitions cached", cache.len());
+    }
+    let point = |mask: u64| -> [f32; NF] {
+        let mut p: [f32; NF] = std::array::from_fn(|i| b[i] as f32);
+        for (k, &i) in players.iter().enumerate() {
+            if mask >> k & 1 != 0 {
+                p[i] = w[i] as f32;
+            }
+        }
+        eval::from_normalised(&p)
+    };
+
+    // The permutations, fixed by the seed so a resumed run walks the same ones.
+    let mut rng = game::Rng::new(a.get("perm-seed", 11u64));
+    let mut orders: Vec<Vec<usize>> = Vec::new();
+    while orders.len() < perms {
+        let mut o: Vec<usize> = (0..n).collect();
+        for i in (1..n).rev() {
+            o.swap(i, rng.below(i as u64 + 1) as usize);
+        }
+        let r: Vec<usize> = o.iter().rev().copied().collect();
+        orders.push(o);
+        orders.push(r);
+    }
+    let full = (1u64 << n) - 1;
+    let session = Instant::now();
+    let batch = (a.get("batch", 4usize) / 2 * 2).max(2);
+    let mut contrib: Vec<Vec<f64>> = vec![Vec::new(); n];
+    for (bi, chunk) in orders.chunks(batch).enumerate() {
+        let mut need: Vec<u64> = vec![0, full];
+        for o in chunk {
+            let mut m = 0u64;
+            for &k in o {
+                m |= 1 << k;
+                need.push(m);
+            }
+        }
+        need.sort_unstable();
+        need.dedup();
+        need.retain(|m| !cache.contains_key(m));
+        if !need.is_empty() {
+            let cw: Vec<[f32; NF]> = need.iter().map(|&m| point(m)).collect();
+            let done_before = bi * batch;
+            let fits = f.eval(&cw, seed, threads_used(), &|done, total| {
+                let frac = (done_before as f64 + chunk.len() as f64 * done as f64 / total as f64) / perms as f64;
+                let secs = session.elapsed().as_secs_f64();
+                let bar: String = (0..20).map(|i| if (i as f64) < frac * 20.0 { '#' } else { '-' }).collect();
+                let _ = std::fs::write(format!("{}.progress", save), format!("permutations {}/{}  [{}] {:.0}%  session {}\n",
+                    done_before, perms, bar, frac * 100.0, fmt_dur(secs)));
+            });
+            let mut fh = std::fs::OpenOptions::new().append(true).create(true).open(&cache_path).unwrap();
+            for (&m, &v) in need.iter().zip(&fits) {
+                cache.insert(m, v);
+                let _ = writeln!(fh, "{:x} {:.6}", m, v);
+            }
+        }
+        for o in chunk {
+            let mut m = 0u64;
+            for &k in o {
+                let before = cache[&m];
+                m |= 1 << k;
+                contrib[k].push(cache[&m] - before);
+            }
+        }
+        // Running estimate: mean marginal contribution and its standard error, taken over
+        // antithetic pairs (the pair mean is the independent sample).
+        let done = (bi * batch + chunk.len()).min(perms);
+        let mut csv = String::from("feature,phi,se,weight,baseline\n");
+        let mut rows: Vec<(f64, String)> = Vec::new();
+        for k in 0..n {
+            let pairs: Vec<f64> = contrib[k].chunks(2).map(|p| p.iter().sum::<f64>() / p.len() as f64).collect();
+            let mean = pairs.iter().sum::<f64>() / pairs.len() as f64;
+            let var = if pairs.len() > 1 { pairs.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (pairs.len() - 1) as f64 } else { 0.0 };
+            let se = (var / pairs.len() as f64).sqrt();
+            let i = players[k];
+            csv += &format!("{},{:.5},{:.5},{:.4},{:.4}\n", eval::NAMES[i], mean, se, w[i], b[i]);
+            rows.push((mean, format!("  {:<12} {:>+7.4} +- {:.4}", eval::NAMES[i], mean, se)));
+        }
+        csv += &format!("#v_empty,{:.5}\n#v_full,{:.5}\n#perms,{}\n", cache[&0], cache[&full], done);
+        std::fs::write(format!("{}.csv", save), csv).unwrap();
+        println!("after {} permutations (v(B) {:.3}, v(W) {:.3}, {} coalitions, {}):", done, cache[&0], cache[&full], cache.len(), fmt_dur(session.elapsed().as_secs_f64()));
+        rows.sort_by(|x, y| y.0.total_cmp(&x.0));
+        for (_, r) in rows {
+            println!("{}", r);
+        }
+    }
+    let _ = std::fs::write(format!("{}.progress", save), "finished\n");
+}

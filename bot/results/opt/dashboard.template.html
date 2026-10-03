@@ -88,6 +88,9 @@ td.desc, .mult .desc { color: var(--ink-3); font-size: 13px; text-align: left; w
 .wbar .fill { height: 8px; border-radius: 2px; display: inline-block; }
 .wbar .fill.neg { opacity: .55; }
 .note.axes { font-family: var(--mono); font-size: 12px; line-height: 1.6; }
+.part { padding-top: 20px; border-top: 2px solid var(--rule); }
+.parth { font-size: clamp(26px, 3.4vw, 34px); line-height: 1.05; }
+.facts a { color: var(--ink-2); }
 .empty { padding: 28px; text-align: center; color: var(--ink-3); border: 1px dashed var(--rule); border-radius: 6px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -171,6 +174,51 @@ td.desc, .mult .desc { color: var(--ink-3); font-size: 13px; text-align: left; w
     <div class="legend" id="legend-paths"></div>
     <div class="mult" id="paths"></div>
   </section>
+
+  <header class="part" id="burst">
+    <div class="eyebrow">Burst rules · a second study</div>
+    <h2 class="parth">Bursty bot</h2>
+    <p>Normal rules plus two changes. A T-spin triple is worth 10. A <b>qualifying clear</b> (a full T-spin, a quad, or a Mini double or triple) placed <b>straight after another qualifying clear</b> has its base attack doubled. The back-to-back bonus is added after and is not doubled. Any other placement breaks the burst: one that clears nothing, a plain clear, or a Mini single. Example: TSD then TST sends 4 + 10×2 = 24.</p>
+    <p>The burst weights were tuned by CEM under these rules (30 generations, starting from normal.txt). A control was tuned the same way under normal rules. Both use 18 of the 30 weights: the S/Z, L/J and I spin slots, max_height and the two all-spin features are held at 0, and burst_armed is added (1 when the last placement was a qualifying clear).</p>
+    <div class="facts" id="burst-facts"></div>
+  </header>
+
+  <section id="s-burst-heldout">
+    <h2>Held-out: three weight sets under both rule sets</h2>
+    <p>20 fresh games of 500 pieces at full search. A <b>window APP</b> is the attack sent over 7 (or 14) consecutive pieces, divided by the window length. <b>Best</b> is the average over games of each game's best window; <b>p90</b> is the 90th percentile over all windows. A <b>pair</b> is two qualifying clears on consecutive placements, the clears burst rules double. Pairs are counted the same way under normal rules, where they earn nothing extra. <b>Pair attack share</b> is the share of all attack sent by the clears in those pairs.</p>
+    <div class="tablewrap" id="burst-heldout"></div>
+  </section>
+
+  <section id="s-burst-time">
+    <h2>Attack over a game</h2>
+    <p>Rolling window APP, piece by piece, for one held-out game (all three weight sets play the same piece sequence). Bursty play shows up as tall, narrow spikes; steady play as a flatter line at a similar average.</p>
+    <div class="controls">
+      <label for="b-rules">Rules <select id="b-rules"><option value="burst">burst</option><option value="normal">normal</option></select></label>
+      <label for="b-win">Window <select id="b-win"><option value="7">7 pieces</option><option value="14">14 pieces</option></select></label>
+      <label for="b-game">Game <input type="range" id="b-game" min="1" max="20" value="1" step="1"><output id="b-game-out">1</output></label>
+    </div>
+    <div class="legend" id="legend-burst"></div>
+    <div class="chart" id="c-burst-time"></div>
+    <h3>How often a window reaches a given APP</h3>
+    <p>Every window of every game, under the rules selected above: the share of windows whose APP is at least the value on the horizontal axis. A curve that sits further right at the bottom has more big bursts.</p>
+    <div class="chart" id="c-burst-tail"></div>
+  </section>
+
+  <section id="s-shapley">
+    <h2>Which weights mattered</h2>
+    <p>Shapley values: how much each weight contributed to the APP gained over the starting weights (standard.txt). They are estimated from random orderings. In each ordering the weights are switched one at a time from their starting value to the tuned value, and each weight is credited with the change in APP its switch made. Each value is that change averaged over every ordering, so it accounts for interactions. Over all weights, the values add up to the tuned APP minus the starting APP. Every coalition is scored on the same 12 seeded games of 300 pieces (tuning search). Whiskers are ±1 standard error.</p>
+    <div class="row" id="shapley"></div>
+  </section>
+
+  <section id="s-burst-weights">
+    <h2>What the burst tune changed</h2>
+    <p>Tuned weights in normalised units, burst tune against its normal-rules control (same start, same mask, same budget). Sorted by the size of the change.</p>
+    <div class="tablewrap" id="burst-weights"></div>
+    <h3>Training fitness</h3>
+    <div class="legend" id="legend-burst-conv"></div>
+    <div class="chart" id="c-burst-conv"></div>
+    <p class="note">Each run's fitness is measured under its own rules, so the two curves are not on the same scale: burst rules pay more for the same clears.</p>
+  </section>
 </main>
 
 <script>
@@ -227,7 +275,7 @@ function mix(a, b, t) {
 }
 
 // ---------------------------------------------------------------- line chart
-function lineChart(container, { series, xLabel, yLabel, yFmt = f3, height = 240 }) {
+function lineChart(container, { series, xLabel, yLabel, yFmt = f3, xFmt = (v) => v, height = 240, xStep = 1, dots = true }) {
   container.innerHTML = "";
   const W = 560, H = height, m = { l: 48, r: 92, t: 10, b: 34 };
   const xs = series.flatMap((s) => s.points.map((p) => p[0]));
@@ -241,14 +289,14 @@ function lineChart(container, { series, xLabel, yLabel, yFmt = f3, height = 240 
     el("text", { x: m.l - 8, y: Y(t) + 4, "text-anchor": "end" }, ax).textContent = yFmt(t);
   }
   for (const t of niceTicks(x0, x1, 6)) {
-    el("text", { x: X(t), y: H - m.b + 18, "text-anchor": "middle" }, ax).textContent = t;
+    el("text", { x: X(t), y: H - m.b + 18, "text-anchor": "middle" }, ax).textContent = xFmt(t);
   }
   el("text", { x: (m.l + W - m.r) / 2, y: H - 4, "text-anchor": "middle", class: "lbl" }, svg).textContent = xLabel;
   for (const s of series) {
     const d = s.points.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + "," + Y(p[1]).toFixed(1)).join("");
     el("path", { d, fill: "none", stroke: `var(${s.color})`, "stroke-width": 2, "stroke-dasharray": s.dash || "", "stroke-linejoin": "round" }, svg);
     const last = s.points[s.points.length - 1];
-    el("circle", { cx: X(last[0]), cy: Y(last[1]), r: 4, fill: `var(${s.color})`, stroke: "var(--surface)", "stroke-width": 2 }, svg);
+    if (dots) el("circle", { cx: X(last[0]), cy: Y(last[1]), r: 4, fill: `var(${s.color})`, stroke: "var(--surface)", "stroke-width": 2 }, svg);
     el("text", { x: X(last[0]) + 8, y: Y(last[1]) + 4, class: "lbl", style: "fill:var(--ink-2)" }, svg).textContent = s.short || s.label;
   }
   // Crosshair + tooltip.
@@ -256,11 +304,11 @@ function lineChart(container, { series, xLabel, yLabel, yFmt = f3, height = 240 
   const hit = el("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent" }, svg);
   const move = (ev) => {
     const r = svg.getBoundingClientRect(), px = ((ev.clientX - r.left) / r.width) * W;
-    const xv = Math.round(x0 + ((px - m.l) / (W - m.l - m.r)) * (x1 - x0));
+    const xv = Math.min(x1, Math.max(x0, Math.round((x0 + ((px - m.l) / (W - m.l - m.r)) * (x1 - x0)) / xStep) * xStep));
     cross.setAttribute("x1", X(xv)); cross.setAttribute("x2", X(xv)); cross.setAttribute("visibility", "visible");
-    const rows = series.map((s) => { const p = s.points.find((q) => q[0] === xv); return p ? `<span style="color:var(${s.color})">■</span> ${s.label}: <b>${yFmt(p[1])}</b>` : ""; }).filter(Boolean);
+    const rows = series.map((s) => { const p = s.points.find((q) => Math.abs(q[0] - xv) < xStep * 1e-6); return p ? `<span style="color:var(${s.color})">■</span> ${s.label}: <b>${yFmt(p[1])}</b>` : ""; }).filter(Boolean);
     const cr = container.getBoundingClientRect();
-    showTip(container, `<b>${xLabel} ${xv}</b><br>` + rows.join("<br>"), ev.clientX - cr.left, ev.clientY - cr.top);
+    showTip(container, `<b>${xLabel} ${xFmt(xv)}</b><br>` + rows.join("<br>"), ev.clientX - cr.left, ev.clientY - cr.top);
   };
   hit.addEventListener("pointermove", move);
   hit.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); hideTip(container); });
@@ -280,6 +328,7 @@ function renderHeader() {
     "tuning search: beam 24, depth 4",
     `${DATA.names.length} weights, normalised units`,
   ];
+  if (DATA.burst) facts.push('<a href="#burst">burst rules study ↓</a>');
   document.getElementById("facts").innerHTML = facts.map((f) => `<span>${f}</span>`).join("");
 }
 function renderHeldout() {
@@ -587,11 +636,141 @@ function renderPaths() {
   });
 }
 
+
+// ---------------------------------------------------------------- burst rules
+const BURST_SETS = [
+  { key: "burst", label: "burst tune", color: "--cma" },
+  { key: "normal_frozen", label: "normal-rules control", color: "--cem" },
+  { key: "normal_txt", label: "normal.txt (all 29 weights)", color: "--cem0" },
+];
+function rolling(seq, w) {
+  const out = [];
+  let s = 0;
+  for (let i = 0; i < seq.length; i++) {
+    s += seq[i];
+    if (i >= w) s -= seq[i - w];
+    if (i >= w - 1) out.push([i + 1, s / w]);
+  }
+  return out;
+}
+function renderBurst() {
+  const B = DATA.burst;
+  const has = B && B.heldout && B.heldout.length;
+  document.getElementById("burst-facts").innerHTML = B ? [
+    `burst tune: ${B.log && B.log.burst ? B.log.burst.length : 0} generations`,
+    `control: ${B.log && B.log.normal_frozen ? B.log.normal_frozen.length : 0} generations`,
+    "18 active weights",
+  ].map((f) => `<span>${f}</span>`).join("") : "";
+  renderBurstHeldout(); renderBurstTime(); renderShapley(); renderBurstWeights();
+}
+function renderBurstHeldout() {
+  const box = document.getElementById("burst-heldout");
+  const rows = (DATA.burst && DATA.burst.heldout) || [];
+  if (!rows.length) { box.innerHTML = '<div class="empty">The held-out runs have not finished yet.</div>'; return; }
+  const name = Object.fromEntries(BURST_SETS.map((s) => [s.key, s.label]));
+  const order = (r) => (r.mode === "burst" ? 0 : 10) + BURST_SETS.findIndex((s) => s.key === r.name);
+  rows.sort((a, b) => order(a) - order(b));
+  const best = {};
+  for (const r of rows) best[r.mode] = Math.max(best[r.mode] || 0, r.app);
+  box.innerHTML = `<table><thead><tr><th>Weights</th><th>Rules</th><th>APP</th><th>Deaths</th><th>7-pc best</th><th>7-pc p90</th><th>14-pc best</th><th>14-pc p90</th><th>Pair rate</th><th>Pair attack share</th><th>TST /100</th><th>TSD /100</th><th>Quads /100</th></tr></thead><tbody>` +
+    rows.map((r) => `<tr><td><span style="color:var(${(BURST_SETS.find((s) => s.key === r.name) || {}).color})">■</span> ${name[r.name] || r.name}</td><td>${r.mode}</td><td class="${r.app === best[r.mode] ? "best" : ""}">${r.app.toFixed(3)}</td><td>${r.died}</td><td>${r.w7best.toFixed(2)}</td><td>${r.w7p90.toFixed(2)}</td><td>${r.w14best.toFixed(2)}</td><td>${r.w14p90.toFixed(2)}</td><td>${r.pair_rate.toFixed(1)}%</td><td>${r.pair_share.toFixed(1)}%</td><td>${r.tst.toFixed(2)}</td><td>${r.tsd.toFixed(2)}</td><td>${r.quad.toFixed(2)}</td></tr>`).join("") +
+    `</tbody></table><p class="note" style="margin-top:8px">Bold = the best APP under each rule set. Pair rate = qualifying clears that followed another one, as a share of all qualifying clears.</p>`;
+}
+function renderBurstTime() {
+  const B = DATA.burst || {};
+  const mode = document.getElementById("b-rules").value, w = +document.getElementById("b-win").value;
+  const g = +document.getElementById("b-game").value;
+  document.getElementById("b-game-out").textContent = g;
+  const sets = BURST_SETS.filter((s) => B.seqs && B.seqs[s.key + "|" + mode]);
+  legend(document.getElementById("legend-burst"), sets);
+  const time = document.getElementById("c-burst-time"), tail = document.getElementById("c-burst-tail");
+  if (!sets.length) { time.innerHTML = tail.innerHTML = '<div class="empty">No held-out sequences yet.</div>'; return; }
+  const series = sets.map((s) => {
+    const seq = B.seqs[s.key + "|" + mode][g - 1] || [];
+    return { ...s, short: "", points: rolling(seq, w) };
+  });
+  lineChart(time, { series, xLabel: "piece", yLabel: `${w}-piece window APP`, yFmt: (v) => v.toFixed(1), height: 260, dots: false });
+  // Survival curve over every window of every game.
+  const step = 0.25;
+  const tails = sets.map((s) => {
+    const vals = B.seqs[s.key + "|" + mode].flatMap((seq) => rolling(seq, w).map((p) => p[1]));
+    return { s, vals };
+  });
+  const vmax = Math.max(...tails.flatMap((t) => t.vals));
+  const xs = [];
+  for (let x = 0; x <= vmax + step / 2; x += step) xs.push(+x.toFixed(2));
+  const tseries = tails.map(({ s, vals }) => ({ ...s, short: "", points: xs.map((x) => [x, (100 * vals.filter((v) => v >= x - 1e-9).length) / vals.length]) }));
+  lineChart(tail, { series: tseries, xLabel: `${w}-piece window APP at least`, yLabel: "% of windows", yFmt: (v) => v.toFixed(0) + "%", xStep: step, dots: false, height: 240 });
+}
+function renderShapley() {
+  const host = document.getElementById("shapley");
+  const S = (DATA.burst && DATA.burst.shapley) || {};
+  const panels = [
+    { key: "burst", title: "Burst weights, burst rules", color: "--cma" },
+    { key: "normal", title: "Control weights, normal rules", color: "--cem" },
+  ].filter((p) => S[p.key]);
+  if (!panels.length) { host.innerHTML = '<div class="empty">The Shapley runs have not finished yet.</div>'; return; }
+  host.innerHTML = "";
+  const lo = Math.min(0, ...panels.flatMap((p) => S[p.key].rows.map((r) => r.phi - r.se)));
+  const hi = Math.max(0, ...panels.flatMap((p) => S[p.key].rows.map((r) => r.phi + r.se)));
+  for (const p of panels) {
+    const d = S[p.key];
+    const rows = [...d.rows].sort((a, b) => b.phi - a.phi);
+    const box = document.createElement("div");
+    box.innerHTML = `<h3>${p.title}</h3><p class="note">APP ${d.v_empty.toFixed(3)} with the starting weights → ${d.v_full.toFixed(3)} tuned · ${d.perms} orderings</p>`;
+    const chart = document.createElement("div"); chart.className = "chart"; box.appendChild(chart); host.appendChild(box);
+    const W = 520, rowH = 20, m = { l: 96, r: 56, t: 6, b: 30 }, H = m.t + m.b + rows.length * rowH;
+    const X = scale(lo, hi, m.l, W - m.r);
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Shapley value per weight: " + p.title }, chart);
+    const ax = el("g", { class: "axis" }, svg);
+    for (const t of niceTicks(lo, hi, 5)) {
+      el("line", { x1: X(t), x2: X(t), y1: m.t, y2: H - m.b, class: "gridl" }, ax);
+      el("text", { x: X(t), y: H - m.b + 16, "text-anchor": "middle" }, ax).textContent = t.toFixed(2);
+    }
+    el("line", { x1: X(0), x2: X(0), y1: m.t, y2: H - m.b, stroke: "var(--ink-3)", "stroke-width": 1 }, svg);
+    el("text", { x: (m.l + W - m.r) / 2, y: H - 2, "text-anchor": "middle", class: "lbl" }, svg).textContent = "APP contributed";
+    rows.forEach((r, i) => {
+      const y = m.t + i * rowH + 4, bh = rowH - 8;
+      el("text", { x: m.l - 8, y: y + bh / 2 + 4, "text-anchor": "end", class: "lbl", style: "fill:var(--ink-2)" }, svg).textContent = r.feature;
+      const x0 = X(Math.min(0, r.phi)), x1 = X(Math.max(0, r.phi));
+      el("rect", { x: x0, y, width: Math.max(1, x1 - x0), height: bh, rx: 2, fill: `var(${p.color})`, opacity: r.phi < 0 ? 0.55 : 1 }, svg);
+      el("line", { x1: X(r.phi - r.se), x2: X(r.phi + r.se), y1: y + bh / 2, y2: y + bh / 2, stroke: "var(--ink)", "stroke-width": 1.5 }, svg);
+      el("text", { x: X(Math.max(0, r.phi + r.se)) + 6, y: y + bh / 2 + 4, class: "lbl" }, svg).textContent = (r.phi >= 0 ? "+" : "") + r.phi.toFixed(3);
+      const hit = el("rect", { x: 0, y: y - 4, width: W, height: rowH, fill: "transparent" }, svg);
+      hit.addEventListener("pointermove", (ev) => {
+        const cr = chart.getBoundingClientRect();
+        showTip(chart, `<b>${r.feature}</b><br>Shapley ${r.phi >= 0 ? "+" : ""}${r.phi.toFixed(4)} ± ${r.se.toFixed(4)} APP<br>weight ${r.baseline.toFixed(2)} → ${r.weight.toFixed(2)}`, ev.clientX - cr.left, ev.clientY - cr.top);
+      });
+      hit.addEventListener("pointerleave", () => hideTip(chart));
+    });
+  }
+}
+function renderBurstWeights() {
+  const B = DATA.burst || {};
+  const box = document.getElementById("burst-weights");
+  const W = B.weights || {};
+  if (!W.burst || !W.normal_frozen) { box.innerHTML = '<div class="empty">The tunes have not finished yet.</div>'; }
+  else {
+    const rows = W.names.map((nm, i) => ({ nm, desc: (DATA.descriptions || {})[nm] || "", c: W.normal_frozen[i], b: W.burst[i] }))
+      .filter((r) => r.c !== 0 || r.b !== 0).sort((x, y) => Math.abs(y.b - y.c) - Math.abs(x.b - x.c));
+    box.innerHTML = `<table><thead><tr><th>Feature</th><th>What it measures</th><th>Control</th><th>Burst</th><th>Change</th></tr></thead><tbody>` +
+      rows.map((r) => `<tr><td>${r.nm}</td><td class="desc">${r.desc}</td><td>${r.c.toFixed(1)}</td><td>${r.b.toFixed(1)}</td><td>${(r.b - r.c >= 0 ? "+" : "") + (r.b - r.c).toFixed(1)}</td></tr>`).join("") + `</tbody></table>`;
+  }
+  const L = B.log || {};
+  const series = [];
+  if (L.burst) series.push({ label: "burst tune (burst rules)", short: "burst", color: "--cma", points: L.burst.map((p) => [p.gen + 1, p.elite_mean]) });
+  if (L.normal_frozen) series.push({ label: "control (normal rules)", short: "control", color: "--cem", points: L.normal_frozen.map((p) => [p.gen + 1, p.elite_mean]) });
+  legend(document.getElementById("legend-burst-conv"), series);
+  const c = document.getElementById("c-burst-conv");
+  if (series.length) lineChart(c, { series, xLabel: "generation", yLabel: "elite mean APP" }); else c.innerHTML = '<div class="empty">No tune log yet.</div>';
+}
+
 function renderAll() {
   if (!DATA) return;
-  renderHeader(); renderHeldout(); renderWeights(); renderSynth(); renderConvergence(); renderTrajectories(); renderSlices(); renderPlane(); renderShape(); renderPaths();
+  renderHeader(); renderHeldout(); renderWeights(); renderSynth(); renderConvergence(); renderTrajectories(); renderSlices(); renderPlane(); renderShape(); renderPaths(); renderBurst();
 }
 for (const id of ["gen", "stride", "show-samples", "show-bg"]) document.getElementById(id).addEventListener("input", renderTrajectories);
+for (const id of ["b-rules", "b-win", "b-game"]) document.getElementById(id).addEventListener("input", renderBurstTime);
 document.getElementById("weights-all").addEventListener("click", () => { showAllWeights = !showAllWeights; renderWeights(); });
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
 new MutationObserver(renderAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });

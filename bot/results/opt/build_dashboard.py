@@ -91,6 +91,80 @@ def read_heldout():
     return rows
 
 
+BURST = os.path.join(HERE, "..", "burst")
+
+
+def read_weights_file(p):
+    """Name -> value from a normalised weights file (tune output or weights/*.txt)."""
+    out = {}
+    with open(p) as f:
+        for line in f:
+            line = line.split("#")[0].strip()
+            if line:
+                k, v = line.split()[:2]
+                out[k] = float(v)
+    return out
+
+
+def read_burst():
+    """The burst-rules study in ../burst: held-out rows, per-piece attack sequences,
+    Shapley estimates, tune logs and weights."""
+    if not os.path.isdir(BURST):
+        return None
+    out = {"heldout": [], "seqs": {}, "shapley": {}, "log": {}, "weights": {}}
+    for name in sorted(os.listdir(BURST)):
+        m = re.match(r"heldout_(.+)_(burst|normal)\.txt$", name)
+        if not m:
+            continue
+        with open(os.path.join(BURST, name)) as f:
+            lines = f.read().splitlines()
+        v = lines[0].split()
+        row = {"name": m.group(1), "mode": m.group(2), "app": float(v[1]), "died": v[2], "quad": float(v[4]),
+               "tsd": float(v[5]), "tst": float(v[6]), "tss": float(v[7]), "plain": float(v[10]), "b2b": int(v[12])}
+        b = next((l for l in lines if l.startswith("burst")), "")
+        mm = re.search(r"7-pc window APP best (\S+) p90 (\S+), 14-pc window APP best (\S+) p90 (\S+); pair rate (\S+)% of (\d+) qualifying clears; burst-pair attack share (\S+)%", b)
+        if mm:
+            g = [float(x) for x in mm.groups()]
+            row.update(w7best=g[0], w7p90=g[1], w14best=g[2], w14p90=g[3], pair_rate=g[4], qual=int(g[5]), pair_share=g[6])
+        out["heldout"].append(row)
+        seq = os.path.join(BURST, name[:-4] + ".seq.csv")
+        if os.path.exists(seq):
+            games = {}
+            with open(seq) as f:
+                f.readline()
+                for line in f:
+                    gi, _n, atk, _q, _d = line.strip().split(",")
+                    games.setdefault(int(gi), []).append(int(atk))
+            out["seqs"][m.group(1) + "|" + m.group(2)] = [games[k] for k in sorted(games)]
+    for key in ("burst", "normal"):
+        p = os.path.join(BURST, f"shapley_{key}.csv")
+        if not os.path.exists(p):
+            continue
+        rows, meta = [], {}
+        with open(p) as f:
+            f.readline()
+            for line in f:
+                parts = line.strip().split(",")
+                if parts[0].startswith("#"):
+                    meta[parts[0][1:]] = float(parts[1])
+                else:
+                    rows.append({"feature": parts[0], "phi": float(parts[1]), "se": float(parts[2]),
+                                 "weight": float(parts[3]), "baseline": float(parts[4])})
+        out["shapley"][key] = {"rows": rows, "v_empty": meta.get("v_empty", 0), "v_full": meta.get("v_full", 0),
+                               "perms": int(meta.get("perms", 0))}
+    for key in ("burst", "normal_frozen"):
+        log = read_log(os.path.join(BURST, f"{key}.txt.log"))
+        if log:
+            out["log"][key] = log
+    files = {"burst": os.path.join(BURST, "burst.txt"), "normal_frozen": os.path.join(BURST, "normal_frozen.txt"),
+             "normal_txt": os.path.join(HERE, "..", "..", "weights", "normal.txt")}
+    found = {k: read_weights_file(p) for k, p in files.items() if os.path.exists(p)}
+    # Feature order from a tune output (all 30 names); normal.txt predates burst_armed.
+    names = list(found.get("burst") or found.get("normal_frozen") or found.get("normal_txt") or [])
+    out["weights"] = {"names": names, **{k: [w.get(n, 0.0) for n in names] for k, w in found.items()}}
+    return out
+
+
 DESCRIPTIONS = {
     "holes": "empty cells with something above them",
     "hole_rows": "rows that contain at least one hole",
@@ -121,6 +195,7 @@ DESCRIPTIONS = {
     "i_single": "an I spin spot that would clear 1 row",
     "i_double": "an I spin spot that would clear 2 rows",
     "i_triple": "an I spin spot that would clear 3 rows",
+    "burst_armed": "the last placement was a qualifying clear (burst rules)",
 }
 
 
@@ -178,6 +253,7 @@ def main():
             weights.setdefault("start", run["dist"]["mean"][0])
             weights[key] = run["dist"]["mean"][-1]
     data["weights"] = weights
+    data["burst"] = read_burst()
 
     with open(path("dashboard.template.html"), encoding="utf-8") as f:
         html = f.read()
