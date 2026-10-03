@@ -1,0 +1,4 @@
+gate                    1.314  0/20    500   4.10   6.26   0.01   5.70   0.09   3.59   0.02    0/0   104  0.00    0   61.89
+clears per 100 pieces -- spin singles 8.30, doubles 7.33, triples 0.02; plain 1/2/3/4: 0.02/0.00/0.00/4.10; attack per line 3.33
+burst -- 7-pc window APP best 4.12 p90 2.57, 14-pc window APP best 2.86 p90 2.00; pair rate 5.9% of 1715 qualifying clears; burst-pair attack share 10.9%; doubled 349 clears sending 26.7% of attack
+STSD/TST template -- in search: 0.13% of 153174583 V evals saw a slot, 0.05% a ready one; on the board: ready before 11 moves, cashed 4 (followed by a TSD 1); vertical T-spin doubles/triples 4, 4 of them found by the template beforehand
