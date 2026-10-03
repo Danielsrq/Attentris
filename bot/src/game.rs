@@ -15,6 +15,13 @@ impl Rng {
     pub fn new(seed: u64) -> Rng {
         Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1)
     }
+    /// Raw generator state, for resumable runs.
+    pub fn state(&self) -> u64 {
+        self.0
+    }
+    pub fn from_state(s: u64) -> Rng {
+        Rng(s)
+    }
     pub fn next(&mut self) -> u64 {
         // xorshift64*
         let mut x = self.0;

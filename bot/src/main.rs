@@ -296,6 +296,10 @@ fn cmd_bench(a: &Args) {
 /// Cross-entropy method over the weight vector. Fitness is attack per piece over a
 /// fixed set of seeds (common random numbers, so candidates are compared on the same
 /// piece sequences); topping out forfeits the remaining pieces' attack.
+///
+/// Resumable: after every generation the full state (means, spreads, RNG, best) is
+/// written to <save>.state and the learning curve appended to <save>.log. Re-running
+/// the same command continues from the last finished generation (--fresh restarts).
 fn cmd_tune(a: &Args) {
     let gens = a.get("gens", 20usize);
     let pop = a.get("pop", 32usize);
@@ -306,24 +310,40 @@ fn cmd_tune(a: &Args) {
     let r = rules(a);
     let g = garbage(a);
     let save = a.str("save").unwrap_or("weights/tuned.txt").to_string();
+    let state_path = format!("{}.state", save);
+    let log_path = format!("{}.log", save);
+    if let Some(dir) = std::path::Path::new(&save).parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+
     let mut mean = weights(a).w;
     let mut sd: Vec<f32> = mean.iter().map(|m| m.abs() * 0.5 + 0.2).collect();
     let mut rng = game::Rng::new(a.get("seed", 7u64));
-    let mut gauss = move || {
-        // Box-Muller.
-        let u1 = ((rng.next() >> 11) as f64 + 1.0) / (1u64 << 53) as f64;
-        let u2 = (rng.next() >> 11) as f64 / (1u64 << 53) as f64;
-        ((-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()) as f32
-    };
-    println!("tuning: {} gens x {} candidates x {} games x {} pieces, search beam {} depth {}", gens, pop, games, pieces, sc.beam, sc.depth);
     let mut best_ever = (f64::NEG_INFINITY, Weights { w: mean });
-    for g_i in 0..gens {
+    let mut start = 0usize;
+    if !a.has("fresh") {
+        if let Ok(text) = std::fs::read_to_string(&state_path) {
+            let (s, m, d, bf, bw, rs) = parse_state(&text);
+            start = s;
+            mean = m;
+            sd = d;
+            best_ever = (bf, Weights { w: bw });
+            rng = game::Rng::from_state(rs);
+            println!("resuming {} from generation {}", save, start);
+        }
+    }
+    if start == 0 {
+        let _ = std::fs::write(&log_path, "gen best elite_mean incumbent seconds\n");
+    }
+    println!("tuning: {} gens x {} candidates x {} games x {} pieces, search beam {} depth {}{}", gens, pop, games, pieces, sc.beam,
+        sc.depth, if eval::RAW_FEATURES.load(std::sync::atomic::Ordering::Relaxed) { "  [raw features]" } else { "" });
+    for g_i in start..gens {
         let seed = 1000 + g_i as u64 * 101;
         let mut cands: Vec<Weights> = vec![Weights { w: mean }];
         while cands.len() < pop {
             let mut w = mean;
             for i in 0..eval::NF {
-                w[i] += sd[i] * gauss();
+                w[i] += sd[i] * gauss(&mut rng);
             }
             cands.push(Weights { w });
         }
@@ -366,15 +386,55 @@ fn cmd_tune(a: &Args) {
         if top > best_ever.0 {
             best_ever = (top, cands[order[0]].clone());
         }
-        println!("gen {:>2}: best {:.3}  elite mean {:.3}  (incumbent mean {:.3})  {:.0}s",
-            g_i, top, order[..elite].iter().map(|&i| fits[i]).sum::<f64>() / elite as f64, fits[0], t0.elapsed().as_secs_f64());
-        if let Some(dir) = std::path::Path::new(&save).parent() {
-            let _ = std::fs::create_dir_all(dir);
-        }
+        let elite_mean = order[..elite].iter().map(|&i| fits[i]).sum::<f64>() / elite as f64;
+        let secs = t0.elapsed().as_secs_f64();
+        println!("gen {:>2}: best {:.3}  elite mean {:.3}  (incumbent mean {:.3})  {:.0}s", g_i, top, elite_mean, fits[0], secs);
         let header = format!("# tuned by `bot tune`, gen {}, fitness (APP on training seeds) of distribution mean below\n", g_i);
         std::fs::write(&save, header + &Weights { w: mean }.to_text()).unwrap();
+        // State last, written atomically: a stop mid-write leaves the previous state.
+        let tmp = format!("{}.tmp", state_path);
+        std::fs::write(&tmp, format_state(g_i + 1, &mean, &sd, best_ever.0, &best_ever.1.w, rng.state())).unwrap();
+        std::fs::rename(&tmp, &state_path).unwrap();
+        use std::io::Write;
+        if let Ok(mut f) = std::fs::OpenOptions::new().append(true).create(true).open(&log_path) {
+            let _ = writeln!(f, "{} {:.4} {:.4} {:.4} {:.0}", g_i, top, elite_mean, fits[0], secs);
+        }
     }
     println!("\nsaved distribution mean to {} (best single candidate scored {:.3})", save, best_ever.0);
+}
+
+fn gauss(rng: &mut game::Rng) -> f32 {
+    // Box-Muller.
+    let u1 = ((rng.next() >> 11) as f64 + 1.0) / (1u64 << 53) as f64;
+    let u2 = (rng.next() >> 11) as f64 / (1u64 << 53) as f64;
+    ((-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()) as f32
+}
+
+fn format_state(next_gen: usize, mean: &[f32], sd: &[f32], best: f64, best_w: &[f32], rng: u64) -> String {
+    let row = |v: &[f32]| v.iter().map(|x| format!("{:e}", x)).collect::<Vec<_>>().join(" ");
+    format!("gen {}\nbest {:e}\nmean {}\nsd {}\nbest_w {}\nrng {}\n", next_gen, best, row(mean), row(sd), row(best_w), rng)
+}
+
+#[allow(clippy::type_complexity)]
+fn parse_state(text: &str) -> (usize, [f32; eval::NF], Vec<f32>, f64, [f32; eval::NF], u64) {
+    let field = |k: &str| -> Vec<&str> {
+        text.lines().find(|l| l.starts_with(&format!("{} ", k))).map(|l| l.split_whitespace().skip(1).collect()).unwrap_or_default()
+    };
+    let arr = |k: &str| -> [f32; eval::NF] {
+        let mut a = [0f32; eval::NF];
+        for (i, v) in field(k).iter().enumerate().take(eval::NF) {
+            a[i] = v.parse().unwrap();
+        }
+        a
+    };
+    (
+        field("gen")[0].parse().unwrap(),
+        arr("mean"),
+        arr("sd").to_vec(),
+        field("best")[0].parse().unwrap(),
+        arr("best_w"),
+        field("rng")[0].parse().unwrap(),
+    )
 }
 
 fn main() {
