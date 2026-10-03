@@ -1,0 +1,3 @@
+burst                   1.254  0/20    500   6.08   2.97   0.00   7.30   0.06   1.45   0.01    0/0    95  0.00    0   64.14
+clears per 100 pieces -- spin singles 8.46, doubles 3.32, triples 0.00; plain 1/2/3/4: 0.01/0.00/0.00/6.08; attack per line 3.18
+burst -- 7-pc window APP best 4.14 p90 2.57, 14-pc window APP best 2.81 p90 1.86; pair rate 7.4% of 1670 qualifying clears; burst-pair attack share 15.6%; doubled 269 clears sending 21.7% of attack
