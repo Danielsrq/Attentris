@@ -1,0 +1,8 @@
+gate2 weights + a hand-set t_vertical bonus (ready STSD / C-spin / imperial-cross slot),
+gate rules, 20 games x 500 pieces, full search. The bonus is collected at every search
+leaf while the slot exists, so above the chain's payoff (8) the bot hoards the slot.
+
+bonus  APP    ready-before-move  cashed  then-TSD
+0      0.320     73               19      12
++10    0.021   9613               28       4
++30    0.002   9752                2       1

@@ -14,7 +14,7 @@
 use crate::board::{Board, FULL};
 use crate::rules::{clear_type, B2bMode, Piece, Shapes, Spin, H, W};
 
-pub const NAMES: [&str; 31] = [
+pub const NAMES: [&str; 32] = [
     "holes",       // empty cells with something above them
     "hole_rows",   // rows containing at least one hole
     "cover",       // filled cells above each column's topmost hole
@@ -55,6 +55,9 @@ pub const NAMES: [&str; 31] = [
     // Fill of the TSD a vertical STSD / TST (C-spin) slot leaves behind: how ready the
     // second clear of a T-spin pair is. See scan_tslots.
     "t_followup",
+    // A ready vertical template slot (STSD / C-spin / imperial cross, 2+ lines): lets a
+    // finished vertical structure be valued apart from flat TSD slots.
+    "t_vertical",
 ];
 pub const NF: usize = NAMES.len();
 
@@ -85,6 +88,7 @@ pub const SCALE: [f32; NF] = [
     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, // spin-slot flags
     1.0,   // burst_armed: flag
     1.0,   // t_followup: 0..1
+    1.0,   // t_vertical: flag
 ];
 
 /// Features that carry no information in a mode, frozen at 0 by `tune --freeze` and in
@@ -165,6 +169,7 @@ impl Default for Weights {
                 0.0, 0.0, 0.0, // i_*
                 0.0,   // burst_armed
                 0.0,   // t_followup
+                0.0,   // t_vertical
             ],
         };
         for i in 0..NF {
@@ -829,6 +834,7 @@ pub fn features(b: &Board, b2b: i32, b2b_mode: B2bMode) -> [f32; NF] {
     }
     f[29] = (b.burst_armed > 0) as i32 as f32;
     f[30] = follow;
+    f[31] = slots.vertical.map_or(0.0, |s| (s.lines >= 2) as i32 as f32);
     for i in 0..NF {
         f[i] /= scale(i);
     }
