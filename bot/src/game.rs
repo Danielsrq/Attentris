@@ -405,7 +405,14 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
             if let Some(c) = slot_cells.as_mut() {
                 c.sort();
             }
-            let into_slot = p.piece == Piece::T && slot_cells == Some(sorted_cells(&p, &shapes));
+            // Into the slot: the same stem (its 3-cell column), either nub side -- an imperial
+            // cross is twisted in one way and turned 180 the other.
+            let stem = |c: &[(i32, i32); 4]| -> Vec<(i32, i32)> {
+                let x = (0..4).map(|i| c[i].0).max_by_key(|&x| c.iter().filter(|q| q.0 == x).count()).unwrap();
+                c.iter().copied().filter(|q| q.0 == x).collect()
+            };
+            let played = sorted_cells(&p, &shapes);
+            let into_slot = p.piece == Piece::T && slot_cells.map_or(false, |c| stem(&c) == stem(&played) && stem(&played).len() == 3);
             let ready = pre.map_or(false, |s| s.lines >= 2);
             stats.tmpl_ready += ready as u64;
             if ready && into_slot && o.lines >= 2 {

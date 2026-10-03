@@ -238,6 +238,9 @@ pub struct TSlot {
     pub fill: f32,
     /// Absolute cells the T would occupy, for the hole-exemption.
     pub cells: [(i32, i32); 4],
+    /// A vertical slot the T can also be turned 180 in (the cell behind the stem open,
+    /// both corners there filled): the imperial cross's turn. Its cells, if so.
+    pub flip: Option<[(i32, i32); 4]>,
 }
 
 /// Everything the T-slot scan finds: the best slot, and the best follow-up fill over the
@@ -298,13 +301,13 @@ pub fn scan_tslots(b: &Board, top: i32) -> TSlots {
     let pop = |y: i32| -> u32 { if (0..H).contains(&y) { b.rows[y as usize].count_ones() } else { 10 } };
     // Walls, floor and ceiling count as filled.
     let filled = |x: i32, y: i32| -> bool { b.blocked(x, y) };
-    let consider = |lines: u32, fill: f32, cells: [(i32, i32); 4], best: &mut Option<TSlot>| {
+    let consider = |slot: TSlot, best: &mut Option<TSlot>| {
         let better = match best {
             None => true,
-            Some(s) => (lines, fill) > (s.lines, s.fill),
+            Some(s) => (slot.lines, slot.fill) > (s.lines, s.fill),
         };
         if better {
-            *best = Some(TSlot { lines, fill, cells });
+            *best = Some(slot);
         }
     };
     for y in y0..H - 1 {
@@ -325,7 +328,7 @@ pub fn scan_tslots(b: &Board, top: i32) -> TSlots {
             let a = pop(y) + 3;
             let bb = pop(y + 1) + 1;
             let lines = (a == 10) as u32 + (bb == 10) as u32;
-            consider(lines, (a + bb) as f32 / 20.0, [(x - 1, y), (x, y), (x + 1, y), (x, y + 1)], &mut best);
+            consider(TSlot { lines, fill: (a + bb) as f32 / 20.0, cells: [(x - 1, y), (x, y), (x + 1, y), (x, y + 1)], flip: None }, &mut best);
         }
         if y < 3 {
             continue;
@@ -358,8 +361,11 @@ pub fn scan_tslots(b: &Board, top: i32) -> TSlots {
                 let cc = pop(y + 1) + 1;
                 let lines = (a == 10) as u32 + (bb == 10) as u32 + (cc == 10) as u32;
                 let cells = [(x, y - 1), (x, y), (x + s, y), (x, y + 1)];
-                consider(lines, (a + bb + cc) as f32 / 30.0, cells, &mut best);
-                consider(lines, (a + bb + cc) as f32 / 30.0, cells, &mut vertical);
+                let flip = (!filled(x - s, y) && filled(x - s, y - 1) && filled(x - s, y + 1))
+                    .then_some([(x, y - 1), (x, y), (x - s, y), (x, y + 1)]);
+                let slot = TSlot { lines, fill: (a + bb + cc) as f32 / 30.0, cells, flip };
+                consider(slot, &mut best);
+                consider(slot, &mut vertical);
                 // The follow-up TSD: lane row (7 cells outside the lane) + the hole's row (9
                 // cells besides the hole; the stem's own cell there counts, the T fills it).
                 let hole_row = if !filled(x + s, y + 1) {
@@ -378,6 +384,61 @@ pub fn scan_tslots(b: &Board, top: i32) -> TSlots {
         }
     }
     TSlots { best, followup, vertical }
+}
+
+/// The board after cashing the T-spin chain -- the best slot, then the best slot that
+/// leaves -- and the readiness (fill, 0..1) of that second slot. Cells are filled and
+/// full rows cleared, as the real placements would. Also tries the best vertical slot
+/// (and its 180 twin): a covered flat slot can tie with it on lines and fill (an
+/// imperial cross has one under its stem), but only the slot a chain starts from leaves
+/// the second one. The chain with the better second slot wins.
+pub fn cash_chain_from(b: &Board, first: Option<TSlot>, vertical: Option<TSlot>) -> (Board, f32) {
+    let one = cash_one(b, first);
+    match vertical {
+        Some(v) if first.map_or(true, |f| f.cells != v.cells) => {
+            let two = cash_one(b, Some(v));
+            if two.1 > one.1 { two } else { one }
+        }
+        _ => one,
+    }
+}
+
+fn cash_one(b: &Board, first: Option<TSlot>) -> (Board, f32) {
+    let Some(s) = first else { return (*b, 0.0) };
+    let fill = |nb: &mut Board, cells: &[(i32, i32); 4]| {
+        let rel: [(i8, i8); 4] = std::array::from_fn(|i| (cells[i].0 as i8, cells[i].1 as i8));
+        nb.place(&rel, 0, 0);
+    };
+    let chain = |cells: &[(i32, i32); 4]| -> (Board, f32) {
+        let mut nb = *b;
+        fill(&mut nb, cells);
+        // A slot that clears nothing starts no chain: just its own cavity is exempt.
+        if s.lines == 0 {
+            return (nb, 0.0);
+        }
+        let top = H - *nb.heights().iter().max().unwrap();
+        match best_tslot(&nb, top) {
+            Some(s2) => {
+                fill(&mut nb, &s2.cells);
+                (nb, s2.fill)
+            }
+            None => (nb, 0.0),
+        }
+    };
+    let a = chain(&s.cells);
+    match s.flip {
+        // Whichever way round leaves the better second slot (an imperial cross is turned).
+        Some(f) => {
+            let b2 = chain(&f);
+            if b2.1 > a.1 { b2 } else { a }
+        }
+        None => a,
+    }
+}
+
+/// `hole_stats`, for tests and diagnostics.
+pub fn hole_stats_pub(b: &Board) -> (f32, f32, f32) {
+    hole_stats(b)
 }
 
 /// Holes, hole rows and cover on `b`.
@@ -519,36 +580,33 @@ pub fn features(b: &Board, b2b: i32, b2b_mode: B2bMode) -> [f32; NF] {
         }
         c.set(v);
     });
-    // Holes are measured as if the best slot were cashed, so the slot's own cavity is
-    // not double-charged: it is an asset (t_*), not a hole.
-    let (holes, hole_rows, cover) = match slot {
-        Some(s) => {
-            let mut filled = *b;
-            for &(x, y) in &s.cells {
-                filled.rows[y as usize] |= 1 << x;
-            }
-            hole_stats(&filled)
-        }
-        None => hole_stats(b),
-    };
+    // Board health (holes, surface, transitions) is measured on the board as it would be
+    // after cashing the T-spin chain: the best slot, then the slot that cashing it leaves
+    // (a fractal's lower TSD, a DT's TST, a C-spin's TSD, an imperial cross's TSD...). A
+    // cavity a T-spin chain will fill is an asset (t_*), not a hole or a jagged surface.
+    let (health, follow) = cash_chain_from(b, slot, slots.vertical);
+    let hb = &health;
+    let (holes, hole_rows, cover) = hole_stats(hb);
     f[0] = holes;
     f[1] = hole_rows;
     f[2] = cover;
 
     // Deepest column is the candidate well; its two edges are left out of bumpiness.
-    let mut well = 0usize;
+    let hh = if slot.is_some() { hb.heights() } else { h };
+    let htop = H - *hh.iter().max().unwrap();
+    let mut hwell = 0usize;
     for x in 1..W as usize {
-        if h[x] < h[well] {
-            well = x;
+        if hh[x] < hh[hwell] {
+            hwell = x;
         }
     }
     let mut bump = 0.0;
     let mut bump_sq = 0.0;
     for x in 0..W as usize - 1 {
-        if x == well || x + 1 == well {
+        if x == hwell || x + 1 == hwell {
             continue;
         }
-        let d = (h[x] - h[x + 1]).abs() as f32;
+        let d = (hh[x] - hh[x + 1]).abs() as f32;
         bump += d;
         bump_sq += d * d;
     }
@@ -557,18 +615,26 @@ pub fn features(b: &Board, b2b: i32, b2b_mode: B2bMode) -> [f32; NF] {
 
     let mut rt = 0u32;
     let mut ct = 0u32;
-    for y in top.max(0)..H {
-        let p = padded(b, y);
+    for y in htop.max(0)..H {
+        let p = padded(hb, y);
         rt += ((p ^ (p >> 1)) & 0x7FF).count_ones();
-        let below = if y + 1 < H { b.rows[y as usize + 1] } else { FULL };
-        ct += (b.rows[y as usize] ^ below).count_ones();
+        let below = if y + 1 < H { hb.rows[y as usize + 1] } else { FULL };
+        ct += (hb.rows[y as usize] ^ below).count_ones();
     }
-    if top > 0 && top < H {
+    if htop > 0 && htop < H {
         // Transition from open air into the top row.
-        ct += b.rows[top as usize].count_ones();
+        ct += hb.rows[htop as usize].count_ones();
     }
     f[5] = rt as f32;
     f[6] = ct as f32;
+
+    // Deepest column of the real board, for the well features below.
+    let mut well = 0usize;
+    for x in 1..W as usize {
+        if h[x] < h[well] {
+            well = x;
+        }
+    }
     f[7] = maxh as f32;
     let d = (maxh - 10).max(0) as f32;
     f[8] = d * d;
@@ -650,7 +716,7 @@ pub fn features(b: &Board, b2b: i32, b2b_mode: B2bMode) -> [f32; NF] {
         }
     }
     f[29] = (b.burst_armed > 0) as i32 as f32;
-    f[30] = slots.followup;
+    f[30] = follow;
     for i in 0..NF {
         f[i] /= scale(i);
     }

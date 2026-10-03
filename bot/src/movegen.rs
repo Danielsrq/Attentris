@@ -394,4 +394,63 @@ mod tests {
         let tst = tst.expect("the DT's TST is reachable as a full spin");
         assert!(tst.rot == 1 || tst.rot == 3);
     }
+
+    /// Imperial cross (Hard Drop wiki): the basic setup, and the board the bot played
+    /// one on (b2n_s6 placement 88). Both T positions -- twisted in, and turned 180 --
+    /// are full hurdle doubles; V's template sees the twisted-in one.
+    #[test]
+    fn imperial_cross() {
+        let shapes = Shapes::new();
+        let wiki = board_from(&["..XX......", "...XXXXXXX", "XX.XXXXXXX", "X...XXXXXX", "XX.XXXXXXX"]);
+        let played = board_from(&[".........X", "...XXXXXXX", "....XXXXXX", "XXX.XXXXXX", "XX...XXXXX", "XXX.XXXXXX", "XXX.XXXXXX"]);
+        for (name, b, top) in [("wiki", wiki, 35), ("played", played, 33)] {
+            let slots = crate::eval::scan_tslots(&b, top);
+            let mut found = Vec::new();
+            for p in placements(&b, Piece::T, true) {
+                let mut nb = b;
+                let lines = nb.place(p.cells(&shapes), p.x as i32, p.y as i32).0;
+                if p.spin == Spin::Full && lines == 2 && (p.rot == 1 || p.rot == 3) {
+                    let mut c = p.abs_cells(&shapes).to_vec();
+                    c.sort();
+                    found.push((p.rot, c));
+                }
+            }
+            println!("{}: movegen full vertical doubles {:?}", name, found);
+            println!("{}: V vertical slot {:?}", name, slots.vertical.map(|s| (s.lines, s.cells)));
+            let v = slots.vertical.expect("V sees a vertical slot");
+            let mut vc = v.cells.to_vec();
+            vc.sort();
+            assert!(found.iter().any(|f| f.1 == vc), "{}: V's slot is one the T can reach", name);
+            assert_eq!(found.len(), 2, "{}: both orientations are full doubles", name);
+        }
+    }
+
+    /// The known two-T structures cash as a chain: the slot left behind is ready
+    /// (fill 1), and the structure's own cavities stop counting as holes.
+    #[test]
+    fn chains_cash_cleanly() {
+        let mut stsd = vec!["XXXX..XXXX", "XXX...XXXX"];
+        stsd.extend_from_slice(&STSD_ROWS);
+        let mut cspin = vec!["XXXX..XXXX", "XXX...XXXX"];
+        cspin.extend_from_slice(&CSPIN_ROWS);
+        let cases: Vec<(&str, Vec<&str>)> = vec![
+            ("fractal", vec!["...XX.....", "XXXX...XXX", "XXXXX.XXXX", "XXXX...XXX", "XXXXX.XXXX"]),
+            ("DT", vec![".....XX...", "......X...", "XXXXX.XXXX", "XXXX..XXXX", "XXXX...XXX", "XXXXX.XXXX", "XXXXX.XXXX"]),
+            ("imperial cross", vec!["..XX......", "...XXXXXXX", "XX.XXXXXXX", "X...XXXXXX", "XX.XXXXXXX"]),
+            ("STSD -> TSD", stsd),
+            ("C-spin", cspin),
+        ];
+        for (name, rows) in cases {
+            let b = board_from(&rows);
+            let top = 40 - rows.len() as i32;
+            let slots = crate::eval::scan_tslots(&b, top);
+            let slot = slots.best;
+            let (after, follow) = crate::eval::cash_chain_from(&b, slot, slots.vertical);
+            let (before_holes, _, _) = crate::eval::hole_stats_pub(&b);
+            let (after_holes, _, _) = crate::eval::hole_stats_pub(&after);
+            println!("{:<15} first {:?}  follow {:.2}  holes {} -> {}", name, slot.map(|s| s.lines), follow, before_holes, after_holes);
+            assert_eq!(follow, 1.0, "{}: the second slot is ready", name);
+            assert!(after_holes < before_holes || before_holes == 0.0, "{}", name);
+        }
+    }
 }
