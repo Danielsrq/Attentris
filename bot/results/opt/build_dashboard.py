@@ -91,6 +91,39 @@ def read_heldout():
     return rows
 
 
+DESCRIPTIONS = {
+    "holes": "empty cells with something above them",
+    "hole_rows": "rows that contain at least one hole",
+    "cover": "filled cells stacked above each column's topmost hole",
+    "bump": "height steps between neighbouring columns",
+    "bump_sq": "the same height steps, squared (punishes big steps)",
+    "row_trans": "filled/empty changes along each row (fragmentation)",
+    "col_trans": "filled/empty changes down each column",
+    "max_height": "height of the tallest column",
+    "danger": "(stack height - 10) squared, zero below 10 rows",
+    "well_rows": "rows full except the deepest column, up to 4: a quad in waiting",
+    "extra_wells": "other 1-wide notches deeper than 2 (needing a second I)",
+    "t_single": "a T-slot that would clear 1 row",
+    "t_double": "a T-slot that would clear 2 rows (TSD)",
+    "t_triple": "a T-slot that would clear 3 rows (TST)",
+    "t_fill": "how full the best T-slot's rows are",
+    "b2b": "a back-to-back chain is live",
+    "b2b_level": "chain length, capped at 8",
+    "b2b_next": "bonus the next difficult clear would earn",
+    "wounds": "wound lines on the board (all-spin only; always 0 here)",
+    "ready_repeat": "a ready clear would repeat the last type (all-spin only)",
+    "sz_single": "an S/Z spin spot that would clear 1 row",
+    "sz_double": "an S/Z spin spot that would clear 2 rows",
+    "sz_triple": "an S/Z spin spot that would clear 3 rows",
+    "lj_single": "an L/J spin spot that would clear 1 row",
+    "lj_double": "an L/J spin spot that would clear 2 rows",
+    "lj_triple": "an L/J spin spot that would clear 3 rows",
+    "i_single": "an I spin spot that would clear 1 row",
+    "i_double": "an I spin spot that would clear 2 rows",
+    "i_triple": "an I spin spot that would clear 3 rows",
+}
+
+
 def main():
     names = None
     data = {"runs": {}}
@@ -136,6 +169,15 @@ def main():
         # Fall back to the slices' feature order.
         names = [s["feature"] for s in data.get("slices", [])]
     data["names"] = names
+    data["descriptions"] = DESCRIPTIONS
+    # Start and final weights (normalised units) from the distribution logs.
+    weights = {}
+    for key in ("cem", "cma"):
+        run = data["runs"].get(key)
+        if run and run.get("dist"):
+            weights.setdefault("start", run["dist"]["mean"][0])
+            weights[key] = run["dist"]["mean"][-1]
+    data["weights"] = weights
 
     with open(path("dashboard.template.html"), encoding="utf-8") as f:
         html = f.read()

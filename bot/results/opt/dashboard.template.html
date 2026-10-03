@@ -78,6 +78,16 @@ td.best { font-weight: 600; }
 .axis text, .lbl { fill: var(--ink-3); font: 11px var(--mono); }
 .axis line, .axis path { stroke: var(--rule); }
 .gridl { stroke: var(--grid); }
+.btn { font: 500 13px var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+.btn:hover { border-color: var(--ink-3); }
+td.desc, .mult .desc { color: var(--ink-3); font-size: 13px; text-align: left; white-space: normal; }
+.mult .desc { font-size: 12px; line-height: 1.35; min-height: 2.7em; }
+.wbar { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.wbar .num { min-width: 5ch; text-align: right; }
+.wbar .track { width: 60px; display: inline-flex; }
+.wbar .fill { height: 8px; border-radius: 2px; display: inline-block; }
+.wbar .fill.neg { opacity: .55; }
+.note.axes { font-family: var(--mono); font-size: 12px; line-height: 1.6; }
 .empty { padding: 28px; text-align: center; color: var(--ink-3); border: 1px dashed var(--rule); border-radius: 6px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -106,6 +116,13 @@ td.best { font-weight: 600; }
     </div>
   </section>
 
+  <section id="s-weights">
+    <h2>The weights found</h2>
+    <p>The bot scores a board as a weighted sum of these measurements. Each weight is in lines of attack per typical amount of its feature (for example, per 10 holes or per 40 row transitions), so the numbers are comparable. Negative weights are penalties. Sorted by size; the first 12 drive almost all of the play.</p>
+    <div class="tablewrap" id="weights"></div>
+    <div><button type="button" id="weights-all" class="btn">Show all 29</button></div>
+  </section>
+
   <section id="s-synth">
     <h2>CEM or CMA-ES at this budget?</h2>
     <p>The same two algorithms on standard test functions in 29 dimensions, starting 2.0 from the optimum, with and without 10% fitness noise. Each cell is the median final value over repeated runs; lower is better. CMA-ES needs enough generations to learn its covariance.</p>
@@ -114,7 +131,7 @@ td.best { font-weight: 600; }
 
   <section id="s-traj">
     <h2>Trajectory</h2>
-    <p>Each run projected onto its own plane: the horizontal axis runs from the starting weights to the final mean, the vertical axis is the main other direction its samples varied in. Dots are sampled candidates (filled = elite), ellipses are the search cloud at two standard deviations, the line is the mean's path. The background is fitness measured on a grid over the plane.</p>
+    <p>The weights live in 29 dimensions, so each panel shows one flat slice through them. <b>Horizontal axis:</b> the straight line from the starting weights (0) to where the run ended up; moving right changes many weights at once, in the mix listed under the panel. <b>Vertical axis:</b> the other direction the candidates varied most, also listed. <b>Colour:</b> fitness (APP) measured on a grid of weight settings in that slice, darker is better. Dots are the candidates a generation tried (filled = the winners kept), each ellipse is that generation's search cloud, and the black line is the cloud's centre moving from start to finish.</p>
     <div class="controls">
       <label for="gen">Up to generation <input type="range" id="gen" min="0" max="20" value="20" step="1"><output id="gen-out">20</output></label>
       <label for="stride">Cloud every <select id="stride"><option value="1">1</option><option value="2">2</option><option value="4" selected>4</option><option value="5">5</option></select> generations</label>
@@ -127,13 +144,14 @@ td.best { font-weight: 600; }
 
   <section id="s-slices">
     <h2>One weight at a time</h2>
-    <p>Fitness when a single weight of the tuned normal-rules weights moves and everything else stays put. All panels share one vertical scale, so a flat panel is a weight that barely matters here. Sorted by how much fitness changes across the range. The open dot is the tuned value.</p>
+    <p>Start from the tuned normal-rules weights, move <b>one</b> weight up and down (three steps each way) and keep the rest fixed. Each chart shows the resulting fitness; the open dot is the tuned value. All charts share one vertical scale, and Δ is how much fitness changed across the range. Changes below about 0.05 APP are within the noise of the 12 test games, so those weights are listed separately: moving them alone does not change how well the bot plays.</p>
     <div class="mult" id="slices"></div>
+    <div class="note" id="slices-flat"></div>
   </section>
 
   <section id="s-plane">
     <h2>Plane through three solutions</h2>
-    <p>Fitness on the plane through the starting weights and the two earlier CEM results (normalised and raw features). Distances are in units of the start-to-CEM-normalised step.</p>
+    <p>Three sets of weights fix one flat slice through weight space: the starting weights (bottom left), the earlier CEM result with normalised features, and the one with raw features. Colour is fitness at each point of that slice, darker is better. The question it answers: did the two tunes find the same hill, or two different ones? Axis units are the distance from the start to the normalised result.</p>
     <div class="row">
       <div class="chart" id="c-plane"></div>
       <div class="note" id="plane-note"></div>
@@ -142,14 +160,14 @@ td.best { font-weight: 600; }
 
   <section id="s-shape">
     <h2>Shape of the search cloud</h2>
-    <p>Standard deviation along each principal axis of the search cloud, widest first, per generation. CEM's cloud has no correlations, so its axes are the weights themselves; CMA-ES learns a full covariance, so its axes are mixtures and its narrow axes mark steep directions of the landscape.</p>
+    <p>How spread out each run's search cloud was, generation by generation (left to right). Each row is one of the cloud's 29 principal directions, widest at the top; darker means more spread. CEM's cloud shrinks as it settles; CMA-ES's stays wide. The bar charts show which weights make up CMA-ES's narrowest direction (where small changes hurt fitness most) and its widest (where the weights hardly matter).</p>
     <div class="row" id="spectra"></div>
     <div class="row" id="loadings"></div>
   </section>
 
   <section id="s-paths">
     <h2>Weight paths</h2>
-    <p>The cloud's mean for each weight, generation by generation, in normalised units.</p>
+    <p>Each weight's value at the centre of the search cloud, generation by generation, for both runs. The numbers after each name are the final values (CEM / CMA-ES).</p>
     <div class="legend" id="legend-paths"></div>
     <div class="mult" id="paths"></div>
   </section>
@@ -275,6 +293,26 @@ function renderHeldout() {
     `</tbody></table>`;
 }
 
+let showAllWeights = false;
+function renderWeights() {
+  const box = document.getElementById("weights");
+  const W = DATA.weights || {};
+  if (!W.cem && !W.cma) { box.innerHTML = '<div class="empty">No tune has finished yet.</div>'; return; }
+  const rows = DATA.names.map((nm, i) => ({ nm, desc: (DATA.descriptions || {})[nm] || "", s: W.start ? W.start[i] : null, c: W.cem ? W.cem[i] : null, m: W.cma ? W.cma[i] : null }));
+  rows.sort((a, b) => Math.max(Math.abs(b.c || 0), Math.abs(b.m || 0)) - Math.max(Math.abs(a.c || 0), Math.abs(a.m || 0)));
+  const shown = showAllWeights ? rows : rows.slice(0, 12);
+  const vmax = Math.max(...rows.flatMap((r) => [Math.abs(r.c || 0), Math.abs(r.m || 0)]));
+  const bar = (v, key) => {
+    if (v == null) return "–";
+    const w = Math.round((Math.abs(v) / vmax) * 60);
+    return `<span class="wbar"><span class="num">${v.toFixed(1)}</span><span class="track"><span class="fill ${v < 0 ? "neg" : "pos"}" style="width:${w}px;background:var(${COLORS[key]})"></span></span></span>`;
+  };
+  box.innerHTML = `<table><thead><tr><th>Feature</th><th>What it measures</th><th>Start</th><th>CEM</th><th>CMA-ES</th></tr></thead><tbody>` +
+    shown.map((r) => `<tr><td>${r.nm}</td><td class="desc">${r.desc}</td><td>${r.s == null ? "–" : r.s.toFixed(1)}</td><td>${bar(r.c, "cem")}</td><td>${bar(r.m, "cma")}</td></tr>`).join("") + `</tbody></table>`;
+  const btn = document.getElementById("weights-all");
+  btn.textContent = showAllWeights ? "Show the top 12" : "Show all 29";
+}
+
 function renderSynth() {
   const box = document.getElementById("synth");
   const rows = DATA.synth || [];
@@ -379,8 +417,11 @@ function renderTrajectories() {
     for (const t of niceTicks(xr[0], xr[1], 5)) el("text", { x: X(t), y: H - m.b + 16, "text-anchor": "middle" }, ax).textContent = t;
     for (const t of niceTicks(yr[0], yr[1], 5)) el("text", { x: m.l - 6, y: Y(t) + 4, "text-anchor": "end" }, ax).textContent = t;
     el("text", { x: (m.l + W - m.r) / 2, y: H - 4, "text-anchor": "middle", class: "lbl" }, svg).textContent = "toward the final mean";
-    const note = document.createElement("div"); note.className = "note";
-    note.textContent = `Vertical axis: the samples' main other direction (${(T.e2_variance_share * 100).toFixed(0)}% of their remaining variation).`;
+    // What the two axes are made of: the weights with the largest share of each direction.
+    const mixOf = (v) => DATA.names.map((nm, i) => [nm, v[i]]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 4)
+      .map(([nm, c]) => `${c >= 0 ? "+" : "−"}${Math.abs(c).toFixed(2)} ${nm}`).join(", ");
+    const note = document.createElement("div"); note.className = "note axes";
+    note.innerHTML = `<b>Right</b> = ${mixOf(T.e1)}<br><b>Up</b> = ${mixOf(T.e2)}`;
     wrap.appendChild(note);
   }
   const lg = document.getElementById("legend-heat");
@@ -393,13 +434,18 @@ function renderTrajectories() {
 function renderSlices() {
   const host = document.getElementById("slices");
   if (!DATA.slices) { host.innerHTML = '<div class="empty">The slices have not been computed yet.</div>'; return; }
-  const items = DATA.slices.map((s) => { const f = s.points.map((p) => p[2]); return { ...s, range: Math.max(...f) - Math.min(...f) }; });
-  items.sort((a, b) => b.range - a.range);
+  const all = DATA.slices.map((s) => { const f = s.points.map((p) => p[2]); return { ...s, range: Math.max(...f) - Math.min(...f) }; });
+  all.sort((a, b) => b.range - a.range);
+  const NOISE = 0.05;
+  const items = all.filter((s) => s.range >= NOISE), flat = all.filter((s) => s.range < NOISE);
   const [y0, y1] = extent(items.flatMap((s) => s.points.map((p) => p[2])), 0.05);
   host.innerHTML = "";
+  document.getElementById("slices-flat").innerHTML = flat.length
+    ? `<b>Flat here (Δ below ${NOISE} APP, ${flat.length} weights):</b> ` + flat.map((s) => `${s.feature} <span style="color:var(--ink-3)">${s.range.toFixed(3)}</span>`).join(" · ")
+    : "";
   for (const s of items) {
     const fig = document.createElement("figure");
-    fig.innerHTML = `<figcaption><span>${s.feature}</span><em>Δ ${s.range.toFixed(3)}</em></figcaption>`;
+    fig.innerHTML = `<figcaption><span>${s.feature}</span><em>Δ ${s.range.toFixed(3)}</em></figcaption><div class="desc">${(DATA.descriptions || {})[s.feature] || ""}</div>`;
     const box = document.createElement("div"); box.className = "chart"; fig.appendChild(box); host.appendChild(fig);
     const W = 200, H = 96, m = { l: 4, r: 4, t: 6, b: 16 };
     const [x0, x1] = extent(s.points.map((p) => p[1]));
@@ -543,9 +589,10 @@ function renderPaths() {
 
 function renderAll() {
   if (!DATA) return;
-  renderHeader(); renderHeldout(); renderSynth(); renderConvergence(); renderTrajectories(); renderSlices(); renderPlane(); renderShape(); renderPaths();
+  renderHeader(); renderHeldout(); renderWeights(); renderSynth(); renderConvergence(); renderTrajectories(); renderSlices(); renderPlane(); renderShape(); renderPaths();
 }
 for (const id of ["gen", "stride", "show-samples", "show-bg"]) document.getElementById(id).addEventListener("input", renderTrajectories);
+document.getElementById("weights-all").addEventListener("click", () => { showAllWeights = !showAllWeights; renderWeights(); });
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
 new MutationObserver(renderAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 if (DATA) {
