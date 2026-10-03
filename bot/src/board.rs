@@ -33,6 +33,9 @@ pub struct Board {
     /// doubled (set to the rules' window by a clear that arms, counts down on every other
     /// placement). Always 0 in other modes.
     pub burst_armed: u8,
+    /// Gate rules: clears in the open chain, and the opener's value while it is alone.
+    pub gate_len: u8,
+    pub gate_pending: u8,
 }
 
 impl Default for Board {
@@ -45,6 +48,8 @@ impl Default for Board {
             last_wound_hole: 0,
             last_clear: 0,
             burst_armed: 0,
+            gate_len: 0,
+            gate_pending: 0,
         }
     }
 }
@@ -234,7 +239,8 @@ impl Board {
             h ^= h >> 29;
         }
         if self.burst_armed > 0 {
-            h = (h ^ 0xB5 ^ (self.burst_armed as u64) << 8).wrapping_mul(0xC4CE_B9FE_1A85_EC53);
+            h = (h ^ 0xB5 ^ (self.burst_armed as u64) << 8 ^ (self.gate_len as u64) << 16 ^ (self.gate_pending as u64) << 24)
+                .wrapping_mul(0xC4CE_B9FE_1A85_EC53);
         }
         h
     }

@@ -1258,6 +1258,29 @@ func test_attack_table() -> void:
 	eq(rs2.burst_step(2, tss), [true, 1], "   but is doubled when armed, using up a placement")
 	eq(RuleSet.burst().burst_step(0, tss), [false, 1], "under burst it still arms")
 
+	# Gate rules: only chains opened by a spin double/triple score.
+	group("gate chains")
+	var gr := RuleSet.gate_rules()
+	var credits := func(seq: Array) -> Array:
+		var st: Array = [0, 0, 0]
+		var out: Array = []
+		for c in seq:
+			var res := attack_result(c[0], c[1], &"T" if c[1] != none else &"I", -1)
+			var gs: Array = gr.gate_step(st, res)
+			out.append(gs[0])
+			st = gs[1]
+		return out
+	var g_tst := [3, full]
+	var g_tsd := [2, full]
+	var g_quad := [4, none]
+	var g_drop := [0, none]
+	eq(credits.call([g_tst, g_tsd]), [0, 14], "C-spin: TST then TSD pays 10 + 4")
+	eq(credits.call([g_tst, g_drop, g_tsd]), [0, 0, 14], "one placement in between is fine")
+	eq(credits.call([g_tst, g_drop, g_drop, g_tsd]), [0, 0, 0, 0], "the window runs out")
+	eq(credits.call([g_tsd, g_quad, g_quad]), [0, 5, 1], "quads join for 1 each")
+	eq(credits.call([g_quad, g_tsd]), [0, 0], "a quad does not open a gate")
+	eq(credits.call([[1, full], g_tsd]), [0, 0], "a T-spin single does not open one either")
+
 ## Board with one 1-wide notch at `col`, `depth` deep, and the neighbours set so the
 ## left and right overhangs are exactly as asked.
 func notch_board(col: int, left_ov: int, right_ov: int) -> Board:

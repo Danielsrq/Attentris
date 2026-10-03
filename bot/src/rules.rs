@@ -232,7 +232,13 @@ pub struct Rules {
     /// Burst rules: whether a full spin single arms the next clear. It can still be
     /// doubled itself either way.
     pub burst_tss_arms: bool,
+    /// Gate rules (a training rule set): only chains score. See `gate_step`.
+    pub gate: bool,
 }
+
+/// Gate chain state: (placements left in the window, clears in the chain, the opener's
+/// value while the chain has one clear). Lives on the Board.
+pub type GateState = (u8, u8, u8);
 
 impl Default for Rules {
     fn default() -> Self {
@@ -250,6 +256,7 @@ impl Default for Rules {
             tst_attack: 6,
             burst_window: 1,
             burst_tss_arms: true,
+            gate: false,
         }
     }
 }
@@ -273,6 +280,48 @@ impl Rules {
     /// an arming clear arms the next TWO placements.
     pub fn burst2() -> Rules {
         Rules { burst_window: 2, burst_tss_arms: false, ..Rules::burst() }
+    }
+
+    /// Gate rules: normal rules, but a clear only scores as part of a chain. A full spin
+    /// double or triple opens a gate; within `burst_window` placements, spin doubles /
+    /// triples and quads join the chain and restart the window; anything else just uses
+    /// up a placement. A chain of two or more pays the sum of its members (TSD 4, TST 10,
+    /// quad 1); a lone opener pays nothing. No B2B, no perfect-clear bonus.
+    pub fn gate() -> Rules {
+        Rules { gate: true, burst_window: 2, tst_attack: 10, ..Rules::normal() }
+    }
+
+    /// Value of a clear that joins a gate chain (0 = it does not join).
+    pub fn gate_value(&self, spin: Spin, lines: u32) -> i32 {
+        match (spin, lines) {
+            (Spin::Full, 2) => 4,
+            (Spin::Full, 3) => self.tst_attack,
+            (_, 4) => 1,
+            _ => 0,
+        }
+    }
+
+    /// One placement under gate rules: (attack credited now, the new state). A chain's
+    /// payout is certain once it has two members, so it is credited then (and each later
+    /// member as it joins) rather than when the window closes -- the same total, and the
+    /// search sees it as soon as it is locked in.
+    pub fn gate_step(&self, st: GateState, spin: Spin, lines: u32) -> (i32, GateState) {
+        let (left, len, pending) = st;
+        let v = self.gate_value(spin, lines);
+        if left > 0 {
+            if v > 0 {
+                let credit = if len == 1 { pending as i32 + v } else { v };
+                (credit, (self.burst_window, len.saturating_add(1), 0))
+            } else if left == 1 {
+                (0, (0, 0, 0))
+            } else {
+                (0, (left - 1, len, pending))
+            }
+        } else if v > 0 && spin == Spin::Full {
+            (0, (self.burst_window, 1, v as u8))
+        } else {
+            (0, (0, 0, 0))
+        }
     }
 
     /// Does this clear arm the burst doubling for the next `burst_window` placements?
@@ -446,5 +495,30 @@ mod tests {
         // Chains: every arming clear re-arms the full window.
         assert_eq!(doubled(&b2, &[tsd, drop, tsd, drop, quad]), [false, false, true, false, true]);
         assert_eq!(doubled(&Rules::normal(), &[tsd, tsd]), [false, false]);
+    }
+
+    fn gate_credits(seq: &[(Spin, u32)]) -> Vec<i32> {
+        let r = Rules::gate();
+        let mut st = (0, 0, 0);
+        seq.iter().map(|&(sp, l)| { let (c, n) = r.gate_step(st, sp, l); st = n; c }).collect()
+    }
+
+    #[test]
+    fn gate_chains() {
+        let (tsd, tst, tss, quad, drop, plain) =
+            ((Spin::Full, 2), (Spin::Full, 3), (Spin::Full, 1), (Spin::None, 4), (Spin::None, 0), (Spin::None, 2));
+        let mini2 = (Spin::Mini, 2);
+        // C-spin: TST then TSD pays 10 + 4, credited once the chain has two members.
+        assert_eq!(gate_credits(&[tst, tsd]), [0, 14]);
+        assert_eq!(gate_credits(&[tst, drop, tsd]), [0, 0, 14], "one placement in between");
+        assert_eq!(gate_credits(&[tst, drop, drop, tsd]), [0, 0, 0, 0], "the window ran out; the TSD opens anew");
+        assert_eq!(gate_credits(&[tsd, quad, quad]), [0, 5, 1], "quads join for 1 each");
+        assert_eq!(gate_credits(&[quad, tsd]), [0, 0], "a quad does not open a gate");
+        assert_eq!(gate_credits(&[tsd]), [0], "a lone opener pays nothing");
+        assert_eq!(gate_credits(&[tss, tsd, plain, mini2, tsd]), [0, 0, 0, 0, 0], "TSS, plain, Mini: neutral, window spent");
+        assert_eq!(gate_credits(&[tsd, plain, tsd, tss, tst]), [0, 0, 8, 0, 10], "joins restart the window");
+        // Everything else scores nothing on its own.
+        let r = Rules::gate();
+        assert_eq!(r.gate_step((0, 0, 0), Spin::None, 4).0, 0);
     }
 }

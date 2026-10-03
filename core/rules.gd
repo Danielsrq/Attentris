@@ -68,6 +68,8 @@ enum GravityMode { LEVEL_CURVE, FIXED }
 @export var burst_window: int = 1
 ## Whether a full spin single arms the next clear (it can still be doubled itself).
 @export var burst_tss_arms: bool = true
+## Gate rules (a training rule set): only chains score. See gate_step.
+@export var gate: bool = false
 
 @export_group("Queue")
 @export var next_count: int = 5
@@ -131,6 +133,47 @@ func burst_step(left: int, r: ClearResult) -> Array:
 	var doubled := left > 0 and r.qualifies_burst()
 	var arms := r.qualifies_burst() and (burst_tss_arms or not (r.spin == SpinDetect.Kind.FULL and r.lines == 1))
 	return [doubled, burst_window if arms else maxi(0, left - 1)]
+
+## Gate rules: normal rules, but a clear only scores as part of a chain. A full spin
+## double or triple opens a gate; within `burst_window` placements, spin doubles/triples
+## and quads join the chain and restart the window; anything else just uses up a
+## placement. A chain of two or more pays the sum of its members (TSD 4, TST 10, quad 1);
+## a lone opener pays nothing. No B2B, no perfect-clear bonus.
+static func gate_rules() -> RuleSet:
+	var r := RuleSet.normal()
+	r.preset_name = "gate"
+	r.gate = true
+	r.burst_window = 2
+	r.tst_attack = 10
+	return r
+
+## Value of a clear that joins a gate chain (0 = it does not join).
+func gate_value(r: ClearResult) -> int:
+	if r.spin == SpinDetect.Kind.FULL and r.lines == 2:
+		return 4
+	if r.spin == SpinDetect.Kind.FULL and r.lines == 3:
+		return tst_attack
+	if r.lines == 4:
+		return 1
+	return 0
+
+## One placement under gate rules. `st` = [placements left, clears in the chain, the
+## opener's value]. Returns [attack credited now, new state]. A chain's payout is certain
+## once it has two members, so it is credited then, and each later member as it joins.
+func gate_step(st: Array, r: ClearResult) -> Array:
+	var left: int = st[0]
+	var n: int = st[1]
+	var pending: int = st[2]
+	var v := gate_value(r)
+	if left > 0:
+		if v > 0:
+			return [pending + v if n == 1 else v, [burst_window, n + 1, 0]]
+		if left == 1:
+			return [0, [0, 0, 0]]
+		return [0, [left - 1, n, pending]]
+	if v > 0 and r.spin == SpinDetect.Kind.FULL:
+		return [0, [burst_window, 1, v]]
+	return [0, [0, 0, 0]]
 
 ## Official-Tetris feel: slower repeat, T-spin only, no 180.
 static func guideline() -> RuleSet:

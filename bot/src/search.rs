@@ -113,9 +113,17 @@ pub fn apply(board: &Board, p: &Placement, b2b: i32, rules: &Rules, shapes: &Sha
     let (lines, cleared) = nb.place(cells, p.x as i32, p.y as i32);
     let nb2 = next_b2b(b2b, spin, lines);
     let perfect = lines > 0 && nb.is_empty();
-    let (burst, left) = rules.burst_step(board.burst_armed, spin, lines);
-    let attack = rules.attack_with(p.piece, spin, lines, nb2, perfect, burst);
-    nb.burst_armed = left;
+    let (attack, burst) = if rules.gate {
+        let (credit, (left, len, pending)) = rules.gate_step((board.burst_armed, board.gate_len, board.gate_pending), spin, lines);
+        nb.burst_armed = left;
+        nb.gate_len = len;
+        nb.gate_pending = pending;
+        (credit, credit > 0)
+    } else {
+        let (burst, left) = rules.burst_step(board.burst_armed, spin, lines);
+        nb.burst_armed = left;
+        (rules.attack_with(p.piece, spin, lines, nb2, perfect, burst), burst)
+    };
     let (mut repeat, mut healed) = (false, 0);
     if rules.repeat_penalty && lines > 0 {
         // Order per the rules: lines are gone, every wound counts down (healing the

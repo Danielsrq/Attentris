@@ -76,6 +76,10 @@ var last_wound_hole: int = -1
 var _wound_rng := RandomNumberGenerator.new()
 ## Burst rules: placements left in which a qualifying clear is doubled (RuleSet.burst_step).
 var burst_armed: int = 0
+## Gate rules: [placements left, clears in the chain, the opener's value] (RuleSet.gate_step).
+var gate_state: Array = [0, 0, 0]
+## Attack the gate credited on the current placement.
+var _gate_credit: int = 0
 
 ## Hole column for a new wound line: the previous wound's column, or with probability
 ## `wound_messiness` (and always for the first) a different one.
@@ -354,6 +358,11 @@ func lock_piece(events: Array, cause: String = "lock_delay") -> void:
 		var step := rules.burst_step(burst_armed, r)
 		r.burst = step[0]
 		burst_armed = step[1]
+	if rules.gate:
+		var gs := rules.gate_step(gate_state, r)
+		_gate_credit = gs[0]
+		gate_state = gs[1]
+		r.burst = _gate_credit > 0
 	r.combo = combo
 	r.level = level
 	# All-spin repeat penalty. Order: the lines are gone (and the perfect clear judged),
@@ -381,7 +390,7 @@ func lock_piece(events: Array, cause: String = "lock_delay") -> void:
 	if r.lines > 0 or r.spin != SpinDetect.Kind.NONE:
 		points = scorer.score_clear(r)
 		score += points
-	r.attack = attack_table.attack_for(r)
+	r.attack = _gate_credit if rules.gate else attack_table.attack_for(r)
 	attack_sent += r.attack
 	last_result = r
 	last_points = points

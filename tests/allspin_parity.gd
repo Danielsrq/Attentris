@@ -18,8 +18,10 @@ func _init() -> void:
 	# --rules=burst / burst2: normal rules plus the burst doubling and TST 10.
 	var burst_rules: RuleSet = null
 	for arg in OS.get_cmdline_user_args():
-		if arg == "--rules=normal" or arg == "--rules=burst" or arg == "--rules=burst2":
+		if arg == "--rules=normal" or arg == "--rules=burst" or arg == "--rules=burst2" or arg == "--rules=gate":
 			penalty = false
+		if arg == "--rules=gate":
+			burst_rules = RuleSet.gate_rules()
 		if arg == "--rules=burst":
 			burst_rules = RuleSet.burst()
 		if arg == "--rules=burst2":
@@ -55,6 +57,8 @@ func _init() -> void:
 		var b2b := -1
 		var last_type := ""
 		var armed := 0
+		var gate_st: Array = [0, 0, 0]
+		var gate_credit := 0
 		for i in steps.size():
 			var step: Dictionary = steps[i]
 			var why := _compare(b, step)
@@ -83,7 +87,12 @@ func _init() -> void:
 			if r.lines > 0:
 				b2b = b2b + 1 if r.is_difficult() else -1
 			r.b2b = b2b
-			if burst:
+			if burst and burst_rules.gate:
+				var gs := burst_rules.gate_step(gate_st, r)
+				gate_credit = gs[0]
+				gate_st = gs[1]
+				r.burst = gate_credit > 0
+			elif burst:
 				var bs := burst_rules.burst_step(armed, r)
 				r.burst = bs[0]
 				armed = bs[1]
@@ -95,7 +104,7 @@ func _init() -> void:
 					# The hole is chosen by messiness in the engine; take the recorded one.
 					b.add_wound(10, int(step.get("wound_hole", 0)))
 				last_type = t
-			var atk := table.attack_for(r)
+			var atk := gate_credit if burst and burst_rules.gate else table.attack_for(r)
 			var problems: Array = []
 			if r.lines != int(step["cleared"]):
 				problems.append("lines %d vs %d" % [r.lines, int(step["cleared"])])
