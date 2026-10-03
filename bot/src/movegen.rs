@@ -278,4 +278,91 @@ mod tests {
         assert_eq!(sq.attack(Piece::T, Spin::Full, 2, 8, false), 6);
         assert_eq!(sq.attack(Piece::T, Spin::Full, 2, 9, false), 7);
     }
+
+    fn mirrored(b: &Board) -> Board {
+        let mut m = *b;
+        for y in 0..40 {
+            m.rows[y] = (0..10).filter(|x| b.rows[y] >> x & 1 != 0).map(|x| 1u16 << (9 - x)).sum();
+        }
+        m
+    }
+
+    /// The slot rows of the two vertical templates (rows 36..39; stem column 3, nub column
+    /// 4 at row 37) with every fill of the cap/lane cells (columns 2..6 of rows 34..35;
+    /// columns 0-1 and 7-9 there filled), in both orientations.
+    fn template_boards(fixed: &[&str]) -> Vec<Board> {
+        let vars: Vec<(usize, usize)> = (34..36).flat_map(|y| (2..7).map(move |x| (x, y))).collect();
+        (0u32..1 << vars.len()).flat_map(|m| {
+            let mut b = Board::default();
+            for (i, r) in fixed.iter().enumerate() {
+                for (x, ch) in r.chars().enumerate() {
+                    if ch == 'X' { b.rows[36 + i] |= 1 << x; }
+                }
+            }
+            for y in 34..36 { for x in [0, 1, 7, 8, 9] { b.rows[y] |= 1 << x; } }
+            for (k, &(x, y)) in vars.iter().enumerate() {
+                if m >> k & 1 != 0 { b.rows[y] |= 1 << x; }
+            }
+            [b, mirrored(&b)]
+        }).collect()
+    }
+
+    const STSD_ROWS: [&str; 4] = ["XXX.XXXXXX", "XXX..XXXXX", "XXX..XXXXX", "XXXXXXXXX."];
+    const CSPIN_ROWS: [&str; 4] = ["XXX.XXXXXX", "XXX..XXXXX", "XXX.XXXXXX", "XXXX.XXXXX"];
+
+    /// V's vertical template accepts exactly the boards where SRS lands a FULL vertical T
+    /// in the slot (through the fifth kick): 12 of the 1024 cap/lane fills, per template
+    /// and orientation, the same 12 for the STSD (a double) and the C-spin (a TST).
+    #[test]
+    fn vertical_template_matches_movegen() {
+        let shapes = Shapes::new();
+        for (fixed, lines) in [(&STSD_ROWS, 2u32), (&CSPIN_ROWS, 3u32)] {
+            let mut landed = 0;
+            for (i, b) in template_boards(fixed).iter().enumerate() {
+                let flip = i % 2 == 1;
+                let mut want: Vec<(i32, i32)> = [(3, 36), (3, 37), (4, 37), (3, 38)]
+                    .iter().map(|&(x, y)| (if flip { 9 - x } else { x }, y)).collect();
+                want.sort();
+                let lands = placements(b, Piece::T, true).iter().any(|p| {
+                    let mut cells = p.abs_cells(&shapes).to_vec();
+                    cells.sort();
+                    let mut nb = *b;
+                    p.spin == Spin::Full && cells == want && nb.place(p.cells(&shapes), p.x as i32, p.y as i32).0 == lines
+                });
+                let found = crate::eval::best_tslot(b, 34).map_or(false, |s| {
+                    let mut cells = s.cells.to_vec();
+                    cells.sort();
+                    cells == want && s.lines == lines
+                });
+                assert_eq!(found, lands, "template {} lines, board {} (mirrored {})", lines, i / 2, flip);
+                landed += lands as u32;
+            }
+            assert_eq!(landed, 24, "12 fills per orientation");
+        }
+    }
+
+    /// The follow-up fill reaches 1 on the full chains: STSD -> TSD and TST (C-spin) -> TSD.
+    #[test]
+    fn followup_fill() {
+        for fixed in [STSD_ROWS, CSPIN_ROWS] {
+            let mut rows = vec!["XXXX..XXXX", "XXX...XXXX"];
+            rows.extend_from_slice(&fixed);
+            let b = board_from(&rows);
+            assert_eq!(crate::eval::scan_tslots(&b, 34).followup, 1.0);
+            assert_eq!(crate::eval::scan_tslots(&mirrored(&b), 34).followup, 1.0);
+        }
+        // Lower fill when the rows around the follow-up TSD are still open.
+        let b = board_from(&["XXXX......", "XXX.......", "XXX.XXXXXX", "XXX..XXXXX", "XXX..XXXXX", "XXXXXXXXX."]);
+        let f = crate::eval::scan_tslots(&b, 34).followup;
+        assert!(f > 0.0 && f < 1.0, "{}", f);
+    }
+
+    /// A vertical slot with no cap cannot be entered, so V does not count it.
+    #[test]
+    fn uncapped_vertical_slot_is_not_counted() {
+        let b = board_from(&["XXX.......", "XXXX......", "XXX..XXXXX", "XXXX.XXXXX", "XXXXXXXXX."]);
+        let vertical = [(4, 36), (4, 37), (3, 37), (4, 38)];
+        assert!(crate::eval::best_tslot(&b, 35).map_or(true, |s| s.cells != vertical));
+        assert!(placements(&b, Piece::T, true).iter().all(|p| p.spin != Spin::Full));
+    }
 }

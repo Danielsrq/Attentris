@@ -30,7 +30,7 @@ var layout: ViewLayout
 var reader := InputReader.new(CONTROL_PROFILE)
 var input_state := InputState.new()
 ## Rule presets the handling toggle cycles through; "normal" is the default.
-const RULE_PRESETS := ["normal", "burst", "competitive", "guideline", "allspin"]
+const RULE_PRESETS := ["normal", "burst", "burst2", "competitive", "guideline", "allspin"]
 var rules_preset := 0
 
 func _preset_rules() -> RuleSet:
@@ -39,6 +39,7 @@ func _preset_rules() -> RuleSet:
 		"guideline": return RuleSet.guideline()
 		"allspin": return RuleSet.allspin()
 		"burst": return RuleSet.burst()
+		"burst2": return RuleSet.burst2()
 		_: return RuleSet.competitive()
 
 ## Right-pane page. GAMEPLAY is the default because the economy is the thing that needs

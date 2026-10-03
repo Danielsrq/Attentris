@@ -14,7 +14,7 @@
 use crate::board::{Board, FULL};
 use crate::rules::{clear_type, B2bMode, Piece, Shapes, Spin, H, W};
 
-pub const NAMES: [&str; 30] = [
+pub const NAMES: [&str; 31] = [
     "holes",       // empty cells with something above them
     "hole_rows",   // rows containing at least one hole
     "cover",       // filled cells above each column's topmost hole
@@ -52,6 +52,9 @@ pub const NAMES: [&str; 30] = [
     // Burst rules: the last placement was a qualifying clear, so the next one is
     // doubled. A fact about the position, not a plan; 0 in every other mode.
     "burst_armed",
+    // Fill of the TSD a vertical STSD / TST (C-spin) slot leaves behind: how ready the
+    // second clear of a T-spin pair is. See scan_tslots.
+    "t_followup",
 ];
 pub const NF: usize = NAMES.len();
 
@@ -81,6 +84,7 @@ pub const SCALE: [f32; NF] = [
     2.0,   // ready_repeat
     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, // spin-slot flags
     1.0,   // burst_armed: flag
+    1.0,   // t_followup: 0..1
 ];
 
 /// Features that carry no information in a mode, frozen at 0 by `tune --freeze` and in
@@ -160,6 +164,7 @@ impl Default for Weights {
                 0.0, 0.0, 0.0, // lj_*
                 0.0, 0.0, 0.0, // i_*
                 0.0,   // burst_armed
+                0.0,   // t_followup
             ],
         };
         for i in 0..NF {
@@ -235,13 +240,50 @@ pub struct TSlot {
     pub cells: [(i32, i32); 4],
 }
 
-/// Best T-spin slot on the board: a resting T position that would register as a FULL
-/// spin by the 3-corner rule (both front corners + one back corner). Reachability is
-/// not checked -- this is a cheap estimate for V, the search checks the real thing.
+/// Everything the T-slot scan finds: the best slot, and the best follow-up fill over the
+/// vertical template slots (see `scan_tslots`).
+#[derive(Clone, Copy, Default, Debug)]
+pub struct TSlots {
+    pub best: Option<TSlot>,
+    pub followup: f32,
+}
+
+/// Best T-spin slot on the board.
 pub fn best_tslot(b: &Board, top: i32) -> Option<TSlot> {
+    scan_tslots(b, top).best
+}
+
+/// T-spin slots: resting T positions that would register as a FULL spin. Two shapes.
+///
+///   Flat (rot 2, nub down), the classic TSD: both front corners + one back corner.
+///
+///   Vertical (rot 1 nub right / rot 3 nub left), one template for the STSD, the TST and
+///   the C-spin. Shown nub right; c = stem column, y = the nub's row:
+///
+///             c-1  c  c+1 c+2 c+3
+///     y-3      ?   #   .   .   A     cap over the stem
+///     y-2      ?   .   .   .   B     the lane the T kicks through
+///     y-1      ?   T   #   ?   ?     roof over the nub
+///     y        ?   T   T   ?   ?
+///     y+1      ?   T   h   ?   ?     STSD: h empty -> the T clears y-1, y; a TSD opens at h
+///     y+2      ?   ?   g   ?   ?     C-spin: h filled, g empty -> TST; a TSD opens at g
+///
+///   Three of the four corners around (c, y) must be filled (an STSD has only the roof
+///   in front; the fifth-kick tuck makes it full), and A empty with B filled sends the
+///   kick elsewhere. This is exactly the set of cap/lane fills where SRS lands the T in
+///   the slot (tests: `vertical_template_matches_movegen`). Reachability from the spawn
+///   is otherwise not checked -- the search checks the real thing.
+///
+/// `followup` is the fill of the TSD a vertical slot leaves behind: once the first clear
+/// is cashed, the lane row lands on the row holding h (or g), and the cap becomes the new
+/// slot's corner. 0..1, 1 = that TSD would clear 2 rows.
+pub fn scan_tslots(b: &Board, top: i32) -> TSlots {
     let mut best: Option<TSlot> = None;
+    let mut followup = 0f32;
     let y0 = (top - 3).max(1);
     let pop = |y: i32| -> u32 { if (0..H).contains(&y) { b.rows[y as usize].count_ones() } else { 10 } };
+    // Walls, floor and ceiling count as filled.
+    let filled = |x: i32, y: i32| -> bool { b.blocked(x, y) };
     let consider = |lines: u32, fill: f32, cells: [(i32, i32); 4], best: &mut Option<TSlot>| {
         let better = match best {
             None => true,
@@ -271,32 +313,55 @@ pub fn best_tslot(b: &Board, top: i32) -> Option<TSlot> {
             let lines = (a == 10) as u32 + (bb == 10) as u32;
             consider(lines, (a + bb) as f32 / 20.0, [(x - 1, y), (x, y), (x + 1, y), (x, y + 1)], &mut best);
         }
-        if y < 1 {
+        if y < 3 {
             continue;
         }
-        // Vertical T (rot 1 nub right / rot 3 nub left): the TST shape.
-        // rot 1 cells (c,y-1) (c,y) (c+1,y) (c,y+1); front corners (c+1,y-1) (c+1,y+1).
+        // Vertical template: stem empty, nub empty, roof over the nub (bitmask prefilter);
+        // corners, cap and lane by lookup on the survivors.
         let base = em & e0 & e1;
-        let m1 = base & (e0 >> 1) & (pm >> 1) & (p1 >> 1) & ((pm << 1) | (p1 << 1)) & 0x7FE;
-        let m3 = base & (e0 << 1) & (pm << 1) & (p1 << 1) & ((pm >> 1) | (p1 >> 1)) & 0x7FE;
-        for (mask, side) in [(m1, 1i32), (m3, -1i32)] {
+        let m1 = base & (e0 >> 1) & (pm >> 1) & 0x7FE;
+        let m3 = base & (e0 << 1) & (pm << 1) & 0x7FE;
+        for (mask, s) in [(m1, 1i32), (m3, -1i32)] {
             let mut m = mask;
             while m != 0 {
                 let c = m.trailing_zeros() as i32;
                 m &= m - 1;
                 let x = c - 1;
-                if x + side < 0 || x + side >= W {
+                if x + s < 0 || x + s >= W {
+                    continue;
+                }
+                let corners = 1 + filled(x + s, y + 1) as u32 + filled(x - s, y - 1) as u32 + filled(x - s, y + 1) as u32;
+                if corners < 3 {
+                    continue;
+                }
+                let lane_open = !filled(x, y - 2) && !filled(x + s, y - 2) && !filled(x + 2 * s, y - 2)
+                    && !filled(x + s, y - 3) && !filled(x + 2 * s, y - 3);
+                if !filled(x, y - 3) || !lane_open || (!filled(x + 3 * s, y - 3) && filled(x + 3 * s, y - 2)) {
                     continue;
                 }
                 let a = pop(y - 1) + 1;
                 let bb = pop(y) + 2;
                 let cc = pop(y + 1) + 1;
                 let lines = (a == 10) as u32 + (bb == 10) as u32 + (cc == 10) as u32;
-                consider(lines, (a + bb + cc) as f32 / 30.0, [(x, y - 1), (x, y), (x + side, y), (x, y + 1)], &mut best);
+                consider(lines, (a + bb + cc) as f32 / 30.0, [(x, y - 1), (x, y), (x + s, y), (x, y + 1)], &mut best);
+                // The follow-up TSD: lane row (7 cells outside the lane) + the hole's row (9
+                // cells besides the hole; the stem's own cell there counts, the T fills it).
+                let hole_row = if !filled(x + s, y + 1) {
+                    Some(y + 1)
+                } else if !filled(x + s, y + 2) {
+                    Some(y + 2)
+                } else {
+                    None
+                };
+                if let Some(hy) = hole_row {
+                    let lane = pop(y - 2);
+                    let hole = pop(hy) + (hy == y + 1) as u32;
+                    followup = followup.max((lane + hole) as f32 / 16.0);
+                }
             }
         }
     }
-    best
+    TSlots { best, followup }
 }
 
 /// Holes, hole rows and cover on `b`.
@@ -427,7 +492,8 @@ pub fn features(b: &Board, b2b: i32, b2b_mode: B2bMode) -> [f32; NF] {
     let maxh = *h.iter().max().unwrap();
     let top = H - maxh;
 
-    let slot = best_tslot(b, top);
+    let slots = scan_tslots(b, top);
+    let slot = slots.best;
     // Holes are measured as if the best slot were cashed, so the slot's own cavity is
     // not double-charged: it is an asset (t_*), not a hole.
     let (holes, hole_rows, cover) = match slot {
@@ -558,7 +624,8 @@ pub fn features(b: &Board, b2b: i32, b2b_mode: B2bMode) -> [f32; NF] {
             }
         }
     }
-    f[29] = b.burst_armed as i32 as f32;
+    f[29] = (b.burst_armed > 0) as i32 as f32;
+    f[30] = slots.followup;
     for i in 0..NF {
         f[i] /= scale(i);
     }

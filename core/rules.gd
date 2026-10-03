@@ -63,6 +63,11 @@ enum GravityMode { LEVEL_CURVE, FIXED }
 @export var burst_doubling: bool = false
 ## Base attack of a full T-spin triple (AttackTable.t_spin_attack[3]); 10 under burst.
 @export var tst_attack: int = 6
+## A qualifying clear is doubled when an arming clear happened within this many previous
+## placements (1 = straight after).
+@export var burst_window: int = 1
+## Whether a full spin single arms the next clear (it can still be doubled itself).
+@export var burst_tss_arms: bool = true
 
 @export_group("Queue")
 @export var next_count: int = 5
@@ -108,6 +113,24 @@ static func burst() -> RuleSet:
 	r.burst_doubling = true
 	r.tst_attack = 10
 	return r
+
+## Burst, sharpened and relaxed: spin singles no longer arm the doubling, and an arming
+## clear arms the next TWO placements.
+static func burst2() -> RuleSet:
+	var r := RuleSet.burst()
+	r.preset_name = "burst2"
+	r.burst_window = 2
+	r.burst_tss_arms = false
+	return r
+
+## One placement of the burst state. `left` = placements still armed. Returns
+## [this clear's base is doubled, the new `left`]. Shared by Game and the parity check.
+func burst_step(left: int, r: ClearResult) -> Array:
+	if not burst_doubling:
+		return [false, 0]
+	var doubled := left > 0 and r.qualifies_burst()
+	var arms := r.qualifies_burst() and (burst_tss_arms or not (r.spin == SpinDetect.Kind.FULL and r.lines == 1))
+	return [doubled, burst_window if arms else maxi(0, left - 1)]
 
 ## Official-Tetris feel: slower repeat, T-spin only, no 180.
 static func guideline() -> RuleSet:

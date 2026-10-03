@@ -226,6 +226,12 @@ pub struct Rules {
     pub burst: bool,
     /// Base attack of a full T-spin triple (6; 10 under burst rules).
     pub tst_attack: i32,
+    /// Burst rules: a qualifying clear is doubled when an arming clear happened within
+    /// this many previous placements (1 = straight after).
+    pub burst_window: u8,
+    /// Burst rules: whether a full spin single arms the next clear. It can still be
+    /// doubled itself either way.
+    pub burst_tss_arms: bool,
 }
 
 impl Default for Rules {
@@ -242,6 +248,8 @@ impl Default for Rules {
             b2b_cap: None,
             burst: false,
             tst_attack: 6,
+            burst_window: 1,
+            burst_tss_arms: true,
         }
     }
 }
@@ -259,6 +267,28 @@ impl Rules {
     /// qualifying clears double the second one's base attack.
     pub fn burst() -> Rules {
         Rules { burst: true, tst_attack: 10, ..Rules::normal() }
+    }
+
+    /// Burst rules, relaxed and sharpened: spin singles no longer arm the doubling, and
+    /// an arming clear arms the next TWO placements.
+    pub fn burst2() -> Rules {
+        Rules { burst_window: 2, burst_tss_arms: false, ..Rules::burst() }
+    }
+
+    /// Does this clear arm the burst doubling for the next `burst_window` placements?
+    pub fn burst_arms(&self, spin: Spin, lines: u32) -> bool {
+        burst_qualifies(spin, lines) && (self.burst_tss_arms || !(spin == Spin::Full && lines == 1))
+    }
+
+    /// One placement of the burst state: `left` = placements still armed. Returns
+    /// (this clear's base is doubled, the new `left`). Always (false, 0) without burst.
+    pub fn burst_step(&self, left: u8, spin: Spin, lines: u32) -> (bool, u8) {
+        if !self.burst {
+            return (false, 0);
+        }
+        let doubled = left > 0 && burst_qualifies(spin, lines);
+        let next = if self.burst_arms(spin, lines) { self.burst_window } else { left.saturating_sub(1) };
+        (doubled, next)
     }
 
     pub fn allspin() -> Rules {
@@ -388,5 +418,33 @@ mod tests {
         assert!(!burst_qualifies(Spin::Mini, 1), "Mini singles break the chain");
         assert!(!burst_qualifies(Spin::None, 3) && !burst_qualifies(Spin::Full, 0));
         assert!(burst_qualifies(Spin::None, 4) && burst_qualifies(Spin::Full, 1));
+    }
+
+    /// Runs a sequence of placements (spin, lines) through burst_step; returns which
+    /// clears were doubled.
+    fn doubled(r: &Rules, seq: &[(Spin, u32)]) -> Vec<bool> {
+        let mut left = 0;
+        seq.iter().map(|&(sp, l)| { let (d, n) = r.burst_step(left, sp, l); left = n; d }).collect()
+    }
+
+    #[test]
+    fn burst_windows() {
+        let (b1, b2) = (Rules::burst(), Rules::burst2());
+        let (tsd, tss, quad, drop, plain) = ((Spin::Full, 2), (Spin::Full, 1), (Spin::None, 4), (Spin::None, 0), (Spin::None, 2));
+        // Original burst: straight after only; a TSS arms.
+        assert_eq!(doubled(&b1, &[tsd, tsd]), [false, true]);
+        assert_eq!(doubled(&b1, &[tsd, drop, tsd]), [false, false, false]);
+        assert_eq!(doubled(&b1, &[tss, quad]), [false, true]);
+        // burst2: one placement in between is fine, two are not.
+        assert_eq!(doubled(&b2, &[tsd, drop, tsd]), [false, false, true]);
+        assert_eq!(doubled(&b2, &[tsd, plain, quad]), [false, false, true]);
+        assert_eq!(doubled(&b2, &[tsd, drop, drop, tsd]), [false, false, false, false]);
+        // A TSS does not arm, but is doubled when armed; it then uses up one placement.
+        assert_eq!(doubled(&b2, &[tss, quad]), [false, false]);
+        assert_eq!(doubled(&b2, &[quad, tss, tsd]), [false, true, true]);
+        assert_eq!(doubled(&b2, &[quad, tss, drop, tsd]), [false, true, false, false]);
+        // Chains: every arming clear re-arms the full window.
+        assert_eq!(doubled(&b2, &[tsd, drop, tsd, drop, quad]), [false, false, true, false, true]);
+        assert_eq!(doubled(&Rules::normal(), &[tsd, tsd]), [false, false]);
     }
 }

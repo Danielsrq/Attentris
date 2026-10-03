@@ -14,6 +14,7 @@
 //!   --no-allspin            T-spins only (RuleSet.guideline()); default is all-spin on
 //!   --mode allspin          every spin full (Minis promoted), repeat-penalty wound lines
 //!   --mode burst            normal + TST 10 + x2 base for back-to-back qualifying clears
+//!   --mode burst2           burst, but spin singles do not arm and the window is 2 placements
 //!   --wound-clears N        clears a wound line lasts (default 10)
 //!   --garbage E,R,M         inject R rows every E pieces, hole moves with prob M
 //!   --cheese N              start with N rows of messy garbage
@@ -89,11 +90,12 @@ fn rules_for(a: &Args, mode: Option<&str>) -> Rules {
     let mut r = match mode {
         Some("allspin") => Rules::allspin(),
         Some("burst") => Rules::burst(),
+        Some("burst2") => Rules::burst2(),
         Some("standard") => Rules { all_spin: false, ..Rules::default() },
         // Normal rules are the default, as in the Godot game.
         Some("normal") | None => Rules::normal(),
         Some("competitive") => Rules::default(),
-        Some(m) => panic!("unknown --mode {} (normal | burst | standard | competitive | allspin)", m),
+        Some(m) => panic!("unknown --mode {} (normal | burst | burst2 | standard | competitive | allspin)", m),
     };
     if a.has("no-allspin") {
         r.all_spin = false;
@@ -220,10 +222,16 @@ fn burst_line(seqs: &[Vec<(u16, u8)>]) -> String {
         parts.push(format!("{}-pc window APP best {:.2} p90 {:.2}", w, best_sum / seqs.len().max(1) as f64, p90));
     }
     let (mut qual, mut doubled, mut total, mut pair_atk) = (0u64, 0u64, 0u64, 0u64);
+    // Clears the rules in play actually doubled (burst2's window differs from "pairs").
+    let (mut ruled, mut ruled_atk) = (0u64, 0u64);
     for s in seqs {
         for (i, &(atk, fl)) in s.iter().enumerate() {
             total += atk as u64;
             qual += (fl & 1) as u64;
+            if fl & 2 != 0 {
+                ruled += 1;
+                ruled_atk += atk as u64;
+            }
             // A pair: this placement and the previous one both qualifying clears -- the
             // clears burst rules double, counted the same way under any rules.
             if fl & 1 != 0 && i > 0 && s[i - 1].1 & 1 != 0 {
@@ -236,8 +244,9 @@ fn burst_line(seqs: &[Vec<(u16, u8)>]) -> String {
             }
         }
     }
-    format!("burst -- {}; pair rate {:.1}% of {} qualifying clears; burst-pair attack share {:.1}%",
-        parts.join(", "), 100.0 * doubled as f64 / qual.max(1) as f64, qual, 100.0 * pair_atk as f64 / total.max(1) as f64)
+    format!("burst -- {}; pair rate {:.1}% of {} qualifying clears; burst-pair attack share {:.1}%; doubled {} clears sending {:.1}% of attack",
+        parts.join(", "), 100.0 * doubled as f64 / qual.max(1) as f64, qual, 100.0 * pair_atk as f64 / total.max(1) as f64,
+        ruled, 100.0 * ruled_atk as f64 / total.max(1) as f64)
 }
 
 static mut THREADS: usize = 1;

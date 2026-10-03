@@ -1231,6 +1231,33 @@ func test_attack_table() -> void:
 	# 4; then 4x2 + 1 (chain 1); the drop breaks the burst; then 4 + 1 (chain 2).
 	eq(sent, [4, 9, 0, 5], "quad 4, doubled quad 9, a drop breaks it, the next quad 5")
 
+	# burst2: the window is 2 placements, so one drop in between keeps it.
+	group("burst2 through Game")
+	var bg2 := make_game(Board.new(10, 20, 20), RuleSet.burst2())
+	var sent2: Array = []
+	for step in ["quad", "drop", "quad", "drop", "drop", "quad"]:
+		if step == "quad":
+			for y in range(36, 40):
+				for x in range(1, 10):
+					bg2.board.set_cell(x, y, 1)
+			bg2.board.set_cell(5, 34, 1)
+			place(bg2, &"I", 1, Vector2i(-2, 36))
+		else:
+			bg2.board.clear()
+			place(bg2, &"O", 0, Vector2i(7, 38))
+		var ev2: Array = []
+		var before2 := bg2.attack_sent
+		bg2.lock_piece(ev2)
+		sent2.append(bg2.attack_sent - before2)
+		bg2.board.clear()
+	# 4; drop; 4x2 + 1 (chain 1); two drops end it; 4 + 1 (chain 2).
+	eq(sent2, [4, 0, 9, 0, 0, 5], "a drop in between is fine under burst2, two are not")
+	var rs2 := RuleSet.burst2()
+	var tss := attack_result(1, full, &"T", -1)
+	eq(rs2.burst_step(0, tss), [false, 0], "a T-spin single does not arm under burst2")
+	eq(rs2.burst_step(2, tss), [true, 1], "   but is doubled when armed, using up a placement")
+	eq(RuleSet.burst().burst_step(0, tss), [false, 1], "under burst it still arms")
+
 ## Board with one 1-wide notch at `col`, `depth` deep, and the neighbours set so the
 ## left and right overhangs are exactly as asked.
 func notch_board(col: int, left_ov: int, right_ov: int) -> Board:

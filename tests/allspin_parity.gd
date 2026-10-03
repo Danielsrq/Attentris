@@ -15,15 +15,18 @@ func _init() -> void:
 	var path := ""
 	# --rules=normal: no repeat penalty (normal rules); default: all-spin.
 	var penalty := true
-	# --rules=burst: normal rules plus the burst doubling and TST 10.
-	var burst := false
+	# --rules=burst / burst2: normal rules plus the burst doubling and TST 10.
+	var burst_rules: RuleSet = null
 	for arg in OS.get_cmdline_user_args():
-		if arg == "--rules=normal" or arg == "--rules=burst":
+		if arg == "--rules=normal" or arg == "--rules=burst" or arg == "--rules=burst2":
 			penalty = false
 		if arg == "--rules=burst":
-			burst = true
+			burst_rules = RuleSet.burst()
+		if arg == "--rules=burst2":
+			burst_rules = RuleSet.burst2()
 		if arg.begins_with("--replay="):
 			path = arg.substr("--replay=".length())
+	var burst := burst_rules != null
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		print("FAIL cannot open ", path)
@@ -43,7 +46,7 @@ func _init() -> void:
 
 	var ps := PieceSet.tetrominoes()
 	var table := AttackTable.new()
-	table.configure(RuleSet.burst() if burst else RuleSet.normal())
+	table.configure(burst_rules if burst else RuleSet.normal())
 	var bad := 0
 	var totals := {"placements": 0, "repeats": 0, "healed": 0, "attack": 0, "bursts": 0}
 	for name in order:
@@ -51,7 +54,7 @@ func _init() -> void:
 		var b := Board.new(10, 20, 20)
 		var b2b := -1
 		var last_type := ""
-		var armed := false
+		var armed := 0
 		for i in steps.size():
 			var step: Dictionary = steps[i]
 			var why := _compare(b, step)
@@ -81,8 +84,9 @@ func _init() -> void:
 				b2b = b2b + 1 if r.is_difficult() else -1
 			r.b2b = b2b
 			if burst:
-				r.burst = armed and r.qualifies_burst()
-				armed = r.qualifies_burst()
+				var bs := burst_rules.burst_step(armed, r)
+				r.burst = bs[0]
+				armed = bs[1]
 			if penalty and r.lines > 0:
 				r.healed = b.tick_wounds()
 				var t := r.clear_type()
