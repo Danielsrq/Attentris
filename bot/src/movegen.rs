@@ -365,4 +365,33 @@ mod tests {
         assert!(crate::eval::best_tslot(&b, 35).map_or(true, |s| s.cells != vertical));
         assert!(placements(&b, Piece::T, true).iter().all(|p| p.spin != Spin::Full));
     }
+
+    /// The DT cannon core (Hard Drop wiki, "Double Triple Cannon Setups"): a flat TSD
+    /// under the overhang, which leaves a vertical TST slot with cap and lane -- the
+    /// C-spin template, mirrored. Both must be FULL spins, and V must see each in turn.
+    #[test]
+    fn dt_cannon() {
+        let shapes = Shapes::new();
+        let b = board_from(&[".....XX...", "......X...", "XXXXX.XXXX", "XXXX..XXXX", "XXXX...XXX", "XXXXX.XXXX", "XXXXX.XXXX"]);
+        let top = 33;
+        let tsd = placements(&b, Piece::T, true).into_iter().find(|p| {
+            let mut nb = b;
+            p.spin == Spin::Full && p.rot == 2 && nb.place(p.cells(&shapes), p.x as i32, p.y as i32).0 == 2
+        });
+        let tsd = tsd.expect("the DT's TSD is reachable as a full spin");
+        let slots = crate::eval::scan_tslots(&b, top);
+        println!("before: best {:?} vertical {:?}", slots.best.map(|s| (s.lines, s.cells)), slots.vertical.map(|s| (s.lines, s.cells)));
+        assert_eq!(slots.best.map(|s| s.lines), Some(2), "V sees the TSD");
+        let mut nb = b;
+        nb.place(tsd.cells(&shapes), tsd.x as i32, tsd.y as i32);
+        let after = crate::eval::scan_tslots(&nb, top + 2);
+        println!("after:  best {:?} vertical {:?}", after.best.map(|s| (s.lines, s.cells)), after.vertical.map(|s| (s.lines, s.cells)));
+        assert_eq!(after.vertical.map(|s| s.lines), Some(3), "then V sees the TST template slot");
+        let tst = placements(&nb, Piece::T, true).into_iter().find(|p| {
+            let mut n2 = nb;
+            p.spin == Spin::Full && n2.place(p.cells(&shapes), p.x as i32, p.y as i32).0 == 3
+        });
+        let tst = tst.expect("the DT's TST is reachable as a full spin");
+        assert!(tst.rot == 1 || tst.rot == 3);
+    }
 }
