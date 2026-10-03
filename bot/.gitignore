@@ -9,3 +9,5 @@ results/ablation/*.tmp
 results/ablation/*.part
 results/ablation/run.log
 results/ablation/STOP
+results/cem_norm_vs_raw/run.log
+results/cem_norm_vs_raw/*.tmp
