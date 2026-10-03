@@ -1,0 +1,31 @@
+# normal rules + fibonacci B2B: CEM 20 gens from standard.txt (raw-features arm, held-out 1.26 APP)
+#! features normalised
+holes        -26.1926
+hole_rows    8.2838
+cover        6.3536
+bump         13.0581
+bump_sq      -9.4182
+row_trans    -35.5120
+col_trans    -10.0113
+max_height   18.7217
+danger       -59.0357
+well_rows    8.8968
+extra_wells  2.5246
+t_single     1.2249
+t_double     1.5228
+t_triple     0.2636
+t_fill       -0.1001
+b2b          3.2798
+b2b_level    9.8456
+b2b_next     1.8719
+wounds       18.2891
+ready_repeat 0.9420
+sz_single    0.6328
+sz_double    0.3473
+sz_triple    0.0372
+lj_single    0.0249
+lj_double    1.4715
+lj_triple    -0.2573
+i_single     0.0608
+i_double     -2.5097
+i_triple     0.0730

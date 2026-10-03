@@ -1,0 +1,2 @@
+start_standard          0.933  0/20    500   3.77   5.36   0.00   3.17   0.58   3.10   3.55    0/0    46  0.00    0   68.89
+clears per 100 pieces -- spin singles 6.32, doubles 5.89, triples 0.00; plain 1/2/3/4: 1.26/1.64/0.65/3.77; attack per line 2.35

@@ -1,0 +1,2 @@
+allspin_slots           1.000  3/20    487   1.22   5.43   0.00   7.69   0.24  11.12   0.25    0/0   135  0.00    0   81.40
+clears per 100 pieces -- spin singles 16.81, doubles 7.64, triples 0.03; plain 1/2/3/4: 0.18/0.06/0.00/1.22; attack per line 2.68

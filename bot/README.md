@@ -62,6 +62,17 @@ godot --headless --path .. -s res://tests/bot_replay_check.gd -- --replay=res://
 godot --headless --path .. -s res://tests/allspin_parity.gd -- --replay=<allspin jsonl without garbage>
 ```
 
+## Normal-rules weights
+
+`weights/normal.txt`: tuned under normal rules with fibonacci B2B (CEM, 20 generations
+from `standard.txt`). Held-out 1.26 APP vs 0.93 for `standard.txt`, no deaths; replays in
+`data/bot/normal.jsonl`. The normalised-vs-raw feature comparison that produced it is in
+`results/cem_norm_vs_raw/` (normalised converged faster early, both ended within noise).
+
+Weight files are now written for normalised features (`#! features normalised`); older
+files without the marker are raw and are converted on load. `bot cpus` shows the CPU
+layout; the bot pins itself to the performance cores unless `--any-cores`.
+
 ## Rules switches
 
 * default (`--mode normal`, Godot `RuleSet.normal()`, the game's default preset): every
