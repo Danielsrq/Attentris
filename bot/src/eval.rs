@@ -12,7 +12,7 @@
 //!     T-slot overhang is punished as a hole and spins can never emerge.
 
 use crate::board::{Board, FULL};
-use crate::rules::{clear_type, Piece, Shapes, Spin, H, W};
+use crate::rules::{clear_type, B2bMode, Piece, Shapes, Spin, H, W};
 
 pub const NAMES: [&str; 29] = [
     "holes",       // empty cells with something above them
@@ -34,7 +34,7 @@ pub const NAMES: [&str; 29] = [
     "b2b_level",   // min(chain, 8): for bonuses that grow with the chain
     // sqrt(chain + 1) while a chain is live: the shape of the floor(sqrt(chain)) bonus
     // every future difficult clear will earn, so a long chain is worth more to keep.
-    "b2b_sqrt",
+    "b2b_next",    // B2B bonus the next difficult clear would earn under the active scaling
     "wounds",      // live wound lines (all-spin repeat penalty): a shorter field
     "ready_repeat", // a ready quad or spin slot would repeat the last clear type
     // All-spin slots for the other pieces, by family: the best resting, immobile spot
@@ -52,15 +52,53 @@ pub const NAMES: [&str; 29] = [
 ];
 pub const NF: usize = NAMES.len();
 
+/// Normalisation: every feature is divided by a fixed, theory-based scale -- its realistic
+/// range under the game's rules (the 20-row visible field, a slot's 0/1 flag, the B2B
+/// bonus cap of 7) -- so each weight is in lines of attack per typical change and all
+/// weights sit on one scale. For a linear V this changes nothing about play; it makes
+/// the weights comparable and the tuner better conditioned.
+pub const SCALE: [f32; NF] = [
+    10.0,  // holes
+    20.0,  // hole_rows: rows in the visible field
+    20.0,  // cover
+    20.0,  // bump
+    100.0, // bump_sq
+    40.0,  // row_trans: ~2 per row over 20 rows
+    40.0,  // col_trans
+    20.0,  // max_height: visible field
+    100.0, // danger: (20 - 10)^2
+    4.0,   // well_rows: 0..4
+    10.0,  // extra_wells
+    1.0, 1.0, 1.0, // t_single / t_double / t_triple: flags
+    1.0,   // t_fill: 0..1
+    1.0,   // b2b: flag
+    8.0,   // b2b_level: capped at 8
+    7.0,   // b2b_next: bonus capped at 7
+    10.0,  // wounds
+    2.0,   // ready_repeat
+    1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, // spin-slot flags
+];
+
+pub const NORMALISED_MARKER: &str = "#! features normalised";
+
+/// Experimental control: evaluate with raw (unscaled) features, as before normalisation.
+pub static RAW_FEATURES: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+#[inline]
+fn scale(i: usize) -> f32 {
+    if RAW_FEATURES.load(std::sync::atomic::Ordering::Relaxed) { 1.0 } else { SCALE[i] }
+}
+
 #[derive(Clone, Debug)]
 pub struct Weights {
     pub w: [f32; NF],
 }
 
 impl Default for Weights {
-    /// Hand-set starting point, scaled so 1.0 ~ one line of attack. `tune` improves it.
+    /// Hand-set starting point in raw units, 1.0 ~ one line of attack; converted to the
+    /// active (normalised) units on construction. `tune` improves it.
     fn default() -> Self {
-        Weights {
+        let mut w = Weights {
             w: [
                 -1.6,  // holes
                 -1.0,  // hole_rows
@@ -79,20 +117,28 @@ impl Default for Weights {
                 1.2,   // t_fill
                 1.2,   // b2b
                 0.0,   // b2b_level
-                0.0,   // b2b_sqrt
+                0.0,   // b2b_next
                 0.0,   // wounds
                 0.0,   // ready_repeat
                 0.0, 0.0, 0.0, // sz_single / double / triple
                 0.0, 0.0, 0.0, // lj_*
                 0.0, 0.0, 0.0, // i_*
             ],
+        };
+        for i in 0..NF {
+            w.w[i] *= scale(i);
         }
+        w
     }
 }
 
 impl Weights {
+    /// Files written since normalisation carry NORMALISED_MARKER and hold weights for
+    /// the normalised features. Older files hold weights for the raw features; they are
+    /// converted on load (w * scale), so they evaluate every board exactly as before.
     pub fn parse(text: &str) -> Result<Weights, String> {
         let mut w = Weights::default();
+        let normalised_file = text.lines().any(|l| l.trim() == NORMALISED_MARKER);
         for (n, line) in text.lines().enumerate() {
             let line = line.split('#').next().unwrap().trim();
             if line.is_empty() {
@@ -105,16 +151,21 @@ impl Weights {
                 .ok_or(format!("line {}: missing value", n + 1))?
                 .parse()
                 .map_err(|e| format!("line {}: {}", n + 1, e))?;
+            // b2b_sqrt (sqrt(chain + 1)) was replaced by b2b_next; carry its weight over.
+            let name = if name == "b2b_sqrt" { "b2b_next" } else { name };
             let i = NAMES.iter().position(|&k| k == name).ok_or(format!("line {}: unknown feature {}", n + 1, name))?;
-            w.w[i] = val;
+            // Stored in the units of the active mode (normalised unless --raw-features).
+            let raw = if normalised_file { val / SCALE[i] } else { val };
+            w.w[i] = raw * scale(i);
         }
         Ok(w)
     }
 
+    /// Always written for normalised features, with the marker.
     pub fn to_text(&self) -> String {
-        let mut s = String::new();
+        let mut s = format!("{}\n", NORMALISED_MARKER);
         for i in 0..NF {
-            s += &format!("{:<12} {:.4}\n", NAMES[i], self.w[i]);
+            s += &format!("{:<12} {:.4}\n", NAMES[i], self.w[i] / scale(i) * SCALE[i]);
         }
         s
     }
@@ -333,7 +384,7 @@ pub fn scan_spin_slots(b: &Board, top: i32, mut hit: impl FnMut(SpinSlot)) {
     }
 }
 
-pub fn features(b: &Board, b2b: i32) -> [f32; NF] {
+pub fn features(b: &Board, b2b: i32, b2b_mode: B2bMode) -> [f32; NF] {
     let mut f = [0f32; NF];
     let h = b.heights();
     let maxh = *h.iter().max().unwrap();
@@ -429,7 +480,8 @@ pub fn features(b: &Board, b2b: i32) -> [f32; NF] {
     }
     f[15] = (b2b >= 0) as i32 as f32;
     f[16] = b2b.clamp(0, 8) as f32;
-    f[17] = if b2b >= 0 { ((b2b + 1) as f32).sqrt() } else { 0.0 };
+    // The bonus the next difficult clear would earn: follows whichever scaling is active.
+    f[17] = if b2b >= 0 { b2b_mode.bonus(b2b + 1) as f32 } else { 0.0 };
     // All-spin repeat penalty. Both are zero outside that mode (no wounds, no
     // last_clear), so they cost nothing in the other modes.
     f[18] = b.wounds as f32;
@@ -468,6 +520,9 @@ pub fn features(b: &Board, b2b: i32) -> [f32; NF] {
                 f[19] += 1.0;
             }
         }
+    }
+    for i in 0..NF {
+        f[i] /= scale(i);
     }
     f
 }

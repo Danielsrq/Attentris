@@ -385,6 +385,10 @@ fn main() {
     }
     let a = Args::parse(&argv[1..]);
     let t = a.get("threads", std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4));
+    // Experimental control: evaluate with the raw, unscaled features (before weights load).
+    if a.has("raw-features") {
+        eval::RAW_FEATURES.store(true, std::sync::atomic::Ordering::Relaxed);
+    }
     unsafe {
         THREADS = t;
     }

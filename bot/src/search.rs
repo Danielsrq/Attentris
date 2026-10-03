@@ -137,7 +137,7 @@ impl Searcher {
     }
 
     fn value(&self, b: &Board, b2b: i32) -> f32 {
-        self.weights.value(&features(b, b2b))
+        self.weights.value(&features(b, b2b, self.rules.b2b))
     }
 
     /// Children of `node` for one piece choice, appended to `out`.
