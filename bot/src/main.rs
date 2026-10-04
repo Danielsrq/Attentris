@@ -290,12 +290,14 @@ fn run_games(sc: &SearchConfig, w: &Weights, r: Rules, env: Option<Rules>, g: &G
 
 fn summary_header() {
     println!(
-        "{:<22} {:>6} {:>5} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>5} {:>5} {:>4} {:>7}",
-        "config", "APP", "died", "pcs", "quad%", "TSD%", "TST%", "TSS%", "mini%", "spin%", "1-3%", "gbclr", "b2b", "rep%", "wnd", "ms/pc"
+        "{:<22} {:>6} {:>5} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>5} {:>5} {:>4} {:>7} {:>8}",
+        "config", "APP", "died", "pcs", "quad%", "TSD%", "TST%", "TSS%", "mini%", "spin%", "1-3%", "gbclr", "b2b", "rep%", "wnd", "ms/pc", "APPfull"
     );
 }
 
-fn summary_row(name: &str, st: &[Stats], secs: f64) {
+/// APP is attack per piece actually played; APPfull divides by the full budget (games x
+/// `pieces`), as training fitness does, so pieces a dead bot never played count as 0.
+fn summary_row(name: &str, st: &[Stats], secs: f64, pieces: usize) {
     let mut t = Stats::default();
     for s in st {
         t.add(s);
@@ -303,7 +305,7 @@ fn summary_row(name: &str, st: &[Stats], secs: f64) {
     let died = st.iter().filter(|s| s.died).count();
     let per = |n: u64| 100.0 * n as f64 / t.pieces.max(1) as f64;
     println!(
-        "{:<22} {:>6.3} {:>2}/{:<2} {:>6.0} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6} {:>5} {:>5.2} {:>4} {:>7.2}",
+        "{:<22} {:>6.3} {:>2}/{:<2} {:>6.0} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6} {:>5} {:>5.2} {:>4} {:>7.2} {:>8.3}",
         name,
         t.app(),
         died,
@@ -321,6 +323,7 @@ fn summary_row(name: &str, st: &[Stats], secs: f64) {
         per(t.repeats),
         t.max_wounds,
         1000.0 * secs / t.pieces.max(1) as f64 * threads_used() as f64,
+        t.attack as f64 / (st.len() * pieces).max(1) as f64,
     );
 }
 
@@ -392,7 +395,7 @@ fn cmd_play(a: &Args) {
     };
     let (st, js) = run_games(&sc, &weights(a), belief, env, &garbage(a), games, pieces, seed, threads_used(), &label, a.has("out"));
     summary_header();
-    summary_row(&label, &st, t0.elapsed().as_secs_f64());
+    summary_row(&label, &st, t0.elapsed().as_secs_f64(), pieces);
     let mut t: Vec<u32> = st.iter().flat_map(|s| s.think_us.iter().copied()).collect();
     if !t.is_empty() {
         t.sort_unstable();
@@ -477,7 +480,7 @@ fn cmd_bench(a: &Args) {
         let t0 = Instant::now();
         let label = name.replace([' ', '(', ')'], "").replace('+', "_");
         let (st, js) = run_games(&sc, &w, r, None, &g, games, pieces, seed, threads_used(), &label, out.is_some());
-        summary_row(&name, &st, t0.elapsed().as_secs_f64());
+        summary_row(&name, &st, t0.elapsed().as_secs_f64(), pieces);
         // Keep only the first game per config: enough to watch side by side.
         let first = format!("{}_s{}", label, seed);
         all_js += &js.lines().filter(|l| l.contains(&format!("\"replay\":\"{}\"", first))).map(|l| format!("{}\n", l)).collect::<String>();
