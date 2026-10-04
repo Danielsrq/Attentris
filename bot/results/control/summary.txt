@@ -1,0 +1,20 @@
+Control for round 3 (today's code): gate rules, no garbage, from the gate2 weights, 12 games
+per candidate, 30 generations; arms identical but for t_vertical's starting value.
+
+arm         start  final t_vertical  final elite (training)  held-out gate APP (20 x 500)
+control     0      +1.29             0.308                   0.406
+replicate   +5     +2.14             0.309                   0.396
+(round 3 on the older V: +4.74, held-out 0.355)
+
+Fitness slice over t_vertical, the other weights held at each arm's final values
+(tuning search: beam 24, depth 4, 12 games x 300 pieces):
+
+t_vertical   0      1      2      3      4      5      6      7      8
+ctrl0        0.291  0.273  0.300  0.242  0.200  0.166  0.135  0.062  0.018
+ctrl5        0.267  0.291  0.271  0.270  0.238  0.173  0.142  0.096  0.042
+
+Reading: both arms land on the same broad plateau (t_vertical ~0-2, up to ~3 with the
+replicate's harsher danger); fitness then falls steadily and collapses at 7-8 (the slot is
+hoarded rather than cashed). No barrier between 0 and the best value, so no local optimum:
+the control did not get stuck. Today's V (unreachable lidded slots no longer exempt) needs a
+much smaller direct STSD bonus than round 3's older V did.

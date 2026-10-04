@@ -1,0 +1,2 @@
+ctrl0                   0.406  0/20    500   0.00  10.46   0.00   0.16   0.03   1.85  14.19    0/0     5  0.00    0   72.94    0.406
+STSD/TST template -- in search: 10.12% of 157548301 V evals saw a slot, 9.50% a ready one; on the board: ready before 1350 moves, cashed 166 (followed by a TSD 145); vertical T-spin doubles/triples 166, 166 of them found by the template beforehand

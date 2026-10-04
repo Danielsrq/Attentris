@@ -1,0 +1,103 @@
+== CEM under gate rules, t_vertical starting at 0
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+frozen at 0: max_height b2b b2b_level b2b_next wounds ready_repeat sz_single sz_double sz_triple lj_single lj_double lj_triple i_single i_double i_triple
+tuning (cem): 30 gens x 32 candidates x 12 games x 300 pieces, search beam 24 depth 4
+gen  1/30: best 0.272  elite mean 0.229  (incumbent 0.272)  spread 2.301  86s  eta 41m
+gen  2/30: best 0.273  elite mean 0.255  (incumbent 0.273)  spread 1.504  95s  eta 42m
+gen  3/30: best 0.276  elite mean 0.260  (incumbent 0.256)  spread 1.119  105s  eta 43m
+gen  4/30: best 0.292  elite mean 0.279  (incumbent 0.257)  spread 0.892  106s  eta 42m
+gen  5/30: best 0.288  elite mean 0.281  (incumbent 0.272)  spread 0.663  106s  eta 41m
+gen  6/30: best 0.302  elite mean 0.294  (incumbent 0.291)  spread 0.618  106s  eta 40m
+gen  7/30: best 0.294  elite mean 0.289  (incumbent 0.280)  spread 0.518  108s  eta 39m
+gen  8/30: best 0.307  elite mean 0.298  (incumbent 0.276)  spread 0.482  110s  eta 38m
+gen  9/30: best 0.312  elite mean 0.301  (incumbent 0.291)  spread 0.427  109s  eta 36m
+gen 10/30: best 0.314  elite mean 0.300  (incumbent 0.311)  spread 0.423  108s  eta 35m
+gen 11/30: best 0.308  elite mean 0.302  (incumbent 0.300)  spread 0.459  109s  eta 33m
+gen 12/30: best 0.308  elite mean 0.301  (incumbent 0.266)  spread 0.438  110s  eta 31m
+gen 13/30: best 0.319  elite mean 0.297  (incumbent 0.299)  spread 0.368  110s  eta 30m
+gen 14/30: best 0.326  elite mean 0.300  (incumbent 0.247)  spread 0.351  108s  eta 28m
+gen 15/30: best 0.315  elite mean 0.301  (incumbent 0.264)  spread 0.331  108s  eta 26m
+gen 16/30: best 0.307  elite mean 0.296  (incumbent 0.280)  spread 0.270  108s  eta 25m
+gen 17/30: best 0.311  elite mean 0.305  (incumbent 0.311)  spread 0.238  108s  eta 23m
+gen 18/30: best 0.307  elite mean 0.301  (incumbent 0.298)  spread 0.200  108s  eta 21m
+gen 19/30: best 0.312  elite mean 0.302  (incumbent 0.302)  spread 0.166  108s  eta 19m
+gen 20/30: best 0.316  elite mean 0.311  (incumbent 0.311)  spread 0.184  108s  eta 18m
+gen 21/30: best 0.318  elite mean 0.307  (incumbent 0.287)  spread 0.180  108s  eta 16m
+gen 22/30: best 0.320  elite mean 0.302  (incumbent 0.296)  spread 0.133  108s  eta 14m
+gen 23/30: best 0.313  elite mean 0.306  (incumbent 0.296)  spread 0.138  109s  eta 12m
+gen 24/30: best 0.308  elite mean 0.303  (incumbent 0.293)  spread 0.136  109s  eta 11m
+gen 25/30: best 0.318  elite mean 0.306  (incumbent 0.284)  spread 0.136  109s  eta 9m
+gen 26/30: best 0.319  elite mean 0.308  (incumbent 0.288)  spread 0.122  108s  eta 7m
+gen 27/30: best 0.314  elite mean 0.299  (incumbent 0.285)  spread 0.119  108s  eta 5m
+gen 28/30: best 0.313  elite mean 0.296  (incumbent 0.302)  spread 0.097  108s  eta 4m
+gen 29/30: best 0.313  elite mean 0.300  (incumbent 0.282)  spread 0.082  108s  eta 2m
+gen 30/30: best 0.316  elite mean 0.308  (incumbent 0.307)  spread 0.065  109s  eta 0m
+
+saved distribution mean to C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/bot/results/control/ctrl0.txt (best single candidate scored 0.326)
+== CEM under gate rules, t_vertical starting at 5
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+frozen at 0: max_height b2b b2b_level b2b_next wounds ready_repeat sz_single sz_double sz_triple lj_single lj_double lj_triple i_single i_double i_triple
+tuning (cem): 30 gens x 32 candidates x 12 games x 300 pieces, search beam 24 depth 4
+gen  1/30: best 0.232  elite mean 0.211  (incumbent 0.224)  spread 2.277  96s  eta 47m
+gen  2/30: best 0.284  elite mean 0.247  (incumbent 0.258)  spread 1.917  100s  eta 46m
+gen  3/30: best 0.296  elite mean 0.283  (incumbent 0.264)  spread 1.131  108s  eta 46m
+gen  4/30: best 0.296  elite mean 0.279  (incumbent 0.296)  spread 0.872  108s  eta 45m
+gen  5/30: best 0.300  elite mean 0.289  (incumbent 0.278)  spread 0.777  108s  eta 43m
+gen  6/30: best 0.299  elite mean 0.286  (incumbent 0.262)  spread 0.596  108s  eta 42m
+gen  7/30: best 0.287  elite mean 0.285  (incumbent 0.280)  spread 0.553  108s  eta 40m
+gen  8/30: best 0.301  elite mean 0.286  (incumbent 0.271)  spread 0.527  109s  eta 39m
+gen  9/30: best 0.308  elite mean 0.298  (incumbent 0.287)  spread 0.471  109s  eta 37m
+gen 10/30: best 0.304  elite mean 0.294  (incumbent 0.276)  spread 0.427  109s  eta 35m
+gen 11/30: best 0.298  elite mean 0.289  (incumbent 0.278)  spread 0.430  109s  eta 34m
+gen 12/30: best 0.309  elite mean 0.295  (incumbent 0.293)  spread 0.358  109s  eta 32m
+gen 13/30: best 0.297  elite mean 0.289  (incumbent 0.279)  spread 0.320  109s  eta 30m
+gen 14/30: best 0.312  elite mean 0.302  (incumbent 0.309)  spread 0.296  108s  eta 29m
+gen 15/30: best 0.315  elite mean 0.293  (incumbent 0.282)  spread 0.286  109s  eta 27m
+gen 16/30: best 0.315  elite mean 0.297  (incumbent 0.268)  spread 0.302  109s  eta 25m
+gen 17/30: best 0.299  elite mean 0.292  (incumbent 0.282)  spread 0.316  108s  eta 23m
+gen 18/30: best 0.308  elite mean 0.295  (incumbent 0.296)  spread 0.272  109s  eta 21m
+gen 19/30: best 0.306  elite mean 0.300  (incumbent 0.273)  spread 0.243  109s  eta 20m
+gen 20/30: best 0.307  elite mean 0.298  (incumbent 0.274)  spread 0.247  108s  eta 18m
+gen 21/30: best 0.301  elite mean 0.296  (incumbent 0.273)  spread 0.234  109s  eta 16m
+gen 22/30: best 0.313  elite mean 0.297  (incumbent 0.313)  spread 0.189  109s  eta 14m
+gen 23/30: best 0.320  elite mean 0.309  (incumbent 0.288)  spread 0.180  109s  eta 13m
+gen 24/30: best 0.310  elite mean 0.301  (incumbent 0.271)  spread 0.170  109s  eta 11m
+gen 25/30: best 0.312  elite mean 0.300  (incumbent 0.275)  spread 0.156  110s  eta 9m
+gen 26/30: best 0.321  elite mean 0.302  (incumbent 0.321)  spread 0.133  109s  eta 7m
+gen 27/30: best 0.311  elite mean 0.299  (incumbent 0.268)  spread 0.132  109s  eta 5m
+gen 28/30: best 0.307  elite mean 0.298  (incumbent 0.278)  spread 0.107  109s  eta 4m
+gen 29/30: best 0.302  elite mean 0.298  (incumbent 0.291)  spread 0.097  110s  eta 2m
+gen 30/30: best 0.323  elite mean 0.309  (incumbent 0.302)  spread 0.075  110s  eta 0m
+
+saved distribution mean to C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/bot/results/control/ctrl5.txt (best single candidate scored 0.323)
+-- ctrl0, gate
+ctrl0                   0.406  0/20    500   0.00  10.46   0.00   0.16   0.03   1.85  14.19    0/0     5  0.00    0   72.94    0.406
+STSD/TST template -- in search: 10.12% of 157548301 V evals saw a slot, 9.50% a ready one; on the board: ready before 1350 moves, cashed 166 (followed by a TSD 145); vertical T-spin doubles/triples 166, 166 of them found by the template beforehand
+-- ctrl5, gate
+ctrl5                   0.396  0/20    500   0.00  10.28   0.01   0.24   0.06   1.98  14.40    0/0     5  0.00    0   73.57    0.396
+STSD/TST template -- in search: 13.33% of 157863945 V evals saw a slot, 12.80% a ready one; on the board: ready before 1892 moves, cashed 234 (followed by a TSD 209); vertical T-spin doubles/triples 234, 234 of them found by the template beforehand
+== slice of t_vertical around ctrl0
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+slice t_vertical: 9 points x 12 games x 300 pieces (base value 1.292)
+     0.000  0.2911
+     1.000  0.2733
+     2.000  0.3000
+     3.000  0.2417
+     4.000  0.2000
+     5.000  0.1661
+     6.000  0.1350
+     7.000  0.0622
+     8.000  0.0178
+== slice of t_vertical around ctrl5
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+slice t_vertical: 9 points x 12 games x 300 pieces (base value 2.135)
+     0.000  0.2667
+     1.000  0.2911
+     2.000  0.2711
+     3.000  0.2700
+     4.000  0.2378
+     5.000  0.1728
+     6.000  0.1422
+     7.000  0.0956
+     8.000  0.0422
+all done
