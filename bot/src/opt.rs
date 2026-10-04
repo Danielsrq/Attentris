@@ -605,6 +605,24 @@ pub fn cmd_landscape(a: &Args, what: &str) {
     let dir = a.str("save").unwrap_or("results/landscape").to_string();
     let _ = std::fs::create_dir_all(&dir);
     match what {
+        "slices" if a.str("only").is_some() => {
+            // One weight set to the listed values (normalised units), the rest held at a
+            // weights file: `--only t_vertical --values 0,1,2,...` -> slice_<name>.csv.
+            let base = normalised_weights_file(a.str("weights").expect("--weights"));
+            let name = a.str("only").unwrap();
+            let i = eval::index_of(name).unwrap_or_else(|| panic!("--only: unknown feature {}", name));
+            let values: Vec<f64> = a.str("values").expect("--values a,b,c").split(',').map(|v| v.parse().expect("--values")).collect();
+            let points: Vec<Vec<f64>> = values.iter().map(|&v| { let mut p = base.clone(); p[i] = v; p }).collect();
+            println!("slice {}: {} points x {} games x {} pieces (base value {:.3})", name, points.len(), f.games, f.pieces, base[i]);
+            let tag = a.str("tag").unwrap_or("");
+            let fits = eval_cached(&f, &points, seed, &dir, &format!("slice_{}{}", name, tag));
+            let mut out = format!("{},fitness\n", name);
+            for (v, ft) in values.iter().zip(&fits) {
+                out += &format!("{:.4},{:.5}\n", v, ft);
+                println!("  {:>8.3}  {:.4}", v, ft);
+            }
+            std::fs::write(format!("{}/slice_{}{}.csv", dir, name, tag), out).unwrap();
+        }
         "slices" => {
             // One-dimensional cuts: every weight moved alone around a weights file.
             let base = normalised_weights_file(a.str("weights").expect("--weights"));
