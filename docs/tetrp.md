@@ -28,7 +28,7 @@ the conversion, not an independent derivation.
 
 ## The patch
 
-`data/zenith-tetrp.patch` — 94 insertions across 6 files. Upstream supports 40L and
+`data/zenith-tetrp.patch` — 97 insertions across 6 files. Upstream supports 40L and
 Tetra League and refuses Zenith outright. Every hunk is accommodation, not a change to
 how the game is simulated:
 
@@ -44,6 +44,11 @@ how the game is simulated:
   `interaction` *is* the arrival, so packets otherwise sit pending forever.
 - **Placement resolution** routed through the TL path. Zenith is pseudo-versus and
   declares `hasgarbage: true`; without this nothing sets `nextWillTank`.
+- **`gamemode: "zenithex"`** accepted alongside `"zenith"`. Zenith Expert is the same
+  engine on a separate leaderboard — `zenith_expert` was already a known profile key
+  upstream, and the only thing rejecting these replays was the mode string in
+  `parser.js`. `prepareReplay`'s `isZenith` had to widen with it, or every `zenith_*`
+  option would have been treated as a rules difference and failed the profile check.
 - **Ack-cancellation disabled.** All tower garbage is labelled `from: 'P2'`, so the 1v1
   "attack in flight annihilates attack in flight" rule otherwise ate the first ~96
   packets.
