@@ -1,17 +1,106 @@
 class_name ControlProfiles
 extends RefCounted
 
-## Named key bindings. A profile covers the eight game actions only -- the meta keys
-## (restart, debug toggles, profile cycling) live in InputReader and are the same
-## everywhere, so they can never be shadowed by a profile.
+## Named key bindings, and the one place they are pushed into Godot's InputMap.
+##
+## A profile covers the eight Tetris actions only. The meta keys (restart, debug
+## toggles, profile cycling) live in InputReader, and the defence-board keys are the
+## fixed DEFENCE table below; neither varies by profile.
 ##
 ## Bindings are physical keycodes: they follow the key's position on the board, so
 ## WASD stays where your fingers are on AZERTY or Dvorak, and the numpad keys are
-## recognised whether or not NumLock is on.
+## recognised whether or not NumLock is on. `bind_table` therefore sets
+## `physical_keycode` and leaves `keycode` at 0 -- the same shape as the hand-authored
+## `switch_board` action in project.godot. Setting `keycode` instead would silently undo
+## both of those properties.
+##
+## These tables stay the source of truth rather than the InputMap: the project builds
+## every resource in code and ships no .tres, runtime profile cycling needs to rewrite
+## the bindings anyway, and a project.godot diff per keybind change is worse than this.
+## The InputMap is a cache of what is written here, rebuilt by `apply`.
+##
+## Action names are left unprefixed for the Tetris and meta actions, which were already
+## distinct and are referenced by name from main.gd and the tests. Only the defence
+## actions take a prefix, because there are fifteen of them and they benefit from sorting
+## together in the editor's action list.
 
 const ACTIONS := [
 	"left", "right", "soft_drop", "hard_drop",
 	"rotate_ccw", "rotate_cw", "rotate_180", "hold",
+]
+
+## Defence-board actions. Deliberately reuse the Tetris keys: focus is exclusive, so
+## while the defence board has it the Tetris keys are idle and the player's hands do not
+## move. Digits are free across every profile and the meta map, so they take tower
+## selection.
+const DEFENCE := {
+	"def_cursor_left": [KEY_A, KEY_LEFT],
+	"def_cursor_right": [KEY_D, KEY_RIGHT],
+	"def_cursor_up": [KEY_W, KEY_UP],
+	"def_cursor_down": [KEY_S, KEY_DOWN],
+	# Aim gets the Tetris rotate keys, not the footprint. Both are rotations, but the aim
+	# has 16 steps against the footprint's 4, so it takes up to eight presses to a
+	# footprint's two -- the one you press most should be the one your fingers already
+	# know as "turn". The footprint moves to numpad 4/6, which read as left/right anyway.
+	"def_aim_ccw": [KEY_KP_7, KEY_Z],
+	"def_aim_cw": [KEY_KP_9, KEY_X],
+	"def_rot_ccw": [KEY_KP_4, KEY_Q],
+	"def_rot_cw": [KEY_KP_6, KEY_E],
+	"def_place": [KEY_KP_0, KEY_SPACE],
+	"def_cancel": [KEY_KP_PERIOD, KEY_BACKSPACE],
+	"def_select_1": [KEY_1],
+	"def_select_2": [KEY_2],
+	"def_select_3": [KEY_3],
+	"def_select_4": [KEY_4],
+	"def_select_5": [KEY_5],
+}
+
+## Display order for the defence keys, same role ACTIONS plays for Tetris.
+const DEFENCE_ACTIONS := [
+	"def_cursor_left", "def_cursor_right", "def_cursor_up", "def_cursor_down",
+	"def_aim_ccw", "def_aim_cw", "def_rot_ccw", "def_rot_cw",
+	"def_place", "def_cancel",
+]
+
+const DEFENCE_LABELS := {
+	"def_cursor_left": "cursor left",
+	"def_cursor_right": "cursor right",
+	"def_cursor_up": "cursor up",
+	"def_cursor_down": "cursor down",
+	"def_aim_ccw": "aim ccw",
+	"def_aim_cw": "aim cw",
+	"def_rot_ccw": "turn block ccw",
+	"def_rot_cw": "turn block cw",
+	"def_place": "build",
+	"def_cancel": "cancel / sell",
+}
+
+## The action the user bound by hand in project.godot. Listed so `apply` knows to leave
+## it alone -- it is the one action this file does not own.
+const EXTERNAL := ["switch_board"]
+
+## Declared above but not REQUIRED, so `missing()` does not report them as a gap and the
+## defence board does not warn about them.
+##
+## The distinction is whether leaving one out stops you playing or just costs that one key.
+## These only cost their key:
+##
+##   def_select_*     tower selection cannot matter until there is more than one tower type
+##   toggle_handling  F2, swaps the ruleset preset mid-run
+##   toggle_gravity   F3, a kick-checking affordance
+##   toggle_grid      F4, cosmetic
+##   cycle_profile    F5, only matters if you want a different control profile
+##   toggle_hints     F6, the solver overlay
+##   toggle_ghost     F7, the T-spin assist
+##   toggle_autoplay  F9, and F10/F11 its rate
+##
+## Deliberately NOT here, because without them something is actually unusable: the eight
+## Tetris actions, `switch_board`, the ten `def_*` that drive the board, `restart` (the
+## game can be lost), and `toggle_debug` (how you see anything when it misbehaves).
+const OPTIONAL := [
+	"def_select_1", "def_select_2", "def_select_3", "def_select_4", "def_select_5",
+	"toggle_handling", "toggle_gravity", "toggle_grid", "cycle_profile",
+	"toggle_hints", "toggle_ghost", "toggle_autoplay", "pps_down", "pps_up",
 ]
 
 ## Human-readable labels for the overlay, in display order.
@@ -77,12 +166,85 @@ static func guideline() -> Dictionary:
 		"hold": [KEY_SHIFT, KEY_C],
 	}
 
-## "A, D" etc. for the overlay.
-static func keys_text(profile: Dictionary, action: String) -> String:
-	var keys: Array = profile.get(action, [])
-	if keys.is_empty():
+# ------------------------------------------------------------------------------
+# InputMap
+# ------------------------------------------------------------------------------
+
+## Rebinds the keys of actions that ALREADY EXIST, replacing whatever they were bound to.
+##
+## Deliberately never calls `InputMap.add_action`: every action is declared in
+## project.godot through the editor's Input Map, because actions created at runtime are
+## not reliable. See docs/input_map.md for the table to enter, and `missing()` for what is
+## not there yet. An action absent from the map is skipped here and never polled, so a
+## half-entered map degrades to dead keys rather than an error every tick.
+##
+## Rebinding an existing action is a different operation from creating one, and it is the
+## one thing that cannot be done from the editor: F5 profile cycling has to rewrite these
+## at runtime, so only one of the three profiles could ever be the one in the file.
+static func bind_table(table: Dictionary) -> void:
+	for action in table:
+		if not InputMap.has_action(action):
+			continue
+		InputMap.action_erase_events(action)
+		for key in table[action]:
+			var e := InputEventKey.new()
+			# Physical, not `keycode`: position on the board rather than printed label.
+			# InputEventKey.action_match prefers keycode when it is non-zero, so setting
+			# both would quietly reintroduce the layout dependence this avoids.
+			e.physical_keycode = key
+			InputMap.action_add_event(action, e)
+
+## Binds the named profile plus the fixed defence keys. Call on each profile switch.
+##
+## `switch_board` is untouched -- it is authored in project.godot and owned by the user.
+static func apply(profile_name: String) -> void:
+	bind_table(get_profile(profile_name))
+	bind_table(DEFENCE)
+
+## Actions this file expects but project.godot has not declared, so a half-entered Input
+## Map reports itself as one list instead of as mystery dead keys. Anything in OPTIONAL is
+## excluded -- see `missing_optional` for those.
+static func missing(meta: Dictionary) -> Array:
+	var out: Array = []
+	for a in _expected(meta):
+		if a in OPTIONAL:
+			continue
+		if not InputMap.has_action(a):
+			out.append(a)
+	return out
+
+## The not-needed-yet actions that are also absent. Worth reporting, never worth failing.
+static func missing_optional(meta: Dictionary) -> Array:
+	var out: Array = []
+	for a in OPTIONAL:
+		if not InputMap.has_action(a):
+			out.append(a)
+	return out
+
+## Every action name the game expects, in a stable order.
+static func _expected(meta: Dictionary) -> Array:
+	var out: Array = []
+	for a in ACTIONS:
+		out.append(a)
+	for a in DEFENCE:
+		out.append(a)
+	for a in meta:
+		out.append(a)
+	for a in EXTERNAL:
+		out.append(a)
+	return out
+
+## "A, D" etc. for the overlay, read back from the InputMap so it shows what is actually
+## live rather than what a table says should be.
+static func keys_text(action: String) -> String:
+	if not InputMap.has_action(action):
 		return "-"
 	var parts: Array = []
-	for k in keys:
-		parts.append(OS.get_keycode_string(k))
+	for e in InputMap.action_get_events(action):
+		if e is InputEventKey:
+			parts.append(OS.get_keycode_string(e.physical_keycode))
+		elif e is InputEventJoypadButton:
+			parts.append("pad %d" % e.button_index)
+	if parts.is_empty():
+		return "-"
 	return ", ".join(parts)

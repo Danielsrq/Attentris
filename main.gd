@@ -29,6 +29,16 @@ var layout: ViewLayout
 
 var reader := InputReader.new(CONTROL_PROFILE)
 var input_state := InputState.new()
+
+## Which half the keys drive. Tetris keeps SIMULATING either way -- only the input is
+## gated -- which is the multitasking pressure the design is built around.
+enum Focus { TETRIS, DEFENCE }
+var focus: int = Focus.TETRIS
+
+var defence_rules: DefenceRules
+var tower_set: TowerSet
+var defence: DefenceSim
+var cursor: BuildCursor
 ## Rule presets the handling toggle cycles through; "normal" is the default.
 const RULE_PRESETS := ["normal", "burst", "burst2", "gate", "gate_b2b", "competitive", "guideline", "allspin"]
 var rules_preset := 0
@@ -44,11 +54,6 @@ func _preset_rules() -> RuleSet:
 		"gate_b2b": return RuleSet.gate_b2b_rules()
 		_: return RuleSet.competitive()
 
-## Right-pane page. GAMEPLAY is the default because the economy is the thing that needs
-## watching now; the mechanics readout moved to being a page of the same pane rather
-## than an overlay competing for it. TAB cycles, F1 blanks and restores.
-var pane_tab: int = PaneTab.GAMEPLAY
-var _pane_last: int = PaneTab.GAMEPLAY
 
 ## Assist mode. Search depth is tied to the number of steps shown, because a plan
 ## can only be as long as the search was deep.
@@ -118,6 +123,7 @@ var _auto_staged := false
 @onready var overlay: Node2D = $DebugOverlay
 @onready var hints: Node2D = $HintView
 @onready var audio: AudioBus = $Audio
+@onready var defence_view: Node2D = $DefenceView
 
 func _ready() -> void:
 	if not Engine.is_editor_hint():
@@ -135,18 +141,30 @@ func _new_game(seed_v: int = -1) -> void:
 	board.ghost_width = GHOST_COLUMNS
 	board.ghost.resize(GHOST_COLUMNS * board.total_height)
 	ghost_slot.update(board)
-	layout = ViewLayout.new(board, get_viewport_rect().size, CELL)
+	layout = ViewLayout.new(board, _layout_viewport(), CELL)
 
 	solver = BeamSolver.new(BoardEvaluator.new(EvalWeights.lookahead()))
 	solver.beam_width = HINT_BEAM
 	solver.depth = hint_steps
 
+	defence_rules = DefenceRules.testing()
+	tower_set = TowerSet.standard()
+	defence = DefenceSim.new(defence_rules, tower_set, CELL, seed_v)
+	cursor = BuildCursor.new(tower_set, defence.field)
+	_set_focus(Focus.TETRIS)
+
 	board_view.setup(game, layout)
 	board_view.drop_flashes()      # or a restart inherits the last run's outlines
+	defence_view.setup(defence, cursor, layout)
+	# Say so on screen rather than leaving the keys mysteriously dead. The actions live in
+	# project.godot, so an incomplete map is a configuration state, not a code fault.
+	var absent: Array = reader.missing_actions()
+	defence_view.input_warning = "" if absent.is_empty() else 		"%d action(s) not declared -- see docs/input_map.md
+%s" % [
+			absent.size(), ", ".join(absent.slice(0, 6))]
 	hints.setup(game, layout)
 	hud.setup(game, layout)
 	overlay.setup(game, layout, self)
-	_set_pane_tab(pane_tab)        # setup() resets the HUD, so re-assert the page
 	hints.enabled = hints_enabled
 	auto_pieces = 0
 	auto_quads = 0
@@ -238,17 +256,116 @@ func _physics_process(_delta: float) -> void:
 	reader.poll()
 	_collect_solve()
 	_handle_meta_keys()
+	_handle_focus()
 	if autoplay:
 		_autoplay_step(_delta)
 	else:
-		reader.to_input_state(input_state)
+		# Tetris ticks either way. When the defence board has the keys it is handed a
+		# CLEARED InputState rather than being skipped, so gravity, lock delay, ARE and
+		# spawning all keep running and the piece in play will land by itself.
+		if focus == Focus.TETRIS:
+			reader.to_input_state(input_state)
+		else:
+			input_state.clear()
+			_handle_defence_keys()
 		_dispatch(game.tick(input_state))
+	# Tetris first, defence second, within the same tick: a line clear produced above
+	# grants its free shot NOW rather than one frame later, which is what makes the
+	# coupling feel immediate rather than mysterious.
+	_dispatch_defence(defence.tick(1.0 / Game.TICKS_PER_SECOND))
 	if _needs_resolve:
 		_resolve_hints()
 	_redraw_views()
 
+## TAB swaps which half the keys drive. Tetris keeps simulating; only its input stops.
+func _handle_focus() -> void:
+	if reader.pressed("switch_board"):
+		_set_focus(Focus.DEFENCE if focus == Focus.TETRIS else Focus.TETRIS)
+
+func _set_focus(f: int) -> void:
+	focus = f
+	# Dropping the held state matters: a direction still down when focus changes would
+	# otherwise read as held by the half that just took over without a fresh press.
+	input_state.clear()
+	if game != null:
+		# Frozen, not merely slowed. Gravity alone would leave a grounded piece locking
+		# itself 0.5s after you looked away, which reads as "Tetris carried on without me"
+		# rather than as a pause.
+		game.advancing = f == Focus.TETRIS
+		game.gravity_scale = 1.0 if f == Focus.TETRIS else defence_rules.unfocused_gravity_scale
+	if defence_view != null:
+		defence_view.focused = f == Focus.DEFENCE
+		defence_view.queue_redraw()
+
+## The build cursor. Only read while the defence board has focus, which is why these keys
+## can safely be the same ones Tetris uses.
+func _handle_defence_keys() -> void:
+	if reader.pressed("def_cursor_left"):
+		cursor.move(-1, 0)
+	if reader.pressed("def_cursor_right"):
+		cursor.move(1, 0)
+	if reader.pressed("def_cursor_up"):
+		cursor.move(0, -1)
+	if reader.pressed("def_cursor_down"):
+		cursor.move(0, 1)
+	if reader.pressed("def_aim_ccw"):
+		cursor.turn_aim(1)
+	if reader.pressed("def_aim_cw"):
+		cursor.turn_aim(-1)
+	if reader.pressed("def_rot_ccw"):
+		cursor.turn_footprint(-1)
+	if reader.pressed("def_rot_cw"):
+		cursor.turn_footprint(1)
+	for i in 5:
+		if reader.pressed("def_select_%d" % (i + 1)):
+			cursor.select(i)
+	if reader.pressed("def_place"):
+		var ev: Array = []
+		# Cost goes through Resources.can_afford/spend eventually; while towers are free
+		# the only gates are the grid and max_towers.
+		defence.build(cursor.def(), cursor.rot, cursor.origin, cursor.aim, ev)
+		_dispatch_defence(ev)
+	if reader.pressed("def_cancel"):
+		var ev2: Array = []
+		defence.remove_tower(defence.tower_at(cursor.origin), ev2)
+		_dispatch_defence(ev2)
+
+## The defence side's own event seam, mirroring _dispatch. The view creates and releases
+## nodes from these; it reads positions straight off the sim.
+func _dispatch_defence(events: Array) -> void:
+	# Garbage produces GameEvents, which must NOT go into the array being iterated: they
+	# are a different type, and appending to a list mid-loop is how a frame starts
+	# processing events it has already passed. They go out through the Tetris dispatch
+	# instead, so the HUD and audio see a top-out from garbage exactly as they would any
+	# other.
+	var from_garbage: Array = []
+	for e in events:
+		if e.type == DefenceEvent.Type.GARBAGE_FLUSHED:
+			# The other half of the coupling: failing on the right makes the left harder,
+			# and receive_garbage is what decides whether it also kills.
+			game.receive_garbage(e.data["holes"], from_garbage)
+	defence_view.handle_events(events)
+	defence_view.sync()
+	if not from_garbage.is_empty():
+		_dispatch(from_garbage)
+
+## The size to lay out for.
+##
+## In the editor `get_viewport_rect()` is the EDITOR's 2D viewport, not the game window,
+## so an @tool preview would be arranged for whatever size that pane happens to be --
+## and at any width under ~1240 the right pane is narrower than the defence grid. Using
+## the project's configured window size instead makes the preview the game's layout,
+## which is the only thing a preview is for.
+func _layout_viewport() -> Vector2:
+	if Engine.is_editor_hint():
+		return Vector2(
+			float(ProjectSettings.get_setting("display/window/size/viewport_width", 1280)),
+			float(ProjectSettings.get_setting("display/window/size/viewport_height", 720)))
+	return get_viewport_rect().size
+
 func _redraw_views() -> void:
 	board_view.queue_redraw()
+	defence_view.queue_redraw()
 	hints.queue_redraw()
 	hud.queue_redraw()
 	overlay.queue_redraw()
@@ -325,12 +442,11 @@ func _handle_meta_keys() -> void:
 	if reader.pressed("restart"):
 		_new_game()
 		return
-	if reader.pressed("cycle_pane"):
-		_set_pane_tab(PaneTab.next(pane_tab))
 	if reader.pressed("toggle_debug"):
-		# F1 keeps its old meaning -- blank the pane and bring it back -- which is now
-		# just a shortcut to OFF and back to whichever page was up.
-		_set_pane_tab(_pane_last if pane_tab == PaneTab.OFF else PaneTab.OFF)
+		# Back to a plain show/hide. The pane is the defence board now, so the mechanics
+		# readout has nothing to share it with -- it draws over the top.
+		overlay.visible_overlay = not overlay.visible_overlay
+		overlay.queue_redraw()
 	if reader.pressed("toggle_grid"):
 		board_view.show_grid = not board_view.show_grid
 	if reader.pressed("cycle_profile"):
@@ -368,17 +484,6 @@ func _handle_meta_keys() -> void:
 		rules = game.rules
 		game.gravity_enabled = keep_gravity
 
-## Single point of truth for the pane: the overlay is one PAGE of it, so its visibility
-## is derived here rather than toggled independently.
-func _set_pane_tab(tab: int) -> void:
-	if tab != PaneTab.OFF:
-		_pane_last = tab
-	pane_tab = tab
-	hud.pane_tab = tab
-	overlay.visible_overlay = tab == PaneTab.DEBUG
-	hud.queue_redraw()
-	overlay.queue_redraw()
-
 func _dispatch(events: Array) -> void:
 	# This is the seam the right-hand minigame will hook into: it consumes the same
 	# event stream rather than reaching into the sim.
@@ -402,6 +507,10 @@ func _dispatch(events: Array) -> void:
 			var r: ClearResult = e.data["result"]
 			hud.log_economy(game.pieces_placed, r.describe().to_upper(),
 				{r.resource_group(): r.resource_amount()})
+		if e.type == GameEvent.Type.LINES_CLEARED and defence != null:
+			# One extra shot per tower, which does NOT reset any cooldown -- clearing lines
+			# can only ever add damage.
+			defence.grant_free_shots(1)
 		if e.type == GameEvent.Type.STRUCTURE_BUILT:
 			board_view.flash_structure(e.data["rect"])
 			hud.on_structure(e.data["payout"])
@@ -518,6 +627,55 @@ func _build_preview() -> void:
 			"piece": r.piece_id, "spin": r.spin, "kick": 4,
 			"cells": [], "result": r, "points": points,
 		})])
+	_build_defence_preview(rng)
+
+## Representative defence state, so the pane is never a blank rectangle in the editor.
+## Same bargain as the rest of the preview: every widget that can hold something holds
+## something, so an empty one in the viewport means a real bug rather than an empty game.
+##
+## Towers are built through the sim rather than poked in, so the preview exercises the
+## real placement rules -- a preview that cannot be built is a preview that lies.
+func _build_defence_preview(rng: RandomNumberGenerator) -> void:
+	if defence == null:
+		return
+	var ev: Array = []
+	# A spread of footprints and aims, including a diagonal, so the barrel rotation and
+	# the ghost's aim line are both visible without running the game.
+	var plan := [
+		[&"basic", Vector2i(2, 3), 0, 0],
+		[&"basic", Vector2i(2, 9), 1, 2],
+		[&"angled", Vector2i(7, 5), 0, 14],
+		[&"angled", Vector2i(12, 11), 2, 8],
+	]
+	for p in plan:
+		var d: TowerDef = tower_set.get_def(p[0])
+		if d != null:
+			defence.build(d, int(p[2]), p[1], int(p[3]), ev)
+	# A few bodies mid-field, at the HP steps the enemy tint is meant to show.
+	for i in 3:
+		var lane := 2 + i * 5
+		var e := DefenceEnemy.new(defence._id(),
+			Vector2(float(defence.rules.cols * CELL) - 90.0 - float(i) * 150.0,
+				(float(lane) + 0.5) * float(CELL)),
+			defence.rules.enemy_hp - i * defence.rules.hit_damage, lane,
+			defence.rules.enemy_half_extents, defence.rules.enemy_speed)
+		defence.enemies.append(e)
+		ev.append(DefenceEvent.new(DefenceEvent.Type.ENEMY_SPAWNED, {"id": e.id, "enemy": e}))
+	# Shots in flight, so the pooling path runs in the editor too.
+	for i in 2:
+		var sh := DefenceShot.new(defence._id(),
+			Vector2(200.0 + float(i) * 140.0, 120.0 + float(i) * 190.0),
+			2 + i * 5, defence.rules.projectile_speed, 0)
+		sh.ignore_towers = false
+		defence.shots.append(sh)
+		ev.append(DefenceEvent.new(DefenceEvent.Type.SHOT_FIRED,
+			{"id": sh.id, "shot": sh, "tower_id": 0, "cause": "cooldown"}))
+	# The ghost is only drawn while focused, so show it: this is the editor, not play.
+	cursor.origin = Vector2i(15, 2)
+	cursor.select(0)
+	cursor.aim = 12
+	defence_view.focused = true
+	_dispatch_defence(ev)
 
 func _preview_result(lines: int, spin: int, piece: StringName, b2b: int, combo: int) -> ClearResult:
 	var r := ClearResult.new()

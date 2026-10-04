@@ -68,8 +68,9 @@ func _draw() -> void:
 	var x := layout.right_pane.position.x + 16.0
 	if layout.right_pane.size.x <= 0.0:
 		x = layout.field_origin.x + layout.field_size.x + 16.0
-	# Below the tab strip the HUD draws at the top of the pane: this is one of its pages.
-	var top := layout.right_pane.position.y + PaneTab.STRIP_H + 14.0
+	# Below the palette strip the HUD draws at the top of the pane. This now draws OVER the
+	# defence board rather than beside it, which is why it is on a plain F1 toggle again.
+	var top := layout.palette_rect.end.y + 14.0
 	_draw_state_column(x, top)
 	_draw_readout_column(x + COLUMN_GAP, top)
 

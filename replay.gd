@@ -96,7 +96,7 @@ func _ready() -> void:
 	# A real Game is built only so BoardView and Hud can draw from it unchanged. The
 	# viewer writes its fields directly and never ticks it.
 	game = Game.new(RuleSet.competitive(), piece_set, board, Scorer.new(ScoreTable.new()), 0)
-	layout = ViewLayout.new(board, get_viewport_rect().size, CELL)
+	layout = ViewLayout.new(board, _layout_viewport(), CELL)
 
 	if board_view != null:
 		board_view.setup(game, layout)
@@ -129,6 +129,19 @@ func _ready() -> void:
 	_sample_total = log.total_samples()
 	playing = play_on_start and not Engine.is_editor_hint()
 	_open_run(run_index)
+
+## The size to lay out for.
+##
+## In the editor `get_viewport_rect()` is the EDITOR's 2D viewport, not the game window, so
+## an @tool preview would be arranged for whatever size that pane happens to be. The
+## project's configured window size makes the preview the game's layout, which is the only
+## thing a preview is for.
+func _layout_viewport() -> Vector2:
+	if Engine.is_editor_hint():
+		return Vector2(
+			float(ProjectSettings.get_setting("display/window/size/viewport_width", 1280)),
+			float(ProjectSettings.get_setting("display/window/size/viewport_height", 720)))
+	return get_viewport_rect().size
 
 func _open_run(which: int) -> void:
 	if log == null or log.run_count() == 0:

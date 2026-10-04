@@ -3,12 +3,28 @@ extends RefCounted
 
 ## Reads the keyboard once per physics tick and produces an InputState.
 ##
-## Deliberately bypasses InputMap: edge detection is computed per tick rather than
-## per frame, and the sim still only ever sees an InputState -- so nothing about
-## replays or headless tests depends on this class existing.
+## Edge detection is computed per TICK, not per frame. That is the whole reason this
+## class exists, and it survived the move to the InputMap: `poll` snapshots
+## `Input.is_action_pressed` -- the level query -- into a double buffer and derives
+## rising edges itself. `Input.is_action_just_pressed` is deliberately NOT used, because
+## it is frame-scoped: a physics frame can run twice or not at all for a given rendered
+## frame, so a press read that way can be double-counted or missed entirely. Every
+## binding is still a physical keycode, so the sim only ever sees an InputState and
+## nothing about replays or headless tests depends on this class.
 ##
-## Game actions come from a ControlProfiles profile. Meta keys are fixed so a
-## profile can never shadow the restart or debug toggles.
+## The move also made this class testable for the first time.
+## `Input.is_physical_key_pressed` cannot be faked, so no test could prove `pressed` was
+## an edge rather than a level; `Input.action_press`/`action_release` write action state
+## directly and work headless, so test_input_map now asserts it.
+##
+## `is_action_pressed` is left on its default INEXACT match, which is required rather
+## than incidental: `hold` sits on KEY_SHIFT in two profiles, so Shift+A has to keep
+## moving left. Passing exact_match would make every binding played with a modifier
+## held silently stop matching.
+##
+## Tetris actions come from a ControlProfiles profile, defence actions from its fixed
+## DEFENCE table, and the meta keys from META below -- fixed everywhere, so a profile
+## can never shadow the restart or debug toggles.
 
 const META := {
 	"restart": [KEY_R],
@@ -19,9 +35,6 @@ const META := {
 	"cycle_profile": [KEY_F5],
 	"toggle_hints": [KEY_F6],
 	"toggle_ghost": [KEY_F7],
-	# TAB, not F8: F8 is Godot's "Stop Running Project" and the editor keeps it even while
-	# the game has focus, so binding it here just quit the game. TAB also says "tab".
-	"cycle_pane": [KEY_TAB],
 	"toggle_autoplay": [KEY_F9],
 	"pps_down": [KEY_F10],
 	"pps_up": [KEY_F11],
@@ -30,24 +43,43 @@ const META := {
 var profile_name: String = "wasd_numpad"
 var profile: Dictionary = {}
 
+## Every action name this reader polls. A set, not a key table: the keys now live in the
+## InputMap, and this is only the list of names to ask about.
 var _all: Dictionary = {}
 var _cur: Dictionary = {}
 var _prev: Dictionary = {}
 
 func _init(starting_profile: String = "wasd_numpad") -> void:
+	ControlProfiles.bind_table(META)
 	set_profile(starting_profile)
 
 func set_profile(new_name: String) -> void:
 	profile_name = new_name
 	profile = ControlProfiles.get_profile(new_name)
+	ControlProfiles.apply(new_name)
+	# Only actions the InputMap actually declares are polled. Everything is declared in
+	# project.godot through the editor (see docs/input_map.md), so a name that is not
+	# there yet becomes a dead key rather than an error on every tick; `missing()` is how
+	# you find out which.
 	_all = {}
-	for action in profile:
-		_all[action] = profile[action]
-	for action in META:
-		_all[action] = META[action]
+	for table in [profile, ControlProfiles.DEFENCE, META]:
+		for action in table:
+			if InputMap.has_action(action):
+				_all[action] = true
+	for action in ControlProfiles.EXTERNAL:
+		if InputMap.has_action(action):
+			_all[action] = true
 	# Drop edge history so switching mid-run cannot fire a phantom press.
 	_cur = {}
 	_prev = {}
+
+## Actions expected but not declared in project.godot, for the debug overlay and tests.
+func missing_actions() -> Array:
+	return ControlProfiles.missing(META)
+
+## The same, for actions that are declared but not needed yet.
+func missing_optional_actions() -> Array:
+	return ControlProfiles.missing_optional(META)
 
 func next_profile() -> void:
 	var all_names := ControlProfiles.names()
@@ -59,15 +91,8 @@ func poll() -> void:
 	_prev = _cur
 	_cur = {}
 	for action in _all:
-		var down := false
-		for key in _all[action]:
-			# Physical keycodes: position on the board, not the printed label. Keeps
-			# WASD under the same fingers on non-QWERTY layouts and makes the numpad
-			# work regardless of NumLock.
-			if Input.is_physical_key_pressed(key):
-				down = true
-				break
-		_cur[action] = down
+		# The LEVEL query. See the class doc for why is_action_just_pressed is not used.
+		_cur[action] = Input.is_action_pressed(action)
 
 func held(action: String) -> bool:
 	return _cur.get(action, false)
@@ -95,14 +120,16 @@ func held_actions() -> Array:
 			out.append(action)
 	return out
 
-## Binding list derived from the live profile rather than hardcoded text.
-## Returns [label, keys] pairs; an empty label means "draw the value full width".
+## Binding list read back from the InputMap rather than hardcoded text, so it shows what
+## is actually live. Returns [label, keys] pairs; an empty label means "draw the value
+## full width".
 func binding_text() -> Array:
 	var out: Array = []
 	for action in ControlProfiles.ACTIONS:
-		out.append([ControlProfiles.LABELS[action], ControlProfiles.keys_text(profile, action)])
-	out.append(["restart", "R"])
+		out.append([ControlProfiles.LABELS[action], ControlProfiles.keys_text(action)])
+	out.append(["restart", ControlProfiles.keys_text("restart")])
+	out.append(["switch board", ControlProfiles.keys_text("switch_board")])
 	out.append(["", "F1 blank pane  F2 handling  F3 gravity  F4 grid  F5 profile"])
-	out.append(["", "F6 hints  F7 spin assist  TAB pane tab"])
+	out.append(["", "F6 hints  F7 spin assist"])
 	out.append(["", "F9 autoplay  F10/F11 pps"])
 	return out
