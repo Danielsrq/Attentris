@@ -354,18 +354,30 @@ pub fn cmd_tune(a: &Args) {
     let n = NF;
 
     let frozen = frozen_mask(a);
+    // --fix name,...: weights held at their STARTING value (--freeze holds them at 0).
+    let mut fixed = [false; NF];
+    for name in a.str("fix").map(|s| s.split(',').collect::<Vec<_>>()).unwrap_or_default() {
+        fixed[eval::index_of(name).unwrap_or_else(|| panic!("--fix: unknown feature {}", name))] = true;
+    }
     let mut start_w: Vec<f64> = weights(a).w.iter().map(|&x| x as f64).collect();
     let mut init_sd: Vec<f64> = start_w.iter().map(|m| m.abs() * 0.5 + 0.2).collect();
     for i in 0..n {
         if frozen[i] {
             start_w[i] = 0.0;
+        }
+        if frozen[i] || fixed[i] {
             init_sd[i] = 0.0;
         }
     }
-    assert!(algo == "cem" || !frozen.iter().any(|&x| x), "--freeze is only supported with --algo cem");
+    let held = |i: usize| frozen[i] || fixed[i];
+    assert!(algo == "cem" || !(0..n).any(held), "--freeze / --fix are only supported with --algo cem");
     if frozen.iter().any(|&x| x) {
         let names: Vec<&str> = (0..n).filter(|&i| frozen[i]).map(|i| eval::NAMES[i]).collect();
         println!("frozen at 0: {}", names.join(" "));
+    }
+    if fixed.iter().any(|&x| x) {
+        let names: Vec<String> = (0..n).filter(|&i| fixed[i]).map(|i| format!("{} {:.2}", eval::NAMES[i], start_w[i] * unit_factor()[i])).collect();
+        println!("fixed at start: {}", names.join(", "));
     }
     let mut st = TuneState {
         generation: 0,
@@ -454,8 +466,8 @@ pub fn cmd_tune(a: &Args) {
                     st.mean[i] = m;
                     // Noise floor that decays, so the search does not collapse early.
                     st.sd[i] = v.sqrt() + 0.1 * (1.0 - g_i as f64 / gens as f64);
-                    if frozen[i] {
-                        st.mean[i] = 0.0;
+                    if frozen[i] || fixed[i] {
+                        st.mean[i] = start_w[i];
                         st.sd[i] = 0.0;
                     }
                 }
