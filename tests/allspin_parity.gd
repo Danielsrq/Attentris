@@ -18,10 +18,12 @@ func _init() -> void:
 	# --rules=burst / burst2: normal rules plus the burst doubling and TST 10.
 	var burst_rules: RuleSet = null
 	for arg in OS.get_cmdline_user_args():
-		if arg == "--rules=normal" or arg == "--rules=burst" or arg == "--rules=burst2" or arg == "--rules=gate":
+		if arg == "--rules=normal" or arg == "--rules=burst" or arg == "--rules=burst2" or arg == "--rules=gate" or arg == "--rules=gate_b2b":
 			penalty = false
 		if arg == "--rules=gate":
 			burst_rules = RuleSet.gate_rules()
+		if arg == "--rules=gate_b2b":
+			burst_rules = RuleSet.gate_b2b_rules()
 		if arg == "--rules=burst":
 			burst_rules = RuleSet.burst()
 		if arg == "--rules=burst2":
@@ -88,7 +90,8 @@ func _init() -> void:
 				b2b = b2b + 1 if r.is_difficult() else -1
 			r.b2b = b2b
 			if burst and burst_rules.gate:
-				var gs := burst_rules.gate_step(gate_st, r)
+				var bonus := table.b2b_bonus_for(r.b2b) if burst_rules.gate_b2b else 0
+				var gs := burst_rules.gate_step(gate_st, r, bonus)
 				gate_credit = gs[0]
 				gate_st = gs[1]
 				r.burst = gate_credit > 0

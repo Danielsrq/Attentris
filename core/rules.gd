@@ -70,6 +70,9 @@ enum GravityMode { LEVEL_CURVE, FIXED }
 @export var burst_tss_arms: bool = true
 ## Gate rules (a training rule set): only chains score. See gate_step.
 @export var gate: bool = false
+## gate_b2b: each spin clear of a paid gate chain also earns the B2B bonus of the chain
+## count it reached; B2B runs, and plain clears break it, as in normal rules.
+@export var gate_b2b: bool = false
 
 @export_group("Queue")
 @export var next_count: int = 5
@@ -147,6 +150,14 @@ static func gate_rules() -> RuleSet:
 	r.tst_attack = 10
 	return r
 
+## gate_b2b: the gate rules plus the B2B bonus on every spin clear of a paid chain, so
+## digging with plain clears (which break B2B) costs future chain value.
+static func gate_b2b_rules() -> RuleSet:
+	var r := RuleSet.gate_rules()
+	r.preset_name = "gate_b2b"
+	r.gate_b2b = true
+	return r
+
 ## Value of a clear that joins a gate chain (0 = it does not join).
 func gate_value(r: ClearResult) -> int:
 	if r.spin == SpinDetect.Kind.FULL and r.lines == 2:
@@ -161,12 +172,15 @@ func gate_value(r: ClearResult) -> int:
 ## value held until it has two]. Returns [attack credited now, new state]. A chain's
 ## payout is certain once it holds two spin clears, so it is credited then, and each later
 ## member as it joins.
-func gate_step(st: Array, r: ClearResult) -> Array:
+## `bonus`: the B2B bonus this clear earns, added to a spin clear's value under gate_b2b.
+func gate_step(st: Array, r: ClearResult, bonus: int = 0) -> Array:
 	var left: int = st[0]
 	var spins: int = st[1]
 	var held: int = st[2]
-	var v := gate_value(r)
 	var is_spin := 1 if r.spin == SpinDetect.Kind.FULL else 0
+	var v := gate_value(r)
+	if v > 0 and is_spin == 1:
+		v += bonus
 	if left > 0:
 		if v > 0:
 			var n := spins + is_spin

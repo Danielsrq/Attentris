@@ -16,6 +16,7 @@
 //!   --mode burst            normal + TST 10 + x2 base for back-to-back qualifying clears
 //!   --mode burst2           burst, but spin singles do not arm and the window is 2 placements
 //!   --mode gate             training rules: only chains opened by a spin double/triple score
+//!   --mode gate_b2b         gate, plus the B2B bonus on every spin clear of a paid chain
 //!   --wound-clears N        clears a wound line lasts (default 10)
 //!   --garbage E,R,M         inject R rows every E pieces, hole moves with prob M
 //!   --cheese N              start with N rows of messy garbage
@@ -93,11 +94,12 @@ fn rules_for(a: &Args, mode: Option<&str>) -> Rules {
         Some("burst") => Rules::burst(),
         Some("burst2") => Rules::burst2(),
         Some("gate") => Rules::gate(),
+        Some("gate_b2b") => Rules::gate_b2b(),
         Some("standard") => Rules { all_spin: false, ..Rules::default() },
         // Normal rules are the default, as in the Godot game.
         Some("normal") | None => Rules::normal(),
         Some("competitive") => Rules::default(),
-        Some(m) => panic!("unknown --mode {} (normal | burst | burst2 | gate | standard | competitive | allspin)", m),
+        Some(m) => panic!("unknown --mode {} (normal | burst | burst2 | gate | gate_b2b | standard | competitive | allspin)", m),
     };
     if a.has("no-allspin") {
         r.all_spin = false;

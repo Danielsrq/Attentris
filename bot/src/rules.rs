@@ -234,6 +234,9 @@ pub struct Rules {
     pub burst_tss_arms: bool,
     /// Gate rules (a training rule set): only chains score. See `gate_step`.
     pub gate: bool,
+    /// gate_b2b: each spin clear of a paid gate chain also earns the B2B bonus of the
+    /// chain count it reached; B2B runs (and plain clears break it) as in normal rules.
+    pub gate_b2b: bool,
 }
 
 /// Gate chain state: (placements left in the window, spin clears in the chain, value
@@ -257,6 +260,7 @@ impl Default for Rules {
             burst_window: 1,
             burst_tss_arms: true,
             gate: false,
+            gate_b2b: false,
         }
     }
 }
@@ -292,6 +296,12 @@ impl Rules {
         Rules { gate: true, burst_window: 2, tst_attack: 10, ..Rules::normal() }
     }
 
+    /// gate_b2b: the gate rules, plus the B2B bonus on every spin clear of a paid chain,
+    /// so digging with plain clears (which break B2B) costs future chain value.
+    pub fn gate_b2b() -> Rules {
+        Rules { gate_b2b: true, ..Rules::gate() }
+    }
+
     /// Value of a clear that joins a gate chain (0 = it does not join).
     pub fn gate_value(&self, spin: Spin, lines: u32) -> i32 {
         match (spin, lines) {
@@ -307,8 +317,15 @@ impl Rules {
     /// later member as it joins) rather than when the window closes -- the same total,
     /// and the search sees it as soon as it is locked in.
     pub fn gate_step(&self, st: GateState, spin: Spin, lines: u32) -> (i32, GateState) {
+        self.gate_step_b2b(st, spin, lines, 0)
+    }
+
+    /// `gate_step`, with `bonus` (the B2B bonus this clear earns) added to a spin clear's
+    /// value under gate_b2b.
+    pub fn gate_step_b2b(&self, st: GateState, spin: Spin, lines: u32, bonus: i32) -> (i32, GateState) {
         let (left, spins, held) = st;
-        let v = self.gate_value(spin, lines);
+        let base = self.gate_value(spin, lines);
+        let v = if base > 0 && spin == Spin::Full { base + bonus } else { base };
         let is_spin = (spin == Spin::Full) as u8;
         if left > 0 {
             if v > 0 {
@@ -532,5 +549,18 @@ mod tests {
         // Everything else scores nothing on its own.
         let r = Rules::gate();
         assert_eq!(r.gate_step((0, 0, 0), Spin::None, 4).0, 0);
+    }
+
+    /// gate_b2b: each spin clear of a paid chain adds its B2B bonus (given per clear by
+    /// the caller); quads add none.
+    #[test]
+    fn gate_b2b_bonus() {
+        let r = Rules::gate_b2b();
+        let mut st = (0, 0, 0);
+        let mut run = |sp, l, bonus| { let (c, n) = r.gate_step_b2b(st, sp, l, bonus); st = n; c };
+        assert_eq!(run(Spin::Full, 2, 1), 0, "opener held: 4 + 1");
+        assert_eq!(run(Spin::None, 4, 1), 0, "a quad holds the gate: +1, no bonus");
+        assert_eq!(run(Spin::Full, 2, 2), 5 + 1 + 6, "pays (4+1) + 1 + (4+2)");
+        assert_eq!(run(Spin::Full, 3, 2), 12, "a later TST: 10 + 2");
     }
 }

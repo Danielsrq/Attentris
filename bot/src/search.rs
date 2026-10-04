@@ -114,7 +114,14 @@ pub fn apply(board: &Board, p: &Placement, b2b: i32, rules: &Rules, shapes: &Sha
     let nb2 = next_b2b(b2b, spin, lines);
     let perfect = lines > 0 && nb.is_empty();
     let (attack, burst) = if rules.gate {
-        let (credit, (left, len, pending)) = rules.gate_step((board.burst_armed, board.gate_len, board.gate_pending), spin, lines);
+        let bonus = if rules.gate_b2b && nb2 >= 1 {
+            let b = rules.b2b.bonus(nb2);
+            rules.b2b_cap.map_or(b, |c| b.min(c))
+        } else {
+            0
+        };
+        let (credit, (left, len, pending)) =
+            rules.gate_step_b2b((board.burst_armed, board.gate_len, board.gate_pending), spin, lines, bonus);
         nb.burst_armed = left;
         nb.gate_len = len;
         nb.gate_pending = pending;

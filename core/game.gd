@@ -359,7 +359,8 @@ func lock_piece(events: Array, cause: String = "lock_delay") -> void:
 		r.burst = step[0]
 		burst_armed = step[1]
 	if rules.gate:
-		var gs := rules.gate_step(gate_state, r)
+		var bonus := attack_table.b2b_bonus_for(r.b2b) if rules.gate_b2b else 0
+		var gs := rules.gate_step(gate_state, r, bonus)
 		_gate_credit = gs[0]
 		gate_state = gs[1]
 		r.burst = _gate_credit > 0
