@@ -6,3 +6,6 @@
 vendor/tetrp/
 # Rust build output
 target/
+
+# Session scratch, and the agent worktrees under it -- each is a full checkout.
+.claude/
