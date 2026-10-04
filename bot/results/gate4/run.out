@@ -1,0 +1,66 @@
+== CEM under gate_b2b rules with garbage 15,4,0,0.2, from gate3 (+ burst2's B2B weights)
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+frozen at 0: max_height wounds ready_repeat sz_single sz_double sz_triple lj_single lj_double lj_triple i_single i_double i_triple
+tuning (cem): 30 gens x 32 candidates x 8 games x 300 pieces, search beam 24 depth 4
+gen  1/30: best 0.168  elite mean 0.141  (incumbent 0.128)  spread 2.969  53s  eta 26m
+gen  2/30: best 0.170  elite mean 0.145  (incumbent 0.117)  spread 2.246  64s  eta 27m
+gen  3/30: best 0.207  elite mean 0.181  (incumbent 0.192)  spread 1.780  66s  eta 27m
+gen  4/30: best 0.172  elite mean 0.152  (incumbent 0.087)  spread 1.818  66s  eta 27m
+gen  5/30: best 0.219  elite mean 0.164  (incumbent 0.150)  spread 1.567  67s  eta 26m
+gen  6/30: best 0.195  elite mean 0.163  (incumbent 0.129)  spread 1.720  67s  eta 26m
+gen  7/30: best 0.222  elite mean 0.202  (incumbent 0.210)  spread 1.845  69s  eta 25m
+gen  8/30: best 0.158  elite mean 0.155  (incumbent 0.120)  spread 1.423  68s  eta 24m
+gen  9/30: best 0.198  elite mean 0.188  (incumbent 0.180)  spread 0.990  69s  eta 23m
+gen 10/30: best 0.165  elite mean 0.153  (incumbent 0.149)  spread 0.780  70s  eta 22m
+gen 11/30: best 0.228  elite mean 0.201  (incumbent 0.149)  spread 0.803  71s  eta 21m
+gen 12/30: best 0.181  elite mean 0.172  (incumbent 0.164)  spread 0.737  71s  eta 20m
+gen 13/30: best 0.199  elite mean 0.185  (incumbent 0.165)  spread 0.809  71s  eta 19m
+gen 14/30: best 0.212  elite mean 0.193  (incumbent 0.120)  spread 0.608  72s  eta 18m
+gen 15/30: best 0.180  elite mean 0.163  (incumbent 0.144)  spread 0.511  70s  eta 17m
+gen 16/30: best 0.170  elite mean 0.156  (incumbent 0.140)  spread 0.535  70s  eta 16m
+gen 17/30: best 0.209  elite mean 0.179  (incumbent 0.150)  spread 0.547  71s  eta 15m
+gen 18/30: best 0.237  elite mean 0.206  (incumbent 0.205)  spread 0.403  71s  eta 14m
+gen 19/30: best 0.192  elite mean 0.167  (incumbent 0.107)  spread 0.362  69s  eta 12m
+gen 20/30: best 0.200  elite mean 0.189  (incumbent 0.124)  spread 0.371  71s  eta 11m
+gen 21/30: best 0.212  elite mean 0.198  (incumbent 0.111)  spread 0.325  71s  eta 10m
+gen 22/30: best 0.185  elite mean 0.170  (incumbent 0.135)  spread 0.314  67s  eta 9m
+gen 23/30: best 0.237  elite mean 0.210  (incumbent 0.177)  spread 0.263  71s  eta 8m
+gen 24/30: best 0.195  elite mean 0.182  (incumbent 0.138)  spread 0.230  71s  eta 7m
+gen 25/30: best 0.184  elite mean 0.167  (incumbent 0.146)  spread 0.210  71s  eta 6m
+gen 26/30: best 0.194  elite mean 0.177  (incumbent 0.167)  spread 0.222  71s  eta 5m
+gen 27/30: best 0.190  elite mean 0.180  (incumbent 0.176)  spread 0.189  70s  eta 3m
+gen 28/30: best 0.200  elite mean 0.187  (incumbent 0.159)  spread 0.188  71s  eta 2m
+gen 29/30: best 0.210  elite mean 0.177  (incumbent 0.134)  spread 0.154  71s  eta 1m
+gen 30/30: best 0.198  elite mean 0.183  (incumbent 0.142)  spread 0.156  71s  eta 0m
+
+saved distribution mean to C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/bot/results/gate4/gate4.txt (best single candidate scored 0.237)
+-- gate4, gate_b2b_garbage
+gate4                   0.367  0/20    500   6.26   7.91   0.14   0.84   0.42   8.81   5.73 2576/2640    81  0.00    0   72.10
+clears per 100 pieces -- spin singles 7.21, doubles 10.64, triples 0.27; plain 1/2/3/4: 3.76/1.49/0.48/6.26; attack per line 0.59
+burst -- 7-pc window APP best 2.68 p90 1.86, 14-pc window APP best 1.72 p90 1.07; pair rate 11.3% of 1801 qualifying clears; burst-pair attack share 24.2%; doubled 369 clears sending 100.0% of attack
+STSD/TST template -- in search: 11.89% of 156347677 V evals saw a slot, 11.45% a ready one; on the board: ready before 1261 moves, cashed 153 (followed by a TSD 77); vertical T-spin doubles/triples 153, 153 of them found by the template beforehand
+-- gate3, gate_b2b_garbage
+gate3                   0.280  0/20    500   5.36   7.82   0.02   0.43   0.19   2.37  16.52 2589/2640     8  0.00    0   69.83
+clears per 100 pieces -- spin singles 2.42, doubles 8.38, triples 0.03; plain 1/2/3/4: 12.12/3.32/1.08/5.36; attack per line 0.45
+burst -- 7-pc window APP best 1.84 p90 1.43, 14-pc window APP best 1.12 p90 0.71; pair rate 9.4% of 1420 qualifying clears; burst-pair attack share 26.2%; doubled 376 clears sending 100.0% of attack
+STSD/TST template -- in search: 10.86% of 155904003 V evals saw a slot, 10.54% a ready one; on the board: ready before 1313 moves, cashed 166 (followed by a TSD 116); vertical T-spin doubles/triples 166, 166 of them found by the template beforehand
+-- gate4, gate_garbage
+gate4                   0.202  0/20    500   6.47   7.66   0.09   0.83   0.49   9.43   5.07 2580/2640    64  0.00    0   79.48
+clears per 100 pieces -- spin singles 8.05, doubles 10.26, triples 0.19; plain 1/2/3/4: 3.14/1.49/0.44/6.47; attack per line 0.32
+burst -- 7-pc window APP best 1.57 p90 1.14, 14-pc window APP best 1.01 p90 0.64; pair rate 11.3% of 1775 qualifying clears; burst-pair attack share 28.3%; doubled 322 clears sending 100.0% of attack
+STSD/TST template -- in search: 12.16% of 157004541 V evals saw a slot, 11.81% a ready one; on the board: ready before 1287 moves, cashed 130 (followed by a TSD 46); vertical T-spin doubles/triples 130, 130 of them found by the template beforehand
+-- gate4, burst2_garbage
+gate4                   1.468  0/20    500   6.90   8.30   0.32   2.55   0.34   6.85   3.34 2577/2640   119  0.00    0   85.65
+clears per 100 pieces -- spin singles 7.30, doubles 10.71, triples 0.35; plain 1/2/3/4: 1.70/1.37/0.27/6.90; attack per line 2.34
+burst -- 7-pc window APP best 4.92 p90 2.86, 14-pc window APP best 3.46 p90 2.36; pair rate 8.6% of 2051 qualifying clears; burst-pair attack share 17.0%; doubled 793 clears sending 51.6% of attack
+STSD/TST template -- in search: 5.95% of 155354818 V evals saw a slot, 5.52% a ready one; on the board: ready before 690 moves, cashed 152 (followed by a TSD 34); vertical T-spin doubles/triples 152, 152 of them found by the template beforehand
+-- gate4, normal
+gate4                   1.088  0/20    500   0.90   9.22   0.20   3.91   0.13   9.24   0.41    0/0   121  0.00    0   91.29
+clears per 100 pieces -- spin singles 10.79, doubles 11.67, triples 0.24; plain 1/2/3/4: 0.27/0.12/0.02/0.90; attack per line 2.79
+burst -- 7-pc window APP best 3.16 p90 2.29, 14-pc window APP best 2.23 p90 1.71; pair rate 5.6% of 1672 qualifying clears; burst-pair attack share 8.3%; doubled 0 clears sending 0.0% of attack
+STSD/TST template -- in search: 28.07% of 154487656 V evals saw a slot, 27.74% a ready one; on the board: ready before 2833 moves, cashed 308 (followed by a TSD 15); vertical T-spin doubles/triples 309, 308 of them found by the template beforehand
+== replays: gate4 bot under gate_b2b rules with garbage
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+plan stability: 75.0% of moves were exactly what the previous search planned (1747 / 2330)
+wrote C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/bot/results/gate4/../../../data/bot/gate4_garbage.jsonl (2500 placements)
+all done
