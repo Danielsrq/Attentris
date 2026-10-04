@@ -1,0 +1,11 @@
+Stress test, normal rules, garbage --garbage 10,3-4,cheese0.2,0.2: every 10 pieces a
+batch of 3-4 rows; 80% clean (aligned well: same column as the last clean batch, or an
+adjacent one with chance 0.2), 20% cheese (every row a random hole; does not move the well).
+20 games x 500 pieces, full search.
+
+weights     APP    deaths  avg pcs  garbage cleared  quad/TSD/TST per 100  vertical IC/STSD/TST
+gate4       0.931   0/20   500      3383/3425        6.34 / 6.69 / 0.16    58 / 6 / 16
+normal.txt  1.097   7/20   382      2453/2621        8.43 / 6.40 / 0.01    (5 vertical)
+burst2      0.986  17/20   209      1161/1452        6.65 / 5.98 / 0.02    (11 vertical)
+
+Replays: data/bot/gate4_stress.jsonl (gate4_s1..s5_stress).

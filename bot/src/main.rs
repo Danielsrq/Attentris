@@ -128,9 +128,11 @@ fn garbage(a: &Args) -> GarbageConfig {
             }
             None => g.rows = p.get(1).and_then(|x| x.parse().ok()).unwrap_or(1),
         }
-        // Messiness: a chance, or "mix" for clean and cheese batches with even odds.
+        // Messiness: a chance; "mix" (clean or cheese batches, even odds); or "cheeseP"
+        // (a batch is cheese with chance P, else clean).
         match p.get(2) {
-            Some(&"mix") => g.mix = true,
+            Some(&"mix") => g.cheese = 0.5,
+            Some(m) if m.starts_with("cheese") => g.cheese = m["cheese".len()..].parse().unwrap_or(0.5),
             m => g.messiness = m.and_then(|x| x.parse().ok()).unwrap_or(0.3),
         }
         // Optional 4th field: chance a batch moves from the previous batch's column.

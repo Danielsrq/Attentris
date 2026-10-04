@@ -91,8 +91,9 @@ pub struct GarbageConfig {
     pub rows_min: usize,
     /// Chance each subsequent row moves its hole (0 = clean, 1 = full cheese).
     pub messiness: f64,
-    /// Each batch is clean (messiness 0) or cheese (messiness 1), with even odds.
-    pub mix: bool,
+    /// Chance a batch is cheese (every row a new hole) instead of clean ("mix" = 0.5).
+    /// With an aligned well (batch_move < 1) a cheese batch leaves the clean column alone.
+    pub cheese: f64,
     /// Chance a batch's first row moves from the previous batch's hole column (1 = every
     /// batch in a new column, as TETR.IO; lower keeps the garbage well aligned).
     pub batch_move: f64,
@@ -102,7 +103,7 @@ pub struct GarbageConfig {
 
 impl Default for GarbageConfig {
     fn default() -> Self {
-        GarbageConfig { every: 0, rows: 0, rows_min: 0, messiness: 0.0, mix: false, batch_move: 1.0, start_rows: 0 }
+        GarbageConfig { every: 0, rows: 0, rows_min: 0, messiness: 0.0, cheese: 0.0, batch_move: 1.0, start_rows: 0 }
     }
 }
 
@@ -293,15 +294,15 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
     let mut garbage_hole = grng.below(W as u64) as i32;
     let mut garbage_left = 0u64; // garbage rows still on the board (approximate: counted by 'G' rows)
 
-    let inject = |board: &mut Board, colors: &mut Colors, n: usize, grng: &mut Rng, hole: &mut i32, messiness: f64| {
+    let inject = |board: &mut Board, colors: &mut Colors, n: usize, grng: &mut Rng, hole: &mut i32, messiness: f64, cheese: bool| {
         // A batch starts in a new column with chance `batch_move` (1 = always, as TETR.IO:
         // one attack = one clean chunk); `messiness` is the chance each further row moves.
         let mut holes = Vec::with_capacity(n);
         for i in 0..n {
             // With batch_move < 1 (an aligned well), a batch that moves goes to an adjacent
             // column -- inward at a wall; otherwise any other column, as before.
-            let aligned = cfg.garbage.batch_move < 1.0;
-            let moves = if i == 0 { !aligned || grng.chance(cfg.garbage.batch_move) } else { grng.chance(messiness) };
+            let aligned = cfg.garbage.batch_move < 1.0 && !cheese;
+            let moves = cheese || if i == 0 { !aligned || grng.chance(cfg.garbage.batch_move) } else { grng.chance(messiness) };
             if moves && i == 0 && aligned && *hole >= 0 && *hole < W {
                 *hole = if *hole == 0 {
                     1
@@ -351,8 +352,15 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         if cfg.garbage.every > 0 && n > 0 && n % cfg.garbage.every == 0 {
             let g = &cfg.garbage;
             let n_rows = if g.rows_min > 0 && g.rows_min < g.rows { g.rows_min + grng.below((g.rows - g.rows_min + 1) as u64) as usize } else { g.rows };
-            let messiness = if g.mix { if grng.chance(0.5) { 0.0 } else { 1.0 } } else { g.messiness };
-            inject(&mut board, &mut colors, n_rows, &mut grng, &mut garbage_hole, messiness);
+            let cheese = g.cheese > 0.0 && grng.chance(g.cheese);
+            if cheese && g.batch_move < 1.0 {
+                // Cheese over an aligned well: its holes do not move the well's column.
+                let mut tmp = garbage_hole;
+                inject(&mut board, &mut colors, n_rows, &mut grng, &mut tmp, 1.0, true);
+            } else {
+                let messiness = if g.cheese > 0.0 { if cheese { 1.0 } else { 0.0 } } else { g.messiness };
+                inject(&mut board, &mut colors, n_rows, &mut grng, &mut garbage_hole, messiness, false);
+            }
             garbage_rows_total += n_rows as u64;
             garbage_left += n_rows as u64;
             stats.garbage_in += n_rows as u64;
