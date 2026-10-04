@@ -7,5 +7,10 @@ weights     APP    deaths  avg pcs  garbage cleared  quad/TSD/TST per 100  verti
 gate4       0.931   0/20   500      3383/3425        6.34 / 6.69 / 0.16    58 / 6 / 16
 normal.txt  1.097   7/20   382      2453/2621        8.43 / 6.40 / 0.01    (5 vertical)
 burst2      0.986  17/20   209      1161/1452        6.65 / 5.98 / 0.02    (11 vertical)
+gate6       0.889   3/20   468      3114/3211        5.75 / 7.29 / 0.18    98 / 10 / 17
 
-Replays: data/bot/gate4_stress.jsonl (gate4_s1..s5_stress).
+APPfull (attack over the full 20 x 500 budget): gate4 0.931, gate6 0.832, normal.txt 0.838,
+burst2 0.412. gate6 died in s11 (310 pieces), s12 (420), s15 (123); gate4 survived those.
+
+Replays: data/bot/gate4_stress.jsonl (gate4_s1..s5_stress, gate4_s11/s12/s15_stress);
+data/bot/gate6_stress.jsonl (gate6_s1..s5_stress, gate6_s11/s12/s15_stress_died).
