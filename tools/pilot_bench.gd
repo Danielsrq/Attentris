@@ -21,8 +21,11 @@ var _seed := 12345
 var _bot := -1
 var _restarted := false
 
+var _args: Dictionary = {}
+
 func _initialize() -> void:
 	var args := _flags()
+	_args = args
 	_pieces = int(args.get("pieces", "300"))
 	var seed_v := int(args.get("seed", "12345"))
 
@@ -95,10 +98,14 @@ func _process(_delta: float) -> bool:
 		# After _ready, so the pilot exists; the preset carries its own rules with it.
 		if _bot >= 0:
 			var p: Dictionary = _main.pilot.use_preset(_bot)
-			var r: int = _main.RULE_PRESETS.find(String(p["rules"]))
-			if r >= 0:
-				_main.rules_preset = r
-			print("bot '%s' under '%s' rules -- %s" % [p["name"], p["rules"], p["note"]])
+			# --rules, when given, wins: measuring a weight set under rules it was not tuned
+			# for is a deliberate experiment, and the whole reason the axes are separate.
+			if not _args.has("rules"):
+				var r: int = _main.RULE_PRESETS.find(String(p["tuned_for"]))
+				if r >= 0:
+					_main.rules_preset = r
+			print("weights '%s' under '%s' rules -- %s" % [
+				p["name"], _main.RULE_PRESETS[_main.rules_preset], p["note"]])
 		_main._new_game(_seed)
 		var trouble: String = _main.pilot_status()
 		if trouble != "":
@@ -121,7 +128,10 @@ func _report(game) -> void:
 		game.b2b, game.level, game.board.wound_count(), _main.pilot.unreachable])
 	var arena = _main.battler
 	if arena != null and arena.field != null:
-		print("   battler: teal %d  red %d  queued %d" % [
+		# SENT is the number that matters for the economy; alive is just the snapshot.
+		print("   battler: sent %d teal / %d red  (%.2f teal per piece)  alive %d/%d  queued %d" % [
+			arena.teal_sent, arena.red_sent,
+			float(arena.teal_sent) / float(maxi(1, placed)),
 			arena.alive_on(UnitDef.TEAL), arena.alive_on(UnitDef.RED), arena.pending()])
 	if _main.pilot.last_error != "":
 		print("   last pilot error: %s" % _main.pilot.last_error)

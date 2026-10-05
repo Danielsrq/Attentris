@@ -96,8 +96,8 @@ func _draw_state_column(x: float, y: float) -> void:
 		# has no symptom of its own beyond playing worse than its own benchmarks.
 		var trouble: String = main.pilot_status()
 		var bot: Dictionary = main.pilot.preset()
-		y = _row("brain", "rust %s (%s)  %d nodes" % [
-				bot["name"], bot["mode"], main.pilot.last_nodes]
+		y = _row("brain", "rust %s / %s  %d nodes" % [
+				bot["name"], main.pilot.mode, main.pilot.last_nodes]
 			if trouble == "" else trouble, x, y, trouble != "")
 	y = _row("das / arr", "%.0f / %.0f ms left" % [game.das_remaining(), game.arr_remaining()], x, y)
 	y = _row("b2b / combo", "%d / %d" % [game.b2b, game.combo], x, y)

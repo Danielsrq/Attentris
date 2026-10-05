@@ -277,7 +277,24 @@ all-spin play this economy pays for. It stays as the **fallback**, so a clone wi
 toolchain still has hints and autoplay, and the overlay's `brain` row always names which one is
 flying. Both answer `solve()` with `Array[Placement]`, so `_stage_placement` never changed.
 
-**F6** draws its plan while you play; **F9** hands it the board; **B** cycles which bot.
+**F6** draws its plan while you play; **F9** hands it the board; **B** cycles which weight
+set; **F2** cycles the rules, and the bot's belief follows F2 automatically.
+
+**Attack per piece is the wrong metric for this half.** `spawns_unit()` fires on a quad or any
+spin, and a Mini is still a spin -- so a fighter is sent whether or not the clear pays. The
+two come apart hard. Same `allspin_slots` weights, 200 piloted pieces, one seed:
+
+| rules | bot believes | APP | fighters sent |
+|---|---|---|---|
+| allspin | allspin | 2.15 | 73 |
+| allspin_nw | allspin_nw | 2.24 | **75** |
+| normal | allspin (mismatched) | 0.24 | 73 |
+| normal | normal | 0.84 | **51** |
+
+Attack swings ninefold while spawn output barely moves -- until the bot *believes* normal
+rules, at which point it stops spamming spins that no longer pay and sends a third fewer
+fighters. So the lever on fighter output is what the bot believes, not what the game pays:
+**keep the rules on `allspin` or `allspin_nw` if what you want is a busy lane.**
 
 `cycle_bot` (B) steps through `BotPilot.PRESETS` and **brings the game's rules with it**, so
 a weight set can never run under rules it was not tuned for. That pairing is not a nicety:

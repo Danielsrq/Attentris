@@ -70,6 +70,14 @@ var _font: Font
 var _pending: Array[int] = []
 ## Spawns so far, only to alternate the turn bias.
 var _spawned: int = 0
+## Fighters each side has SENT over the run, including ones long dead.
+##
+## The economy's real output metric. Attack per piece measures what the Tetris half is paid;
+## this measures what the minigame actually receives, and the two come apart badly -- under
+## normal rules an all-spin bot's spins are Minis that send no attack at all, yet every one
+## of them still trips spawns_unit() and still puts a fighter on the field.
+var teal_sent: int = 0
+var red_sent: int = 0
 
 func setup(r: BattlerRules, l: ViewLayout, seed_v: int = 0) -> void:
 	rules = r
@@ -80,6 +88,8 @@ func setup(r: BattlerRules, l: ViewLayout, seed_v: int = 0) -> void:
 	_breaches = 0
 	_pending.clear()
 	_spawned = 0
+	teal_sent = 0
+	red_sent = 0
 	for c in get_children():
 		c.queue_free()
 	# Absolute, and the transform is deliberately left alone -- see the class doc.
@@ -93,9 +103,11 @@ func setup(r: BattlerRules, l: ViewLayout, seed_v: int = 0) -> void:
 
 ## A Tetris clear worth a fighter. Called from main._dispatch.
 func spawn_teal() -> void:
+	teal_sent += 1
 	_pending.append(UnitDef.TEAL)
 
 func spawn_red() -> void:
+	red_sent += 1
 	_pending.append(UnitDef.RED)
 
 ## Places everything queued that can find room, and KEEPS the rest for next frame.

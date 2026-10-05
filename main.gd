@@ -314,6 +314,10 @@ func _resolve_hints() -> void:
 	# Gate state travels with the request: under gate rules it is the whole reward signal, and
 	# the board cannot carry it.
 	if brain == pilot:
+		# The bot's belief tracks the rules the GAME is applying, every solve. It is never a
+		# separate choice, so the two cannot drift -- and drifting has no symptom beyond the
+		# bot quietly playing for value it will not be paid.
+		pilot.follow_rules(RULE_PRESETS[rules_preset])
 		pilot.gate_state = game.gate_state.duplicate()
 	if threaded_solve and not Engine.is_editor_hint():
 		_request_threaded_solve()
@@ -350,11 +354,11 @@ func piloted() -> bool:
 func pilot_status() -> String:
 	if pilot == null or not pilot.available():
 		return "bot not built -- cargo build --release in bot/, using BeamSolver"
+	# A rules mismatch is no longer reachable -- follow_rules() derives the mode every solve --
+	# so the only pairing fault left is a rules preset the bot has no mode for at all.
 	var preset: String = RULE_PRESETS[rules_preset]
-	var want: String = String(pilot.preset()["rules"])
-	if preset != want:
-		return "bot '%s' wants '%s' rules, game is on '%s'" % [
-			pilot.preset()["name"], want, preset]
+	if not BotPilot.MODE_FOR_RULES.has(preset):
+		return "no bot mode for '%s' rules" % preset
 	if pilot.unreachable > 0:
 		return "%d placements Godot could not reach" % pilot.unreachable
 	return ""
@@ -461,17 +465,17 @@ func _use_rules(index: int) -> void:
 	rules = game.rules
 	game.gravity_enabled = keep_gravity
 
-## Next bot, and the rules it was tuned under, together.
+## Next WEIGHT SET, and a jump to the rules it was tuned against.
 ##
-## The rules move WITH the bot deliberately. Every weight set here was tuned against one rule
-## mode, and running it under another is the one failure in the pilot with no symptom except
-## playing worse than its own benchmarks -- so the toggle makes the mismatch unreachable
-## rather than leaving pilot_status() to complain about it afterwards.
+## Two separate axes, which is the point: B changes what the bot values, F2 changes what the
+## game pays for, and the bot's belief always follows F2. The jump here is a convenience --
+## landing on the rules a weight set was tuned for is the useful default -- not a constraint,
+## so F2 afterwards is free and stays coherent.
 func _cycle_bot() -> void:
 	if pilot == null:
 		return
 	var p := pilot.next_preset()
-	var want: int = RULE_PRESETS.find(String(p["rules"]))
+	var want: int = RULE_PRESETS.find(String(p["tuned_for"]))
 	if want >= 0:
 		_use_rules(want)
 	_needs_resolve = true

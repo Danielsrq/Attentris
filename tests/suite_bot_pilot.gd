@@ -207,10 +207,8 @@ func test_presets() -> void:
 		names[name] = true
 		check(FileAccess.file_exists(p["weights"]),
 			"'%s' weights exist at %s" % [name, p["weights"]])
-		check(String(p["mode"]) in bot_modes,
-			"'%s' uses a mode the bot accepts (%s)" % [name, p["mode"]])
-		check(String(p["rules"]) in godot_presets,
-			"'%s' pairs with a real Godot preset (%s)" % [name, p["rules"]])
+		check(String(p["tuned_for"]) in godot_presets,
+			"'%s' names a real Godot preset to start on (%s)" % [name, p["tuned_for"]])
 		check(not String(p.get("note", "")).is_empty(),
 			"'%s' says what it is for" % name)
 
@@ -218,8 +216,26 @@ func test_presets() -> void:
 	# leave the bot searching with one bot's weights under another's rules.
 	var pilot := BotPilot.new()
 	var first: Dictionary = pilot.use_preset(0)
-	eq(pilot.mode, first["mode"], "loading a preset sets its mode")
-	eq(pilot.weights, first["weights"], "   and its weights")
+	eq(pilot.weights, first["weights"], "loading a weight set sets its weights")
+
+	# Every rules preset must map to a mode the bot accepts, or follow_rules() silently leaves
+	# the bot believing the previous rules -- the exact drift the derivation exists to stop.
+	for g in godot_presets:
+		check(BotPilot.MODE_FOR_RULES.has(g), "'%s' rules have a bot mode" % g)
+		check(String(BotPilot.MODE_FOR_RULES.get(g, "")) in bot_modes,
+			"   and the bot accepts it (%s)" % BotPilot.MODE_FOR_RULES.get(g, ""))
+	eq(BotPilot.MODE_FOR_RULES.size(), godot_presets.size(),
+		"the map covers every rules preset and invents none")
+
+	# The mode follows the rules, and only restarts the backend when it actually changes.
+	pilot.follow_rules("allspin")
+	eq(pilot.mode, "allspin", "following all-spin rules sets the all-spin mode")
+	pilot.follow_rules("allspin_nw")
+	eq(pilot.mode, "allspin_nw", "   and the no-wound rules switch the belief with them")
+	pilot.follow_rules("guideline")
+	eq(pilot.mode, "standard", "guideline maps to the bot's 'standard' -- the one rename")
+	pilot.follow_rules("not_a_preset")
+	eq(pilot.mode, "standard", "an unknown preset leaves the mode alone rather than guessing")
 	for _i in BotPilot.PRESETS.size():
 		pilot.next_preset()
 	eq(pilot.preset_index, 0, "cycling all the way round comes back to the first")

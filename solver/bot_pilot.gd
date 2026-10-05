@@ -34,41 +34,54 @@ extends RefCounted
 ## Relative to the project root. Build output, so it is gitignored and may simply be absent.
 const BINARY := "res://bot/target/release/bot.exe"
 const BINARY_UNIX := "res://bot/target/release/bot"
-## The bots that are ready to fly.
+## The bot's rule mode for each of main.RULE_PRESETS.
 ##
-## `mode` is the bot's own rule mode; `rules` is the Godot preset it pairs with. They are
-## declared TOGETHER because a bot searching under rules the game does not apply plays worse
-## for no visible reason, and that is the one failure here with no symptom of its own. The
-## bot's --mode names and main.RULE_PRESETS happen to share seven spellings, which is what
-## makes the pairing a lookup rather than a translation table.
+## The mode is DERIVED from the rules the game is applying, never chosen separately. That is
+## the whole guard against the one failure here with no symptom of its own: a bot searching
+## under rules the game does not apply keeps playing well and quietly stops being paid for it.
+##
+## The two name sets already share seven spellings; only `guideline` differs, because the bot
+## calls that one `standard`.
+const MODE_FOR_RULES := {
+	"normal": "normal",
+	"burst": "burst",
+	"burst2": "burst2",
+	"gate": "gate",
+	"gate_b2b": "gate_b2b",
+	"competitive": "competitive",
+	"guideline": "standard",
+	"allspin": "allspin",
+	"allspin_nw": "allspin_nw",
+}
+
+## The weight sets that are ready to fly. WEIGHTS only -- the rules are the other axis.
+##
+## `tuned_for` is the rules preset each set was tuned against, which is where the bot toggle
+## jumps the game when you load it. It is a starting point, not a constraint: the rules stay
+## free to change afterwards, and the bot's belief follows them.
 const PRESETS := [
 	{
-		"name": "allspin-slots", "mode": "allspin", "rules": "allspin",
+		"name": "allspin-slots", "tuned_for": "allspin",
 		"weights": "res://bot/weights/allspin_slots.txt",
-		"note": "strongest all-spin: 2.58 APP clean, but tuned on clean boards",
+		"note": "strongest all-spin, with the spin-slot features",
 	},
 	{
-		"name": "allspin-nowound", "mode": "allspin_nw", "rules": "allspin_nw",
-		"weights": "res://bot/weights/allspin_slots.txt",
-		"note": "same weights, all-spin scoring, no wound lines from repeated clears",
-	},
-	{
-		"name": "allspin", "mode": "allspin", "rules": "allspin",
+		"name": "allspin", "tuned_for": "allspin",
 		"weights": "res://bot/weights/allspin.txt",
 		"note": "the earlier all-spin set, without the spin-slot features",
 	},
 	{
-		"name": "gate4", "mode": "gate_b2b", "rules": "gate_b2b",
+		"name": "gate4", "tuned_for": "gate_b2b",
 		"weights": "res://bot/results/gate4/gate4.txt",
 		"note": "tuned WITH garbage, so the one that should survive the battler",
 	},
 	{
-		"name": "normal", "mode": "normal", "rules": "normal",
+		"name": "normal", "tuned_for": "normal",
 		"weights": "res://bot/weights/normal.txt",
 		"note": "normal rules, 1.26 APP held out",
 	},
 	{
-		"name": "standard", "mode": "standard", "rules": "guideline",
+		"name": "standard", "tuned_for": "guideline",
 		"weights": "res://bot/weights/standard.txt",
 		"note": "no all-spin: quad wells and I-dependency, a different game",
 	},
@@ -77,8 +90,9 @@ const PRESETS := [
 var piece_set: PieceSet
 ## Which of PRESETS is loaded.
 var preset_index: int = 0
-## The rule mode handed to the bot, and the weights it searches with. Set from a preset; the
-## backend reads both ONCE at startup, so changing either restarts it.
+## The rule mode handed to the bot, and the weights it searches with. The backend reads both
+## ONCE at startup, so changing either restarts it -- which is why they go through setters
+## rather than being assigned.
 var mode: String = "allspin"
 var weights: String = "res://bot/weights/allspin_slots.txt"
 ## How many steps of the returned plan to keep.
@@ -120,13 +134,21 @@ func preset() -> Dictionary:
 func use_preset(i: int) -> Dictionary:
 	preset_index = posmod(i, PRESETS.size())
 	var p := preset()
-	mode = p["mode"]
 	weights = p["weights"]
 	_stop()
 	_warned = false
 	last_error = ""
 	unreachable = 0
 	return p
+
+## Points the bot at the rules the GAME is applying. Called before every solve, so the two can
+## never drift apart; restarts the backend only when the mode actually changes.
+func follow_rules(rules_preset_name: String) -> void:
+	var want: String = MODE_FOR_RULES.get(rules_preset_name, "")
+	if want == "" or want == mode:
+		return
+	mode = want
+	_stop()
 
 func next_preset() -> Dictionary:
 	return use_preset(preset_index + 1)

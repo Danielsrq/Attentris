@@ -108,13 +108,17 @@ Measured in-game against this binary's own numbers, 400 pieces of all-spin:
 | `bot play` | 2.582 | 0/8 |
 | piloting Godot | 2.550 | 0 |
 
-The weight sets on the in-game toggle (`BotPilot.PRESETS`), 250 piloted pieces each, with the
-Godot rules preset each one was tuned against:
+`BotPilot.PRESETS` is weight sets only. The bot's `--mode` is DERIVED from the rules the game
+is applying (`MODE_FOR_RULES`, re-checked before every solve), so the two cannot drift -- the
+mode names already share seven spellings with Godot's presets, and only `guideline` differs,
+which the bot calls `standard`. Deliberate mismatch is therefore no longer reachable from the
+game; it was the `belief-rules` experiment and would need a flag to re-expose.
+
+The weight sets, 250 piloted pieces each, on the rules each one was tuned against:
 
 | bot | rules | APP in Godot | note |
 |---|---|---|---|
 | `allspin-slots` | allspin | 2.32 | strongest; all-spin pays for every spin |
-| `allspin-nowound` | allspin_nw | 2.34 | same weights, no wound lines from repeats |
 | `allspin` | allspin | 2.30 | the earlier set, no spin-slot features |
 | `normal` | normal | 0.97 | 5 quads; non-T spins are Minis |
 | `standard` | guideline | 0.77 | 8 quads -- a quad-well bot, a different game |
