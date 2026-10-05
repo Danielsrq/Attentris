@@ -135,7 +135,7 @@ func _draw_readout_column(x: float, y: float) -> void:
 		y = _draw_autoplay(x, y)
 	if main != null and main.has_method("hint_status"):
 		var h: Dictionary = main.hint_status()
-		y = _heading("ASSIST  (F6)", x, y)
+		y = _heading("ASSIST  (H)", x, y)
 		y = _row("hints", "ON" if h["enabled"] else "off", x, y, h["enabled"])
 		if h["enabled"]:
 			y = _row("plan", "%d of %d shown" % [h["shown"], h["plan_len"]], x, y)
@@ -156,7 +156,7 @@ func _draw_readout_column(x: float, y: float) -> void:
 
 func _draw_autoplay(x: float, y: float) -> float:
 	var a: Dictionary = main.autoplay_status()
-	y = _heading("AUTOPLAY  (F9)", x, y)
+	y = _heading("AUTOPLAY  (P)", x, y)
 	y = _row("state", "PLAYING" if a["on"] else "off", x, y, a["on"])
 
 	# Rate slider. Logarithmic, so 0.25 pps and 40 pps both get usable resolution.
@@ -173,7 +173,7 @@ func _draw_autoplay(x: float, y: float) -> float:
 	draw_string(_font, Vector2(x + w + 12.0, y + 12.0), rate,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, HILITE)
 	y += 26.0
-	y = _line("drag, or F10 / F11", x, y, LABEL)
+	y = _line("drag, or [ / ]", x, y, LABEL)
 
 	y += 4.0
 	y = _row("pieces", "%d" % a["pieces"], x, y)

@@ -90,6 +90,9 @@ const PRESETS := [
 var piece_set: PieceSet
 ## Which of PRESETS is loaded.
 var preset_index: int = 0
+## When non-empty, the rules preset the bot is pinned to believe, whatever the game applies.
+## See set_belief().
+var believe: String = ""
 ## The rule mode handed to the bot, and the weights it searches with. The backend reads both
 ## ONCE at startup, so changing either restarts it -- which is why they go through setters
 ## rather than being assigned.
@@ -141,10 +144,37 @@ func use_preset(i: int) -> Dictionary:
 	unreachable = 0
 	return p
 
-## Points the bot at the rules the GAME is applying. Called before every solve, so the two can
-## never drift apart; restarts the backend only when the mode actually changes.
+## Points the bot at the rules the GAME is applying. Called before every solve, so the two
+## cannot drift; restarts the backend only when the mode actually changes.
+##
+## Skipped entirely while `believe` is set -- see there.
 func follow_rules(rules_preset_name: String) -> void:
+	if believe != "":
+		return
+	_set_mode(MODE_FOR_RULES.get(rules_preset_name, ""))
+
+## Pins what the bot BELIEVES, regardless of what the game applies. "" hands control back to
+## follow_rules().
+##
+## A deliberate mismatch, and a real experiment rather than a mistake: the bot searches under
+## one rule set while the game scores another, which is the `belief-rules` question. It is
+## also measurably useful here -- an all-spin-believing bot under normal rules keeps spamming
+## spins it will not be paid for, which sends a third MORE fighters into the lane than a bot
+## that knows the truth (73 against 51 over 200 pieces).
+##
+## Named rather than a bool so the overlay can say which belief is pinned, because a mismatch
+## has no symptom of its own: the bot plays well and is quietly underpaid.
+func set_belief(rules_preset_name: String) -> void:
+	if rules_preset_name == "":
+		believe = ""
+		return
 	var want: String = MODE_FOR_RULES.get(rules_preset_name, "")
+	if want == "":
+		return
+	believe = rules_preset_name
+	_set_mode(want)
+
+func _set_mode(want: String) -> void:
 	if want == "" or want == mode:
 		return
 	mode = want

@@ -95,9 +95,9 @@ func _process(_delta: float) -> bool:
 	if not _restarted:
 		# Now that _ready has run, restart on the chosen seed under the chosen preset.
 		_restarted = true
-		# After _ready, so the pilot exists; the preset carries its own rules with it.
-		if _bot >= 0:
-			var p: Dictionary = _main.pilot.use_preset(_bot)
+		# After _ready, so the pilot exists.
+		if _bot >= 0 or _args.has("believe"):
+			var p: Dictionary = _main.pilot.use_preset(maxi(_bot, 0))
 			# --rules, when given, wins: measuring a weight set under rules it was not tuned
 			# for is a deliberate experiment, and the whole reason the axes are separate.
 			if not _args.has("rules"):
@@ -106,6 +106,12 @@ func _process(_delta: float) -> bool:
 					_main.rules_preset = r
 			print("weights '%s' under '%s' rules -- %s" % [
 				p["name"], _main.RULE_PRESETS[_main.rules_preset], p["note"]])
+		# --believe PRESET pins what the bot searches with, against what the game scores.
+		var belief := String(_args.get("believe", ""))
+		if belief != "":
+			_main.pilot.set_belief(belief)
+			print("   EXPERIMENT: believes '%s' while the game scores '%s'" % [
+				belief, _main.RULE_PRESETS[_main.rules_preset]])
 		_main._new_game(_seed)
 		var trouble: String = _main.pilot_status()
 		if trouble != "":

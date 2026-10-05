@@ -25,21 +25,27 @@ extends RefCounted
 ## Tetris actions come from a ControlProfiles profile; the meta keys come from META below
 ## and are fixed everywhere, so a profile can never shadow restart or the debug toggles.
 
+## F5 to F11 are DELIBERATELY avoided. The editor keeps Run (F5), Run Current Scene (F6),
+## Pause (F7), Stop (F8) and Fullscreen (F11) live while a project launched from it is
+## running, so those keys reach the editor instead of the game -- F9 paused and F8 quit,
+## which is indistinguishable from the game ignoring the key.
+##
+## F1 to F4 stay: the editor's bindings there do nothing to a running project.
+##
+## Every letter below is free in all three play profiles (they use WASD, ZXC, the numpad, the
+## arrows, space, shift and ctrl).
 const META := {
 	"restart": [KEY_R],
 	"toggle_debug": [KEY_F1],
 	"toggle_handling": [KEY_F2],
 	"toggle_gravity": [KEY_F3],
 	"toggle_grid": [KEY_F4],
-	"cycle_profile": [KEY_F5],
-	"toggle_hints": [KEY_F6],
-	"toggle_ghost": [KEY_F7],
-	"toggle_autoplay": [KEY_F9],
-	"pps_down": [KEY_F10],
-	"pps_up": [KEY_F11],
-	# B, not a function key: it is free in every play profile (they use WASD, ZXC, the numpad
-	# and the arrows), and there is no F12 toggle to sit beside any more -- the Rust bot is
-	# the brain whenever it is built, so the only choice left is WHICH bot.
+	"cycle_profile": [KEY_V],
+	"toggle_hints": [KEY_H],
+	"toggle_ghost": [KEY_G],
+	"toggle_autoplay": [KEY_P],
+	"pps_down": [KEY_BRACKETLEFT],
+	"pps_up": [KEY_BRACKETRIGHT],
 	"cycle_bot": [KEY_B],
 }
 

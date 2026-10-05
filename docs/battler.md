@@ -277,8 +277,19 @@ all-spin play this economy pays for. It stays as the **fallback**, so a clone wi
 toolchain still has hints and autoplay, and the overlay's `brain` row always names which one is
 flying. Both answer `solve()` with `Array[Placement]`, so `_stage_placement` never changed.
 
-**F6** draws its plan while you play; **F9** hands it the board; **B** cycles which weight
-set; **F2** cycles the rules, and the bot's belief follows F2 automatically.
+**H** draws its plan while you play; **P** hands it the board; **B** cycles which weight set;
+**F2** cycles the rules, and the bot's belief follows F2 automatically.
+
+Those are letters, not function keys, on purpose: the editor keeps Run (F5), Run Current Scene
+(F6), Pause (F7), Stop (F8) and Fullscreen (F11) live while a project launched from it is
+running, so F5-F11 reach the editor rather than the game. F9 paused the game and F8 quit it,
+which is indistinguishable from the key being ignored. F1-F4 are safe and stayed.
+
+`pilot.set_belief()` pins what the bot believes against what the game scores -- the
+`belief-rules` experiment, and useful rather than merely curious: an all-spin-believing bot
+under normal scoring keeps spamming spins it will not be paid for, and sends **73 fighters
+against 51** over 200 pieces. `pilot_bench --believe <preset>` runs it, and the overlay says
+`EXPERIMENT: ...` while it is pinned, because a mismatch otherwise has no symptom at all.
 
 **Attack per piece is the wrong metric for this half.** `spawns_unit()` fires on a quad or any
 spin, and a Mini is still a spin -- so a fighter is sent whether or not the clear pays. The
@@ -288,7 +299,7 @@ two come apart hard. Same `allspin_slots` weights, 200 piloted pieces, one seed:
 |---|---|---|---|
 | allspin | allspin | 2.15 | 73 |
 | allspin_nw | allspin_nw | 2.24 | **75** |
-| normal | allspin (mismatched) | 0.24 | 73 |
+| normal | allspin (pinned belief) | 0.24 | 73 |
 | normal | normal | 0.84 | **51** |
 
 Attack swings ninefold while spawn output barely moves -- until the bot *believes* normal

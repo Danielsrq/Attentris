@@ -359,6 +359,10 @@ func pilot_status() -> String:
 	var preset: String = RULE_PRESETS[rules_preset]
 	if not BotPilot.MODE_FOR_RULES.has(preset):
 		return "no bot mode for '%s' rules" % preset
+	# A pinned belief is intentional, but it still has to be visible: the bot plays well and
+	# is quietly paid for a different rule set, which looks like nothing at all.
+	if pilot.believe != "" and pilot.believe != preset:
+		return "EXPERIMENT: bot believes '%s', game scores '%s'" % [pilot.believe, preset]
 	if pilot.unreachable > 0:
 		return "%d placements Godot could not reach" % pilot.unreachable
 	return ""

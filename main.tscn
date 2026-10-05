@@ -21,6 +21,9 @@ script = ExtResource("6_hint")
 [node name="Hud" type="Node2D" parent="." unique_id=1395571422]
 script = ExtResource("3_hud")
 
+[node name="Battler" type="Node2D" parent="." unique_id=1842663501]
+script = ExtResource("7_battler")
+
 [node name="DebugOverlay" type="Node2D" parent="." unique_id=2114751713]
 script = ExtResource("4_overlay")
 
@@ -29,6 +32,3 @@ script = ExtResource("5_audio")
 master_db = -4.5
 gain_move = -6.0
 gain_combo_break = -6.0
-
-[node name="Battler" type="Node2D" parent="." unique_id=1842663501]
-script = ExtResource("7_battler")

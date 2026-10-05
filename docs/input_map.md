@@ -55,12 +55,12 @@ Fixed everywhere and never rebound, so a profile can never shadow restart or the
 | `toggle_handling` | F2 | optional |
 | `toggle_gravity` | F3 | optional |
 | `toggle_grid` | F4 | optional |
-| `cycle_profile` | F5 | optional |
-| `toggle_hints` | F6 | optional |
-| `toggle_ghost` | F7 | optional |
-| `toggle_autoplay` | F9 | optional |
-| `pps_down` | F10 | optional |
-| `pps_up` | F11 | optional |
+| `cycle_profile` | V | optional |
+| `toggle_hints` | H | optional |
+| `toggle_ghost` | G | optional |
+| `toggle_autoplay` | P | optional |
+| `pps_down` | BracketLeft | optional |
+| `pps_up` | BracketRight | optional |
 | `cycle_bot` | B | optional |
 
 ## Already present

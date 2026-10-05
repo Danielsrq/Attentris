@@ -236,6 +236,21 @@ func test_presets() -> void:
 	eq(pilot.mode, "standard", "guideline maps to the bot's 'standard' -- the one rename")
 	pilot.follow_rules("not_a_preset")
 	eq(pilot.mode, "standard", "an unknown preset leaves the mode alone rather than guessing")
+
+	# A pinned belief is the deliberate-mismatch experiment: the bot searches one rule set
+	# while the game scores another. It must survive follow_rules(), which otherwise runs
+	# before every solve and would immediately undo it.
+	pilot.set_belief("allspin")
+	eq(pilot.mode, "allspin", "pinning a belief sets the mode")
+	eq(pilot.believe, "allspin", "   and records which belief is pinned, for the overlay")
+	pilot.follow_rules("normal")
+	eq(pilot.mode, "allspin", "a pinned belief is NOT overwritten by the game's rules")
+	pilot.set_belief("")
+	eq(pilot.believe, "", "clearing it hands control back")
+	pilot.follow_rules("normal")
+	eq(pilot.mode, "normal", "   and the mode follows the rules again")
+	pilot.set_belief("not_a_preset")
+	eq(pilot.believe, "", "an unknown belief is refused rather than pinned to nothing")
 	for _i in BotPilot.PRESETS.size():
 		pilot.next_preset()
 	eq(pilot.preset_index, 0, "cycling all the way round comes back to the first")
