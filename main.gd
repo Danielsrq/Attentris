@@ -56,17 +56,13 @@ var ghost_slot := GhostSlot.new()
 const GHOST_COLUMNS := 1
 
 var solver: BeamSolver
-## The Rust bot, when it is flying the board instead of the Godot solver.
-var pilot: BotPilot
-## Hand the board to bot/ rather than to BeamSolver.
+## The Rust bot in bot/. The brain for both hints and autoplay whenever it is built.
 ##
-## The Godot solver is the quad-oriented hint search and cannot reach tucks or kicked spins,
-## so it cannot demonstrate the all-spin play the minigame's economy is built around. The
-## Rust bot can, and the seam is free: both answer solve() with Array[Placement].
-@export var bot_pilot := false:
-	set(value):
-		bot_pilot = value
-		_needs_resolve = true
+## There is no toggle between it and BeamSolver, because there is no reason to choose the
+## worse one: the Godot solver is the quad-oriented hint search and cannot reach tucks or
+## kicked spins, so it cannot see most of the all-spin play the minigame's economy pays for.
+## It stays as the FALLBACK, so a clone with no Rust toolchain still has hints and autoplay.
+var pilot: BotPilot
 var hints_enabled := false
 ## Lookahead depth for the hint solver. Fixed: it was on F7/F8 and never touched,
 ## and a knob nobody turns is just a way for the two paths to drift apart.
@@ -330,12 +326,18 @@ func _resolve_hints() -> void:
 ## Whichever search is flying the board. Duck-typed on solve() and depth, so the worker and
 ## the synchronous path do not care which one they got.
 ##
-## Falls back to the Godot solver when the bot has not been built, rather than stalling: an
-## unbuilt binary is a missing `cargo build --release`, not a reason to stop playing.
+## The Rust bot when it is built, BeamSolver otherwise. Falling back rather than stalling is
+## the point: an unbuilt binary is a missing `cargo build --release`, not a reason to lose
+## hints and autoplay. The overlay always names which one is flying, since there is no longer
+## a toggle whose position would tell you.
 func _brain() -> Object:
-	if bot_pilot and pilot != null and pilot.available():
+	if pilot != null and pilot.available():
 		return pilot
 	return solver
+
+## Whether the Rust bot is the brain right now.
+func piloted() -> bool:
+	return pilot != null and pilot.available()
 
 ## Empty when the pairing is fine, otherwise what is wrong with it.
 ##
@@ -344,10 +346,8 @@ func _brain() -> Object:
 ## plays worse than its benchmarks. Reported rather than corrected: which of the two is wrong
 ## is the user's call, not this function's.
 func pilot_status() -> String:
-	if not bot_pilot:
-		return ""
 	if pilot == null or not pilot.available():
-		return "bot not built -- cargo build --release in bot/"
+		return "bot not built -- cargo build --release in bot/, using BeamSolver"
 	var preset: String = RULE_PRESETS[rules_preset]
 	var want: String = String(pilot.preset()["rules"])
 	if preset != want:
@@ -421,8 +421,6 @@ func _handle_meta_keys() -> void:
 		board_view.show_grid = not board_view.show_grid
 	if reader.pressed("cycle_profile"):
 		reader.next_profile()
-	if reader.pressed("toggle_pilot"):
-		bot_pilot = not bot_pilot
 	if reader.pressed("toggle_autoplay"):
 		autoplay = not autoplay
 		_auto_staged = false

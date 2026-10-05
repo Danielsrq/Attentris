@@ -270,10 +270,14 @@ draining, the lane is jammed and **lane depth** is the lever, not the steering.
 
 ## Letting the bot play the left half
 
-`main.bot_pilot` hands the Tetris board to the Rust bot in `bot/` instead of `BeamSolver`,
-which matters here because the Godot solver is the quad-oriented hint search and cannot reach
-tucks or kicked spins -- so it cannot play the all-spin game this economy is built around.
-Both answer `solve()` with `Array[Placement]`, so `_stage_placement` needed no change.
+The Rust bot in `bot/` is the brain for both hints and autoplay whenever it is built -- there
+is no toggle, because there is no reason to choose the worse one. The Godot `BeamSolver` is the
+quad-oriented hint search and cannot reach tucks or kicked spins, so it cannot see most of the
+all-spin play this economy pays for. It stays as the **fallback**, so a clone with no Rust
+toolchain still has hints and autoplay, and the overlay's `brain` row always names which one is
+flying. Both answer `solve()` with `Array[Placement]`, so `_stage_placement` never changed.
+
+**F6** draws its plan while you play; **F9** hands it the board; **B** cycles which bot.
 
 `cycle_bot` (B) steps through `BotPilot.PRESETS` and **brings the game's rules with it**, so
 a weight set can never run under rules it was not tuned for. That pairing is not a nicety:

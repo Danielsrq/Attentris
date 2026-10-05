@@ -55,7 +55,6 @@ func _initialize() -> void:
 			quit(1)
 			return
 		_bot = found
-	_main.bot_pilot = true
 	_main.autoplay = true
 	_main.autoplay_pps = _main.PPS_UNCAPPED
 	# NOT restarted here. @onready vars are assigned by _ready, and _ready is deferred when
@@ -64,6 +63,8 @@ func _initialize() -> void:
 	# frame instead, by which time _ready has run.
 	_seed = seed_v
 
+	# The STATIC check: _main.pilot does not exist yet, because _ready is deferred when
+	# add_child runs during _initialize.
 	if not BotPilot.binary_path().is_empty():
 		print("piloting %d pieces under '%s' rules" % [_pieces, preset])
 	else:

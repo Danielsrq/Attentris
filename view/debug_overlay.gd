@@ -90,12 +90,14 @@ func _draw_state_column(x: float, y: float) -> void:
 		p.move_resets if p != null else 0], x, y)
 	y = _row("gravity", "%s  %.4f c/tick" % [
 		"on" if game.gravity_enabled else "OFF", game.current_gravity()], x, y)
-	if main != null and main.bot_pilot:
+	if main != null and main.pilot != null:
+		# Always shown, and highlighted when something is wrong. With no toggle left to read,
+		# this row is the only thing that says which brain is flying -- and a mispaired bot
+		# has no symptom of its own beyond playing worse than its own benchmarks.
 		var trouble: String = main.pilot_status()
-		# Highlighted when something is wrong, because a mispaired pilot has no symptom
-		# other than playing worse than its own benchmarks.
 		var bot: Dictionary = main.pilot.preset()
-		y = _row("pilot", "%s (%s)  %d nodes" % [bot["name"], bot["mode"], main.pilot.last_nodes]
+		y = _row("brain", "rust %s (%s)  %d nodes" % [
+				bot["name"], bot["mode"], main.pilot.last_nodes]
 			if trouble == "" else trouble, x, y, trouble != "")
 	y = _row("das / arr", "%.0f / %.0f ms left" % [game.das_remaining(), game.arr_remaining()], x, y)
 	y = _row("b2b / combo", "%d / %d" % [game.b2b, game.combo], x, y)

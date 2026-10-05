@@ -42,7 +42,7 @@ const EXTERNAL := ["switch_board"]
 const OPTIONAL := [
 	"toggle_handling", "toggle_gravity", "toggle_grid", "cycle_profile",
 	"toggle_hints", "toggle_ghost", "toggle_autoplay", "pps_down", "pps_up",
-	"toggle_pilot", "cycle_bot",
+	"cycle_bot",
 ]
 
 ## Human-readable labels for the overlay, in display order.
@@ -55,7 +55,6 @@ const LABELS := {
 	"rotate_cw": "rotate cw",
 	"rotate_180": "rotate 180",
 	"hold": "hold",
-	"toggle_pilot": "rust bot pilots",
 	"cycle_bot": "next rust bot",
 }
 

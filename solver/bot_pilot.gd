@@ -76,8 +76,12 @@ var preset_index: int = 0
 ## backend reads both ONCE at startup, so changing either restarts it.
 var mode: String = "allspin"
 var weights: String = "res://bot/weights/allspin_slots.txt"
-## Mirrors BeamSolver's field so main can set it uniformly; the Rust search depth is fixed by
-## its own beam config, so this is only carried, not used.
+## How many steps of the returned plan to keep.
+##
+## It does NOT shorten the search -- the Rust beam depth is fixed by the backend's own config
+## -- but it still has to be honoured, because this is what hint mode draws. BeamSolver's
+## depth used to bound the plan's length, so without this F6 would go from two outlines over
+## the board to six.
 var depth: int = 6
 
 var last_nodes: int = 0
@@ -266,7 +270,7 @@ func _to_plan(board: Board, parsed: Dictionary) -> Array:
 	last_nodes = int(parsed.get("nodes", 0))
 	var steps: Array = parsed["plan"]
 	var out: Array = []
-	for i in steps.size():
+	for i in mini(steps.size(), maxi(1, depth)):
 		var step: Dictionary = steps[i]
 		var def: PieceDef = piece_set.get_def(StringName(String(step["type"]).to_upper()))
 		if def == null:
