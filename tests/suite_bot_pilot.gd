@@ -9,15 +9,20 @@ extends TestHarness
 ## that; the records are the only thing that can.
 
 const REPLAY := "res://data/bot/allspin_slots.jsonl"
+## Normal rules, where a non-T spin is a MINI. The all-spin replay cannot exercise the
+## Mini-versus-Full distinction at all, because all-spin promotes every Mini.
+const REPLAY_NORMAL := "res://data/bot/normal.jsonl"
 
 func run() -> void:
 	test_path_finder_against_recorded_placements()
+	test_best_spin_is_kept()
 	test_pilot_wire_format()
+	test_presets()
 	test_pilot_degrades_without_a_binary()
 
 ## Reads the first `n` records that have a `place` with cells.
-func _records(n: int) -> Array:
-	var f := FileAccess.open(REPLAY, FileAccess.READ)
+func _records(n: int, path: String = REPLAY) -> Array:
+	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return []
 	var out: Array = []
@@ -88,6 +93,41 @@ func test_path_finder_against_recorded_placements() -> void:
 		rules)
 	eq(nowhere, null, "an unreachable target returns null, not a near miss")
 
+func test_best_spin_is_kept() -> void:
+	group("PathFinder: the best spin, not the first one found")
+
+	# The same cells can be reached by different kicks that score differently, because the
+	# Mini-to-Full upgrade turns on the kick index. Taking the FIRST spin found silently
+	# downgraded Full spins to Minis -- invisible under all-spin, where every spin is Full
+	# already, and catastrophic under gate rules, where gate_value() pays 4 for a Full spin
+	# double and nothing whatsoever for a Mini. It zeroed the gate4 bot's entire output.
+	var recs := _records(400, REPLAY_NORMAL)
+	check(not recs.is_empty(), "the recorded normal-rules replay is readable")
+	if recs.is_empty():
+		return
+
+	var ps := PieceSet.tetrominoes()
+	var rules := RuleSet.normal()
+	var full_seen := 0
+	var downgraded := 0
+	for v in recs:
+		var place: Dictionary = v["place"]
+		if String(place.get("spin", "none")) != "full":
+			continue
+		full_seen += 1
+		var def: PieceDef = ps.get_def(StringName(String(place["type"]).to_upper()))
+		var b := _board_from(v["board"])
+		var p := PathFinder.find(b, def, PathFinder.cells_from(place["cells"]), rules)
+		if p == null or p.spin != SpinDetect.Kind.FULL:
+			downgraded += 1
+
+	check(full_seen >= 20, "the replay contains full spins to check (%d)" % full_seen)
+	eq(downgraded, 0, "a recorded FULL spin is never resolved as a Mini or lost")
+
+	eq(PathFinder._spin_rank(SpinDetect.Kind.FULL), 2, "Full outranks")
+	eq(PathFinder._spin_rank(SpinDetect.Kind.MINI), 1, "   Mini, which outranks")
+	eq(PathFinder._spin_rank(SpinDetect.Kind.NONE), 0, "   no spin at all")
+
 func test_pilot_wire_format() -> void:
 	group("BotPilot: the state it sends and the plan it reads back")
 
@@ -146,6 +186,45 @@ func test_pilot_wire_format() -> void:
 	var none: Array = pilot._to_plan(empty, bad)
 	eq(none.size(), 0, "a step Godot cannot reach empties the plan rather than guessing")
 	eq(pilot.unreachable, 1, "   and is counted, because the measured rate is zero")
+
+func test_presets() -> void:
+	group("BotPilot: every bot on the toggle is real and correctly paired")
+
+	# Godot's rules presets, so the pairing can be checked without instantiating main.
+	var godot_presets := ["normal", "burst", "burst2", "gate", "gate_b2b", "competitive",
+		"guideline", "allspin"]
+	# The modes bot/src/main.rs rules_for() accepts. A mode outside this list makes the
+	# backend panic on startup, which reads as "the bot would not come up".
+	var bot_modes := ["normal", "burst", "burst2", "gate", "gate_b2b", "standard",
+		"competitive", "allspin"]
+
+	check(BotPilot.PRESETS.size() >= 2, "there is more than one bot to choose between")
+	var names := {}
+	for p in BotPilot.PRESETS:
+		var name := String(p["name"])
+		check(not names.has(name), "'%s' appears once" % name)
+		names[name] = true
+		check(FileAccess.file_exists(p["weights"]),
+			"'%s' weights exist at %s" % [name, p["weights"]])
+		check(String(p["mode"]) in bot_modes,
+			"'%s' uses a mode the bot accepts (%s)" % [name, p["mode"]])
+		check(String(p["rules"]) in godot_presets,
+			"'%s' pairs with a real Godot preset (%s)" % [name, p["rules"]])
+		check(not String(p.get("note", "")).is_empty(),
+			"'%s' says what it is for" % name)
+
+	# Cycling wraps, and reloads mode and weights together -- a half-applied switch would
+	# leave the bot searching with one bot's weights under another's rules.
+	var pilot := BotPilot.new()
+	var first: Dictionary = pilot.use_preset(0)
+	eq(pilot.mode, first["mode"], "loading a preset sets its mode")
+	eq(pilot.weights, first["weights"], "   and its weights")
+	for _i in BotPilot.PRESETS.size():
+		pilot.next_preset()
+	eq(pilot.preset_index, 0, "cycling all the way round comes back to the first")
+	var neg: Dictionary = pilot.use_preset(-1)
+	eq(neg["name"], BotPilot.PRESETS[BotPilot.PRESETS.size() - 1]["name"],
+		"and it wraps backwards too, rather than clamping")
 
 func test_pilot_degrades_without_a_binary() -> void:
 	group("BotPilot: an unbuilt bot is a message, not a mystery")

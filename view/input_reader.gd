@@ -37,6 +37,10 @@ const META := {
 	"toggle_autoplay": [KEY_F9],
 	"pps_down": [KEY_F10],
 	"pps_up": [KEY_F11],
+	"toggle_pilot": [KEY_F12],
+	# B, not another function key: F12 is the last one, and B is free in every play profile
+	# (they use WASD, ZXC, the numpad and the arrows).
+	"cycle_bot": [KEY_B],
 }
 
 var profile_name: String = "wasd_numpad"

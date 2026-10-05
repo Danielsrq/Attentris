@@ -34,9 +34,46 @@ extends RefCounted
 ## Relative to the project root. Build output, so it is gitignored and may simply be absent.
 const BINARY := "res://bot/target/release/bot.exe"
 const BINARY_UNIX := "res://bot/target/release/bot"
+## The bots that are ready to fly.
+##
+## `mode` is the bot's own rule mode; `rules` is the Godot preset it pairs with. They are
+## declared TOGETHER because a bot searching under rules the game does not apply plays worse
+## for no visible reason, and that is the one failure here with no symptom of its own. The
+## bot's --mode names and main.RULE_PRESETS happen to share seven spellings, which is what
+## makes the pairing a lookup rather than a translation table.
+const PRESETS := [
+	{
+		"name": "allspin-slots", "mode": "allspin", "rules": "allspin",
+		"weights": "res://bot/weights/allspin_slots.txt",
+		"note": "strongest all-spin: 2.58 APP clean, but tuned on clean boards",
+	},
+	{
+		"name": "allspin", "mode": "allspin", "rules": "allspin",
+		"weights": "res://bot/weights/allspin.txt",
+		"note": "the earlier all-spin set, without the spin-slot features",
+	},
+	{
+		"name": "gate4", "mode": "gate_b2b", "rules": "gate_b2b",
+		"weights": "res://bot/results/gate4/gate4.txt",
+		"note": "tuned WITH garbage, so the one that should survive the battler",
+	},
+	{
+		"name": "normal", "mode": "normal", "rules": "normal",
+		"weights": "res://bot/weights/normal.txt",
+		"note": "normal rules, 1.26 APP held out",
+	},
+	{
+		"name": "standard", "mode": "standard", "rules": "guideline",
+		"weights": "res://bot/weights/standard.txt",
+		"note": "no all-spin: quad wells and I-dependency, a different game",
+	},
+]
+
 var piece_set: PieceSet
-## The rule mode handed to the bot. Must match the RuleSet the game is applying, or the bot
-## searches for value the game will not pay -- see `main._pilot_rules_warning`.
+## Which of PRESETS is loaded.
+var preset_index: int = 0
+## The rule mode handed to the bot, and the weights it searches with. Set from a preset; the
+## backend reads both ONCE at startup, so changing either restarts it.
 var mode: String = "allspin"
 var weights: String = "res://bot/weights/allspin_slots.txt"
 ## Mirrors BeamSolver's field so main can set it uniformly; the Rust search depth is fixed by
@@ -66,11 +103,34 @@ static func binary_path() -> String:
 func available() -> bool:
 	return binary_path() != ""
 
+func preset() -> Dictionary:
+	return PRESETS[clampi(preset_index, 0, PRESETS.size() - 1)]
+
+## Loads a bot. The backend is stopped rather than reconfigured, because it reads its weights
+## once at startup; the next solve brings it back up with the new ones.
+func use_preset(i: int) -> Dictionary:
+	preset_index = posmod(i, PRESETS.size())
+	var p := preset()
+	mode = p["mode"]
+	weights = p["weights"]
+	_stop()
+	_warned = false
+	last_error = ""
+	unreachable = 0
+	return p
+
+func next_preset() -> Dictionary:
+	return use_preset(preset_index + 1)
+
 ## Same signature as BeamSolver.solve, so either can be dropped into the worker.
 ##
 ## Returns [] on any failure, having set `last_error`. An empty plan makes autoplay wait
 ## rather than place something arbitrary, which is the right failure: a wrong placement is
 ## much harder to notice than a stalled one.
+## `gate_state` is set by the caller before each solve, because it is game state the board
+## cannot carry: Game owns it, and under gate rules the search is blind without it.
+var gate_state: Array = []
+
 func solve(board: Board, queue: Array, hold: PieceDef, _progress: Callable, b2b: int) -> Array:
 	if queue.is_empty() or piece_set == null:
 		return []
@@ -78,7 +138,7 @@ func solve(board: Board, queue: Array, hold: PieceDef, _progress: Callable, b2b:
 		return []
 	# One line out, one line back. Blocking, and that is the point: this runs on main's solve
 	# thread, so the wait costs a later plan rather than a dropped frame.
-	_io.store_line(_state_json(board, queue, hold, b2b))
+	_io.store_line(_state_json(board, queue, hold, b2b, gate_state))
 	_io.flush()
 	var line := _io.get_line()
 	if line.is_empty():
@@ -164,7 +224,8 @@ func _stop() -> void:
 ## wound arrays go with it because `--board` alone cannot express them, and under all-spin
 ## rules they are real: `RuleSet.allspin()` turns `repeat_penalty` on, so the board grows
 ## unclearable rows, and a bot that thought it could clear them would plan into a wall.
-func _state_json(board: Board, queue: Array, hold: PieceDef, b2b: int) -> String:
+func _state_json(board: Board, queue: Array, hold: PieceDef, b2b: int,
+		gate: Array = []) -> String:
 	var top := 0
 	while top < board.total_height and board.row_is_empty(top):
 		top += 1
@@ -188,6 +249,10 @@ func _state_json(board: Board, queue: Array, hold: PieceDef, b2b: int) -> String
 		"b2b": b2b,
 		"wound_left": wound_left,
 		"wound_hole": wound_hole,
+		# [placements left, spin clears in the chain, the opener's value]. Under gate rules
+		# attack comes only from a completed chain, so a bot that cannot see the chain it is
+		# already in never finishes one.
+		"gate": gate,
 	})
 
 ## The bot's plan as Placements.

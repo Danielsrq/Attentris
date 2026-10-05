@@ -82,7 +82,13 @@ round trip against a ~15ms search, which capped piloting at roughly 8 pieces per
 Measured end to end through Godot, 200 piloted pieces: **12.6s including engine startup**, so
 about 53ms a piece against 112ms+ before.
 
-* `--state-file` holds `{board, queue, hold, b2b, wound_left, wound_hole}`. A **file**, not a
+* The state holds `{board, queue, hold, b2b, wound_left, wound_hole, gate}`. Everything in
+  it is reward state the board alone cannot carry, and each omission is silent: a missing
+  `b2b` costs chain value, missing `wound_*` makes the bot plan into unclearable rows, and a
+  missing `gate` cost the gate4 weights their ENTIRE output -- 2.6 APP in `bot play` against a
+  flat 0.000 piloting Godot, because under gate rules `r.attack` comes only from a completed
+  chain and a bot that believes the gate is shut never completes one.
+* `--state-file` is the one-shot form of the same thing. A **file**, not a
   `--state` argument: the state is JSON, and a quoted JSON blob in a Windows process argument
   is mangled before this binary sees it. Both forms are accepted; the file is what Godot uses.
 * `wound_*` travel because `--board` cannot express an unclearable row, and under all-spin
@@ -101,6 +107,20 @@ Measured in-game against this binary's own numbers, 400 pieces of all-spin:
 |---|---|---|
 | `bot play` | 2.582 | 0/8 |
 | piloting Godot | 2.550 | 0 |
+
+The weight sets on the in-game toggle (`BotPilot.PRESETS`), 250 piloted pieces each, with the
+Godot rules preset each one was tuned against:
+
+| bot | rules | APP in Godot | note |
+|---|---|---|---|
+| `allspin-slots` | allspin | 2.32 | strongest; all-spin pays for every spin |
+| `allspin` | allspin | 2.30 | the earlier set, no spin-slot features |
+| `normal` | normal | 0.97 | 5 quads; non-T spins are Minis |
+| `standard` | guideline | 0.77 | 8 quads -- a quad-well bot, a different game |
+| `gate4` | gate_b2b | 0.56 | tuned with garbage; gate pays only for chains |
+
+`gate4` against 0.612 in `bot play` is the pairing working; it read 0.000 until `gate` was
+added to the state.
 
 Within 2%, which is what says the rules pairing and the B2B chain are crossing the wire
 intact. A large gap is the symptom to watch for; it has no other.

@@ -313,6 +313,10 @@ func _resolve_hints() -> void:
 		return
 	var brain := _brain()
 	brain.depth = AUTOPLAY_DEPTH if autoplay else hint_steps
+	# Gate state travels with the request: under gate rules it is the whole reward signal, and
+	# the board cannot carry it.
+	if brain == pilot:
+		pilot.gate_state = game.gate_state.duplicate()
 	if threaded_solve and not Engine.is_editor_hint():
 		_request_threaded_solve()
 		return
@@ -345,10 +349,10 @@ func pilot_status() -> String:
 	if pilot == null or not pilot.available():
 		return "bot not built -- cargo build --release in bot/"
 	var preset: String = RULE_PRESETS[rules_preset]
-	if pilot.mode == "allspin" and preset != "allspin":
-		return "bot is all-spin but rules are '%s' -- press the handling toggle" % preset
-	if pilot.mode != "allspin" and preset == "allspin":
-		return "rules are all-spin but bot mode is '%s'" % pilot.mode
+	var want: String = String(pilot.preset()["rules"])
+	if preset != want:
+		return "bot '%s' wants '%s' rules, game is on '%s'" % [
+			pilot.preset()["name"], want, preset]
 	if pilot.unreachable > 0:
 		return "%d placements Godot could not reach" % pilot.unreachable
 	return ""
@@ -445,12 +449,32 @@ func _handle_meta_keys() -> void:
 		# slot and check a kick by hand.
 		game.gravity_enabled = not game.gravity_enabled
 	if reader.pressed("toggle_handling"):
-		rules_preset = (rules_preset + 1) % RULE_PRESETS.size()
-		# Swap the ruleset in place so the run in progress is preserved.
-		var keep_gravity := game.gravity_enabled
-		game.rules = _preset_rules()
-		rules = game.rules
-		game.gravity_enabled = keep_gravity
+		_use_rules((rules_preset + 1) % RULE_PRESETS.size())
+	if reader.pressed("cycle_bot"):
+		_cycle_bot()
+
+## Swaps the ruleset in place, so the run in progress is preserved.
+func _use_rules(index: int) -> void:
+	rules_preset = posmod(index, RULE_PRESETS.size())
+	var keep_gravity := game.gravity_enabled
+	game.rules = _preset_rules()
+	rules = game.rules
+	game.gravity_enabled = keep_gravity
+
+## Next bot, and the rules it was tuned under, together.
+##
+## The rules move WITH the bot deliberately. Every weight set here was tuned against one rule
+## mode, and running it under another is the one failure in the pilot with no symptom except
+## playing worse than its own benchmarks -- so the toggle makes the mismatch unreachable
+## rather than leaving pilot_status() to complain about it afterwards.
+func _cycle_bot() -> void:
+	if pilot == null:
+		return
+	var p := pilot.next_preset()
+	var want: int = RULE_PRESETS.find(String(p["rules"]))
+	if want >= 0:
+		_use_rules(want)
+	_needs_resolve = true
 
 func _dispatch(events: Array) -> void:
 	# This is the seam the right-hand minigame will hook into: it consumes the same

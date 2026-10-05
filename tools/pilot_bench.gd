@@ -18,6 +18,7 @@ var _pieces := 300
 var _frames := 0
 var _max_frames := 120000
 var _seed := 12345
+var _bot := -1
 var _restarted := false
 
 func _initialize() -> void:
@@ -38,6 +39,22 @@ func _initialize() -> void:
 		quit(1)
 		return
 	_main.rules_preset = idx
+	# --bot NAME picks one of BotPilot.PRESETS and brings the game's rules with it, so a run
+	# cannot accidentally measure a bot under rules it was not tuned for.
+	var want := String(args.get("bot", ""))
+	if want != "":
+		var found := -1
+		for i in BotPilot.PRESETS.size():
+			if String(BotPilot.PRESETS[i]["name"]) == want:
+				found = i
+		if found < 0:
+			var names: Array = []
+			for pr in BotPilot.PRESETS:
+				names.append(pr["name"])
+			push_error("unknown --bot %s (have %s)" % [want, ", ".join(names)])
+			quit(1)
+			return
+		_bot = found
 	_main.bot_pilot = true
 	_main.autoplay = true
 	_main.autoplay_pps = _main.PPS_UNCAPPED
@@ -74,6 +91,13 @@ func _process(_delta: float) -> bool:
 	if not _restarted:
 		# Now that _ready has run, restart on the chosen seed under the chosen preset.
 		_restarted = true
+		# After _ready, so the pilot exists; the preset carries its own rules with it.
+		if _bot >= 0:
+			var p: Dictionary = _main.pilot.use_preset(_bot)
+			var r: int = _main.RULE_PRESETS.find(String(p["rules"]))
+			if r >= 0:
+				_main.rules_preset = r
+			print("bot '%s' under '%s' rules -- %s" % [p["name"], p["rules"], p["note"]])
 		_main._new_game(_seed)
 		var trouble: String = _main.pilot_status()
 		if trouble != "":

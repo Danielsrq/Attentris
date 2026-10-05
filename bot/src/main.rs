@@ -238,6 +238,20 @@ fn state_from_json(src: &str) -> Result<(board::Board, Vec<rules::Piece>, Option
             b.last_wound_hole = b.wound_hole[base + i];
         }
     }
+    // The gate chain, which lives on the BOARD here (search.rs reads burst_armed / gate_len /
+    // gate_pending straight off it) and in Game.gate_state there, in the same order:
+    // placements left, spin clears in the chain, the opener's value held.
+    //
+    // Omitting it is not a small loss. Under gate rules r.attack comes ONLY from a completed
+    // chain, so a bot that always believes the gate is shut never values the second clear of
+    // one and never completes any -- which is exactly how the gate4 weights scored 2.6 APP in
+    // `bot play` and a flat 0.000 piloting Godot.
+    if let Some(g) = v["gate"].as_array() {
+        let at = |i: usize| g.get(i).and_then(|x| x.as_u64()).unwrap_or(0) as u8;
+        b.burst_armed = at(0);
+        b.gate_len = at(1);
+        b.gate_pending = at(2);
+    }
     let letter = |c: char| rules::Piece::from_letter(c).ok_or(format!("bad piece '{c}'"));
     let mut queue = Vec::new();
     for c in v["queue"].as_str().unwrap_or("").chars() {

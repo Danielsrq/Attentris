@@ -32,11 +32,20 @@ static func cells_from(raw: Array) -> Dictionary:
 
 ## The placement standing on `want`, or null if no legal path reaches it.
 ##
-## Prefers a path whose LAST action is a rotation registering a spin. That preference is not
-## cosmetic: `Game` only consults `SpinDetect` when `last_action_was_rotation` is set, so a
-## placement that omits it is silently un-spinnable whatever shape it lands in -- and a spin is
-## never worth less than the same cells without one, which is the same reasoning the Rust move
-## generator uses when it keeps the best spin per cell set.
+## Prefers a path whose LAST action is a rotation registering the BEST spin available. That
+## preference is not cosmetic, and neither is the word "best":
+##
+## `Game` only consults `SpinDetect` when `last_action_was_rotation` is set, so a placement
+## that omits it is silently un-spinnable whatever shape it lands in. And the same cells can
+## be reached by different kicks that score differently -- the Mini-to-Full upgrade turns on
+## the kick index -- so taking the FIRST spin found rather than the best quietly downgrades
+## Full spins to Minis.
+##
+## That cost real attack and was invisible under all-spin rules, where every spin is Full
+## already. Under normal-based rules it halved the `normal` bot's output, and under gate rules
+## it zeroed the `gate4` bot's entirely, because gate_value() pays for a Full spin double and
+## nothing at all for a Mini. The Rust move generator keeps the best spin per cell set for
+## exactly this reason; this now matches it.
 ## `out_actions`, when given, is filled with the input names leading to the returned
 ## placement -- which is how `tests/spin_path_check.gd` can replay the path through a real
 ## Game and show it. Carried here rather than left to the caller so there is ONE BFS over the
@@ -46,8 +55,9 @@ static func find(b: Board, def: PieceDef, want: Dictionary, rules: RuleSet,
 	var spawn := Vector2i((b.width - def.box) / 2, b.buffer_height - def.first_filled_row)
 	if not b.can_place(def.rotations[0], spawn):
 		return null
-	var best: Placement = null                       # any path, kept as the fallback
+	var best: Placement = null                       # best so far, by spin rank
 	var best_path: Array = []
+	var best_rank := -1
 	var start := [spawn, 0]
 	var seen := {start: true}
 	# state -> [previous state, the input that got here]; null for the spawn.
@@ -62,7 +72,9 @@ static func find(b: Board, def: PieceDef, want: Dictionary, rules: RuleSet,
 		var pos: Vector2i = s[0]
 		var rot: int = s[1]
 		if best == null and cells_at(def, rot, pos) == want and _grounded(b, def, rot, pos):
+			# A move-last path can never register a spin, so it ranks lowest.
 			best = _placement(b, def, rot, pos, false, -1, rules)
+			best_rank = 0
 			best_path = _path_to(parent, s)
 		for m in moves:
 			var np: Vector2i = pos + moves[m]
@@ -83,16 +95,17 @@ static func find(b: Board, def: PieceDef, want: Dictionary, rules: RuleSet,
 				# already seen can still be the first to arrive here by rotation.
 				if cells_at(def, to, np) == want and _grounded(b, def, to, np):
 					var p := _placement(b, def, to, np, true, i, rules)
-					var turn := "%s (kick %d)" % [t, i]
-					if p.spin != SpinDetect.Kind.NONE:
-						var path := _path_to(parent, s)
-						path.append(turn)
-						out_actions.assign(path)
-						return p
-					if best == null:
+					var rank := _spin_rank(p.spin)
+					if rank > best_rank:
 						best = p
+						best_rank = rank
 						best_path = _path_to(parent, s)
-						best_path.append(turn)
+						best_path.append("%s (kick %d)" % [t, i])
+					# Only a FULL spin is worth stopping for; anything less may still be
+					# beaten by another kick to the same cells.
+					if rank >= 2:
+						out_actions.assign(best_path)
+						return best
 				var ns2 := [np, to]
 				if not seen.has(ns2):
 					seen[ns2] = true
@@ -103,6 +116,15 @@ static func find(b: Board, def: PieceDef, want: Dictionary, rules: RuleSet,
 	if best != null:
 		out_actions.assign(best_path)
 	return best
+
+## Full beats Mini beats no spin. The ordering is what makes "best" mean anything, and it is
+## the whole difference between a T-spin double paying 4 under gate rules and paying 0.
+static func _spin_rank(spin: int) -> int:
+	if spin == SpinDetect.Kind.FULL:
+		return 2
+	if spin == SpinDetect.Kind.MINI:
+		return 1
+	return 0
 
 ## The inputs leading to a state, oldest first.
 static func _path_to(parent: Dictionary, state: Array) -> Array:

@@ -61,6 +61,8 @@ Fixed everywhere and never rebound, so a profile can never shadow restart or the
 | `toggle_autoplay` | F9 | optional |
 | `pps_down` | F10 | optional |
 | `pps_up` | F11 | optional |
+| `toggle_pilot` | F12 | optional |
+| `cycle_bot` | B | optional |
 
 ## Already present
 

@@ -275,6 +275,12 @@ which matters here because the Godot solver is the quad-oriented hint search and
 tucks or kicked spins -- so it cannot play the all-spin game this economy is built around.
 Both answer `solve()` with `Array[Placement]`, so `_stage_placement` needed no change.
 
+`cycle_bot` (B) steps through `BotPilot.PRESETS` and **brings the game's rules with it**, so
+a weight set can never run under rules it was not tuned for. That pairing is not a nicety:
+each set is tuned against one rule mode, and running it under another has no symptom except
+playing worse than its own benchmarks. Output ranges from 2.32 APP (`allspin-slots`) down to
+0.56 (`gate4`), which makes the toggle a difficulty dial as much as a bot picker.
+
 The bot runs as a held-open child process (`bot serve`), started on first use and buried in
 `main._exit_tree` -- a backend outliving the window is the failure mode worth guarding, and the
 thread is joined before the kill so a blocking read cannot hang the join.
