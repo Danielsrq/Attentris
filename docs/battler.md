@@ -293,11 +293,25 @@ Those are letters, not function keys, on purpose: the editor keeps Run (F5), Run
 running, so F5-F11 reach the editor rather than the game. F9 paused the game and F8 quit it,
 which is indistinguishable from the key being ignored. F1-F4 are safe and stayed.
 
-`pilot.set_belief()` pins what the bot believes against what the game scores -- the
-`belief-rules` experiment, and useful rather than merely curious: an all-spin-believing bot
-under normal scoring keeps spamming spins it will not be paid for, and sends **73 fighters
-against 51** over 200 pieces. `pilot_bench --believe <preset>` runs it, and the overlay says
-`EXPERIMENT: ...` while it is pinned, because a mismatch otherwise has no symptom at all.
+**What the bot believes belongs to the bot, not to the game.** Each weight set believes the
+rules it was tuned against, and keeps believing them while the environment scores something
+else -- `allspin-slots` believes all-spin even though the game defaults to normal rules. That
+mismatch is the intended configuration, and the pane header spells it out:
+`allspin-slots believes allspin / game normal`.
+
+Getting it the other way round is fatal, not merely suboptimal. Syncing the belief to the
+game's rules was tried, and all-spin weights against a normal-rules reward **topped out every
+run** of a three-seed 500-piece test at around piece 300, against no deaths and 2.59 APP with
+a coherent belief. Weights that value spin setups cannot be scored by a reward that will not
+pay for them.
+
+It also sends more fighters, which is what this half cares about: a bot spamming spins it
+will not be paid for puts **73 into the lane against 51** over 200 pieces.
+
+`pilot.set_belief()` overrides it either way -- point the bot at the real environment to make
+it honest, or at rules it was never tuned for to see the cost. `pilot_bench --believe <preset>`
+runs that, and the overlay says `EXPERIMENT:` whenever the belief does not match the weights,
+because a wrongly-believing bot keeps playing well and is quietly paid for a different game.
 
 **Attack per piece is the wrong metric for this half.** `spawns_unit()` fires on a quad or any
 spin, and a Mini is still a spin -- so a fighter is sent whether or not the clear pays. The
@@ -307,8 +321,8 @@ two come apart hard. Same `allspin_slots` weights, 200 piloted pieces, one seed:
 |---|---|---|---|
 | allspin | allspin | 2.15 | 73 |
 | allspin_nw | allspin_nw | 2.24 | **75** |
-| normal | allspin (pinned belief) | 0.24 | 73 |
-| normal | normal | 0.84 | **51** |
+| normal | allspin (the default) | 0.24 | 73 |
+| normal | normal | 0.84 | **51**, and tops out by ~300 pieces |
 
 Attack swings ninefold while spawn output barely moves -- until the bot *believes* normal
 rules, at which point it stops spamming spins that no longer pay and sends a third fewer

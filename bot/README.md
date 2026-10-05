@@ -108,11 +108,15 @@ Measured in-game against this binary's own numbers, 400 pieces of all-spin:
 | `bot play` | 2.582 | 0/8 |
 | piloting Godot | 2.550 | 0 |
 
-`BotPilot.PRESETS` is weight sets only. The bot's `--mode` is DERIVED from the rules the game
-is applying (`MODE_FOR_RULES`, re-checked before every solve), so the two cannot drift -- the
-mode names already share seven spellings with Godot's presets, and only `guideline` differs,
-which the bot calls `standard`. Deliberate mismatch is therefore no longer reachable from the
-game; it was the `belief-rules` experiment and would need a flag to re-expose.
+`BotPilot.PRESETS` is weight sets, and each one carries the rules it was tuned against as its
+`--mode`. The mode is a property of the WEIGHTS, not of the running game: `allspin_slots.txt`
+searches under all-spin even when the Godot game is scoring normal rules, because a reward
+model the weights were fitted against is not separable from them.
+
+Syncing the mode to the game's rules instead was tried and is fatal -- all-spin weights under
+a normal-rules reward topped out every run of a three-seed, 500-piece test at around piece
+300, against no deaths and 2.59 APP with a coherent mode. `pilot.set_belief()` overrides it
+deliberately, in either direction, and says so on screen.
 
 The weight sets, 250 piloted pieces each, on the rules each one was tuned against:
 

@@ -90,9 +90,18 @@ const PRESETS := [
 var piece_set: PieceSet
 ## Which of PRESETS is loaded.
 var preset_index: int = 0
-## When non-empty, the rules preset the bot is pinned to believe, whatever the game applies.
-## See set_belief().
-var believe: String = ""
+## The rules the bot SEARCHES under. A property of the bot, not of the game.
+##
+## Defaults to the rules its weight set was tuned against, and stays there when the game's
+## rules change -- because weights and reward model are one package. `allspin_slots.txt` was
+## tuned under all-spin, so it believes all-spin even while the environment scores normal
+## rules, and that mismatch is the intended configuration rather than a fault.
+##
+## It is also the difference between working and dying. Measured at 500 pieces over three
+## seeds: believing all-spin gives 2.59 APP and no deaths, while believing normal rules with
+## the same all-spin weights topped out every single run at around piece 300 -- weights that
+## value spin setups against a reward that will not pay for them.
+var believe: String = "allspin"
 ## The rule mode handed to the bot, and the weights it searches with. The backend reads both
 ## ONCE at startup, so changing either restarts it -- which is why they go through setters
 ## rather than being assigned.
@@ -134,39 +143,31 @@ func preset() -> Dictionary:
 
 ## Loads a bot. The backend is stopped rather than reconfigured, because it reads its weights
 ## once at startup; the next solve brings it back up with the new ones.
+## Loads a weight set AND the belief it was tuned with, together. They are one package: a
+## reward model the weights were fitted against is not separable from the weights.
 func use_preset(i: int) -> Dictionary:
 	preset_index = posmod(i, PRESETS.size())
 	var p := preset()
 	weights = p["weights"]
+	believe = String(p["tuned_for"])
+	mode = MODE_FOR_RULES.get(believe, "allspin")
 	_stop()
 	_warned = false
 	last_error = ""
 	unreachable = 0
 	return p
 
-## Points the bot at the rules the GAME is applying. Called before every solve, so the two
-## cannot drift; restarts the backend only when the mode actually changes.
+## Overrides what the bot believes. "" restores the belief its weight set was tuned for.
 ##
-## Skipped entirely while `believe` is set -- see there.
-func follow_rules(rules_preset_name: String) -> void:
-	if believe != "":
-		return
-	_set_mode(MODE_FOR_RULES.get(rules_preset_name, ""))
-
-## Pins what the bot BELIEVES, regardless of what the game applies. "" hands control back to
-## follow_rules().
-##
-## A deliberate mismatch, and a real experiment rather than a mistake: the bot searches under
-## one rule set while the game scores another, which is the `belief-rules` question. It is
-## also measurably useful here -- an all-spin-believing bot under normal rules keeps spamming
-## spins it will not be paid for, which sends a third MORE fighters into the lane than a bot
-## that knows the truth (73 against 51 over 200 pieces).
-##
-## Named rather than a bool so the overlay can say which belief is pinned, because a mismatch
-## has no symptom of its own: the bot plays well and is quietly underpaid.
+## The deliberate-mismatch control, in both directions: point an all-spin bot at normal rules
+## to make it honest about the environment, or point any bot at rules it was not tuned for to
+## see what that costs. Named rather than a bool so the overlay can say WHICH belief is held,
+## because a belief that does not match the weights has no symptom of its own -- the bot keeps
+## playing well and is quietly paid for a different game.
 func set_belief(rules_preset_name: String) -> void:
 	if rules_preset_name == "":
-		believe = ""
+		believe = String(preset()["tuned_for"])
+		_set_mode(MODE_FOR_RULES.get(believe, ""))
 		return
 	var want: String = MODE_FOR_RULES.get(rules_preset_name, "")
 	if want == "":

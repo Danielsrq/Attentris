@@ -315,10 +315,9 @@ func _resolve_hints() -> void:
 	# Gate state travels with the request: under gate rules it is the whole reward signal, and
 	# the board cannot carry it.
 	if brain == pilot:
-		# The bot's belief tracks the rules the GAME is applying, every solve. It is never a
-		# separate choice, so the two cannot drift -- and drifting has no symptom beyond the
-		# bot quietly playing for value it will not be paid.
-		pilot.follow_rules(RULE_PRESETS[rules_preset])
+		# The bot's belief is NOT synced to the game's rules. It belongs to the weight set --
+		# see BotPilot.believe. Only the gate chain travels, because that is live game state
+		# the board cannot carry rather than a rule.
 		pilot.gate_state = game.gate_state.duplicate()
 	if threaded_solve and not Engine.is_editor_hint():
 		_request_threaded_solve()
@@ -355,15 +354,18 @@ func piloted() -> bool:
 func pilot_status() -> String:
 	if pilot == null or not pilot.available():
 		return "bot not built -- cargo build --release in bot/, using BeamSolver"
-	# A rules mismatch is no longer reachable -- follow_rules() derives the mode every solve --
-	# so the only pairing fault left is a rules preset the bot has no mode for at all.
+	# The only structural fault left is a rules preset the bot has no mode for at all.
 	var preset: String = RULE_PRESETS[rules_preset]
 	if not BotPilot.MODE_FOR_RULES.has(preset):
 		return "no bot mode for '%s' rules" % preset
-	# A pinned belief is intentional, but it still has to be visible: the bot plays well and
-	# is quietly paid for a different rule set, which looks like nothing at all.
-	if pilot.believe != "" and pilot.believe != preset:
-		return "EXPERIMENT: bot believes '%s', game scores '%s'" % [pilot.believe, preset]
+	# Believing something OTHER than what the weights were tuned for is the suspicious state,
+	# and it kills: all-spin weights believing normal rules topped out every run of a
+	# three-seed, 500-piece test. Believing the tuned-for rules while the game scores
+	# something else is the intended setup and says nothing.
+	var tuned: String = String(pilot.preset()["tuned_for"])
+	if pilot.believe != tuned:
+		return "EXPERIMENT: '%s' weights believing '%s' rules" % [
+			pilot.preset()["name"], pilot.believe]
 	if pilot.unreachable > 0:
 		return "%d placements Godot could not reach" % pilot.unreachable
 	return ""
@@ -481,12 +483,12 @@ func _refresh_brain_label() -> void:
 		return
 	if not piloted():
 		battler.brain_label = "beam solver (bot not built)"
-	elif pilot.believe != "":
-		battler.brain_label = "%s  believes %s  /  rules %s" % [
-			pilot.preset()["name"], pilot.believe, RULE_PRESETS[rules_preset]]
+	elif pilot.believe == RULE_PRESETS[rules_preset]:
+		battler.brain_label = "%s  /  %s" % [pilot.preset()["name"], pilot.believe]
 	else:
-		battler.brain_label = "%s  /  %s" % [
-			pilot.preset()["name"], RULE_PRESETS[rules_preset]]
+		# Spelled out whenever belief and environment differ, which is the normal case now.
+		battler.brain_label = "%s  believes %s  /  game %s" % [
+			pilot.preset()["name"], pilot.believe, RULE_PRESETS[rules_preset]]
 	battler.queue_redraw()
 
 ## Next WEIGHT SET, and a jump to the rules it was tuned against.
@@ -498,12 +500,11 @@ func _refresh_brain_label() -> void:
 func _cycle_bot() -> void:
 	if pilot == null:
 		return
-	var p := pilot.next_preset()
-	var want: int = RULE_PRESETS.find(String(p["tuned_for"]))
-	if want >= 0:
-		_use_rules(want)      # which refreshes the label
-	else:
-		_refresh_brain_label()
+	# Changes the bot only. The game's rules are a separate axis and are deliberately left
+	# alone: an all-spin bot believing all-spin while the environment scores normal rules is
+	# the intended setup, not something to be tidied away.
+	pilot.next_preset()
+	_refresh_brain_label()
 	_needs_resolve = true
 
 func _dispatch(events: Array) -> void:

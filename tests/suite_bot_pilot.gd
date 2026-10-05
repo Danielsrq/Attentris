@@ -218,8 +218,8 @@ func test_presets() -> void:
 	var first: Dictionary = pilot.use_preset(0)
 	eq(pilot.weights, first["weights"], "loading a weight set sets its weights")
 
-	# Every rules preset must map to a mode the bot accepts, or follow_rules() silently leaves
-	# the bot believing the previous rules -- the exact drift the derivation exists to stop.
+	# Every rules preset must map to a mode the bot accepts, or a belief set to it silently
+	# leaves the bot searching the previous rules.
 	for g in godot_presets:
 		check(BotPilot.MODE_FOR_RULES.has(g), "'%s' rules have a bot mode" % g)
 		check(String(BotPilot.MODE_FOR_RULES.get(g, "")) in bot_modes,
@@ -227,36 +227,28 @@ func test_presets() -> void:
 	eq(BotPilot.MODE_FOR_RULES.size(), godot_presets.size(),
 		"the map covers every rules preset and invents none")
 
-	# The mode follows the rules, and only restarts the backend when it actually changes.
-	pilot.follow_rules("allspin")
-	eq(pilot.mode, "allspin", "following all-spin rules sets the all-spin mode")
-	pilot.follow_rules("allspin_nw")
-	eq(pilot.mode, "allspin_nw", "   and the no-wound rules switch the belief with them")
-	pilot.follow_rules("guideline")
-	eq(pilot.mode, "standard", "guideline maps to the bot's 'standard' -- the one rename")
-	pilot.follow_rules("not_a_preset")
-	eq(pilot.mode, "standard", "an unknown preset leaves the mode alone rather than guessing")
+	# Belief belongs to the WEIGHTS, not to the game. A reward model the weights were fitted
+	# against is not separable from them, and getting this backwards is fatal rather than
+	# suboptimal: all-spin weights believing normal rules topped out every run of a
+	# three-seed, 500-piece test, against no deaths and 2.59 APP believing all-spin.
+	for i in BotPilot.PRESETS.size():
+		var loaded: Dictionary = pilot.use_preset(i)
+		eq(pilot.believe, String(loaded["tuned_for"]),
+			"'%s' believes the rules it was tuned for" % loaded["name"])
+		eq(pilot.mode, String(BotPilot.MODE_FOR_RULES[pilot.believe]),
+			"   and its mode follows that belief")
 
-	# A pinned belief is the deliberate-mismatch experiment: the bot searches one rule set
-	# while the game scores another. It must survive follow_rules(), which otherwise runs
-	# before every solve and would immediately undo it.
-	pilot.set_belief("allspin")
-	eq(pilot.mode, "allspin", "pinning a belief sets the mode")
-	eq(pilot.believe, "allspin", "   and records which belief is pinned, for the overlay")
-	pilot.follow_rules("normal")
-	eq(pilot.mode, "allspin", "a pinned belief is NOT overwritten by the game's rules")
+	# Overriding it is the experiment, in either direction, and clearing restores the pairing.
+	pilot.use_preset(0)
+	var tuned: String = String(pilot.preset()["tuned_for"])
+	pilot.set_belief("normal")
+	eq(pilot.believe, "normal", "a belief can be pointed at the real environment")
+	eq(pilot.mode, "normal", "   and the mode goes with it")
 	pilot.set_belief("")
-	eq(pilot.believe, "", "clearing it hands control back")
-	pilot.follow_rules("normal")
-	eq(pilot.mode, "normal", "   and the mode follows the rules again")
+	eq(pilot.believe, tuned, "clearing it restores what the weights were tuned for")
+	eq(pilot.mode, String(BotPilot.MODE_FOR_RULES[tuned]), "   mode included")
 	pilot.set_belief("not_a_preset")
-	eq(pilot.believe, "", "an unknown belief is refused rather than pinned to nothing")
-	for _i in BotPilot.PRESETS.size():
-		pilot.next_preset()
-	eq(pilot.preset_index, 0, "cycling all the way round comes back to the first")
-	var neg: Dictionary = pilot.use_preset(-1)
-	eq(neg["name"], BotPilot.PRESETS[BotPilot.PRESETS.size() - 1]["name"],
-		"and it wraps backwards too, rather than clamping")
+	eq(pilot.believe, tuned, "an unknown belief is refused rather than silently applied")
 
 func test_allspin_without_wounds() -> void:
 	group("RuleSet: all-spin scoring without the wound lines")

@@ -114,10 +114,21 @@ func test_input_map() -> void:
 		print("   .... %s" % str(unregistered))
 		print("   .... declare these in Project Settings > Input Map, then re-run")
 		return
-	# Not a failure: tower selection cannot matter until there is more than one tower type.
+	# Optional actions create themselves in bind_table, so there should be nothing left here.
+	# An optional action quietly absent is a dead key with no error anywhere -- B did nothing
+	# for two rounds for exactly this reason -- so it is a failure now, not a note.
 	var later: Array = reader.missing_optional_actions()
-	if not later.is_empty():
-		print("   note  %d optional action(s) not declared yet: %s" % [later.size(), str(later)])
+	check(later.is_empty(), "every optional action exists after binding%s" % [
+		"" if later.is_empty() else " -- missing %s" % str(later)])
+
+	# And they must be bound, not merely declared: an action with no events is as dead as one
+	# that does not exist.
+	var unbound: Array = []
+	for a in ControlProfiles.OPTIONAL:
+		if InputMap.has_action(a) and InputMap.action_get_events(a).is_empty():
+			unbound.append(a)
+	check(unbound.is_empty(), "   and carries a key%s" % [
+		"" if unbound.is_empty() else " -- %s have none" % str(unbound)])
 
 	# Physical keycodes, not labels. If this regresses, WASD moves on AZERTY and the
 	# numpad stops working with NumLock off -- silently, and only for other people.

@@ -127,7 +127,17 @@ static func guideline() -> Dictionary:
 static func bind_table(table: Dictionary) -> void:
 	for action in table:
 		if not InputMap.has_action(action):
-			continue
+			# OPTIONAL actions create themselves. They are debug toggles, not gameplay keys:
+			# nobody should have to hand-author six entries in Project Settings to get the
+			# bot cycler or the rate keys, and the symptom of not having done so is a key
+			# that silently does nothing -- which has now cost two rounds of "why is B dead?"
+			#
+			# REQUIRED actions are deliberately NOT created. Those are the keys the player
+			# owns, and a half-entered Input Map should report itself (see `missing`) rather
+			# than be quietly papered over with this file's opinion of the right binding.
+			if not (action in OPTIONAL):
+				continue
+			InputMap.add_action(action)
 		InputMap.action_erase_events(action)
 		for key in table[action]:
 			var e := InputEventKey.new()
@@ -156,7 +166,12 @@ static func missing(meta: Dictionary) -> Array:
 	return out
 
 ## The not-needed-yet actions that are also absent. Worth reporting, never worth failing.
-static func missing_optional(meta: Dictionary) -> Array:
+## Optional actions still absent after binding.
+##
+## Expected to be empty now that bind_table creates them, and kept because it is the thing
+## that would notice if that ever stopped working -- an optional action quietly missing is a
+## dead key, with no error anywhere.
+static func missing_optional(_meta: Dictionary) -> Array:
 	var out: Array = []
 	for a in OPTIONAL:
 		if not InputMap.has_action(a):
