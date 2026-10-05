@@ -22,9 +22,8 @@ extends RefCounted
 ## moving left. Passing exact_match would make every binding played with a modifier
 ## held silently stop matching.
 ##
-## Tetris actions come from a ControlProfiles profile, defence actions from its fixed
-## DEFENCE table, and the meta keys from META below -- fixed everywhere, so a profile
-## can never shadow the restart or debug toggles.
+## Tetris actions come from a ControlProfiles profile; the meta keys come from META below
+## and are fixed everywhere, so a profile can never shadow restart or the debug toggles.
 
 const META := {
 	"restart": [KEY_R],
@@ -62,7 +61,7 @@ func set_profile(new_name: String) -> void:
 	# there yet becomes a dead key rather than an error on every tick; `missing()` is how
 	# you find out which.
 	_all = {}
-	for table in [profile, ControlProfiles.DEFENCE, META]:
+	for table in [profile, META]:
 		for action in table:
 			if InputMap.has_action(action):
 				_all[action] = true

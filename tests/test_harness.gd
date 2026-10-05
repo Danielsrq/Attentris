@@ -15,9 +15,17 @@ var _pass := 0
 var _fail := 0
 var _group := ""
 
-## Each suite overrides this and calls its own test functions.
+## Each suite overrides this and calls its own test functions. May be a coroutine: the
+## runner awaits it, so a suite that needs physics frames can await them.
 func run() -> void:
 	pass
+
+## Waits n physics frames. TWO is the minimum anywhere a freshly added Area2D is involved:
+## the first frame registers it, the second runs the step that populates the overlap list.
+## One frame is the classic flake.
+func physics_frames(n: int) -> void:
+	for _i in n:
+		await get_tree().physics_frame
 
 # ------------------------------------------------------------------------------
 # Garbage

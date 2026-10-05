@@ -22,7 +22,7 @@ const SUITES := [
 	"res://tests/suite_audio.gd",
 	"res://tests/suite_input.gd",
 	"res://tests/suite_economy.gd",
-	"res://tests/suite_defence.gd",
+	"res://tests/suite_battler.gd",
 ]
 
 func _ready() -> void:
@@ -30,9 +30,14 @@ func _ready() -> void:
 	var failed := 0
 	for path in SUITES:
 		var suite: TestHarness = load(path).new()
-		# Parented so a suite that needs the tree (the defence view does) can use it.
+		# Parented so a suite that needs the SceneTree can use it.
 		add_child(suite)
-		suite.run()
+		# AWAITED, not called. A suite that needs physics frames is a coroutine, and
+		# calling it plainly would suspend it, let the runner sum the counters before it had
+		# run, and report "0 passed, 0 failed" with exit code 0 -- a green suite that ran
+		# nothing. await on a non-coroutine simply proceeds, so this is right for both.
+		@warning_ignore("redundant_await")
+		await suite.run()
 		passed += suite._pass
 		failed += suite._fail
 		suite.queue_free()

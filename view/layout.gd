@@ -13,24 +13,32 @@ var title_h: int = 22
 ## Widest piece a preview box must hold, in cells. 5 leaves room for pentominoes.
 var preview_span: int = 5
 
-## Height of the tower palette strip across the top of the right pane. The defence grid
-## gets whatever is left, and at 18 rows of 30px that is exactly the 540 remaining -- so
-## this number is also what decides whether the grid fits.
-var palette_h: int = 60
+## Depth of the battler lane, in pixels: 8 bodies at 32px.
+##
+## This number IS the number of bodies that seals the lane, which makes it the most
+## load-bearing constant in the minigame. At 5 deep, five units form an impenetrable wall and
+## the front line stops moving -- a count reached constantly at the current spawn rates, so a
+## stalemate would be the default state rather than an event. 8 costs eight bodies to seal and
+## leaves lateral room for the steering's rotation search to work in.
+##
+## Its ratio to BattlerRules.aggro_px also decides what KIND of flanking exists. 256 deep
+## against 96 of aggro leaves no blind corridor, so a flanker is always seen and a defender
+## peels off to intercept: the flank is a race decided by distance and numbers rather than a
+## gap to walk through.
+var lane_h: int = 256
 
 var field_origin: Vector2
 var field_size: Vector2
 var hold_rect: Rect2
 var next_rect: Rect2
 var stats_origin: Vector2
-## The whole right-hand column. Still used by replay.tscn, which has no defence board.
+## The whole right-hand column: the battler's home, and still used by replay.tscn.
 var right_pane: Rect2
-## The two halves the defence game splits that column into.
-var palette_rect: Rect2
-var defence_rect: Rect2
-## Resource bank and the earned log, as a full-width band under everything. They moved out
-## of the pane when the defence board took it: the pane has 38px of slack beside a 600px
-## grid, which is not a readout.
+## One lane, vertically centred in the pane. One of about seven that would fit, so adding
+## lanes later is a loop rather than a redesign.
+var lane_rect: Rect2
+## Resource bank and the earned log, as a full-width band under everything, where they
+## moved when the pane was given to the minigame.
 var economy_strip: Rect2
 
 func _init(board: Board, viewport: Vector2, cell_size: int = 30) -> void:
@@ -55,10 +63,9 @@ func _init(board: Board, viewport: Vector2, cell_size: int = 30) -> void:
 		Vector2(pane_x, field_origin.y),
 		Vector2(maxf(0.0, viewport.x - pane_x - margin), field_size.y))
 
-	palette_rect = Rect2(right_pane.position, Vector2(right_pane.size.x, float(palette_h)))
-	defence_rect = Rect2(
-		right_pane.position + Vector2(0.0, float(palette_h)),
-		Vector2(right_pane.size.x, maxf(0.0, right_pane.size.y - float(palette_h))))
+	lane_rect = Rect2(
+		right_pane.position + Vector2(0.0, (right_pane.size.y - float(lane_h)) * 0.5),
+		Vector2(right_pane.size.x, float(lane_h)))
 
 	# `pad` rather than `margin` below the field: the field is vertically centred, so there
 	# are only 60px between its bottom edge and the window, and a full margin at both ends
@@ -69,29 +76,12 @@ func _init(board: Board, viewport: Vector2, cell_size: int = 30) -> void:
 		Vector2(maxf(0.0, viewport.x - float(margin) * 2.0),
 			maxf(0.0, viewport.y - strip_y - float(pad))))
 
-## Top-left pixel of a cols x rows defence grid, centred in `defence_rect`.
+## Mid-depth of the lane: the seed for a spawn, which then searches outward for room.
 ##
-## The defence grid deliberately uses the SAME `cell` as the playfield -- that shared cell
-## size is what makes the two halves read as one board rather than two games sharing a
-## window. At 18 rows it fills `defence_rect` exactly in height, so only the horizontal
-## slack is ever centred.
-func defence_origin(cols: int, rows: int) -> Vector2:
-	var span := Vector2(float(cols * cell), float(rows * cell))
-	var slack := defence_rect.size - span
-	# Clamped at zero, never halved into the negative. A pane NARROWER than the grid would
-	# otherwise centre the board leftwards -- straight on top of the playfield, which is
-	# exactly what it did at any window under about 1240px wide. Overflowing off the right
-	# edge is ugly; overlapping the other game is wrong.
-	return defence_rect.position + Vector2(maxf(0.0, slack.x), maxf(0.0, slack.y)) * 0.5
-
-## True when the pane is actually wide enough for the grid. The defence view skips drawing
-## when it is not, rather than painting over the Tetris board.
-func defence_fits(cols: int, rows: int) -> bool:
-	return defence_rect.size.x >= float(cols * cell) and defence_rect.size.y >= float(rows * cell)
-
-## Top-left pixel of a defence cell, in the same spirit as cell_pos for the playfield.
-func defence_cell_pos(origin: Vector2, x: int, y: int) -> Vector2:
-	return origin + Vector2(float(x * cell), float(y * cell))
+## Not a "floor". The lane is two-dimensional now, so a unit's y is a position it walks around
+## in rather than a baseline it stands on, and there is no single line the feet sit at.
+func lane_centre_y() -> float:
+	return lane_rect.position.y + lane_rect.size.y * 0.5
 
 ## Top-left pixel of a visible-field cell. Rows above buffer_height are off-screen.
 func cell_pos(board: Board, x: int, y: int) -> Vector2:

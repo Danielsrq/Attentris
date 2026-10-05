@@ -59,9 +59,11 @@ var top_out_reason: String = ""
 ## Debug affordance: with gravity off, soft drop still works, which makes it easy to
 ## walk a piece into a slot and verify kicks by hand.
 var gravity_enabled: bool = true
-## Scales PASSIVE gravity only, so looking away at the defence board costs tempo rather
-## than the piece. Soft drop is deliberately unscaled -- it is player intent, and nobody
-## is holding it while building.
+## Scales PASSIVE gravity only, so a slowdown costs tempo rather than the piece. Soft drop
+## is deliberately unscaled -- it is player intent, and nobody is holding it while building.
+##
+## Has no writer since the auto-battler replaced the tower defence, which needs no input and
+## so has no focus switch. Kept because a general slowdown is obviously useful later.
 ##
 ## A field on Game rather than a value on RuleSet, because `rules` is a shared preset that
 ## _handle_meta_keys replaces wholesale when the handling toggle fires; a scale stored
@@ -485,8 +487,8 @@ func _scan_structures(events: Array) -> void:
 # Incoming garbage
 # ------------------------------------------------------------------------------
 
-## Garbage arriving from outside the Tetris board -- today, enemies that breached the
-## defence board's left wall.
+## Garbage arriving from outside the Tetris board -- today, a red fighter that reached the
+## left edge of the battler lane.
 ##
 ## This exists because Board.push_garbage cannot kill you. It raises the stack and
 ## silently discards whatever it shifts past row 0; its own doc calls that "a top-out in

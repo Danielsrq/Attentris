@@ -6,7 +6,7 @@
 [ext_resource type="Script" uid="uid://cgq2jsvlqpu32" path="res://view/debug_overlay.gd" id="4_overlay"]
 [ext_resource type="Script" uid="uid://bbafucb2mc0am" path="res://view/audio_bus.gd" id="5_audio"]
 [ext_resource type="Script" uid="uid://c00wj6ci0vvan" path="res://view/hint_view.gd" id="6_hint"]
-[ext_resource type="Script" uid="uid://x13aeuo5gybo" path="res://view/defence_view.gd" id="7_defence"]
+[ext_resource type="Script" uid="uid://dr2ybbtutwi2q" path="res://battler/arena.gd" id="7_battler"]
 
 [node name="Main" type="Node2D" unique_id=1375788954]
 script = ExtResource("1_main")
@@ -30,5 +30,5 @@ master_db = -4.5
 gain_move = -6.0
 gain_combo_break = -6.0
 
-[node name="DefenceView" type="Node2D" parent="." unique_id=1395128423]
-script = ExtResource("7_defence")
+[node name="Battler" type="Node2D" parent="." unique_id=1842663501]
+script = ExtResource("7_battler")

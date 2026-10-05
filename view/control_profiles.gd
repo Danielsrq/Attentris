@@ -4,8 +4,7 @@ extends RefCounted
 ## Named key bindings, and the one place they are pushed into Godot's InputMap.
 ##
 ## A profile covers the eight Tetris actions only. The meta keys (restart, debug
-## toggles, profile cycling) live in InputReader, and the defence-board keys are the
-## fixed DEFENCE table below; neither varies by profile.
+## toggles, profile cycling) live in InputReader and do not vary by profile.
 ##
 ## Bindings are physical keycodes: they follow the key's position on the board, so
 ## WASD stays where your fingers are on AZERTY or Dvorak, and the numpad keys are
@@ -19,86 +18,28 @@ extends RefCounted
 ## the bindings anyway, and a project.godot diff per keybind change is worse than this.
 ## The InputMap is a cache of what is written here, rebuilt by `apply`.
 ##
-## Action names are left unprefixed for the Tetris and meta actions, which were already
-## distinct and are referenced by name from main.gd and the tests. Only the defence
-## actions take a prefix, because there are fifteen of them and they benefit from sorting
-## together in the editor's action list.
+## Action names are unprefixed: the Tetris and meta actions were already distinct and are
+## referenced by name from main.gd and the tests.
 
 const ACTIONS := [
 	"left", "right", "soft_drop", "hard_drop",
 	"rotate_ccw", "rotate_cw", "rotate_180", "hold",
 ]
 
-## Defence-board actions. Deliberately reuse the Tetris keys: focus is exclusive, so
-## while the defence board has it the Tetris keys are idle and the player's hands do not
-## move. Digits are free across every profile and the meta map, so they take tower
-## selection.
-const DEFENCE := {
-	"def_cursor_left": [KEY_A, KEY_LEFT],
-	"def_cursor_right": [KEY_D, KEY_RIGHT],
-	"def_cursor_up": [KEY_W, KEY_UP],
-	"def_cursor_down": [KEY_S, KEY_DOWN],
-	# Aim gets the Tetris rotate keys, not the footprint. Both are rotations, but the aim
-	# has 16 steps against the footprint's 4, so it takes up to eight presses to a
-	# footprint's two -- the one you press most should be the one your fingers already
-	# know as "turn". The footprint moves to numpad 4/6, which read as left/right anyway.
-	"def_aim_ccw": [KEY_KP_7, KEY_Z],
-	"def_aim_cw": [KEY_KP_9, KEY_X],
-	"def_rot_ccw": [KEY_KP_4, KEY_Q],
-	"def_rot_cw": [KEY_KP_6, KEY_E],
-	"def_place": [KEY_KP_0, KEY_SPACE],
-	"def_cancel": [KEY_KP_PERIOD, KEY_BACKSPACE],
-	"def_select_1": [KEY_1],
-	"def_select_2": [KEY_2],
-	"def_select_3": [KEY_3],
-	"def_select_4": [KEY_4],
-	"def_select_5": [KEY_5],
-}
-
-## Display order for the defence keys, same role ACTIONS plays for Tetris.
-const DEFENCE_ACTIONS := [
-	"def_cursor_left", "def_cursor_right", "def_cursor_up", "def_cursor_down",
-	"def_aim_ccw", "def_aim_cw", "def_rot_ccw", "def_rot_cw",
-	"def_place", "def_cancel",
-]
-
-const DEFENCE_LABELS := {
-	"def_cursor_left": "cursor left",
-	"def_cursor_right": "cursor right",
-	"def_cursor_up": "cursor up",
-	"def_cursor_down": "cursor down",
-	"def_aim_ccw": "aim ccw",
-	"def_aim_cw": "aim cw",
-	"def_rot_ccw": "turn block ccw",
-	"def_rot_cw": "turn block cw",
-	"def_place": "build",
-	"def_cancel": "cancel / sell",
-}
-
 ## The action the user bound by hand in project.godot. Listed so `apply` knows to leave
 ## it alone -- it is the one action this file does not own.
 const EXTERNAL := ["switch_board"]
 
-## Declared above but not REQUIRED, so `missing()` does not report them as a gap and the
-## defence board does not warn about them.
+## Declared but not REQUIRED, so `missing()` does not report them as a gap.
 ##
 ## The distinction is whether leaving one out stops you playing or just costs that one key.
-## These only cost their key:
-##
-##   def_select_*     tower selection cannot matter until there is more than one tower type
-##   toggle_handling  F2, swaps the ruleset preset mid-run
-##   toggle_gravity   F3, a kick-checking affordance
-##   toggle_grid      F4, cosmetic
-##   cycle_profile    F5, only matters if you want a different control profile
-##   toggle_hints     F6, the solver overlay
-##   toggle_ghost     F7, the T-spin assist
-##   toggle_autoplay  F9, and F10/F11 its rate
+## These only cost their key: F2 handling, F3 gravity, F4 grid, F5 profile, F6 hints,
+## F7 spin assist, F9 autoplay and F10/F11 its rate.
 ##
 ## Deliberately NOT here, because without them something is actually unusable: the eight
-## Tetris actions, `switch_board`, the ten `def_*` that drive the board, `restart` (the
-## game can be lost), and `toggle_debug` (how you see anything when it misbehaves).
+## Tetris actions, `restart` (the game can be lost), and `toggle_debug` (how you see
+## anything when it misbehaves).
 const OPTIONAL := [
-	"def_select_1", "def_select_2", "def_select_3", "def_select_4", "def_select_5",
 	"toggle_handling", "toggle_gravity", "toggle_grid", "cycle_profile",
 	"toggle_hints", "toggle_ghost", "toggle_autoplay", "pps_down", "pps_up",
 ]
@@ -194,12 +135,11 @@ static func bind_table(table: Dictionary) -> void:
 			e.physical_keycode = key
 			InputMap.action_add_event(action, e)
 
-## Binds the named profile plus the fixed defence keys. Call on each profile switch.
+## Binds the named profile. Call on each profile switch.
 ##
 ## `switch_board` is untouched -- it is authored in project.godot and owned by the user.
 static func apply(profile_name: String) -> void:
 	bind_table(get_profile(profile_name))
-	bind_table(DEFENCE)
 
 ## Actions this file expects but project.godot has not declared, so a half-entered Input
 ## Map reports itself as one list instead of as mystery dead keys. Anything in OPTIONAL is
@@ -225,8 +165,6 @@ static func missing_optional(meta: Dictionary) -> Array:
 static func _expected(meta: Dictionary) -> Array:
 	var out: Array = []
 	for a in ACTIONS:
-		out.append(a)
-	for a in DEFENCE:
 		out.append(a)
 	for a in meta:
 		out.append(a)

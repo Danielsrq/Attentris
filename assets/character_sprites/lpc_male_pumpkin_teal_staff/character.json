@@ -1,0 +1,402 @@
+{
+  "version": 2,
+  "bodyType": "male",
+  "selections": {
+    "head": {
+      "itemId": "heads_jack",
+      "subId": null,
+      "variant": "jack",
+      "recolor": "",
+      "name": "Jack O Lantern (jack)"
+    },
+    "expression": {
+      "itemId": "face_neutral",
+      "subId": null,
+      "variant": "",
+      "recolor": "all.lpcr.azure",
+      "name": "Neutral (lpcr azure)"
+    },
+    "hat": {
+      "itemId": "hat_hood_cloth",
+      "subId": null,
+      "variant": "",
+      "recolor": "teal",
+      "name": "Hood (teal)"
+    },
+    "body": {
+      "itemId": "body",
+      "subId": null,
+      "variant": "",
+      "recolor": "all.lpcr.azure",
+      "name": "Body Color (lpcr azure)"
+    },
+    "shoes": {
+      "itemId": "feet_shoes_basic",
+      "subId": null,
+      "variant": "",
+      "recolor": "teal",
+      "name": "Basic Shoes (teal)"
+    },
+    "weapon": {
+      "itemId": "weapon_magic_diamond",
+      "subId": null,
+      "variant": "silver",
+      "recolor": "",
+      "name": "Diamond staff (silver)"
+    }
+  },
+  "selectedAnimation": "walk",
+  "showTransparencyGrid": true,
+  "applyTransparencyMask": false,
+  "matchBodyColorEnabled": true,
+  "compactDisplay": false,
+  "enabledLicenses": {
+    "CC0": true,
+    "CC-BY-SA": true,
+    "CC-BY": true,
+    "OGA-BY": true,
+    "GPL": true
+  },
+  "enabledAnimations": {
+    "spellcast": false,
+    "thrust": false,
+    "walk": false,
+    "slash": false,
+    "shoot": false,
+    "hurt": false,
+    "climb": false,
+    "idle": false,
+    "jump": false,
+    "sit": false,
+    "emote": false,
+    "run": false,
+    "watering": false,
+    "combat": false,
+    "1h_slash": false,
+    "1h_backslash": false,
+    "1h_halfslash": false
+  },
+  "url": "https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/#sex=male&head=Jack_O_Lantern_jack&expression=Neutral_all.lpcr.azure&hat=Hood_teal&body=Body_Color_all.lpcr.azure&shoes=Basic_Shoes_teal&weapon=Diamond_staff_silver",
+  "layers": [
+    {
+      "itemId": "weapon_magic_diamond",
+      "name": "Diamond staff (silver)",
+      "variant": "silver",
+      "recolors": null,
+      "zPos": 9,
+      "layerNum": 2,
+      "yPos": 512,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "weapon/magic/diamond/universal/background/walk/silver.png"
+      },
+      "supportedAnimations": [
+        "walk",
+        "hurt"
+      ]
+    },
+    {
+      "itemId": "body",
+      "name": "Body Color (lpcr azure)",
+      "variant": "",
+      "recolors": {
+        "body": "all.lpcr.azure"
+      },
+      "zPos": 10,
+      "layerNum": 1,
+      "yPos": 0,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "body/bodies/male/spellcast.png"
+      },
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle",
+        "backslash",
+        "halfslash"
+      ]
+    },
+    {
+      "itemId": "feet_shoes_basic",
+      "name": "Basic Shoes (teal)",
+      "variant": "",
+      "recolors": {
+        "shoes": "teal"
+      },
+      "zPos": 15,
+      "layerNum": 1,
+      "yPos": 0,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "feet/shoes/basic/male/spellcast.png"
+      },
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle",
+        "backslash",
+        "halfslash"
+      ]
+    },
+    {
+      "itemId": "heads_jack",
+      "name": "Jack O Lantern (jack)",
+      "variant": "jack",
+      "recolors": null,
+      "zPos": 100,
+      "layerNum": 1,
+      "yPos": 0,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "head/heads/jack/adult/spellcast/jack.png"
+      },
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle",
+        "backslash",
+        "halfslash"
+      ]
+    },
+    {
+      "itemId": "face_neutral",
+      "name": "Neutral (lpcr azure)",
+      "variant": "",
+      "recolors": {
+        "expression": "all.lpcr.azure"
+      },
+      "zPos": 101,
+      "layerNum": 1,
+      "yPos": 0,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "head/faces/${head}/neutral/spellcast.png"
+      },
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle",
+        "backslash",
+        "halfslash"
+      ]
+    },
+    {
+      "itemId": "hat_hood_cloth",
+      "name": "Hood (teal)",
+      "variant": "",
+      "recolors": {
+        "hat": "teal"
+      },
+      "zPos": 130,
+      "layerNum": 1,
+      "yPos": 0,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "hat/cloth/hood/adult/spellcast.png"
+      },
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle",
+        "backslash",
+        "halfslash"
+      ]
+    },
+    {
+      "itemId": "weapon_magic_diamond",
+      "name": "Diamond staff (silver)",
+      "variant": "silver",
+      "recolors": null,
+      "zPos": 140,
+      "layerNum": 1,
+      "yPos": 512,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "weapon/magic/diamond/universal/foreground/walk/silver.png"
+      },
+      "supportedAnimations": [
+        "walk",
+        "hurt"
+      ]
+    }
+  ],
+  "credits": [
+    {
+      "fileName": "head/heads/jack/adult/walk/jack.png",
+      "file": "head/heads/jack",
+      "notes": "original pumpkin by Joshua Taylor, modified to head by bluecarrot16",
+      "authors": [
+        "bluecarrot16",
+        "Joshua Taylor"
+      ],
+      "licenses": [
+        "CC-BY-SA 3.0",
+        "GPL 3.0"
+      ],
+      "urls": [
+        "https://opengameart.org/content/fruit-and-veggie-inventory",
+        "https://opengameart.org/content/lpc-folk"
+      ]
+    },
+    {
+      "fileName": "head/faces/${head}/neutral/walk.png",
+      "file": "head/faces",
+      "notes": "Original by Redshrike, Expressions by ElizaWy, mapped to all frames by JaidynReiman",
+      "authors": [
+        "JaidynReiman",
+        "ElizaWy",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licenses": [
+        "OGA-BY 3.0"
+      ],
+      "urls": [
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Head",
+        "https://opengameart.org/content/ulpc-expanded-expressions"
+      ]
+    },
+    {
+      "fileName": "hat/cloth/hood/adult/walk.png",
+      "file": "hat/cloth/hood",
+      "notes": "Brown hood by Wulax, original black/white recolors by ??, mapped to idle/run/jump/revised combat by JaidynReiman, along with additional recolors.",
+      "authors": [
+        "Johannes Sjölund (wulax)",
+        "JaidynReiman"
+      ],
+      "licenses": [
+        "OGA-BY 3.0",
+        "CC-BY-SA 3.0",
+        "GPL 3.0"
+      ],
+      "urls": [
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-expanded-hats-facial-helmets"
+      ]
+    },
+    {
+      "fileName": "body/bodies/male/walk.png",
+      "file": "body/bodies/male",
+      "notes": "see details at https://opengameart.org/content/lpc-character-bases; 'Thick' Male Revised Run/Climb by JaidynReiman (based on ElizaWy's LPC Revised)",
+      "authors": [
+        "bluecarrot16",
+        "JaidynReiman",
+        "Benjamin K. Smith (BenCreating)",
+        "Evert",
+        "Eliza Wyatt (ElizaWy)",
+        "TheraHedwig",
+        "MuffinElZangano",
+        "Durrani",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licenses": [
+        "OGA-BY 3.0",
+        "CC-BY-SA 3.0",
+        "GPL 3.0"
+      ],
+      "urls": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
+        "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://opengameart.org/content/lpc-be-seated",
+        "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
+        "https://opengameart.org/content/lpc-jump-expanded",
+        "https://opengameart.org/content/lpc-character-bases"
+      ]
+    },
+    {
+      "fileName": "feet/shoes/basic/male/walk.png",
+      "file": "feet/shoes",
+      "notes": "original by wulax, edited for v3 base by bluecarrot16, Jump/Sit/Emote/Run/Revised Combat by JaidynReiman",
+      "authors": [
+        "JaidynReiman",
+        "bluecarrot16",
+        "Johannes Sjölund (wulax)"
+      ],
+      "licenses": [
+        "OGA-BY 3.0",
+        "CC-BY-SA 3.0",
+        "GPL 3.0"
+      ],
+      "urls": [
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-expanded-socks-shoes"
+      ]
+    },
+    {
+      "fileName": "weapon/magic/diamond/universal/foreground/walk/silver.png",
+      "file": "weapon/magic/diamond",
+      "notes": "",
+      "authors": [
+        "bluecarrot16"
+      ],
+      "licenses": [
+        "OGA-BY 3.0+",
+        "GPL 3.0",
+        "CC-BY 4.0"
+      ],
+      "urls": [
+        "https://opengameart.org/content/lpc-more-weapons"
+      ]
+    }
+  ]
+}

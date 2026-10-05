@@ -12,6 +12,7 @@ func run() -> void:
 	test_randomizer_seed()
 	test_garbage_push()
 	test_receive_garbage()
+	test_game_advancing()
 
 # ------------------------------------------------------------------------------
 # Board
@@ -210,3 +211,96 @@ func test_receive_garbage() -> void:
 	blocked.receive_garbage([5], ev)
 	check(blocked.topped_out, "a piece with nowhere to rise blocks out")
 	eq(blocked.top_out_reason, "garbage_block_out", "   named garbage_block_out")
+
+
+# ------------------------------------------------------------------------------
+# Game: freezing and gravity scale
+# ------------------------------------------------------------------------------
+
+## Rehomed from the deleted defence suite. `advancing` and `gravity_scale` were added for
+## that minigame's focus switching and lost their only writer when it went, but they are
+## general Game mechanics and still work -- so the coverage moves here rather than being
+## deleted with the feature that happened to motivate it.
+func test_game_advancing() -> void:
+	group("Game.advancing: freezing stops everything that advances on its own")
+	# The trap, and the reason `advancing` exists at all: scaling gravity to zero stops the
+	# FALL but not the LOCK. A piece already resting on the stack is governed by
+	# lock_delay_sec, so with gravity alone it locks itself half a second later. Whenever
+	# something wants to pause Tetris, that lock is what reads as "it carried on without me".
+	var gf := make_game(Board.new(10, 20, 20))
+	gf.start()
+	var inp0 := InputState.new()
+	# Drop it to the floor so the lock timer is the only thing that can advance.
+	while gf.board.can_place(gf.active.cells(), gf.active.pos + Vector2i(0, 1)):
+		gf.active.pos.y += 1
+	var grounded: int = gf.active.pos.y
+	var piece_was: int = gf.pieces_placed
+
+	# Gravity off alone is NOT enough: the piece still locks.
+	gf.gravity_scale = 0.0
+	for _i in 120:
+		gf.tick(inp0)
+	check(gf.pieces_placed > piece_was, "with gravity merely zeroed a grounded piece still locks")
+
+	# advancing = false holds it.
+	var gh := make_game(Board.new(10, 20, 20))
+	gh.start()
+	while gh.board.can_place(gh.active.cells(), gh.active.pos + Vector2i(0, 1)):
+		gh.active.pos.y += 1
+	var held_y: int = gh.active.pos.y
+	var held_pieces: int = gh.pieces_placed
+	gh.advancing = false
+	for _i in 300:
+		gh.tick(inp0)
+	eq(gh.pieces_placed, held_pieces, "frozen, five seconds grounded does not lock it")
+	eq(gh.active.pos.y, held_y, "   and it has not moved")
+	check(gh.active != null, "   the piece is still in play")
+
+	# And the timer RESUMES rather than resetting, so the freeze is not free lock delay.
+	var partial := gh.active.lock_timer
+	gh.advancing = true
+	for _i in 10:
+		gh.tick(inp0)
+	check(gh.active == null or gh.active.lock_timer > partial,
+		"unfreezing resumes the lock timer where it stopped")
+
+	# A piece in the AIR is held too, so the freeze covers the fall as well as the lock.
+	var ga := make_game(Board.new(10, 20, 20))
+	ga.start()
+	var air_y: int = ga.active.pos.y
+	ga.advancing = false
+	for _i in 600:
+		ga.tick(inp0)
+	eq(ga.active.pos.y, air_y, "an airborne piece does not fall while frozen")
+
+	group("Game.gravity_scale: passive gravity only")
+	var g2 := make_game(Board.new(10, 20, 20))
+	g2.start()
+	eq(g2.gravity_scale, 1.0, "gravity is unscaled by default")
+	var full := g2.current_gravity()
+	g2.gravity_scale = 0.35
+	# current_gravity reports the UNSCALED rate; the scale is applied in _handle_gravity,
+	# so the readout keeps meaning "this level's gravity" rather than "this frame's".
+	eq(g2.current_gravity(), full, "current_gravity still reports the level's rate")
+	# Measured through the sim: a scaled piece falls strictly less far in the same ticks.
+	var inp := InputState.new()
+	var slow_start: int = g2.active.pos.y
+	for _i in 120:
+		g2.tick(inp)
+	var slow_fall: int = g2.active.pos.y - slow_start if g2.active != null else 999
+	var g3 := make_game(Board.new(10, 20, 20))
+	g3.start()
+	var fast_start: int = g3.active.pos.y
+	for _i in 120:
+		g3.tick(inp)
+	var fast_fall: int = g3.active.pos.y - fast_start if g3.active != null else 999
+	check(slow_fall < fast_fall, "a scaled piece falls less far in the same time")
+	# Zero scale must behave exactly like gravity off, or the two ways of stopping the
+	# piece would disagree.
+	var g4 := make_game(Board.new(10, 20, 20))
+	g4.start()
+	g4.gravity_scale = 0.0
+	var held: int = g4.active.pos.y
+	for _i in 300:
+		g4.tick(inp)
+	eq(g4.active.pos.y, held, "a zero scale holds the piece exactly like gravity off")

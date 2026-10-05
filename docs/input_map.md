@@ -20,11 +20,11 @@ numpad working with NumLock off. The existing `switch_board` entry is already co
 
 **The arrow keys and Space are shared with `ui_*`, and that is fine here.** Godot binds
 `ui_left`/`ui_right`/`ui_up`/`ui_down` to the arrows and `ui_accept`/`ui_select` to
-Space, so those fire alongside `def_cursor_*` and `def_place`. It only matters when a
+Space, so those fire alongside the arrow-key profiles. It only matters when a
 `Control` node holds focus, and `main.tscn` has none — every view is a script-only
-`Node2D` drawing in `_draw()`. (`replay.tscn` does build real Controls, but the defence
-board does not live there.) None of the names below collide with a built-in: all 92 of
-Godot's are `ui_`-prefixed, and a test enforces that this stays true.
+`Node2D` drawing in `_draw()`. (`replay.tscn` does build real Controls, but nothing
+there reads these.) None of the names below collide with a built-in: all 92 of Godot's
+are `ui_`-prefixed, and a test enforces that this stays true.
 
 **Never bind F8.** It is Godot's *Stop Running Project*, and the editor honours it even
 while the game has focus, so anything bound there quits instead of firing.
@@ -62,42 +62,19 @@ Fixed everywhere and never rebound, so a profile can never shadow restart or the
 | `pps_down` | F10 | optional |
 | `pps_up` | F11 | optional |
 
-## Defence actions
-
-Fixed, never rebound. They reuse the Tetris keys on purpose: focus is exclusive, so while the defence board has it the Tetris keys are idle and your hands do not move. The `def_select_*` digits can be skipped until there is more than one tower type.
-
-| action | keys | needed |
-|---|---|---|
-| `def_cursor_left` | A, Left | **required** |
-| `def_cursor_right` | D, Right | **required** |
-| `def_cursor_up` | W, Up | **required** |
-| `def_cursor_down` | S, Down | **required** |
-| `def_aim_ccw` | Kp 7, Z | **required** |
-| `def_aim_cw` | Kp 9, X | **required** |
-| `def_rot_ccw` | Kp 4, Q | **required** |
-| `def_rot_cw` | Kp 6, E | **required** |
-| `def_place` | Kp 0, Space | **required** |
-| `def_cancel` | Kp Period, Backspace | **required** |
-| `def_select_1` | 1 | optional |
-| `def_select_2` | 2 | optional |
-| `def_select_3` | 3 | optional |
-| `def_select_4` | 4 | optional |
-| `def_select_5` | 5 | optional |
-
 ## Already present
 
 | action | keys |
 |---|---|
 | `switch_board` | Tab, pad 20 — authored by hand, owned by you, never touched by code |
 
-**20 required.** Leaving one of those out makes something unusable: you cannot
-play without the Tetris actions, cannot drive the defence board without the
-`def_*` ones, cannot recover from a top-out without `restart`, and cannot see what
-went wrong without `toggle_debug`.
+**10 required.** Leaving one of those out makes something unusable: you cannot
+play without the Tetris actions, cannot recover from a top-out without
+`restart`, and cannot see what went wrong without `toggle_debug`.
 
 Rows marked `optional` cost only their own key. Skip them and F2-F11 simply do
-nothing; the suite reports them as a note and the defence board stays quiet about
-them. Declare them when you want the toggle.
+nothing, and the suite reports them as a note rather than a failure. Declare them
+when you want the toggle.
 
 `tests/run_tests.tscn` fails with the list of REQUIRED actions still missing, so
 the suite is the live checklist.

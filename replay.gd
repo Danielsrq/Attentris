@@ -135,9 +135,10 @@ func _ready() -> void:
 ## In the editor `get_viewport_rect()` is the EDITOR's 2D viewport, not the game window, so
 ## an @tool preview would be arranged for whatever size that pane happens to be. The
 ## project's configured window size makes the preview the game's layout, which is the only
-## thing a preview is for.
+## thing a preview is for. Headless needs the same fallback: with no window it reports a
+## square 1280x1280 against a (0,0) window.
 func _layout_viewport() -> Vector2:
-	if Engine.is_editor_hint():
+	if Engine.is_editor_hint() or DisplayServer.get_name() == "headless":
 		return Vector2(
 			float(ProjectSettings.get_setting("display/window/size/viewport_width", 1280)),
 			float(ProjectSettings.get_setting("display/window/size/viewport_height", 720)))

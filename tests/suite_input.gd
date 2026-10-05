@@ -90,8 +90,6 @@ func test_input_map() -> void:
 	var owned: Array = []
 	for a in ControlProfiles.ACTIONS:
 		owned.append(a)
-	for a in ControlProfiles.DEFENCE:
-		owned.append(a)
 	for a in InputReader.META:
 		owned.append(a)
 
@@ -157,16 +155,20 @@ func test_input_map() -> void:
 
 	# Defence keys reuse the Tetris keys on purpose -- focus is exclusive -- but the meta
 	# keys are global, so a collision there would fire mid-build.
+	# A profile key must not collide with a meta key, or restart or a debug toggle fires
+	# mid-game. Meta wins any tie by being bound last, which would be silent.
 	var meta_keys := {}
 	for a in InputReader.META:
 		for k in InputReader.META[a]:
 			meta_keys[k] = a
 	var meta_clashes: Array = []
-	for a in ControlProfiles.DEFENCE:
-		for k in ControlProfiles.DEFENCE[a]:
-			if meta_keys.has(k):
-				meta_clashes.append("%s vs meta %s" % [a, meta_keys[k]])
-	check(meta_clashes.is_empty(), "no defence key collides with a meta key%s" % [
+	for pname in ControlProfiles.names():
+		var prof: Dictionary = ControlProfiles.get_profile(pname)
+		for a in prof:
+			for k in prof[a]:
+				if meta_keys.has(k):
+					meta_clashes.append("%s/%s vs meta %s" % [pname, a, meta_keys[k]])
+	check(meta_clashes.is_empty(), "no profile key collides with a meta key%s" % [
 		"" if meta_clashes.is_empty() else " (%s)" % str(meta_clashes)])
 
 	group("InputMap: profile switching rewrites the bindings")
@@ -181,11 +183,6 @@ func test_input_map() -> void:
 	reader.set_profile("wasd_numpad")
 	eq(_mapped_keys("left"), [KEY_A], "and switching back restores it")
 
-	# The defence table is fixed, so it must survive a profile switch untouched.
-	eq(_mapped_keys("def_place"), [KEY_KP_0, KEY_SPACE],
-		"a defence binding survives profile cycling, including multi-key ones")
-	if InputMap.has_action("def_select_1"):
-		eq(_mapped_keys("def_select_1"), [KEY_1], "   and so does an optional one")
 
 	# Edge detection, assertable for the first time. is_physical_key_pressed could not be
 	# faked, so nothing ever proved that pressed() was an edge and not a level.
@@ -231,60 +228,48 @@ func test_input_map() -> void:
 # ------------------------------------------------------------------------------
 
 func test_layout_regions() -> void:
-	group("ViewLayout: the defence board's share of the screen")
+	group("ViewLayout: the minigame's share of the screen")
 
 	var b := Board.new(10, 20, 20)
 	var l := ViewLayout.new(b, Vector2(1280, 720), 30)
 
-	# The pane splits into a palette strip and the board. 18 rows of 30px is 540, which is
-	# exactly what is left of a 600px pane after a 60px strip -- so palette_h is also the
-	# number that decides whether the grid fits at all.
-	eq(l.palette_rect.size.y, 60.0, "the palette strip takes the top 60px of the pane")
-	eq(l.defence_rect.size.y, 540.0, "leaving exactly 18 rows of 30px for the board")
-	eq(l.defence_rect.position.y, l.palette_rect.end.y, "   and it starts where the strip ends")
-	eq(l.defence_rect.size.x, l.right_pane.size.x, "   at the pane's full width")
-	check(l.right_pane.size.x >= 600.0, "the pane is wide enough for 20 columns of 30px")
+	# One lane, vertically centred in the pane, deep enough to move around in.
+	eq(l.lane_rect.size.y, float(l.lane_h), "the lane is lane_h deep")
+	eq(l.lane_rect.size.x, l.right_pane.size.x, "   and spans the pane's full width")
+	eq(l.lane_rect.position.x, l.right_pane.position.x, "   starting at its left edge")
+	var above := l.lane_rect.position.y - l.right_pane.position.y
+	var below := l.right_pane.end.y - l.lane_rect.end.y
+	check(absf(above - below) < 1.0, "   and is centred, with equal room above and below")
 
-	# 20 columns of 30px is 600 in a 638 pane, so the grid is centred with slack either
-	# side; vertically it fits exactly, so there is nothing to centre.
-	var o := l.defence_origin(20, 18)
-	eq(o.y, l.defence_rect.position.y, "an 18-row grid sits flush to the top of its rect")
-	check(o.x > l.defence_rect.position.x, "a 20-column grid is centred, not flush left")
-	eq(o.x - l.defence_rect.position.x, l.defence_rect.end.x - (o.x + 600.0),
-		"   with equal slack on both sides")
-	eq(l.defence_cell_pos(o, 0, 0), o, "cell 0,0 is the grid origin")
-	eq(l.defence_cell_pos(o, 2, 3), o + Vector2(60.0, 90.0), "and cells step by the cell size")
+	# The depth IS the number of bodies that seals the lane, so it is worth pinning against
+	# the body size rather than left as a bare 256. Five would be sealed constantly.
+	var bodies := float(l.lane_h) / (BattlerRules.new().body_radius * 2.0)
+	eq(bodies, 8.0, "the lane is 8 bodies deep -- 8 units to seal it, not 5")
+	check(float(l.lane_h) > BattlerRules.new().aggro_px,
+		"and deeper than one unit's aggro, or a centre unit would see the whole lane")
+	check(l.lane_centre_y() > l.lane_rect.position.y
+			and l.lane_centre_y() < l.lane_rect.end.y,
+		"the spawn seed depth sits inside the lane")
 
-	# The economy band sits under the field, full width, and must not overlap it.
-	check(l.economy_strip.position.y >= l.field_origin.y + l.field_size.y,
-		"the economy band starts below the playfield")
-	check(l.economy_strip.end.y <= 720.0, "   and stays inside the window")
-	check(l.economy_strip.size.y > 0.0, "   with room to draw in")
-	check(l.economy_strip.size.x > l.field_size.x, "   spanning more than the field's width")
-
-	check(l.defence_fits(20, 18), "a 1280-wide window fits a 20x18 board")
-
-	# A window too narrow for a pane must degenerate to zero rather than negative, which is
-	# what every consumer's `size.x <= 0.0` guard relies on.
-	var narrow := ViewLayout.new(b, Vector2(640, 720), 30)
-	eq(narrow.right_pane.size.x, 0.0, "a window with no room leaves a zero-width pane")
-	eq(narrow.defence_rect.size.x, 0.0, "   and a zero-width defence rect")
-
-	# And the origin must never be CENTRED into negative space. Halving the slack without
-	# a floor put the board at x=322 on a 900-wide window -- directly on top of a playfield
-	# spanning 161..461. Overflowing right is ugly; overlapping the other game is wrong.
-	var squeezed: Array = []
+	# The lane must not stray over the playfield, which is what the old grid did at any
+	# window under about 1240px wide -- it was centred by halving slack that had gone
+	# negative. A full-width lane cannot repeat that, so this just pins it.
+	var field_rect := Rect2(l.field_origin, l.field_size)
+	var strays: Array = []
 	for vw in [1280, 1100, 900, 700, 640]:
 		var lw := ViewLayout.new(b, Vector2(float(vw), 720.0), 30)
-		var at := lw.defence_origin(20, 18)
-		if at.x < lw.defence_rect.position.x:
-			squeezed.append("%d: %.0f < %.0f" % [vw, at.x, lw.defence_rect.position.x])
-		if Rect2(lw.field_origin, lw.field_size).has_point(at):
-			squeezed.append("%d: origin inside the playfield" % vw)
-	check(squeezed.is_empty(), "the board never centres back over the playfield%s" % [
-		"" if squeezed.is_empty() else " (%s)" % str(squeezed)])
-	check(not ViewLayout.new(b, Vector2(900, 720), 30).defence_fits(20, 18),
-		"and a 900-wide window correctly reports that it does not fit")
+		if lw.lane_rect.position.x < lw.right_pane.position.x:
+			strays.append("%d" % vw)
+		if Rect2(lw.field_origin, lw.field_size).has_point(lw.lane_rect.position):
+			strays.append("%d over the field" % vw)
+	check(strays.is_empty(), "the lane never starts left of its own pane%s" % [
+		"" if strays.is_empty() else " (%s)" % str(strays)])
+
+	# A window with no room must leave a zero-width pane, not a negative one -- every
+	# consumer's `size.x <= 0.0` guard depends on it.
+	var narrow := ViewLayout.new(b, Vector2(640, 720), 30)
+	eq(narrow.right_pane.size.x, 0.0, "a window with no room leaves a zero-width pane")
+	eq(narrow.lane_rect.size.x, 0.0, "   and a zero-width lane")
 
 	group("RuleSet: soft drop factor per preset")
 	eq(RuleSet.guideline().sdf, 20.0, "guideline soft drop is 20x gravity, as specified")

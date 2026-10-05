@@ -83,7 +83,6 @@ func _draw() -> void:
 	_draw_hold()
 	_draw_next()
 	_draw_stats()
-	_draw_palette()
 	_draw_economy()
 	if game.topped_out:
 		_draw_top_out()
@@ -177,22 +176,6 @@ func _draw_last_placement(y: float) -> void:
 		draw_string(_font, Vector2(x, y), " ".join(tags), HORIZONTAL_ALIGNMENT_LEFT, -1, 11,
 			Color(TEXT_DIM, a))
 
-## The tower palette strip across the top of the pane. Chrome only for now -- the tower
-## list arrives with the build cursor. The pane below it belongs to the defence board,
-## which draws its own grid, so the HUD no longer frames it: two scripts drawing one
-## border is how the ghost-pocket outline went wrong.
-func _draw_palette() -> void:
-	var r := layout.palette_rect
-	if r.size.x <= 0.0:
-		return
-	draw_rect(r, Color(0.09, 0.09, 0.12))
-	draw_rect(r, Color(1, 1, 1, 0.10), false, 2.0)
-	draw_string(_font, r.position + Vector2(14.0, 20.0), "TOWERS",
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 14, TEXT_DIM)
-	draw_string(_font, r.position + Vector2(14.0, 42.0),
-		"TAB switches board   WASD move   KP7/9 aim   KP4/6 turn   KP0 build",
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.40, 0.42, 0.50))
-
 func _draw_top_out() -> void:
 	var r := Rect2(layout.field_origin, layout.field_size)
 	draw_rect(r, Color(0, 0, 0, 0.66))
@@ -210,8 +193,8 @@ func _panel(r: Rect2, title: String) -> void:
 
 ## Resource bank and the last few payouts, as one band under the whole screen.
 ##
-## This used to be a tall column in the right pane, until the defence board took the pane
-## and left 38px of slack beside a 600px grid. Laid out horizontally instead: the bank is
+## This used to be a tall column in the right pane, until the minigame was given the pane.
+## Laid out horizontally instead: the bank is
 ## five chips on the top line, the recent payouts a single line beneath. Both get smaller,
 ## and that is the right trade -- the bank is a number you glance at, and the log only has
 ## to answer "did that just pay?".

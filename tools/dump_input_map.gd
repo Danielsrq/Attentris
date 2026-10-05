@@ -5,8 +5,7 @@ extends SceneTree
 ##
 ##   godot --headless --path . --script res://tools/dump_input_map.gd
 ##
-## Run it after changing ControlProfiles.ACTIONS, ControlProfiles.DEFENCE or
-## InputReader.META.
+## Run it after changing ControlProfiles.ACTIONS or InputReader.META.
 
 const OUT := "res://docs/input_map.md"
 
@@ -47,13 +46,12 @@ func _init() -> void:
 			% [a, ControlProfiles.keys_text(a)])
 	f.store_line("")
 	f.store_line("**%d required.** Leaving one of those out makes something unusable: you cannot" % total)
-	f.store_line("play without the Tetris actions, cannot drive the defence board without the")
-	f.store_line("`def_*` ones, cannot recover from a top-out without `restart`, and cannot see what")
-	f.store_line("went wrong without `toggle_debug`.")
+	f.store_line("play without the Tetris actions, cannot recover from a top-out without")
+	f.store_line("`restart`, and cannot see what went wrong without `toggle_debug`.")
 	f.store_line("")
 	f.store_line("Rows marked `optional` cost only their own key. Skip them and F2-F11 simply do")
-	f.store_line("nothing; the suite reports them as a note and the defence board stays quiet about")
-	f.store_line("them. Declare them when you want the toggle.")
+	f.store_line("nothing, and the suite reports them as a note rather than a failure. Declare them")
+	f.store_line("when you want the toggle.")
 	f.store_line("")
 	f.store_line("`tests/run_tests.tscn` fails with the list of REQUIRED actions still missing, so")
 	f.store_line("the suite is the live checklist.")
@@ -75,12 +73,6 @@ func _groups() -> Array:
 		"Fixed everywhere and never rebound, so a profile can never shadow restart or the"
 		+ " debug toggles.",
 		InputReader.META, InputReader.META.keys()],
-		["Defence actions",
-		"Fixed, never rebound. They reuse the Tetris keys on purpose: focus is exclusive, so"
-		+ " while the defence board has it the Tetris keys are idle and your hands do not"
-		+ " move. The `def_select_*` digits can be skipped until there is more than one tower"
-		+ " type.",
-		ControlProfiles.DEFENCE, ControlProfiles.DEFENCE.keys()],
 	]
 
 func _header() -> Array:
@@ -107,11 +99,11 @@ func _header() -> Array:
 		"",
 		"**The arrow keys and Space are shared with `ui_*`, and that is fine here.** Godot binds",
 		"`ui_left`/`ui_right`/`ui_up`/`ui_down` to the arrows and `ui_accept`/`ui_select` to",
-		"Space, so those fire alongside `def_cursor_*` and `def_place`. It only matters when a",
+		"Space, so those fire alongside the arrow-key profiles. It only matters when a",
 		"`Control` node holds focus, and `main.tscn` has none — every view is a script-only",
-		"`Node2D` drawing in `_draw()`. (`replay.tscn` does build real Controls, but the defence",
-		"board does not live there.) None of the names below collide with a built-in: all 92 of",
-		"Godot's are `ui_`-prefixed, and a test enforces that this stays true.",
+		"`Node2D` drawing in `_draw()`. (`replay.tscn` does build real Controls, but nothing",
+		"there reads these.) None of the names below collide with a built-in: all 92 of Godot's",
+		"are `ui_`-prefixed, and a test enforces that this stays true.",
 		"",
 		"**Never bind F8.** It is Godot's *Stop Running Project*, and the editor honours it even",
 		"while the game has focus, so anything bound there quits instead of firing.",
