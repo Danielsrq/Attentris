@@ -70,9 +70,17 @@ garbage back into the Tetris board from its own runtime RNG, so a recording desy
 a red breaches.
 
 ```
-./target/release/bot plan --json --mode allspin --weights weights/allspin_slots.txt                          --state-file <path>      # {"use_hold":..,"nodes":..,"plan":[..]}
+./target/release/bot serve --mode allspin --weights weights/allspin_slots.txt
+            # {"ready":true,..} then one JSON reply per line of state on stdin
+./target/release/bot plan  --json --mode allspin --weights weights/allspin_slots.txt                           --state-file <path>     # the same answer, one shot, for debugging
 godot --headless --path .. --script res://tools/pilot_bench.gd -- --pieces 400 --seed 101
 ```
+
+`serve` is what the game runs: the process is held open for the session, so the weights are
+parsed once and a decision costs only its search. Spawning per decision was 95ms of a 112ms
+round trip against a ~15ms search, which capped piloting at roughly 8 pieces per second.
+Measured end to end through Godot, 200 piloted pieces: **12.6s including engine startup**, so
+about 53ms a piece against 112ms+ before.
 
 * `--state-file` holds `{board, queue, hold, b2b, wound_left, wound_hole}`. A **file**, not a
   `--state` argument: the state is JSON, and a quoted JSON blob in a Windows process argument
@@ -83,7 +91,8 @@ godot --headless --path .. --script res://tools/pilot_bench.gd -- --pieces 400 -
   step's **cells** and re-derives rotation and kick with its own tables
   (`solver/path_finder.gd`), so neither side trusts the other's coordinate conventions.
   Certified by `tests/spin_path_check.gd`: 2068 recorded spin placements, 0 not reproducible.
-* Bad input is reported as `{"error": ...}` on stdout and exit 0, not as a panic. A panic puts
+* Bad input is reported as `{"error": ...}` on stdout and the loop continues, never as a
+  panic. A panic puts
   the reason on stderr, where a parent process reading stdout learns only "exit 101".
 
 Measured in-game against this binary's own numbers, 400 pieces of all-spin:
@@ -91,7 +100,7 @@ Measured in-game against this binary's own numbers, 400 pieces of all-spin:
 | | APP | deaths |
 |---|---|---|
 | `bot play` | 2.582 | 0/8 |
-| piloting Godot | 2.538 | 0 |
+| piloting Godot | 2.550 | 0 |
 
 Within 2%, which is what says the rules pairing and the B2B chain are crossing the wire
 intact. A large gap is the symptom to watch for; it has no other.

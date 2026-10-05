@@ -13,11 +13,20 @@ extends RefCounted
 ## cannot play the all-spin game the minigame's economy is built around. The Rust search has
 ## spin-slot features and CEM-tuned weights, and costs 15ms of CPU per decision.
 ##
-## One process per decision, not a persistent server. 112ms of wall clock is dominated by
-## process spawn, and `main` already solves on a worker thread, so that cost is invisible at
-## watchable speeds. In exchange there is no pipe to deadlock and no orphan to reap if Godot
-## dies. Past roughly 8 pieces per second it would stop keeping up, and the answer then is a
-## `bot serve` subcommand rather than threading tricks here.
+## The bot is held OPEN for the whole session -- `bot serve`, one request per line of stdin,
+## one reply per line of stdout -- rather than spawned per decision. Spawning was 95ms of a
+## 112ms round trip against a ~15ms search, which capped piloting at roughly 8 pieces per
+## second; holding the process removes all of it, and the weights are parsed once instead of
+## per piece.
+##
+## The cost is a lifecycle. The process is started on first use, restarted if it dies, and
+## killed on shutdown; `main` owns that last part, because a backend outliving the game is the
+## failure mode that leaves an orphan running after the window closes.
+##
+## Reads are BLOCKING and cannot be timed out -- FileAccess offers no such thing. A backend
+## that hung rather than crashed would hang the solve thread with it, and the symptom would be
+## that no new plan ever arrives. It has not happened; it is the one failure here with no
+## guard.
 ##
 ## Neither engine trusts the other's coordinates: the bot returns the CELLS a piece should
 ## occupy, and PathFinder re-derives rotation and kick with Godot's own tables.
@@ -25,10 +34,6 @@ extends RefCounted
 ## Relative to the project root. Build output, so it is gitignored and may simply be absent.
 const BINARY := "res://bot/target/release/bot.exe"
 const BINARY_UNIX := "res://bot/target/release/bot"
-## Where the per-decision state is handed over. Rewritten each call; only one solve is ever
-## in flight, because main keeps a single worker thread.
-const STATE_FILE := "user://bot_pilot_state.json"
-
 var piece_set: PieceSet
 ## The rule mode handed to the bot. Must match the RuleSet the game is applying, or the bot
 ## searches for value the game will not pay -- see `main._pilot_rules_warning`.
@@ -46,6 +51,9 @@ var last_error: String = ""
 var unreachable: int = 0
 
 var _warned: bool = false
+## The live backend: its stdio pipe and its process id, or null / -1.
+var _io: FileAccess = null
+var _pid: int = -1
 
 ## Absolute path to the binary, or "" when it has not been built.
 static func binary_path() -> String:
@@ -64,54 +72,93 @@ func available() -> bool:
 ## rather than place something arbitrary, which is the right failure: a wrong placement is
 ## much harder to notice than a stalled one.
 func solve(board: Board, queue: Array, hold: PieceDef, _progress: Callable, b2b: int) -> Array:
-	var exe := binary_path()
-	if exe == "":
-		_fail("bot binary not built -- run `cargo build --release` in bot/")
-		return []
 	if queue.is_empty() or piece_set == null:
 		return []
-	# Handed over in a FILE, not on the command line. The state is JSON, and a quoted JSON
-	# blob in a Windows process argument is mangled before the bot ever sees it -- which cost
-	# an hour and showed up only as "exit 101", because the panic reason went to stderr.
-	var state_path := ProjectSettings.globalize_path(STATE_FILE)
-	var f := FileAccess.open(STATE_FILE, FileAccess.WRITE)
-	if f == null:
-		_fail("cannot write %s" % STATE_FILE)
+	if not _ensure_started():
 		return []
-	f.store_string(_state_json(board, queue, hold, b2b))
-	f.close()
-	var args := [
-		"plan", "--json",
-		"--mode", mode,
-		"--weights", ProjectSettings.globalize_path(weights),
-		"--state-file", state_path,
-	]
-	var out: Array = []
-	# Blocking, and that is fine: this runs on main's solve thread. stderr is left unread
-	# because the binary logs a CPU-affinity note there, and stdout is the JSON.
-	var code := OS.execute(exe, args, out, false, false)
-	if code != 0 or out.is_empty():
-		_fail("bot exited %d: %s" % [code, "" if out.is_empty() else str(out[0]).strip_edges()])
+	# One line out, one line back. Blocking, and that is the point: this runs on main's solve
+	# thread, so the wait costs a later plan rather than a dropped frame.
+	_io.store_line(_state_json(board, queue, hold, b2b))
+	_io.flush()
+	var line := _io.get_line()
+	if line.is_empty():
+		# EOF: the backend died mid-session. Dropped rather than retried here, so one bad
+		# state cannot become an infinite restart loop; the next solve starts it again.
+		_stop()
+		_fail("bot backend stopped -- it will be restarted on the next plan")
 		return []
-	var parsed: Variant = JSON.parse_string(str(out[0]).strip_edges())
+	var parsed: Variant = JSON.parse_string(line)
 	if typeof(parsed) != TYPE_DICTIONARY:
-		_fail("bot output was not JSON: %s" % str(out[0]).left(160))
+		_fail("bot reply was not JSON: %s" % line.left(160))
 		return []
-	# The bot reports its own failures as JSON on stdout rather than panicking, so a bad
-	# handover says what was wrong instead of only how it died.
+	# The bot reports its own failures as JSON rather than dying, so a bad handover says what
+	# was wrong instead of only that the pipe closed.
 	if parsed.has("error"):
 		_fail("bot rejected the state: %s" % parsed["error"])
 		return []
 	if not parsed.has("plan"):
-		_fail("bot output had no plan: %s" % str(out[0]).left(160))
+		_fail("bot reply had no plan: %s" % line.left(160))
 		return []
 	return _to_plan(board, parsed)
+
+# ------------------------------------------------------------------------------
+# The backend's life
+# ------------------------------------------------------------------------------
+
+func running() -> bool:
+	return _io != null and _pid > 0 and OS.is_process_running(_pid)
+
+## Starts the backend if it is not up. Returns false having set `last_error` if it cannot be.
+func _ensure_started() -> bool:
+	if running():
+		return true
+	_stop()
+	var exe := binary_path()
+	if exe == "":
+		_fail("bot binary not built -- run `cargo build --release` in bot/")
+		return false
+	var started: Dictionary = OS.execute_with_pipe(exe, [
+		"serve", "--mode", mode, "--weights", ProjectSettings.globalize_path(weights),
+	])
+	if started.is_empty() or not started.has("stdio"):
+		_fail("could not start the bot backend")
+		return false
+	_io = started["stdio"]
+	_pid = int(started.get("pid", -1))
+	# Waited for deliberately. The backend prints this only after loading its weights, so a
+	# bad --weights path reports itself here instead of looking like a hang on the first plan.
+	var hello := _io.get_line()
+	if not hello.contains("ready"):
+		_fail("bot backend did not come up: %s" % hello.left(160))
+		_stop()
+		return false
+	_warned = false
+	last_error = ""
+	return true
+
+## Closes the backend down. Safe to call when nothing is running.
+##
+## `quit` first so it can exit on its own and flush anything it owns; the kill is only the
+## backstop for a process that has stopped reading its own stdin.
+func shutdown() -> void:
+	_stop()
+
+func _stop() -> void:
+	if _io != null:
+		if _io.is_open():
+			_io.store_line("quit")
+			_io.flush()
+			_io.close()
+		_io = null
+	if _pid > 0 and OS.is_process_running(_pid):
+		OS.kill(_pid)
+	_pid = -1
 
 # ------------------------------------------------------------------------------
 # The wire
 # ------------------------------------------------------------------------------
 
-## The live state, in the schema `bot plan --state` reads.
+## The live state, as one line of the backend's stdin.
 ##
 ## Only the occupied tail of the board is sent; the Rust side bottom-aligns what it gets. The
 ## wound arrays go with it because `--board` alone cannot express them, and under all-spin

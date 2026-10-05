@@ -275,6 +275,10 @@ which matters here because the Godot solver is the quad-oriented hint search and
 tucks or kicked spins -- so it cannot play the all-spin game this economy is built around.
 Both answer `solve()` with `Array[Placement]`, so `_stage_placement` needed no change.
 
+The bot runs as a held-open child process (`bot serve`), started on first use and buried in
+`main._exit_tree` -- a backend outliving the window is the failure mode worth guarding, and the
+thread is joined before the kill so a blocking read cannot hang the join.
+
 **It immediately showed the spawn economy is untuned.** The bot clears ~40 spins per 100
 pieces, and `spawns_unit()` fires on a quad *or any spin*, so over 400 piloted pieces the lane
 held **85 teal against 1 red, with 73 more queued** at the entry edge. The queue draining is

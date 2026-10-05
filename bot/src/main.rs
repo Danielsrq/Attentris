@@ -251,6 +251,65 @@ fn state_from_json(src: &str) -> Result<(board::Board, Vec<rules::Piece>, Option
     Ok((b, queue, hold, chain))
 }
 
+/// One decision per line of stdin, one JSON reply per line of stdout, until EOF.
+///
+/// This is the mode the Godot pilot runs in, so the bot is a part of the game rather than a
+/// process spawned and thrown away per piece. Spawning cost 95ms of the 112ms round trip and
+/// capped piloting at roughly 8 pieces per second; holding the process open removes all of it
+/// and leaves only the ~15ms search.
+///
+/// The weights and the search config are read ONCE here, not per request, which is the other
+/// reason this is cheaper than repeated `plan` calls.
+///
+/// Errors are replies, never panics: the caller reads stdout, so a panic would put the reason
+/// on stderr where it is discarded and tell the caller only that the pipe closed.
+fn cmd_serve(a: &Args) {
+    use std::io::{BufRead as _, Write as _};
+    let r = rules(a);
+    let mut sc = search_config(a);
+    sc.chance = false;
+    let mut s = Searcher::new(sc, weights(a), r);
+    let shapes = rules::Shapes::new();
+    // Announced, so the caller can tell the process came up and loaded its weights before it
+    // sends anything -- otherwise a bad --weights path looks like a hang on the first request.
+    println!("{{\"ready\":true,\"mode\":\"{}\"}}", a.str("mode").unwrap_or("standard"));
+    let _ = std::io::stdout().flush();
+    let stdin = std::io::stdin();
+    for line in stdin.lock().lines() {
+        let line = match line {
+            Ok(l) => l,
+            Err(_) => break,
+        };
+        let t = line.trim();
+        if t.is_empty() {
+            continue;
+        }
+        if t == "quit" {
+            break;
+        }
+        match state_from_json(t) {
+            Err(e) => println!("{{\"error\":{}}}", serde_json::to_string(&e).unwrap()),
+            Ok((b, queue, hold, chain)) => {
+                let before = s.nodes;
+                match s.search(&b, &queue, hold, chain, &rules::ALL_PIECES) {
+                    None => println!("{{\"error\":\"no legal move\"}}"),
+                    Some(d) => {
+                        let plan = game::plan_to_json(&b, &d.plan, chain, &s, &shapes);
+                        // Nodes for THIS search: the counter accumulates across a session.
+                        println!(
+                            "{{\"use_hold\":{},\"nodes\":{},\"plan\":{}}}",
+                            d.use_hold,
+                            s.nodes.saturating_sub(before),
+                            plan
+                        );
+                    }
+                }
+            }
+        }
+        let _ = std::io::stdout().flush();
+    }
+}
+
 fn cmd_plan(a: &Args) {
     let piece = |c: char| rules::Piece::from_letter(c).unwrap_or_else(|| panic!("bad piece {}", c));
     // --state-file, not --state: the state is JSON, and a quoted JSON blob on a Windows
@@ -565,7 +624,7 @@ fn cmd_bench(a: &Args) {
 fn main() {
     let argv: Vec<String> = std::env::args().skip(1).collect();
     if argv.is_empty() {
-        eprintln!("usage: bot play|bench|tune|parity|weights|plan [options]  (see src/main.rs)");
+        eprintln!("usage: bot play|bench|tune|parity|weights|plan|serve [options]  (see src/main.rs)");
         std::process::exit(2);
     }
     let a = Args::parse(&argv[1..]);
@@ -630,6 +689,7 @@ fn main() {
             }
         }
         "weights" =>print!("{}", weights(&a).to_text()),
+        "serve" => cmd_serve(&a),
         "probe" => cmd_probe(&a),
         "plan" => cmd_plan(&a),
         other => {

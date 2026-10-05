@@ -150,7 +150,10 @@ func _new_game(seed_v: int = -1) -> void:
 	solver = BeamSolver.new(BoardEvaluator.new(EvalWeights.lookahead()))
 	solver.beam_width = HINT_BEAM
 	solver.depth = hint_steps
-	pilot = BotPilot.new()
+	# Created ONCE and kept across restarts. Rebuilding it here would leak a backend process
+	# per new game, which is exactly the orphan this lifecycle exists to avoid.
+	if pilot == null:
+		pilot = BotPilot.new()
 	pilot.piece_set = piece_set
 
 	battler_rules = BattlerRules.testing()
@@ -392,9 +395,15 @@ func _collect_solve() -> void:
 	hints.set_plan(plan)
 
 func _exit_tree() -> void:
+	# The thread first: it may be mid-solve, which means mid-request to the backend, and
+	# killing the backend out from under a blocking read would hang the join.
 	if _solve_thread != null:
 		_solve_thread.wait_to_finish()
 		_solve_thread = null
+	# Then bury the backend. It is a child process, so without this it outlives the window and
+	# leaves a `bot serve` running with nobody to talk to.
+	if pilot != null:
+		pilot.shutdown()
 
 func _handle_meta_keys() -> void:
 	if reader.pressed("restart"):
