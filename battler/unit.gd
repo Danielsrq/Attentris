@@ -62,8 +62,9 @@ var _facing: int = SpriteSheet.RIGHT
 var _clip: StringName = &"walk"
 
 var _state: int = State.WALK
-var _ledger: HitLedger
 var _contact_pending: bool = false
+## Seconds of hit-flash left, or 0.
+var _flash_left: float = 0.0
 var _sprite: AnimatedSprite2D
 var _hurt: Area2D
 var _hit: Area2D
@@ -78,7 +79,6 @@ func setup(d: UnitDef, r: BattlerRules, bias: int = 1) -> void:
 	hp = d.hp
 	_bias = 1 if bias >= 0 else -1
 	_facing = d.facing
-	_ledger = HitLedger.new(d.iframe_sec)
 	_resolve()
 	_build_shapes()
 	_wire_layers()
@@ -115,9 +115,12 @@ func _resolve() -> void:
 ## space -- and a node cannot choose when it runs relative to its siblings. Being driven also
 ## means the whole crowd can be stepped by hand in a test, with no physics frames at all.
 func advance(delta: float, field: BattleField) -> void:
-	if def == null or not alive:
+	if def == null:
 		return
-	_ledger.tick(delta)
+	# Before the liveness check, so a killing blow still flashes while the body drops.
+	_tick_flash(delta)
+	if not alive:
+		return
 	_target = _pick_target(field)
 	if _target != null and position.distance_to(_target.position) <= def.reach_px:
 		_attack_step()
@@ -160,15 +163,52 @@ func _attack_step() -> void:
 		return
 	_contact_pending = false
 	if _target != null and is_instance_valid(_target) and _target.alive:
-		_target.take_damage(def.damage, get_instance_id())
+		_target.take_damage(def.damage)
 
-func take_damage(amount: int, from: int) -> void:
-	if not alive or not _ledger.can_hit(from):
+## Applies damage. There is NO invulnerability window.
+##
+## One was there and was removed as dead weight rather than kept as insurance. Damage lands on
+## an animation's contact frame, not on a cooldown, so a fighter is already limited to one hit
+## per swing -- 1.2s for a teal thrust, 0.9s for a red slash at 0.15s a frame. A 0.3s immunity
+## never once refused a hit it was meant to refuse, and a guard that never fires is
+## indistinguishable from a guard that does not work.
+##
+## The attacker is not recorded either. Nothing needs kill attribution yet.
+func take_damage(amount: int) -> void:
+	if not alive:
 		return
-	_ledger.register(from)
+	_begin_flash()
 	hp -= amount
 	if hp <= 0:
 		_die()
+
+## Starts a hit-flash, unless one is already running.
+##
+## Deliberately NOT restarted by a hit that lands mid-flash. It is only a visual, and
+## re-triggering on every hit would leave a unit under attack from several sides flickering
+## continuously, which reads as a rendering fault rather than as damage.
+func _begin_flash() -> void:
+	if _flash_left > 0.0 or rules == null:
+		return
+	_flash_left = rules.flash_sec
+
+## Jitters the sprite's alpha while a flash runs, quantised so it reads as a flicker rather
+## than a fade, and always ending back at full opacity.
+func _tick_flash(delta: float) -> void:
+	if _flash_left <= 0.0 or _sprite == null:
+		return
+	_flash_left -= delta
+	if _flash_left <= 0.0:
+		_flash_left = 0.0
+		_sprite.modulate.a = 1.0
+		return
+	var span := 1.0 - rules.flash_alpha_min
+	var steps := maxi(1, int(round(span / rules.flash_alpha_step)))
+	_sprite.modulate.a = rules.flash_alpha_min 		+ rules.flash_alpha_step * float(randi() % (steps + 1))
+
+## Whether a hit-flash is currently running.
+func flashing() -> bool:
+	return _flash_left > 0.0
 
 ## Order matters, and the first step is the one that has to be synchronous.
 func _die() -> void:

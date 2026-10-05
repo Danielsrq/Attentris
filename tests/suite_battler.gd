@@ -20,7 +20,7 @@ func run() -> void:
 	test_spawn_rule()
 	test_sheet_geometry()
 	test_frame_table_matches_the_art()
-	test_hit_ledger()
+	await test_hit_flash()
 	test_wiring_errors()
 	await test_units_move()
 	await test_units_fight()
@@ -135,57 +135,57 @@ func test_frame_table_matches_the_art() -> void:
 # The hit ledger
 # ------------------------------------------------------------------------------
 
-func test_hit_ledger() -> void:
-	group("HitLedger: immunity is per (attacker, target), not per target")
+func test_hit_flash() -> void:
+	group("BattlerUnit: the hit flash, which is the only feedback a hit now gives")
 
-	var l := HitLedger.new(0.3)
-	check(l.can_hit(111), "an unseen attacker can hit")
-	l.register(111)
-	check(not l.can_hit(111), "   and then cannot, immediately after")
+	SpriteSheet.clear_cache()
+	var r := BattlerRules.testing()
+	var f := BattleField.new(Rect2(0.0, 0.0, 600.0, 256.0), r.body_radius)
+	var u := _spawn(UnitDef.teal(), r, f, Vector2(100.0, 128.0))
+	var sprite: AnimatedSprite2D = u.get_node("Sprite")
 
-	# The whole point. Per-TARGET immunity would refuse this, capping incoming damage at
-	# one hit per window no matter how many attackers -- and because allies do not block
-	# each other here, several reach the same target from the first playtest. A stack of
-	# five would then kill no faster than one, so clearing more lines would stop helping,
-	# which breaks the only coupling this minigame has to Tetris.
-	check(l.can_hit(222), "a DIFFERENT attacker is unaffected, in the same instant")
-	l.register(222)
-	check(not l.can_hit(222), "   until it too has hit")
+	eq(sprite.modulate.a, 1.0, "a fresh unit is fully opaque")
+	check(not u.flashing(), "   and not flashing")
 
-	l.tick(0.2)
-	check(not l.can_hit(111), "part way through the window, still refused")
-	l.tick(0.2)
-	check(l.can_hit(111), "once it expires, allowed again")
-	check(l.can_hit(222), "   for both of them")
-	eq(l.tracked(), 0, "and expired entries are dropped, so the table cannot grow unbounded")
+	u.take_damage(1)
+	check(u.flashing(), "taking damage starts a flash")
+	eq(u.hp, UnitDef.teal().hp - 1, "   and the damage still lands")
 
-	# Damage scales linearly with attacker count. Asserted explicitly, because "simplify
-	# this to one cooldown" is a plausible future refactor that should fail a test naming why.
-	var victim := HitLedger.new(0.3)
-	var landed := 0
-	for attacker in [1, 2, 3, 4, 5]:
-		if victim.can_hit(attacker):
-			victim.register(attacker)
-			landed += 1
-	eq(landed, 5, "five attackers land five hits in one window")
+	# Quantised, and never so faint that the unit disappears -- several may flash at once.
+	var seen := {}
+	var in_range := true
+	for _i in 10:
+		u.advance(0.005, f)
+		var a := sprite.modulate.a
+		if a < r.flash_alpha_min - 0.001 or a > 1.001:
+			in_range = false
+		seen[snappedf(a, 0.01)] = true
+	check(in_range, "   the alpha stays between flash_alpha_min and full")
+	check(seen.size() > 1, "   and actually varies, rather than sitting on one value")
 
-	l.tick(1.0)
-	check(l.can_hit(999), "ticking never resurrects an id that never registered")
-	var f := HitLedger.new(0.3)
-	f.register(7)
-	f.forget(7)
-	check(f.can_hit(7), "forget clears an attacker, for when one dies and its id is recycled")
+	# A hit landing mid-flash must not extend it, or a unit under attack from several sides
+	# flickers forever and reads as a rendering fault.
+	var left_before := u.flashing()
+	u.take_damage(1)
+	check(left_before and u.flashing(), "a second hit mid-flash does not restart it")
 
-# ------------------------------------------------------------------------------
-# Area wiring
-# ------------------------------------------------------------------------------
+	# It ends, and it ends at full opacity rather than wherever the jitter happened to stop.
+	for _i in 80:
+		u.advance(0.01, f)
+	check(not u.flashing(), "the flash finishes")
+	eq(sprite.modulate.a, 1.0, "   and leaves the sprite fully opaque")
 
-## The silent failure mode, made loud.
-##
-## Getting monitoring/monitorable backwards reports no overlap to anything, with no error
-## and no warning -- units just walk past each other forever, which reads exactly like a
-## state-machine bug. An Area2D owns its PhysicsServer RID from construction, so this is
-## checkable off bare Area2D.new() with no tree.
+	# No invulnerability: damage is limited by the swing animation, not by a window, so two
+	# calls in a row both land. This is the assertion that would catch i-frames coming back
+	# by accident.
+	var before := u.hp
+	u.take_damage(3)
+	u.take_damage(3)
+	eq(u.hp, before - 6, "there is no immunity window -- both hits count")
+
+	u.queue_free()
+	await physics_frames(2)
+
 func test_wiring_errors() -> void:
 	group("BattlerUnit: the wiring that would otherwise fail silently")
 
@@ -370,7 +370,7 @@ func test_units_fight() -> void:
 	var corpse := red if not red.alive else teal
 	check(not corpse.alive, "the loser is marked dead synchronously")
 	eq(corpse.hp <= 0, true, "   with its HP spent")
-	corpse.take_damage(99, 12345)
+	corpse.take_damage(99)
 	eq(corpse.hp <= 0, true, "and further damage to a corpse does nothing")
 	# Asked from the SURVIVOR's side: the corpse is the only enemy it has, and must not be
 	# offered as one. Asking from the corpse's own team would return the survivor and prove

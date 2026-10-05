@@ -37,9 +37,6 @@ var heading: int = 1
 
 var hp: int = 30
 var damage: int = 10
-## Seconds a given ATTACKER must wait before it can hurt the same target again. Per
-## (attacker, target) pair, not per target -- see HitLedger.
-var iframe_sec: float = 0.3
 ## Pixels of reach in front, and how far ahead it looks for something to fight. Sight is
 ## the longer of the two so a unit stops just outside its own reach rather than inside it.
 var reach_px: float = 34.0

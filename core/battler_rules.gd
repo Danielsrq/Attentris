@@ -19,14 +19,18 @@ extends Resource
 @export var red_jitter: float = 2.0
 
 @export_group("Movement")
-## Pixels per second. NOT a free parameter: a 9-frame walk at 0.2s per frame is a 1.8s
-## cycle, and a body that does not cover roughly one stride per cycle visibly slides or
-## skates. A 64px frame carries a ~32px body, and an LPC stride covers about one to one and
-## a half of those, so 17-26 px/s is the range that reads as grounded. 22 gives a 29 second
-## crossing of the 638px pane -- comfortably neglectable, which is the point.
+## Pixels per second. NOT a free parameter: it is pinned to frame_seconds, because a body
+## that does not cover roughly one stride per walk cycle visibly slides or skates.
 ##
-## If frame_seconds changes, this has to move with it.
-@export var walk_speed: float = 22.0
+## A 64px frame carries a ~32px body and an LPC stride covers about one to one and a half of
+## those, so the target is ~40px of ground per cycle. A 9-frame walk at 0.15s is a 1.35s
+## cycle, which needs 40 / 1.35 = 29.5 px/s. That gives a 21.6 second crossing of the 638px
+## pane -- still comfortably in the neglectable band.
+##
+## This moved WITH frame_seconds when it went from 0.2s to 0.15s. Leaving it at the old 22
+## would have cut the stride to 30px of ground per 1.35s cycle, which reads as the feet
+## slipping on a treadmill.
+@export var walk_speed: float = 29.5
 
 @export_group("Space")
 ## Half a body, in pixels. The collision quantum, and the scale everything else derives from:
@@ -37,7 +41,7 @@ extends Resource
 ## z-order from y is for.
 @export var body_radius: float = 16.0
 ## How far a unit looks for something to fight, in pixels. 3 bodies, which at walk_speed is
-## about 4.4 seconds of warning before contact.
+## about 3.3 seconds of warning before contact.
 ##
 ## Its ratio to the lane DEPTH decides what kind of flanking exists. Shallower than the aggro
 ## radius and a unit on the centreline sees the entire lane, so there is no corridor to slip
@@ -65,7 +69,22 @@ extends Resource
 @export_group("Animation")
 ## Seconds per frame for every clip. Retiming is a live knob (see SpriteSheet.apply_speed)
 ## rather than a rebuild, so this can be tuned while the game runs.
-@export var frame_seconds: float = 0.2
+##
+## It also sets the combat cadence, because damage lands on an animation's contact frame
+## rather than on a cooldown: at 0.15s a teal thrust is 8 frames and so one hit per 1.2s,
+## while a red slash is 6 frames and so one per 0.9s. Against 30 HP that is 3.6s and 2.7s to
+## kill -- red is the faster fighter, which falls out of the art rather than from a stat.
+@export var frame_seconds: float = 0.15
+
+@export_group("Feedback")
+## How long a unit flashes after being hit. Purely cosmetic -- it carries no mechanical
+## meaning now that there are no invulnerability frames for it to signal.
+@export var flash_sec: float = 0.2
+## Faintest the sprite goes while flashing. Shallow on purpose: a hit should register at the
+## edge of vision without the unit disappearing, since several may be flashing at once.
+@export_range(0.0, 1.0, 0.05) var flash_alpha_min: float = 0.8
+## Quantisation of the flashing alpha, so it reads as a flicker rather than a smooth fade.
+@export_range(0.01, 0.5, 0.01) var flash_alpha_step: float = 0.05
 
 @export_group("Garbage")
 ## How many rows one breach is worth.

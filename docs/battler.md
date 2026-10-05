@@ -17,7 +17,6 @@ peripherally without looking away from the stack.
 | `core/battler_rules.gd` | every tunable, as an exported Resource, plus `spawns_unit()` |
 | `core/unit_def.gd` | the two fighters: sheets, clips, frame counts, stats |
 | `core/sprite_sheet.gd` | builds a `SpriteFrames` in code from an LPC grid |
-| `core/hit_ledger.gd` | per-victim, attacker-keyed immunity |
 | `battler/unit.gd` + `unit.tscn` | one fighter: state machine, detection, damage |
 | `battler/arena.gd` | the right pane: draws it, spawns into the lane, nothing else |
 | `tests/suite_battler.gd` | the pure groups plus four tree tests |
@@ -57,7 +56,7 @@ warning, units simply walk past each other forever. It reads exactly like a stat
 bug. `BattlerUnit.wiring_errors()` checks it at startup and a test checks it with no tree.
 
 **2. `is_instance_valid()` is the wrong liveness check.** A corpse stays a perfectly valid
-instance for its whole death animation — 6 frames at 0.2 s is 1.2 seconds of attackers
+instance for its whole death animation — 6 frames at 0.15 s is 0.9 seconds of attackers
 swinging at a body while the next enemy walks past. The `alive` flag is set
 **synchronously** when HP hits zero, before the deferred shape disable, and that flag is
 what everything checks.
@@ -148,31 +147,49 @@ for the editor. A boot check that cannot see the layout is worth making see the 
 
 | | |
 |---|---|
-| walk speed | 22 px/s — a 29 second crossing of the 638px pane |
-| frame time | 0.2 s for every clip, retimeable live via `SpriteSheet.apply_speed` |
+| walk speed | 29.5 px/s — a 21.6 second crossing of the 638px pane |
+| frame time | 0.15 s for every clip, retimeable live via `SpriteSheet.apply_speed` |
 | red spawn | every 8 s ± 2 |
 | HP / damage | 30 / 10, so three hits kill |
-| immunity | 0.3 s per (attacker, target) pair |
+| hit flash | 0.2 s, alpha jittered 0.8–1.0 in 0.05 steps, not restartable |
 
-**Walk speed is not a free parameter.** A 9-frame walk at 0.2 s is a 1.8 s cycle, and a body
-that does not cover roughly one stride per cycle visibly slides or skates. A 64px frame
-carries a ~32px body and an LPC stride covers about one to one and a half of those, so
-17–26 px/s is the range that reads as grounded. If `frame_seconds` changes, `walk_speed` has
-to move with it.
+**Walk speed is not a free parameter.** A 9-frame walk at 0.15 s is a 1.35 s cycle, and a
+body that does not cover roughly one stride per cycle visibly slides or skates. A 64px frame
+carries a ~32px body and an LPC stride covers about one to one and a half of those, so the
+target is ~40px of ground per cycle — hence 40 / 1.35 = 29.5 px/s.
 
-## Why immunity is per pair
+This is a live coupling, not a note: when `frame_seconds` went from 0.2 s to 0.15 s,
+`walk_speed` moved from 22 to 29.5 with it. Leaving it at 22 would have cut the stride to
+30px per cycle, which reads as the feet slipping on a treadmill.
 
-Per-*victim* immunity would cap incoming damage at `damage / window` regardless of how many
-attackers. Allies deliberately do **not** block each other, so several units reach the same
-target from the first playtest — a stack of five would kill no faster than one, and clearing
-more lines would stop helping you push. That would break the only coupling the minigame
-has. The ledger lives on the victim and is keyed by attacker, which makes the rule
-structural rather than a convention someone can forget.
+## Why there are no invulnerability frames
 
-The cost of letting allies overlap is that 64px sprites can stack. Mitigated by a small
-vertical jitter inside the lane's spare 16px and by z-ordering on it, so a stack reads as a
-crowd — biased to stay above the pane fill, for the reason in trap 6. If that is not enough, the next step is an x nudge on spawn rather than making allies
-block.
+There were, keyed per (attacker, target) rather than per victim, and the argument for that
+keying was sound: per-*victim* immunity caps incoming damage at `damage / window` however
+many attackers there are, so a stack of five would kill no faster than one and clearing more
+lines would stop helping you push.
+
+It was removed because it never did anything. Damage lands on an animation's **contact
+frame**, not on a cooldown, so a fighter is already limited to one hit per swing — 1.2 s for
+a teal thrust, 0.9 s for a red slash at 0.15 s a frame. A 0.3 s window inside a 0.9 s cadence
+never once refused a hit it was meant to refuse. A guard that never fires is
+indistinguishable from a guard that does not work, so it went rather than staying as
+insurance.
+
+**The cadence now comes from the art**, which is why red kills faster than teal: 6 slash
+frames against 8 thrust frames is 2.7 s to kill versus 3.6 s, with no stat saying so. If
+that asymmetry turns out to be wrong, the lever is the declared frame count, not a cooldown.
+
+What replaced it is purely cosmetic: a 0.2 s flash, the sprite's alpha jittered between 0.8
+and 1.0 in 0.05 steps. It is **not restartable** — a hit landing mid-flash is ignored —
+because re-triggering on every hit leaves a unit attacked from several sides flickering
+continuously, which reads as a rendering fault rather than as damage. It ends at full
+opacity, and it ticks before the liveness check so a killing blow still flashes as the body
+drops.
+
+Allies now collide and cannot stack, which was the other half of the old argument. Several
+attackers still reach one target, but they arrive from different sides rather than occupying
+the same ground.
 
 ## How the halves touch
 
