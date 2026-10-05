@@ -114,6 +114,7 @@ Godot rules preset each one was tuned against:
 | bot | rules | APP in Godot | note |
 |---|---|---|---|
 | `allspin-slots` | allspin | 2.32 | strongest; all-spin pays for every spin |
+| `allspin-nowound` | allspin_nw | 2.34 | same weights, no wound lines from repeats |
 | `allspin` | allspin | 2.30 | the earlier set, no spin-slot features |
 | `normal` | normal | 0.97 | 5 quads; non-T spins are Minis |
 | `standard` | guideline | 0.77 | 8 quads -- a quad-well bot, a different game |
@@ -121,6 +122,13 @@ Godot rules preset each one was tuned against:
 
 `gate4` against 0.612 in `bot play` is the pairing working; it read 0.000 until `gate` was
 added to the state.
+
+`--mode allspin_nw` is all-spin scoring with `repeat_penalty` off: every spin still Full and
+still paying like a T-spin, but a repeated clear type no longer inserts a wound line. Worth a
+mode of its own because the obvious alternative is wrong -- wounds come from the repeat
+penalty, not from all-spin, so dropping to `--mode normal` to lose them also makes every non-T
+spin a Mini that sends nothing. Measured through Godot on one seed: **0.24 APP against 2.19**,
+a ninefold collapse, because an all-spin bot's output is almost entirely non-T spin singles.
 
 Within 2%, which is what says the rules pairing and the B2B chain are crossing the wire
 intact. A large gap is the symptom to watch for; it has no other.

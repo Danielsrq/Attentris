@@ -91,6 +91,7 @@ fn rules(a: &Args) -> Rules {
 fn rules_for(a: &Args, mode: Option<&str>) -> Rules {
     let mut r = match mode {
         Some("allspin") => Rules::allspin(),
+        Some("allspin_nw") => Rules::allspin_nw(),
         Some("burst") => Rules::burst(),
         Some("burst2") => Rules::burst2(),
         Some("gate") => Rules::gate(),
@@ -99,7 +100,7 @@ fn rules_for(a: &Args, mode: Option<&str>) -> Rules {
         // Normal rules are the default, as in the Godot game.
         Some("normal") | None => Rules::normal(),
         Some("competitive") => Rules::default(),
-        Some(m) => panic!("unknown --mode {} (normal | burst | burst2 | gate | gate_b2b | standard | competitive | allspin)", m),
+        Some(m) => panic!("unknown --mode {} (normal | burst | burst2 | gate | gate_b2b | standard | competitive | allspin | allspin_nw)", m),
     };
     if a.has("no-allspin") {
         r.all_spin = false;

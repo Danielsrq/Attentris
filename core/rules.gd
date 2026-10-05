@@ -125,6 +125,19 @@ static func allspin() -> RuleSet:
 	r.repeat_penalty = true
 	return r
 
+## All-spin scoring without the repeat penalty: every spin is still Full and still pays like
+## a T-spin, but repeating a clear type no longer inserts an unclearable wound line.
+##
+## Worth having as its own preset because the wounds are the only part of all-spin anyone
+## wants separately, and the obvious alternative is wrong: wounds come from `repeat_penalty`,
+## not from all-spin, so dropping to normal() to lose them also makes every non-T spin a Mini
+## that sends nothing -- measured at 0.24 APP against 2.19 for an all-spin-tuned bot.
+static func allspin_no_wounds() -> RuleSet:
+	var r := RuleSet.allspin()
+	r.preset_name = "allspin_nw"
+	r.repeat_penalty = false
+	return r
+
 ## Burst: normal rules, a T-spin triple worth 10, and back-to-back PLACEMENTS of
 ## qualifying clears (full T-spins, quads, Mini doubles/triples) double the second one.
 static func burst() -> RuleSet:

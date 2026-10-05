@@ -33,7 +33,8 @@ var input_state := InputState.new()
 var battler_rules: BattlerRules
 
 ## Rule presets the handling toggle cycles through; "normal" is the default.
-const RULE_PRESETS := ["normal", "burst", "burst2", "gate", "gate_b2b", "competitive", "guideline", "allspin"]
+const RULE_PRESETS := ["normal", "burst", "burst2", "gate", "gate_b2b", "competitive",
+	"guideline", "allspin", "allspin_nw"]
 var rules_preset := 0
 
 func _preset_rules() -> RuleSet:
@@ -41,6 +42,7 @@ func _preset_rules() -> RuleSet:
 		"normal": return RuleSet.normal()
 		"guideline": return RuleSet.guideline()
 		"allspin": return RuleSet.allspin()
+		"allspin_nw": return RuleSet.allspin_no_wounds()
 		"burst": return RuleSet.burst()
 		"burst2": return RuleSet.burst2()
 		"gate": return RuleSet.gate_rules()

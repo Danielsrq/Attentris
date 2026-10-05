@@ -117,8 +117,8 @@ func _report(game) -> void:
 	var app := float(game.attack_sent) / float(maxi(1, placed))
 	print("pieces %d   attack %d   APP %.3f   quads %d   died %s" % [
 		placed, game.attack_sent, app, _main.auto_quads, game.topped_out])
-	print("   b2b %d   level %d   unreachable placements %d" % [
-		game.b2b, game.level, _main.pilot.unreachable])
+	print("   b2b %d   level %d   wounds %d   unreachable placements %d" % [
+		game.b2b, game.level, game.board.wound_count(), _main.pilot.unreachable])
 	var arena = _main.battler
 	if arena != null and arena.field != null:
 		print("   battler: teal %d  red %d  queued %d" % [

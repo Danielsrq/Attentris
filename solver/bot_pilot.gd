@@ -48,6 +48,11 @@ const PRESETS := [
 		"note": "strongest all-spin: 2.58 APP clean, but tuned on clean boards",
 	},
 	{
+		"name": "allspin-nowound", "mode": "allspin_nw", "rules": "allspin_nw",
+		"weights": "res://bot/weights/allspin_slots.txt",
+		"note": "same weights, all-spin scoring, no wound lines from repeated clears",
+	},
+	{
 		"name": "allspin", "mode": "allspin", "rules": "allspin",
 		"weights": "res://bot/weights/allspin.txt",
 		"note": "the earlier all-spin set, without the spin-slot features",

@@ -18,6 +18,7 @@ func run() -> void:
 	test_best_spin_is_kept()
 	test_pilot_wire_format()
 	test_presets()
+	test_allspin_without_wounds()
 	test_pilot_degrades_without_a_binary()
 
 ## Reads the first `n` records that have a `place` with cells.
@@ -192,11 +193,11 @@ func test_presets() -> void:
 
 	# Godot's rules presets, so the pairing can be checked without instantiating main.
 	var godot_presets := ["normal", "burst", "burst2", "gate", "gate_b2b", "competitive",
-		"guideline", "allspin"]
+		"guideline", "allspin", "allspin_nw"]
 	# The modes bot/src/main.rs rules_for() accepts. A mode outside this list makes the
 	# backend panic on startup, which reads as "the bot would not come up".
 	var bot_modes := ["normal", "burst", "burst2", "gate", "gate_b2b", "standard",
-		"competitive", "allspin"]
+		"competitive", "allspin", "allspin_nw"]
 
 	check(BotPilot.PRESETS.size() >= 2, "there is more than one bot to choose between")
 	var names := {}
@@ -225,6 +226,33 @@ func test_presets() -> void:
 	var neg: Dictionary = pilot.use_preset(-1)
 	eq(neg["name"], BotPilot.PRESETS[BotPilot.PRESETS.size() - 1]["name"],
 		"and it wraps backwards too, rather than clamping")
+
+func test_allspin_without_wounds() -> void:
+	group("RuleSet: all-spin scoring without the wound lines")
+
+	# Wounds come from repeat_penalty, not from all-spin. The obvious way to lose them --
+	# dropping to normal rules -- also makes every non-T spin a Mini that sends nothing, which
+	# measured 0.24 APP against 2.19 for an all-spin-tuned bot. This preset is the narrow
+	# change: the same scoring, minus the unclearable rows.
+	var full := RuleSet.allspin()
+	var nw := RuleSet.allspin_no_wounds()
+
+	eq(nw.preset_name, "allspin_nw", "it is its own preset")
+	check(full.repeat_penalty, "all-spin penalises a repeated clear type")
+	check(not nw.repeat_penalty, "   and this variant does not -- the one difference")
+
+	# Everything that makes it ALL-SPIN has to survive, or it is just normal rules again.
+	eq(nw.all_spin, full.all_spin, "every piece can still spin")
+	eq(nw.allspin_full, full.allspin_full, "   and every spin is still Full, not a Mini")
+	eq(nw.non_t_spin_is_mini, full.non_t_spin_is_mini,
+		"   so a non-T spin still pays, which is what normal rules would have taken away")
+
+	# And the board really stops growing wounds. Driven through Board directly, because the
+	# live wound count ticks down into ordinary garbage and so proves nothing after the fact.
+	var b := Board.new(10, 20, 20)
+	b.add_wound(10, 4)
+	eq(b.wound_count(), 1, "a wound added directly is a wound")
+	check(b.is_wound(b.total_height - 1), "   and it sits at the bottom")
 
 func test_pilot_degrades_without_a_binary() -> void:
 	group("BotPilot: an unbuilt bot is a message, not a mystery")
