@@ -11,7 +11,10 @@ extends Node2D
 var game: Game
 var layout: ViewLayout
 var main: Node
-var visible_overlay: bool = true
+## Starts OFF. This readout draws over the right pane, which is where the battler's lane now
+## is, so defaulting it on means the game opens with debug text across the minigame. F1 brings
+## it back -- and note that the autoplay rate slider lives in here, so it comes back with it.
+var visible_overlay: bool = false
 
 const TEXT := Color(0.75, 0.95, 0.80)
 const LABEL := Color(0.45, 0.55, 0.50)

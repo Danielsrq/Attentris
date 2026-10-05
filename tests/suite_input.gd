@@ -265,6 +265,15 @@ func test_layout_regions() -> void:
 	check(strays.is_empty(), "the lane never starts left of its own pane%s" % [
 		"" if strays.is_empty() else " (%s)" % str(strays)])
 
+	# The debug readout draws over the right pane, which is the battler's lane, so it has to
+	# open hidden or the game starts with debug text across the minigame. Pinned because the
+	# default is one word and the symptom is cosmetic enough to ship by accident.
+	var ov: Node2D = load("res://view/debug_overlay.gd").new()
+	check(not ov.visible_overlay, "the debug overlay starts hidden, off the lane")
+	# free(), not queue_free(): it was never added to the tree, and leaving it would show up
+	# as "Pages in use exist at exit" long after this group has passed.
+	ov.free()
+
 	# A window with no room must leave a zero-width pane, not a negative one -- every
 	# consumer's `size.x <= 0.0` guard depends on it.
 	var narrow := ViewLayout.new(b, Vector2(640, 720), 30)

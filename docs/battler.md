@@ -280,6 +280,9 @@ flying. Both answer `solve()` with `Array[Placement]`, so `_stage_placement` nev
 **H** draws its plan while you play; **P** hands it the board; **B** cycles which weight set;
 **F2** cycles the rules, and the bot's belief follows F2 automatically.
 
+The debug readout starts **hidden**, because it draws over the right pane and the lane is now
+there -- but the autoplay rate slider lives inside it, so **F1** is what brings both back.
+
 Those are letters, not function keys, on purpose: the editor keeps Run (F5), Run Current Scene
 (F6), Pause (F7), Stop (F8) and Fullscreen (F11) live while a project launched from it is
 running, so F5-F11 reach the editor rather than the game. F9 paused the game and F8 quit it,
