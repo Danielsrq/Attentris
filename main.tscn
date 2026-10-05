@@ -29,6 +29,6 @@ script = ExtResource("4_overlay")
 
 [node name="Audio" type="Node" parent="." unique_id=1699760870]
 script = ExtResource("5_audio")
-master_db = -4.5
+master_db = -7.5
 gain_move = -6.0
 gain_combo_break = -6.0

@@ -133,6 +133,10 @@ func _report(game) -> void:
 	print("   b2b %d   level %d   wounds %d   unreachable placements %d" % [
 		game.b2b, game.level, game.board.wound_count(), _main.pilot.unreachable])
 	var arena = _main.battler
+	if arena != null:
+		# What the pane header shows -- the only feedback B gives while the debug readout is
+		# hidden, so it is worth asserting it says something.
+		print("   pane header: \"%s\"" % arena.brain_label)
 	if arena != null and arena.field != null:
 		# SENT is the number that matters for the economy; alive is just the snapshot.
 		print("   battler: sent %d teal / %d red  (%.2f teal per piece)  alive %d/%d  queued %d" % [

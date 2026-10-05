@@ -66,6 +66,13 @@ var _breaches: int = 0
 var _hole: int = 4
 var _red_left: float = 0.0
 var _font: Font
+## Who is feeding this lane, for the pane header: the weight set and the rules the bot
+## believes, or that BeamSolver is standing in.
+##
+## Shown here rather than only in the debug readout, which starts hidden -- cycling the bot
+## with B otherwise gave no feedback whatsoever, and the whole point of the toggle is being
+## able to tell the bots apart. Set by main; this node only prints it.
+var brain_label: String = ""
 ## Teams queued to enter, oldest first. See _drain_pending.
 var _pending: Array[int] = []
 ## Spawns so far, only to alternate the turn bias.
@@ -261,6 +268,9 @@ func _draw() -> void:
 	draw_rect(pane, PANE_EDGE, false, 1.0)
 	draw_string(_font, pane.position + Vector2(8.0, 16.0), TITLE,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, TEXT_DIM)
+	if brain_label != "":
+		draw_string(_font, pane.position + Vector2(8.0, 30.0), brain_label,
+			HORIZONTAL_ALIGNMENT_LEFT, pane.size.x - 16.0, 11, TEXT_DIM)
 
 	var lane := layout.lane_rect
 	draw_rect(lane, LANE_BG)

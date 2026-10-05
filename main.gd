@@ -170,6 +170,7 @@ func _new_game(seed_v: int = -1) -> void:
 	_auto_staged = false
 	_auto_accum = 0.0
 	_dispatch(game.start())
+	_refresh_brain_label()
 
 	if Engine.is_editor_hint() and preview_in_editor:
 		_build_preview()
@@ -468,6 +469,25 @@ func _use_rules(index: int) -> void:
 	game.rules = _preset_rules()
 	rules = game.rules
 	game.gravity_enabled = keep_gravity
+	_refresh_brain_label()
+
+## Names what is feeding the lane, in the battler pane itself.
+##
+## Not in the debug readout alone: that starts hidden, so B gave no feedback and the bots were
+## indistinguishable. Recomputed on change rather than per frame -- it is a string concat, and
+## nothing here changes without one of these calls.
+func _refresh_brain_label() -> void:
+	if battler == null:
+		return
+	if not piloted():
+		battler.brain_label = "beam solver (bot not built)"
+	elif pilot.believe != "":
+		battler.brain_label = "%s  believes %s  /  rules %s" % [
+			pilot.preset()["name"], pilot.believe, RULE_PRESETS[rules_preset]]
+	else:
+		battler.brain_label = "%s  /  %s" % [
+			pilot.preset()["name"], RULE_PRESETS[rules_preset]]
+	battler.queue_redraw()
 
 ## Next WEIGHT SET, and a jump to the rules it was tuned against.
 ##
@@ -481,7 +501,9 @@ func _cycle_bot() -> void:
 	var p := pilot.next_preset()
 	var want: int = RULE_PRESETS.find(String(p["tuned_for"]))
 	if want >= 0:
-		_use_rules(want)
+		_use_rules(want)      # which refreshes the label
+	else:
+		_refresh_brain_label()
 	_needs_resolve = true
 
 func _dispatch(events: Array) -> void:

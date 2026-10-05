@@ -283,6 +283,11 @@ flying. Both answer `solve()` with `Array[Placement]`, so `_stage_placement` nev
 The debug readout starts **hidden**, because it draws over the right pane and the lane is now
 there -- but the autoplay rate slider lives inside it, so **F1** is what brings both back.
 
+The battler pane's own header names what is feeding it (`allspin-slots / allspin`, or
+`allspin-slots believes allspin / rules normal` when a belief is pinned). That is there
+because the bot name used to live only in the hidden readout, so **B** cycled between bots
+that looked identical.
+
 Those are letters, not function keys, on purpose: the editor keeps Run (F5), Run Current Scene
 (F6), Pause (F7), Stop (F8) and Fullscreen (F11) live while a project launched from it is
 running, so F5-F11 reach the editor rather than the game. F9 paused the game and F8 quit it,
