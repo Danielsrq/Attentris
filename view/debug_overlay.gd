@@ -90,6 +90,12 @@ func _draw_state_column(x: float, y: float) -> void:
 		p.move_resets if p != null else 0], x, y)
 	y = _row("gravity", "%s  %.4f c/tick" % [
 		"on" if game.gravity_enabled else "OFF", game.current_gravity()], x, y)
+	if main != null and main.bot_pilot:
+		var trouble: String = main.pilot_status()
+		# Highlighted when something is wrong, because a mispaired pilot has no symptom
+		# other than playing worse than its own benchmarks.
+		y = _row("pilot", "rust %s  %d nodes" % [main.pilot.mode, main.pilot.last_nodes]
+			if trouble == "" else trouble, x, y, trouble != "")
 	y = _row("das / arr", "%.0f / %.0f ms left" % [game.das_remaining(), game.arr_remaining()], x, y)
 	y = _row("b2b / combo", "%d / %d" % [game.b2b, game.combo], x, y)
 	y = _row("seed", str(game.seed_value), x, y)

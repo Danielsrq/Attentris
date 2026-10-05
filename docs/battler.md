@@ -268,6 +268,19 @@ fighter that silently failed to appear because the edge was crowded would be ind
 from a broken spawn rule. The readout shows the queue as `(+N)`; if that sticks rather than
 draining, the lane is jammed and **lane depth** is the lever, not the steering.
 
+## Letting the bot play the left half
+
+`main.bot_pilot` hands the Tetris board to the Rust bot in `bot/` instead of `BeamSolver`,
+which matters here because the Godot solver is the quad-oriented hint search and cannot reach
+tucks or kicked spins -- so it cannot play the all-spin game this economy is built around.
+Both answer `solve()` with `Array[Placement]`, so `_stage_placement` needed no change.
+
+**It immediately showed the spawn economy is untuned.** The bot clears ~40 spins per 100
+pieces, and `spawns_unit()` fires on a quad *or any spin*, so over 400 piloted pieces the lane
+held **85 teal against 1 red, with 73 more queued** at the entry edge. The queue draining is
+the signal to watch; it did not drain. Those numbers were set against a human, and the levers
+are `red_interval`, `spawns_unit()`, and lane depth -- in that order.
+
 ## The editor keeps its own list of open files
 
 Deleting the tower defence left `.godot/editor/editor_layout.cfg` still listing

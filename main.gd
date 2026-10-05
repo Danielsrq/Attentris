@@ -56,6 +56,17 @@ var ghost_slot := GhostSlot.new()
 const GHOST_COLUMNS := 1
 
 var solver: BeamSolver
+## The Rust bot, when it is flying the board instead of the Godot solver.
+var pilot: BotPilot
+## Hand the board to bot/ rather than to BeamSolver.
+##
+## The Godot solver is the quad-oriented hint search and cannot reach tucks or kicked spins,
+## so it cannot demonstrate the all-spin play the minigame's economy is built around. The
+## Rust bot can, and the seam is free: both answer solve() with Array[Placement].
+@export var bot_pilot := false:
+	set(value):
+		bot_pilot = value
+		_needs_resolve = true
 var hints_enabled := false
 ## Lookahead depth for the hint solver. Fixed: it was on F7/F8 and never touched,
 ## and a knob nobody turns is just a way for the two paths to drift apart.
@@ -139,6 +150,8 @@ func _new_game(seed_v: int = -1) -> void:
 	solver = BeamSolver.new(BoardEvaluator.new(EvalWeights.lookahead()))
 	solver.beam_width = HINT_BEAM
 	solver.depth = hint_steps
+	pilot = BotPilot.new()
+	pilot.piece_set = piece_set
 
 	battler_rules = BattlerRules.testing()
 
@@ -295,16 +308,47 @@ func _resolve_hints() -> void:
 		hints.set_plan([])
 		last_solve_ms = 0.0
 		return
-	solver.depth = AUTOPLAY_DEPTH if autoplay else hint_steps
+	var brain := _brain()
+	brain.depth = AUTOPLAY_DEPTH if autoplay else hint_steps
 	if threaded_solve and not Engine.is_editor_hint():
 		_request_threaded_solve()
 		return
 	var queue: Array = [game.active.def]
 	queue.append_array(game.next_queue)
 	var t0 := Time.get_ticks_usec()
-	var plan := solver.solve(game.board, queue, game.hold_def, Callable(), game.b2b)
+	var plan: Array = brain.solve(game.board, queue, game.hold_def, Callable(), game.b2b)
 	last_solve_ms = float(Time.get_ticks_usec() - t0) / 1000.0
 	hints.set_plan(plan)
+
+## Whichever search is flying the board. Duck-typed on solve() and depth, so the worker and
+## the synchronous path do not care which one they got.
+##
+## Falls back to the Godot solver when the bot has not been built, rather than stalling: an
+## unbuilt binary is a missing `cargo build --release`, not a reason to stop playing.
+func _brain() -> Object:
+	if bot_pilot and pilot != null and pilot.available():
+		return pilot
+	return solver
+
+## Empty when the pairing is fine, otherwise what is wrong with it.
+##
+## The bot searches under the rules it is TOLD to use, so piloting with a mismatched preset
+## means it plans for value the game will not pay -- quietly, and the only symptom is that it
+## plays worse than its benchmarks. Reported rather than corrected: which of the two is wrong
+## is the user's call, not this function's.
+func pilot_status() -> String:
+	if not bot_pilot:
+		return ""
+	if pilot == null or not pilot.available():
+		return "bot not built -- cargo build --release in bot/"
+	var preset: String = RULE_PRESETS[rules_preset]
+	if pilot.mode == "allspin" and preset != "allspin":
+		return "bot is all-spin but rules are '%s' -- press the handling toggle" % preset
+	if pilot.mode != "allspin" and preset == "allspin":
+		return "rules are all-spin but bot mode is '%s'" % pilot.mode
+	if pilot.unreachable > 0:
+		return "%d placements Godot could not reach" % pilot.unreachable
+	return ""
 
 ## Hand the worker a board it alone owns. Anything shared would race, because the
 ## game keeps locking pieces while the solve runs.
@@ -320,7 +364,7 @@ func _request_threaded_solve() -> void:
 	_solve_thread.start(_solve_worker.bind(snapshot, queue, game.hold_def, game.b2b))
 
 func _solve_worker(board: Board, queue: Array, hold: PieceDef, b2b: int) -> void:
-	var plan := solver.solve(board, queue, hold, Callable(), b2b)
+	var plan: Array = _brain().solve(board, queue, hold, Callable(), b2b)
 	_solve_mutex.lock()
 	_pending_plan = plan
 	_plan_ready = true
@@ -364,6 +408,8 @@ func _handle_meta_keys() -> void:
 		board_view.show_grid = not board_view.show_grid
 	if reader.pressed("cycle_profile"):
 		reader.next_profile()
+	if reader.pressed("toggle_pilot"):
+		bot_pilot = not bot_pilot
 	if reader.pressed("toggle_autoplay"):
 		autoplay = not autoplay
 		_auto_staged = false

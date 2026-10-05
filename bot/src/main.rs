@@ -211,26 +211,99 @@ fn cmd_probe(a: &Args) {
 /// `bot plan --board ROWS --queue LJTSZO [--hold T] --weights W [--mode M] [--beam N]`
 /// The line the search would play from a given position: each step's piece, clear and
 /// attack, the board after it, and V of the final board. ROWS as in `probe`.
-fn cmd_plan(a: &Args) {
-    let rows: Vec<&str> = a.str("board").expect("--board").split('/').collect();
+/// Reads the live state the Godot pilot sends: the board, the queue, hold, and the B2B
+/// chain, plus wounds -- which `--board` cannot express and which matter under all-spin
+/// rules, where `RuleSet.allspin()` turns `repeat_penalty` on and the Godot board really
+/// does grow unclearable rows. Both engines already represent a wound the same way (a
+/// per-row countdown plus the hole it will leave), so it crosses the wire unchanged.
+fn state_from_json(src: &str) -> Result<(board::Board, Vec<rules::Piece>, Option<rules::Piece>, i32), String> {
+    let v: serde_json::Value = serde_json::from_str(src).map_err(|e| format!("state is not JSON: {e}"))?;
     let mut b = board::Board::default();
+    let rows = v["board"].as_array().ok_or("state.board must be an array of row strings")?;
+    // Bottom-aligned, as --board is: the caller may send only the occupied tail.
     let base = rules::H as usize - rows.len();
-    for (i, r) in rows.iter().enumerate() {
-        for (x, ch) in r.chars().enumerate() {
-            if ch == 'X' || ch == '#' {
+    for (i, row) in rows.iter().enumerate() {
+        for (x, ch) in row.as_str().unwrap_or("").chars().enumerate() {
+            if ch != '.' && ch != ' ' {
                 b.rows[base + i] |= 1 << x;
             }
         }
     }
+    for (i, w) in v["wound_left"].as_array().unwrap_or(&vec![]).iter().enumerate() {
+        let left = w.as_u64().unwrap_or(0) as u8;
+        if left > 0 && base + i < rules::H as usize {
+            b.wound_left[base + i] = left;
+            b.wounds += 1;
+            b.wound_hole[base + i] = v["wound_hole"][i].as_u64().unwrap_or(0) as u8;
+            b.last_wound_hole = b.wound_hole[base + i];
+        }
+    }
+    let letter = |c: char| rules::Piece::from_letter(c).ok_or(format!("bad piece '{c}'"));
+    let mut queue = Vec::new();
+    for c in v["queue"].as_str().unwrap_or("").chars() {
+        queue.push(letter(c)?);
+    }
+    let hold = match v["hold"].as_str().and_then(|h| h.chars().next()) {
+        Some(c) => Some(letter(c)?),
+        None => None,
+    };
+    let chain = v["b2b"].as_i64().unwrap_or(-1) as i32;
+    Ok((b, queue, hold, chain))
+}
+
+fn cmd_plan(a: &Args) {
     let piece = |c: char| rules::Piece::from_letter(c).unwrap_or_else(|| panic!("bad piece {}", c));
-    let queue: Vec<rules::Piece> = a.str("queue").expect("--queue").chars().map(piece).collect();
-    let hold = a.str("hold").and_then(|h| h.chars().next()).map(piece);
+    // --state-file, not --state: the state is JSON, and a quoted JSON blob on a Windows
+    // command line gets mangled before this process ever sees it. A file has no quoting.
+    let from_file = a.str("state-file").map(|p| {
+        std::fs::read_to_string(p).unwrap_or_else(|e| format!("{{\"err\":\"cannot read {p}: {e}\"}}"))
+    });
+    let state_src = from_file.as_deref().or_else(|| a.str("state"));
+    let (b, queue, hold, chain) = match state_src {
+        Some(src) => match state_from_json(src) {
+            Ok(v) => v,
+            Err(e) => {
+                // Reported as JSON on stdout, not as a panic. The caller is another process
+                // that reads stdout; a panic puts the reason on stderr where it is discarded,
+                // and all it learns is "exit 101".
+                println!("{{\"error\":{}}}", serde_json::to_string(&e).unwrap());
+                return;
+            }
+        },
+        None => {
+            let rows: Vec<&str> = a.str("board").expect("--board or --state").split('/').collect();
+            let mut b = board::Board::default();
+            let base = rules::H as usize - rows.len();
+            for (i, r) in rows.iter().enumerate() {
+                for (x, ch) in r.chars().enumerate() {
+                    if ch == 'X' || ch == '#' {
+                        b.rows[base + i] |= 1 << x;
+                    }
+                }
+            }
+            let queue: Vec<rules::Piece> =
+                a.str("queue").expect("--queue").chars().map(piece).collect();
+            let hold = a.str("hold").and_then(|h| h.chars().next()).map(piece);
+            let chain: i32 = a.str("chain").and_then(|c| c.parse().ok()).unwrap_or(-1);
+            (b, queue, hold, chain)
+        }
+    };
     let r = rules(a);
     let mut sc = search_config(a);
     sc.chance = false;
     let mut s = Searcher::new(sc, weights(a), r);
     let shapes = rules::Shapes::new();
-    let d = s.search(&b, &queue, hold, -1, &rules::ALL_PIECES).expect("no move");
+    let d = s.search(&b, &queue, hold, chain, &rules::ALL_PIECES).expect("no move");
+
+    // Machine-readable mode for the Godot pilot: one JSON line, in the schema the replay
+    // viewer already parses, so there is no second wire format to keep in step. The plan's
+    // cells are what the pilot acts on -- it re-derives rotation and kick with Godot's own
+    // kick tables rather than trusting this process's coordinate conventions.
+    if a.str("json").is_some() {
+        let plan = game::plan_to_json(&b, &d.plan, chain, &s, &shapes);
+        println!("{{\"use_hold\":{},\"nodes\":{},\"plan\":{}}}", d.use_hold, s.nodes, plan);
+        return;
+    }
     let show = |b: &board::Board| {
         let top = (0..rules::H as usize).find(|&y| b.rows[y] != 0).unwrap_or(rules::H as usize).min(rules::H as usize - 1);
         for y in top.saturating_sub(1)..rules::H as usize {
@@ -238,9 +311,11 @@ fn cmd_plan(a: &Args) {
         }
     };
     let mut cur = b;
-    let mut chain = -1;
+    // The chain the caller gave us, not a fresh board's -1: V and every attack below depend
+    // on whether a B2B is already live.
+    let mut chain = chain;
     let mut total = 0;
-    println!("start (V {:.3})", s.weights.value(&eval::features(&cur, -1, r.b2b)));
+    println!("start (V {:.3})", s.weights.value(&eval::features(&cur, chain, r.b2b)));
     show(&cur);
     for (k, st) in d.plan.iter().enumerate() {
         let o = search::apply(&cur, &st.placement, chain, &r, &shapes);
@@ -490,7 +565,7 @@ fn cmd_bench(a: &Args) {
 fn main() {
     let argv: Vec<String> = std::env::args().skip(1).collect();
     if argv.is_empty() {
-        eprintln!("usage: bot play|bench|tune|parity|weights [options]  (see src/main.rs)");
+        eprintln!("usage: bot play|bench|tune|parity|weights|plan [options]  (see src/main.rs)");
         std::process::exit(2);
     }
     let a = Args::parse(&argv[1..]);

@@ -62,6 +62,40 @@ godot --headless --path .. -s res://tests/bot_replay_check.gd -- --replay=res://
 godot --headless --path .. -s res://tests/allspin_parity.gd -- --replay=<allspin jsonl without garbage>
 ```
 
+## Piloting the Godot board
+
+`bot plan` answers one decision for a running game, so the bot can fly the board live instead
+of only producing replays. Live is necessary rather than nicer: the right-hand battler pushes
+garbage back into the Tetris board from its own runtime RNG, so a recording desyncs the moment
+a red breaches.
+
+```
+./target/release/bot plan --json --mode allspin --weights weights/allspin_slots.txt                          --state-file <path>      # {"use_hold":..,"nodes":..,"plan":[..]}
+godot --headless --path .. --script res://tools/pilot_bench.gd -- --pieces 400 --seed 101
+```
+
+* `--state-file` holds `{board, queue, hold, b2b, wound_left, wound_hole}`. A **file**, not a
+  `--state` argument: the state is JSON, and a quoted JSON blob in a Windows process argument
+  is mangled before this binary sees it. Both forms are accepted; the file is what Godot uses.
+* `wound_*` travel because `--board` cannot express an unclearable row, and under all-spin
+  rules they are real -- `RuleSet.allspin()` turns `repeat_penalty` on.
+* Output is the replay schema's `plan`, so there is no second wire format. Godot acts on each
+  step's **cells** and re-derives rotation and kick with its own tables
+  (`solver/path_finder.gd`), so neither side trusts the other's coordinate conventions.
+  Certified by `tests/spin_path_check.gd`: 2068 recorded spin placements, 0 not reproducible.
+* Bad input is reported as `{"error": ...}` on stdout and exit 0, not as a panic. A panic puts
+  the reason on stderr, where a parent process reading stdout learns only "exit 101".
+
+Measured in-game against this binary's own numbers, 400 pieces of all-spin:
+
+| | APP | deaths |
+|---|---|---|
+| `bot play` | 2.582 | 0/8 |
+| piloting Godot | 2.538 | 0 |
+
+Within 2%, which is what says the rules pairing and the B2B chain are crossing the wire
+intact. A large gap is the symptom to watch for; it has no other.
+
 ## Normal-rules weights
 
 `weights/normal.txt`: tuned under normal rules with fibonacci B2B (CEM, 20 generations

@@ -23,6 +23,7 @@ const SUITES := [
 	"res://tests/suite_input.gd",
 	"res://tests/suite_economy.gd",
 	"res://tests/suite_battler.gd",
+	"res://tests/suite_bot_pilot.gd",
 ]
 
 func _ready() -> void:

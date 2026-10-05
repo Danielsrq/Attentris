@@ -534,7 +534,7 @@ fn sorted_cells(p: &crate::board::Placement, shapes: &crate::rules::Shapes) -> [
 /// NOW. A planned piece that lands after an earlier planned clear sits on a board
 /// whose rows have shifted down; mapping each row back to the row it came from puts
 /// the forecast where it will visually end up, drawn over today's stack.
-fn plan_to_json(board: &Board, plan: &[crate::search::Step], b2b: i32, searcher: &Searcher,
+pub(crate) fn plan_to_json(board: &Board, plan: &[crate::search::Step], b2b: i32, searcher: &Searcher,
                 shapes: &crate::rules::Shapes) -> String {
     let mut b = *board;
     let mut chain = b2b;
