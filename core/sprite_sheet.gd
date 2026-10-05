@@ -48,12 +48,27 @@ static func facing_row(facing: int, rows: int) -> int:
 		return 0
 	return clampi(facing, 0, rows - 1)
 
+## The clip whose speed comes from a declared DURATION rather than a per-frame time.
+const PACED := &"attack"
+
+## Frames per second for one clip.
+##
+## Every clip runs at 1 / frame_seconds except the attack, which is paced to finish in
+## attack_sec regardless of how many frames it has. Attack speed is a stat; the frame count
+## is only how smooth the swing looks. Pacing the swing per-frame conflated the two and made
+## a 6-frame slash land a third faster than an 8-frame thrust for no reason anyone chose.
+static func clip_fps(clip: StringName, frames: int, frame_seconds: float,
+		attack_sec: float) -> float:
+	if clip == PACED and attack_sec > 0.0 and frames > 0:
+		return float(frames) / attack_sec
+	return 1.0 / maxf(0.01, frame_seconds)
+
 ## Builds every clip a UnitDef declares, for every facing it needs.
 ##
 ## Clip names are "<clip>_<facing>", e.g. "walk_3", so the unit can ask for a clip and a
 ## direction independently. Single-row sheets get the same frames under every facing name,
 ## which costs a few AtlasTextures and saves every caller a special case.
-static func build(def: UnitDef, frame_seconds: float) -> SpriteFrames:
+static func build(def: UnitDef, frame_seconds: float, attack_sec: float = 0.0) -> SpriteFrames:
 	if _cache.has(def.id):
 		return _cache[def.id]
 	var sf := SpriteFrames.new()
@@ -68,7 +83,8 @@ static func build(def: UnitDef, frame_seconds: float) -> SpriteFrames:
 			var name := StringName("%s_%d" % [clip, facing])
 			sf.add_animation(name)
 			sf.set_animation_loop(name, bool(spec["loop"]))
-			sf.set_animation_speed(name, 1.0 / maxf(0.01, frame_seconds))
+			sf.set_animation_speed(name,
+				clip_fps(clip, mini(count, g.x), frame_seconds, attack_sec))
 			var row := facing_row(facing, g.y)
 			for col in mini(count, g.x):
 				var at := AtlasTexture.new()
@@ -80,12 +96,15 @@ static func build(def: UnitDef, frame_seconds: float) -> SpriteFrames:
 
 ## Retimes every clip without rebuilding a single AtlasTexture, so frame_seconds can be a
 ## live inspector knob rather than something that costs a rebuild.
-static func apply_speed(frames: SpriteFrames, frame_seconds: float) -> void:
+static func apply_speed(frames: SpriteFrames, frame_seconds: float,
+		attack_sec: float = 0.0) -> void:
 	if frames == null:
 		return
-	var fps := 1.0 / maxf(0.01, frame_seconds)
 	for name in frames.get_animation_names():
-		frames.set_animation_speed(name, fps)
+		# Clip names are "<clip>_<facing>", so the paced one is recognised by its prefix.
+		var clip := StringName(String(name).get_slice("_", 0))
+		frames.set_animation_speed(name,
+			clip_fps(clip, frames.get_frame_count(name), frame_seconds, attack_sec))
 
 ## Drops the shared cache. Only for tests, which build defs repeatedly.
 static func clear_cache() -> void:

@@ -111,11 +111,6 @@ toggle_autoplay={
 ]
 }
 
-[layer_names]
-
-2d_physics/layer_1="teal_hurt"
-2d_physics/layer_2="red_hurt"
-
 [physics]
 
 3d/physics_engine="Jolt Physics"

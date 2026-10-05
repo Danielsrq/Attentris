@@ -13,10 +13,17 @@ extends Node2D
 ## holds no geometry of its own, which is why the awkward parts of crowd movement are
 ## testable with no scene tree.
 ##
-## The three Area2D children are NO LONGER READ. Radial targeting with ranked candidates, a
-## swept step test and neighbour gathering are all computations over a list, which an overlap
-## query answers badly, so detection moved to BattleField. The nodes and their wiring check
-## remain only so that deleting them can be a separate, reviewable step.
+## There is no detection by overlap. Radial targeting with ranked candidates, a swept step
+## test and neighbour gathering are all computations over a list, which an overlap query
+## answers badly: it returns an unordered set, with no distances, one frame stale. So `Sight`
+## and `Hurtbox` are gone, along with both collision layers -- and with them the trap where
+## inverting monitoring/monitorable makes nothing report an overlap, with no error.
+##
+## One `Hitbox` Area2D survives, inert, as the slot for a SHAPED hit volume. A radius is the
+## right model for single-target melee, but a cone, a projectile, or a volume matching red's
+## slash -- whose art reaches 49px past its nominal frame -- is genuinely a shape, and that is
+## the one job an area still does better than arithmetic. It would be opened on the contact
+## frame and closed after.
 
 enum State { WALK, ATTACK, DYING }
 
@@ -66,10 +73,10 @@ var _contact_pending: bool = false
 ## Seconds of hit-flash left, or 0.
 var _flash_left: float = 0.0
 var _sprite: AnimatedSprite2D
-var _hurt: Area2D
+## Reserved for a SHAPED hit volume -- a cone, a projectile, or something matching red's
+## slash, whose art reaches 49px past its nominal frame. Inert until then: no layer, no mask,
+## not monitoring, shape disabled. See the class doc for why it is the only one left.
 var _hit: Area2D
-var _sight: Area2D
-var _hurt_shape: CollisionShape2D
 var _hit_shape: CollisionShape2D
 
 func setup(d: UnitDef, r: BattlerRules, bias: int = 1) -> void:
@@ -80,17 +87,13 @@ func setup(d: UnitDef, r: BattlerRules, bias: int = 1) -> void:
 	_bias = 1 if bias >= 0 else -1
 	_facing = d.facing
 	_resolve()
-	_build_shapes()
-	_wire_layers()
-	_sprite.sprite_frames = SpriteSheet.build(d, r.frame_seconds)
+	_sprite.sprite_frames = SpriteSheet.build(d, r.frame_seconds, r.attack_sec)
 	_sprite.centered = true
 	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	# Hung above the ground point, so `position` means the feet.
 	_sprite.position = Vector2(0.0, -FEET_BELOW_CENTRE)
 	if not _sprite.frame_changed.is_connected(_on_frame_changed):
 		_sprite.frame_changed.connect(_on_frame_changed)
-	for problem in wiring_errors(_hurt, _hit, _sight, d):
-		push_error("BattlerUnit %s: %s" % [d.id, problem])
 	_play(&"walk")
 
 ## Looked up on demand rather than with @onready, because a unit is set up immediately after
@@ -98,10 +101,7 @@ func setup(d: UnitDef, r: BattlerRules, bias: int = 1) -> void:
 ## still null, silently.
 func _resolve() -> void:
 	_sprite = get_node_or_null("Sprite")
-	_hurt = get_node_or_null("Hurtbox")
 	_hit = get_node_or_null("Hitbox")
-	_sight = get_node_or_null("Sight")
-	_hurt_shape = _hurt.get_node_or_null("Shape") if _hurt != null else null
 	_hit_shape = _hit.get_node_or_null("Shape") if _hit != null else null
 
 # ------------------------------------------------------------------------------
@@ -212,9 +212,10 @@ func flashing() -> bool:
 
 ## Order matters, and the first step is the one that has to be synchronous.
 func _die() -> void:
-	alive = false                                   # before anything deferred
-	_hit_shape.set_deferred("disabled", true)
-	_hurt_shape.set_deferred("disabled", true)
+	alive = false                                   # before anything deferred, and the ONLY
+	                                                # thing that makes a corpse stop being a
+	                                                # target or holding ground: every
+	                                                # BattleField query filters on it.
 	# A corpse sinks behind living siblings, but not below 1: z_index is relative to the
 	# parent, and the arena paints an opaque pane fill in its own _draw, so 0 and below is
 	# where a sprite goes to become invisible rather than to go behind something.
@@ -246,11 +247,26 @@ func _face(v: Vector2) -> void:
 	_facing = f
 	_play(_clip)
 
+## Starts a clip, without restarting one already running.
+##
+## The `is_playing` half of that guard is load-bearing, and its absence was a bug that showed
+## up for ONE TEAM ONLY. Assigning a SpriteFrames leaves the sprite's `animation` set to the
+## first animation it contains, with nothing playing. SpriteSheet builds facings in the order
+## LEFT, RIGHT, UP, DOWN, so the first animation is always "walk_1" -- walk, facing LEFT.
+##
+## Red faces LEFT. So red's opening _play(&"walk") asked for the name already sitting there,
+## the name-only guard skipped the play() call, and red slid across the lane on a frozen frame
+## until its first fight changed the clip and unstuck it. Teal faces RIGHT, wanted "walk_3",
+## and never hit the case.
+##
+## The name check still has to stay: play() on a running clip resets its frame counter, which
+## would restart a swing before it ever reached its contact frame.
 func _play(clip: StringName) -> void:
 	_clip = clip
 	var anim := StringName("%s_%d" % [clip, _facing])
-	if _sprite.animation != anim:
-		_sprite.play(anim)
+	if _sprite.animation == anim and _sprite.is_playing():
+		return
+	_sprite.play(anim)
 
 ## Flags the contact; it is CONSUMED in advance() rather than acted on here.
 ##
@@ -266,64 +282,3 @@ func _on_frame_changed() -> void:
 		return
 	if _sprite.frame == def.contact_frame(&"attack"):
 		_contact_pending = true
-
-# ------------------------------------------------------------------------------
-# The Area2D children, kept only until their deletion can be reviewed on its own
-# ------------------------------------------------------------------------------
-
-func _build_shapes() -> void:
-	_rect(_hurt_shape, Vector2(22.0, 46.0), Vector2.ZERO)
-	var ahead := float(def.heading)
-	_rect(_hit_shape, Vector2(def.reach_px, 40.0), Vector2(ahead * def.reach_px * 0.5, 0.0))
-	var s: CollisionShape2D = _sight.get_node_or_null("Shape") if _sight != null else null
-	_rect(s, Vector2(def.sight_px, 30.0), Vector2(ahead * def.sight_px * 0.5, 0.0))
-
-func _rect(shape: CollisionShape2D, size: Vector2, at: Vector2) -> void:
-	if shape == null:
-		return
-	var r := RectangleShape2D.new()
-	r.size = size
-	shape.shape = r
-	shape.position = at
-
-func _wire_layers() -> void:
-	_hurt.collision_layer = def.own_layer()
-	_hurt.collision_mask = 0
-	_hurt.monitoring = false
-	_hurt.monitorable = true
-	for a in [_hit, _sight]:
-		a.collision_layer = 0
-		a.collision_mask = def.enemy_layer()
-		a.monitoring = true
-		a.monitorable = false
-
-## Everything about the areas that would otherwise fail silently. Returns one string per
-## fault. Static and pure enough to test without a tree: an Area2D owns its PhysicsServer RID
-## from construction, so these properties are readable off a bare Area2D.new().
-static func wiring_errors(hurt: Area2D, hit: Area2D, sight: Area2D, d: UnitDef) -> Array:
-	var out: Array = []
-	if hurt == null or hit == null or sight == null:
-		return ["a required area is missing"]
-	if hurt.collision_layer != d.own_layer():
-		out.append("hurtbox must sit on its own team's layer")
-	if hurt.collision_mask != 0:
-		out.append("hurtbox must mask nothing -- it is found, it does not look")
-	if not hurt.monitorable:
-		out.append("hurtbox must be monitorable or nothing can find it")
-	if hurt.monitoring:
-		out.append("hurtbox must not monitor -- that inverts the damage direction")
-	for pair in [["hitbox", hit], ["sight", sight]]:
-		var a: Area2D = pair[1]
-		if a.collision_mask != d.enemy_layer():
-			out.append("%s must mask the enemy layer" % pair[0])
-		if a.collision_layer != 0:
-			out.append("%s must sit on no layer -- it is a query, not a target" % pair[0])
-		if not a.monitoring:
-			out.append("%s must monitor or it never detects anything" % pair[0])
-		if a.monitorable:
-			out.append("%s must not be monitorable or swings discover each other" % pair[0])
-	for pair2 in [["hurtbox", hurt], ["hitbox", hit], ["sight", sight]]:
-		var sh: CollisionShape2D = (pair2[1] as Area2D).get_node_or_null("Shape")
-		if sh == null or sh.shape == null:
-			out.append("%s has no shape -- the other silent never-overlaps" % pair2[0])
-	return out

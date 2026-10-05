@@ -21,7 +21,7 @@ func run() -> void:
 	test_sheet_geometry()
 	test_frame_table_matches_the_art()
 	await test_hit_flash()
-	test_wiring_errors()
+	await test_clip_startup()
 	await test_units_move()
 	await test_units_fight()
 	await test_arena()
@@ -105,6 +105,28 @@ func test_sheet_geometry() -> void:
 	check(absf(sf.get_animation_speed(&"walk_3") - 20.0) < 0.01, "apply_speed retimes in place")
 	eq(SpriteSheet.build(d, 0.2), sf, "and a second build is the shared cached one")
 
+	# Attack speed is a STAT, divided across whatever frames the clip has -- not a consequence
+	# of how many the artist drew. Teal thrusts in 8 and red slashes in 6, and both must take
+	# the same second, or red kills a third faster for no reason anyone chose.
+	eq(SpriteSheet.clip_fps(&"attack", 8, 0.15, 1.0), 8.0,
+		"an 8-frame swing runs at 8fps to finish in a second")
+	eq(SpriteSheet.clip_fps(&"attack", 6, 0.15, 1.0), 6.0,
+		"   and a 6-frame swing at 6fps, so both take exactly as long")
+	eq(SpriteSheet.clip_fps(&"walk", 9, 0.15, 1.0), 1.0 / 0.15,
+		"walking is still paced per frame, not per cycle")
+	eq(SpriteSheet.clip_fps(&"attack", 8, 0.15, 0.0), 1.0 / 0.15,
+		"and attack_sec of 0 falls back to the per-frame rate")
+
+	SpriteSheet.clear_cache()
+	var paced := SpriteSheet.build(UnitDef.teal(), 0.15, 2.0)
+	eq(paced.get_animation_speed(&"attack_3"), 4.0,
+		"build paces the attack clip: 8 frames over 2s is 4fps")
+	check(absf(paced.get_animation_speed(&"walk_3") - 1.0 / 0.15) < 0.01,
+		"   while leaving walk on the per-frame rate")
+	SpriteSheet.apply_speed(paced, 0.15, 1.0)
+	eq(paced.get_animation_speed(&"attack_3"), 8.0,
+		"and apply_speed re-paces it in place, by clip prefix")
+
 ## The declared frame counts against the actual art.
 ##
 ## Frame counts are declared rather than detected, which is cheap and self-documenting but
@@ -186,64 +208,6 @@ func test_hit_flash() -> void:
 	u.queue_free()
 	await physics_frames(2)
 
-func test_wiring_errors() -> void:
-	group("BattlerUnit: the wiring that would otherwise fail silently")
-
-	var d := UnitDef.teal()
-	var hurt := Area2D.new()
-	var hit := Area2D.new()
-	var sight := Area2D.new()
-	for a in [hurt, hit, sight]:
-		var sh := CollisionShape2D.new()
-		sh.name = "Shape"
-		sh.shape = RectangleShape2D.new()
-		a.add_child(sh)
-	hurt.collision_layer = d.own_layer()
-	hurt.collision_mask = 0
-	hurt.monitoring = false
-	hurt.monitorable = true
-	for a2 in [hit, sight]:
-		a2.collision_layer = 0
-		a2.collision_mask = d.enemy_layer()
-		a2.monitoring = true
-		a2.monitorable = false
-	eq(BattlerUnit.wiring_errors(hurt, hit, sight, d), [], "a correct setup reports nothing")
-
-	# Each fault named, one at a time.
-	hurt.monitorable = false
-	check(BattlerUnit.wiring_errors(hurt, hit, sight, d).size() > 0,
-		"an unmonitorable hurtbox is caught -- nothing could ever find it")
-	hurt.monitorable = true
-	hit.monitoring = false
-	check(BattlerUnit.wiring_errors(hurt, hit, sight, d).size() > 0,
-		"a non-monitoring hitbox is caught -- it would detect nothing, silently")
-	hit.monitoring = true
-	hurt.collision_layer = d.enemy_layer()
-	check(BattlerUnit.wiring_errors(hurt, hit, sight, d).size() > 0,
-		"a hurtbox on the wrong team's layer is caught")
-	hurt.collision_layer = d.own_layer()
-	var bare := hit.get_node("Shape") as CollisionShape2D
-	bare.shape = null
-	check(BattlerUnit.wiring_errors(hurt, hit, sight, d).size() > 0,
-		"and a missing shape -- the other silent never-overlaps")
-
-	eq(d.own_layer(), 1, "teal sits on layer 1")
-	eq(d.enemy_layer(), 2, "   and looks for layer 2")
-	eq(UnitDef.red().own_layer(), 2, "red is the mirror")
-	eq(UnitDef.red().enemy_layer(), 1, "   of that")
-	# A contact frame of 0 would never fire: play() on a clip already at frame 0 emits no
-	# frame_changed, so the first swing of every fight would miss.
-	check(d.contact_frame(&"attack") > 0, "teal's contact frame is not 0")
-	check(UnitDef.red().contact_frame(&"attack") > 0, "   nor red's")
-	check(d.contact_frame(&"attack") < d.frame_count(&"attack"), "and it is inside the clip")
-
-	for a3 in [hurt, hit, sight]:
-		a3.free()
-
-# ------------------------------------------------------------------------------
-# With the tree: the behaviour the arithmetic cannot prove
-# ------------------------------------------------------------------------------
-
 const UNIT_SCENE := preload("res://battler/unit.tscn")
 const ARENA_SCRIPT := preload("res://battler/arena.gd")
 
@@ -258,11 +222,38 @@ func _arena(r: BattlerRules) -> Node2D:
 	return a
 
 ## Fast timings, so a fight resolves in a handful of steps rather than seconds of real time.
+## attack_sec has to come down too: it OVERRIDES frame_seconds for the swing, so leaving it
+## at the default second would pace the fight regardless of how fast the other clips run.
 func _fast_rules() -> BattlerRules:
 	var r := BattlerRules.testing()
 	r.frame_seconds = 0.02
+	r.attack_sec = 0.12
 	r.walk_speed = 200.0
 	return r
+
+func test_clip_startup() -> void:
+	group("BattlerUnit: both teams actually START animating")
+
+	# Red faces LEFT, and "walk_1" is the first animation SpriteSheet builds, so assigning the
+	# SpriteFrames already left `animation` sitting on that exact name with nothing playing.
+	# A name-only guard then skipped the opening play() and red slid across the lane on a
+	# frozen frame until its first fight changed the clip and unstuck it. Teal faces RIGHT,
+	# wanted "walk_3", and never hit the case -- which is why it presented as one team only.
+	SpriteSheet.clear_cache()
+	var r := _fast_rules()
+	var f := BattleField.new(Rect2(0.0, 0.0, 600.0, 256.0), r.body_radius)
+	var depth := 100.0
+	for d in [UnitDef.teal(), UnitDef.red()]:
+		var u := _spawn(d, r, f, Vector2(300.0, depth))
+		depth += 60.0
+		var sp: AnimatedSprite2D = u.get_node("Sprite")
+		eq(sp.animation, StringName("walk_%d" % d.facing),
+			"%s starts on the walk clip for its own facing" % d.id)
+		check(sp.is_playing(), "   and is PLAYING it, rather than frozen on frame 0")
+	for u in f.units:
+		if is_instance_valid(u):
+			u.queue_free()
+	await physics_frames(2)
 
 func _spawn(d: UnitDef, r: BattlerRules, f: BattleField, at: Vector2) -> BattlerUnit:
 	var u: BattlerUnit = UNIT_SCENE.instantiate()

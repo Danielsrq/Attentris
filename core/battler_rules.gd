@@ -70,11 +70,19 @@ extends Resource
 ## Seconds per frame for every clip. Retiming is a live knob (see SpriteSheet.apply_speed)
 ## rather than a rebuild, so this can be tuned while the game runs.
 ##
-## It also sets the combat cadence, because damage lands on an animation's contact frame
-## rather than on a cooldown: at 0.15s a teal thrust is 8 frames and so one hit per 1.2s,
-## while a red slash is 6 frames and so one per 0.9s. Against 30 HP that is 3.6s and 2.7s to
-## kill -- red is the faster fighter, which falls out of the art rather than from a stat.
+## Applies to walking and dying. The ATTACK clip is paced by attack_sec instead.
 @export var frame_seconds: float = 0.15
+## Seconds for one complete swing, divided across however many frames that clip has.
+##
+## Attack speed is a STAT, not a consequence of how many frames an artist drew. Pacing the
+## swing at frame_seconds made it the latter: a teal thrust is 8 frames and a red slash is 6,
+## so red swung every 0.9s against teal's 1.2s and killed a third faster, for no reason
+## anyone chose. Dividing a declared duration by the frame count puts the cadence back under
+## control and leaves the frame count as purely how smooth the swing looks.
+##
+## Damage still lands on the clip's contact frame, so this also moves when the hit connects:
+## teal contacts on 5 of 8 and red on 3 of 6, which is 0.63 and 0.50 of the way through.
+@export var attack_sec: float = 1.0
 
 @export_group("Feedback")
 ## How long a unit flashes after being hit. Purely cosmetic -- it carries no mechanical

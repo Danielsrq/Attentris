@@ -37,10 +37,10 @@ var heading: int = 1
 
 var hp: int = 30
 var damage: int = 10
-## Pixels of reach in front, and how far ahead it looks for something to fight. Sight is
-## the longer of the two so a unit stops just outside its own reach rather than inside it.
+## How close a unit must be to land a hit, in pixels. About one body, so fighters trade blows
+## while touching. The aggro radius that decides what it walks TOWARD is a rule rather than a
+## per-unit stat, and lives in BattlerRules.
 var reach_px: float = 34.0
-var sight_px: float = 44.0
 
 ## clip -> {sheet, frame_px, frames, loop, contact}
 ##
@@ -90,15 +90,6 @@ static func red() -> UnitDef:
 
 static func of(team_id: int) -> UnitDef:
 	return red() if team_id == RED else teal()
-
-## Physics layer bit this team's HURTBOX sits on. The hurtbox is the only thing that ever
-## occupies a layer, which is what lets one shape disable make a corpse untargetable and
-## non-blocking at once.
-func own_layer() -> int:
-	return 1 if team == TEAL else 2
-
-func enemy_layer() -> int:
-	return 2 if team == TEAL else 1
 
 func contact_frame(clip: StringName) -> int:
 	return int(clips.get(clip, {}).get("contact", -1))
