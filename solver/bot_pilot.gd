@@ -54,12 +54,21 @@ const MODE_FOR_RULES := {
 	"allspin_nw": "allspin_nw",
 }
 
-## The weight sets that are ready to fly. WEIGHTS only -- the rules are the other axis.
+## The bots on the toggle: a weight set plus the rules it SEARCHES with.
 ##
-## `tuned_for` is the rules preset each set was tuned against, which is where the bot toggle
-## jumps the game when you load it. It is a starting point, not a constraint: the rules stay
-## free to change afterwards, and the bot's belief follows them.
+## `tuned_for` is provenance -- the rules the weights were actually fitted against.
+## `believes` is what the bot searches with, and defaults to `tuned_for`. They differ only
+## where the mismatch has been measured and is wanted, which is not a contradiction of
+## "believe your weights": the default is still to believe them, and a deliberate exception
+## has to earn its place with numbers.
+##
+## None of these touch the GAME's rules. That is the third axis, on F2.
 const PRESETS := [
+	{
+		"name": "gate4", "tuned_for": "gate_b2b", "believes": "normal",
+		"weights": "res://bot/results/gate4/gate4.txt",
+		"note": "gate-tuned weights under normal rewards -- the most human-looking bot",
+	},
 	{
 		"name": "allspin-slots", "tuned_for": "allspin",
 		"weights": "res://bot/weights/allspin_slots.txt",
@@ -71,9 +80,9 @@ const PRESETS := [
 		"note": "the earlier all-spin set, without the spin-slot features",
 	},
 	{
-		"name": "gate4", "tuned_for": "gate_b2b",
+		"name": "gate4-chains", "tuned_for": "gate_b2b",
 		"weights": "res://bot/results/gate4/gate4.txt",
-		"note": "tuned WITH garbage, so the one that should survive the battler",
+		"note": "the same weights believing gate rules: chains only, and sends almost nothing",
 	},
 	{
 		"name": "normal", "tuned_for": "normal",
@@ -101,12 +110,12 @@ var preset_index: int = 0
 ## seeds: believing all-spin gives 2.59 APP and no deaths, while believing normal rules with
 ## the same all-spin weights topped out every single run at around piece 300 -- weights that
 ## value spin setups against a reward that will not pay for them.
-var believe: String = "allspin"
+var believe: String = ""
 ## The rule mode handed to the bot, and the weights it searches with. The backend reads both
 ## ONCE at startup, so changing either restarts it -- which is why they go through setters
 ## rather than being assigned.
-var mode: String = "allspin"
-var weights: String = "res://bot/weights/allspin_slots.txt"
+var mode: String = ""
+var weights: String = ""
 ## How many steps of the returned plan to keep.
 ##
 ## It does NOT shorten the search -- the Rust beam depth is fixed by the backend's own config
@@ -149,7 +158,7 @@ func use_preset(i: int) -> Dictionary:
 	preset_index = posmod(i, PRESETS.size())
 	var p := preset()
 	weights = p["weights"]
-	believe = String(p["tuned_for"])
+	believe = declared_belief(p)
 	mode = MODE_FOR_RULES.get(believe, "allspin")
 	_stop()
 	_warned = false
@@ -164,9 +173,21 @@ func use_preset(i: int) -> Dictionary:
 ## see what that costs. Named rather than a bool so the overlay can say WHICH belief is held,
 ## because a belief that does not match the weights has no symptom of its own -- the bot keeps
 ## playing well and is quietly paid for a different game.
+## Loads PRESETS[0] immediately.
+##
+## Without this, `preset_index` said one thing while `mode`, `weights` and `believe` held
+## whatever their declared defaults were -- so the pane header named one bot while the backend
+## ran another's weights. The fields have no standalone defaults now, so nothing can disagree.
+func _init() -> void:
+	use_preset(0)
+
+## What a preset searches with: its declared belief, or the rules it was tuned for.
+static func declared_belief(p: Dictionary) -> String:
+	return String(p.get("believes", p["tuned_for"]))
+
 func set_belief(rules_preset_name: String) -> void:
 	if rules_preset_name == "":
-		believe = String(preset()["tuned_for"])
+		believe = declared_belief(preset())
 		_set_mode(MODE_FOR_RULES.get(believe, ""))
 		return
 	var want: String = MODE_FOR_RULES.get(rules_preset_name, "")

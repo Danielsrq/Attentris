@@ -200,6 +200,16 @@ func test_presets() -> void:
 		"competitive", "allspin", "allspin_nw"]
 
 	check(BotPilot.PRESETS.size() >= 2, "there is more than one bot to choose between")
+
+	# A fresh pilot must already BE its first preset. It used to hold declared defaults for
+	# mode, weights and belief that had nothing to do with PRESETS[0], so the pane header
+	# named one bot while the backend loaded another's weights.
+	var fresh := BotPilot.new()
+	var zero: Dictionary = BotPilot.PRESETS[0]
+	eq(fresh.preset_index, 0, "a new pilot starts on the first preset")
+	eq(fresh.weights, String(zero["weights"]), "   with its weights actually loaded")
+	eq(fresh.believe, BotPilot.declared_belief(zero), "   and its belief")
+	eq(fresh.mode, String(BotPilot.MODE_FOR_RULES[fresh.believe]), "   and the matching mode")
 	var names := {}
 	for p in BotPilot.PRESETS:
 		var name := String(p["name"])
@@ -233,14 +243,19 @@ func test_presets() -> void:
 	# three-seed, 500-piece test, against no deaths and 2.59 APP believing all-spin.
 	for i in BotPilot.PRESETS.size():
 		var loaded: Dictionary = pilot.use_preset(i)
-		eq(pilot.believe, String(loaded["tuned_for"]),
-			"'%s' believes the rules it was tuned for" % loaded["name"])
+		eq(pilot.believe, BotPilot.declared_belief(loaded),
+			"'%s' believes what it declares" % loaded["name"])
 		eq(pilot.mode, String(BotPilot.MODE_FOR_RULES[pilot.believe]),
 			"   and its mode follows that belief")
+		# Absent `believes` must fall back to provenance, or a preset that forgets to declare
+		# one silently searches whatever the previous bot believed.
+		if not loaded.has("believes"):
+			eq(pilot.believe, String(loaded["tuned_for"]),
+				"   defaulting to its tuned-for rules when it declares none")
 
 	# Overriding it is the experiment, in either direction, and clearing restores the pairing.
 	pilot.use_preset(0)
-	var tuned: String = String(pilot.preset()["tuned_for"])
+	var tuned: String = BotPilot.declared_belief(pilot.preset())
 	pilot.set_belief("normal")
 	eq(pilot.believe, "normal", "a belief can be pointed at the real environment")
 	eq(pilot.mode, "normal", "   and the mode goes with it")

@@ -293,6 +293,20 @@ Those are letters, not function keys, on purpose: the editor keeps Run (F5), Run
 running, so F5-F11 reach the editor rather than the game. F9 paused the game and F8 quit it,
 which is indistinguishable from the key being ignored. F1-F4 are safe and stayed.
 
+The default bot is **`gate4`**: weights tuned under gate rules, searching with normal-rules
+rewards. A deliberate mismatch, and the one that plays most like an ambitious human -- gate
+tuning chases big setups, and normal rewards pay for the T-spins and quads those setups make.
+Measured against the all-spin bot, 500 pieces, three seeds:
+
+| bot | APP | quads | fighters sent | queued | deaths |
+|---|---|---|---|---|---|
+| `gate4` (normal rewards) | 0.97-1.09 | 2-3 | ~120 | 17-26 | 0/3 |
+| `allspin-slots` under normal rules | 0.21-0.34 | 0 | ~190 | **94** | 0/3 |
+
+Fewer fighters, but the lane can absorb 120 where it choked on 190, and the attack is three
+to five times higher. `allspin-slots` is still a press of **B** away when the lane should be
+flooded instead.
+
 **What the bot believes belongs to the bot, not to the game.** Each weight set believes the
 rules it was tuned against, and keeps believing them while the environment scores something
 else -- `allspin-slots` believes all-spin even though the game defaults to normal rules. That

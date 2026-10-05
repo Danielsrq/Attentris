@@ -358,13 +358,15 @@ func pilot_status() -> String:
 	var preset: String = RULE_PRESETS[rules_preset]
 	if not BotPilot.MODE_FOR_RULES.has(preset):
 		return "no bot mode for '%s' rules" % preset
-	# Believing something OTHER than what the weights were tuned for is the suspicious state,
-	# and it kills: all-spin weights believing normal rules topped out every run of a
-	# three-seed, 500-piece test. Believing the tuned-for rules while the game scores
-	# something else is the intended setup and says nothing.
-	var tuned: String = String(pilot.preset()["tuned_for"])
-	if pilot.believe != tuned:
-		return "EXPERIMENT: '%s' weights believing '%s' rules" % [
+	# Flagged against the preset's DECLARED belief, not its provenance. A preset may ship with
+	# a deliberate mismatch -- gate4 searches normal rewards with gate-tuned weights, which is
+	# the whole reason it plays like an ambitious human -- and that is not an experiment. What
+	# is worth reporting is a runtime override, because a wrongly-believing bot keeps playing
+	# well while being paid for a different game, and all-spin weights believing normal rules
+	# topped out every run of a three-seed, 500-piece test.
+	var declared: String = BotPilot.declared_belief(pilot.preset())
+	if pilot.believe != declared:
+		return "EXPERIMENT: '%s' believing '%s' rules" % [
 			pilot.preset()["name"], pilot.believe]
 	if pilot.unreachable > 0:
 		return "%d placements Godot could not reach" % pilot.unreachable
