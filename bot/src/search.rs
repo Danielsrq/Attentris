@@ -32,11 +32,15 @@ pub struct SearchConfig {
     pub death: f32,
     /// Also report every root placement with its scores (`Decision::roots`), for datasets.
     pub roots: bool,
+    /// Root-diverse pruning (labelling only): every ply keeps the best `root_keep` lines of
+    /// EVERY first move, plus the best beam/2 others, so each root move -- blunders too --
+    /// ends with a search score. 0 = the normal beam.
+    pub root_keep: usize,
 }
 
 impl Default for SearchConfig {
     fn default() -> Self {
-        SearchConfig { beam: 64, depth: 6, use_hold: true, chance: true, chance_top: 12, death: -1000.0, roots: false }
+        SearchConfig { beam: 64, depth: 6, use_hold: true, chance: true, chance_top: 12, death: -1000.0, roots: false, root_keep: 0 }
     }
 }
 
@@ -279,7 +283,7 @@ impl Searcher {
         let plies = self.cfg.depth.max(1).min(queue.len());
         let mut seen: HashMap<u64, usize> = HashMap::new();
         for _ in 1..plies {
-            prune(&mut beam, self.cfg.beam, &mut seen);
+            self.prune_any(&mut beam, &mut seen);
             let mut next = Vec::with_capacity(beam.len() * 40);
             for node in &beam {
                 if node.dead || node.qi as usize >= queue.len() {
@@ -291,7 +295,7 @@ impl Searcher {
             }
             beam = next;
         }
-        prune(&mut beam, self.cfg.beam, &mut seen);
+        self.prune_any(&mut beam, &mut seen);
         if self.cfg.roots {
             for n in &beam {
                 if let Some(r) = roots.get_mut(n.root as usize) {
@@ -318,6 +322,57 @@ impl Searcher {
         let chosen_root = best.root as usize;
         Some(Decision { use_hold: plan[0].use_hold, placement: plan[0].placement, plan, roots, chosen_root })
     }
+}
+
+impl Searcher {
+    fn prune_any(&self, beam: &mut Vec<Node>, seen: &mut HashMap<u64, usize>) {
+        if self.cfg.root_keep > 0 {
+            prune_diverse(beam, self.cfg.beam / 2, self.cfg.root_keep, seen);
+        } else {
+            prune(beam, self.cfg.beam, seen);
+        }
+    }
+}
+
+/// `SearchConfig::root_keep`: the best `keep` lines of every root move, then the best
+/// `extra` of the rest. Transpositions are only merged within a root, so two first moves
+/// that reach the same board each keep their line.
+fn prune_diverse(nodes: &mut Vec<Node>, extra: usize, keep: usize, seen: &mut HashMap<u64, usize>) {
+    nodes.sort_by(|a, b| b.score.total_cmp(&a.score));
+    seen.clear();
+    let key = |n: &Node| n.board.hash64()
+        ^ (n.hold.map_or(7u64, |p| p as u64) << 56)
+        ^ ((n.qi as u64) << 60)
+        ^ ((n.b2b.clamp(-1, 30) + 1) as u64).wrapping_mul(0x2545_F491_4F6C_DD1D)
+        ^ (n.root as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+    let mut per_root: HashMap<u16, usize> = HashMap::new();
+    let mut taken = vec![false; nodes.len()];
+    let mut out = Vec::new();
+    for (i, n) in nodes.iter().enumerate() {
+        let c = per_root.entry(n.root).or_insert(0);
+        if *c >= keep || seen.contains_key(&key(n)) {
+            continue;
+        }
+        seen.insert(key(n), out.len());
+        *c += 1;
+        taken[i] = true;
+        out.push(*n);
+    }
+    let mut added = 0;
+    for (i, n) in nodes.iter().enumerate() {
+        if added >= extra {
+            break;
+        }
+        if taken[i] || seen.contains_key(&key(n)) {
+            continue;
+        }
+        seen.insert(key(n), out.len());
+        added += 1;
+        out.push(*n);
+    }
+    // keep the beam sorted (the chance ply rescans the top of it)
+    out.sort_by(|a, b| b.score.total_cmp(&a.score));
+    *nodes = out;
 }
 
 /// Sort by score, drop transpositions (same board, hold, queue position and chain),

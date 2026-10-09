@@ -83,6 +83,7 @@ fn search_config(a: &Args) -> SearchConfig {
         chance_top: a.get("chance-top", d.chance_top),
         death: d.death,
         roots: false,
+        root_keep: 0,
     }
 }
 
@@ -348,6 +349,11 @@ fn cmd_label(a: &Args) {
     let w = weights(a);
     let label = a.str("label").unwrap_or("teacher").to_string();
     let out_path = a.str("out").expect("--out FILE").to_string();
+    // --all-roots K: after the normal search (which picks the teacher's move), a second,
+    // root-diverse search keeps the best K lines of every first move, so every legal move
+    // gets a search score ("best" in the record), the bad ones included.
+    let all_roots = a.get("all-roots", 0usize);
+    let sc2 = SearchConfig { root_keep: all_roots, ..sc.clone() };
     let lines: Vec<String> = std::io::stdin().lock().lines().filter_map(|l| l.ok()).filter(|l| !l.trim().is_empty()).collect();
     let threads = a.get("threads", std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4)).max(1);
     let done = std::sync::atomic::AtomicUsize::new(0);
@@ -355,9 +361,10 @@ fn cmd_label(a: &Args) {
     let total = lines.len();
     let parts: Vec<String> = std::thread::scope(|s| {
         let hs: Vec<_> = (0..threads).map(|t| {
-            let (sc, w, label, lines, done) = (sc.clone(), w.clone(), label.clone(), &lines, &done);
+            let (sc, sc2, w, label, lines, done) = (sc.clone(), sc2.clone(), w.clone(), label.clone(), &lines, &done);
             s.spawn(move || {
-                let mut searcher = Searcher::new(sc, w, r);
+                let mut searcher = Searcher::new(sc, w.clone(), r);
+                let mut diverse = Searcher::new(sc2, w, r);
                 let shapes = rules::Shapes::for_rules(&r);
                 let letter = |v: &serde_json::Value| v.as_str().and_then(|s| s.chars().next()).and_then(rules::Piece::from_letter);
                 let mut out = String::new();
@@ -372,7 +379,21 @@ fn cmd_label(a: &Args) {
                     queue.extend(v["queue"].as_array().map(|a| a.iter().filter_map(letter).collect::<Vec<_>>()).unwrap_or_default());
                     let hold = letter(&v["hold"]);
                     let b2b = v["b2b"].as_i64().unwrap_or(-1) as i32;
-                    if let Some(d) = searcher.search(&b, &queue, hold, b2b, &rules::ALL_PIECES) {
+                    if let Some(mut d) = searcher.search(&b, &queue, hold, b2b, &rules::ALL_PIECES) {
+                        if all_roots > 0 {
+                            // same board, same move generation: the roots come in the same order
+                            if let Some(d2) = diverse.search(&b, &queue, hold, b2b, &rules::ALL_PIECES) {
+                                if d2.roots.len() == d.roots.len() {
+                                    for (r1, r2) in d.roots.iter_mut().zip(d2.roots.iter()) {
+                                        r1.best = match (r1.best, r2.best) {
+                                            (Some(x), Some(y)) => Some(x.max(y)),
+                                            (x, None) => x,
+                                            (None, y) => y,
+                                        };
+                                    }
+                                }
+                            }
+                        }
                         let cfg = GameConfig { pieces: 0, seed: v["seed"].as_u64().unwrap_or(0), garbage: GarbageConfig::default(),
                                                label: label.clone(), record: false, env_rules: None, dataset: true, external: false };
                         game::dataset_record(&mut out, &cfg, v["n"].as_u64().unwrap_or(0) as usize, &b, piece, &queue[1..], hold, b2b, &d, &r, &shapes);

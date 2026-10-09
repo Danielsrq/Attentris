@@ -1,0 +1,15 @@
+== garbage: none
+AtTenTris logit depth 1 style normal no garbage: APP 0.221 (APPfull 0.221), died 0/16, pieces 500 avg, TSD 103, TST 0, quads 45, max height 19, illegal 0, 9.3 ms/move (p90 10.5), 8s
+AtTenTris qs depth 1 style normal no garbage: APP 0.120 (APPfull 0.056), died 13/16, pieces 233 avg, TSD 19, TST 0, quads 3, max height 22, illegal 0, 7.6 ms/move (p90 9.8), 6s
+AtTenTris q1 depth 1 style normal no garbage: APP 0.000 (APPfull 0.000), died 16/16, pieces 29 avg, TSD 0, TST 0, quads 0, max height 22, illegal 0, 7.6 ms/move (p90 9.0), 4s
+AtTenTris qs depth 1 style gate4 no garbage: APP 0.163 (APPfull 0.157), died 2/16, pieces 482 avg, TSD 79, TST 0, quads 10, max height 22, illegal 0, 9.1 ms/move (p90 10.2), 8s
+AtTenTris qs depth 3 beam 8 style normal no garbage: APP 0.081 (APPfull 0.018), died 16/16, pieces 109 avg, TSD 6, TST 0, quads 2, max height 23, illegal 0, 94.0 ms/move (p90 131.8), 20s
+== garbage: 10,3-4,cheese0.2,0.2
+AtTenTris logit depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.352 (APPfull 0.070), died 16/16, pieces 100 avg, TSD 15, TST 0, quads 58, max height 22, illegal 0, 8.3 ms/move (p90 10.4), 5s
+AtTenTris qs depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.200 (APPfull 0.021), died 16/16, pieces 53 avg, TSD 3, TST 0, quads 18, max height 23, illegal 0, 8.1 ms/move (p90 9.5), 4s
+AtTenTris q1 depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.000 (APPfull 0.000), died 16/16, pieces 22 avg, TSD 0, TST 0, quads 0, max height 26, illegal 0, 7.0 ms/move (p90 8.3), 3s
+AtTenTris qs depth 1 style gate4 garbage 10,3-4,cheese0.2,0.2: APP 0.261 (APPfull 0.044), died 16/16, pieces 85 avg, TSD 11, TST 0, quads 36, max height 22, illegal 0, 8.1 ms/move (p90 10.1), 4s
+AtTenTris qs depth 3 beam 8 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.122 (APPfull 0.007), died 16/16, pieces 28 avg, TSD 1, TST 0, quads 6, max height 24, illegal 0, 107.3 ms/move (p90 125.6), 7s
+all done
+AtTenTris logit depth 3 beam 8 style normal no garbage: APP 0.331 (APPfull 0.331), died 0/16, pieces 500 avg, TSD 187, TST 0, quads 118, max height 20, illegal 0, 122.0 ms/move (p90 133.0), 67s
+AtTenTris logit depth 3 beam 8 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.404 (APPfull 0.130), died 16/16, pieces 161 avg, TSD 29, TST 0, quads 122, max height 23, illegal 0, 93.9 ms/move (p90 120.5), 29s

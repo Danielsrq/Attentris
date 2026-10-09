@@ -78,7 +78,9 @@ def compute_loss(out, d, idx, args, device):
     if args.w_dense:
         dense = torch.where(real, ply1.nan_to_num(0.0) / args.tau_dense, torch.full_like(ply1, float("-inf"))).softmax(-1)
         loss = loss + args.w_dense * -(dense * logp).sum(-1)
-    if args.w_q:
+    w_q1 = args.w_q if args.w_q1 is None else args.w_q1
+    w_qs = args.w_q if args.w_qs is None else args.w_qs
+    if w_q1 or w_qs:
         lo, hi = -30.0, 10.0      # clamp: -1000 death lines would otherwise dominate the regression
         t1 = (ply1.nan_to_num(0.0) / M.Q_SCALE).clamp(lo, hi)
         m1 = real.float()
@@ -86,7 +88,7 @@ def compute_loss(out, d, idx, args, device):
         ms = (real & ~torch.isnan(best)).float()
         ts = (best.nan_to_num(0.0) / M.Q_SCALE).clamp(lo, hi)
         es = (F.smooth_l1_loss(out["qs"], ts, reduction="none") * ms).sum(-1) / ms.sum(-1).clamp(min=1)
-        loss = loss + args.w_q * (e1 + es)
+        loss = loss + w_q1 * e1 + w_qs * es
     return loss, chosen, ply1, best, real
 
 
@@ -146,7 +148,9 @@ def main():
     ap.add_argument("--train", default="train.npz", help="training file(s) in DATA, comma-separated")
     ap.add_argument("--w-dense", type=float, default=0.0, help="weight of the dense 1-ply ranking term (v2: 0.5)")
     ap.add_argument("--tau-dense", type=float, default=2.0)
-    ap.add_argument("--w-q", type=float, default=0.0, help="weight of the value-head regression (v2: 1.0)")
+    ap.add_argument("--w-q", type=float, default=0.0, help="weight of both value-head regressions (v2: 1.0)")
+    ap.add_argument("--w-q1", type=float, default=None, help="weight of the Q1 regression (default --w-q)")
+    ap.add_argument("--w-qs", type=float, default=None, help="weight of the Qs regression (default --w-q)")
     args = ap.parse_args()
     n_p = pcores.pin()
     torch.set_num_threads(args.threads or n_p or 8)
