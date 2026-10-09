@@ -127,6 +127,8 @@ pub struct Stats {
     pub garbage_in: u64,
     pub garbage_cleared: u64,
     pub max_height: i32,
+    /// `bot play-ext`: replies that matched no legal move (the bot's own pick was played).
+    pub ext_illegal: u64,
     pub nodes: u64,
     /// Wall-clock time of each search call, in microseconds.
     pub think_us: Vec<u32>,
@@ -280,6 +282,9 @@ pub struct GameConfig {
     /// Write AtTenTris dataset records (one per position, every root placement with its
     /// search scores) instead of viewer JSONL. Needs `SearchConfig::roots`.
     pub dataset: bool,
+    /// Moves come from another process over stdin / stdout (`bot play-ext`); the searcher
+    /// only lists the legal moves (`SearchConfig::roots`).
+    pub external: bool,
 }
 
 pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
@@ -389,13 +394,16 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
 
         let nodes_before = searcher.nodes;
         let t0 = std::time::Instant::now();
-        let d = match searcher.search(&board, &queue, hold, b2b, &bag_next) {
+        let mut d = match searcher.search(&board, &queue, hold, b2b, &bag_next) {
             Some(d) => d,
             None => {
                 stats.died = true;
                 break;
             }
         };
+        if cfg.external {
+            external_move(&mut d, n, &board, spawned, &queue[1..], hold, b2b, &shapes, &mut stats);
+        }
         stats.think_us.push(t0.elapsed().as_micros().min(u32::MAX as u128) as u32);
         stats.nodes += searcher.nodes - nodes_before;
 
@@ -596,6 +604,41 @@ fn dataset_record(out: &mut String, cfg: &GameConfig, n: usize, board: &Board, s
             c.best.map_or("null".to_string(), |b| format!("{:.3}", b)), cells);
     }
     let _ = writeln!(out, "],\"chosen\":{}}}", chosen);
+}
+
+/// `bot play-ext`: send the state, read the move, and play it if it is one of the legal moves
+/// (several routes to the same cells: the highest-attack one).
+fn external_move(d: &mut crate::search::Decision, n: usize, board: &Board, spawned: Piece, previews: &[Piece], hold: Option<Piece>,
+                 b2b: i32, shapes: &crate::rules::Shapes, stats: &mut Stats) {
+    use std::io::{BufRead, Write};
+    let up = |p: Piece| p.letter().to_ascii_uppercase();
+    {
+        let mut o = std::io::stdout().lock();
+        let _ = writeln!(o, "{{\"n\":{},\"rows\":[{}],\"piece\":\"{}\",\"queue\":[{}],\"hold\":{},\"b2b\":{}}}", n,
+            board.rows.iter().map(|r| r.to_string()).collect::<Vec<_>>().join(","), up(spawned),
+            previews.iter().take(5).map(|&p| format!("\"{}\"", up(p))).collect::<Vec<_>>().join(","),
+            hold.map_or("null".to_string(), |p| format!("\"{}\"", up(p))), b2b);
+        let _ = o.flush();
+    }
+    let mut line = String::new();
+    std::io::stdin().lock().read_line(&mut line).expect("read move");
+    let v: serde_json::Value = serde_json::from_str(&line).expect("move JSON");
+    let uh = v["hold"].as_i64().unwrap_or(0) != 0;
+    let c: Vec<i32> = v["cells"].as_array().map(|a| a.iter().map(|x| x.as_i64().unwrap_or(-99) as i32).collect()).unwrap_or_default();
+    let mut want: Vec<(i32, i32)> = c.chunks(2).filter(|p| p.len() == 2).map(|p| (p[0], p[1])).collect();
+    want.sort();
+    let pick = d.roots.iter()
+        .filter(|r| r.step.use_hold == uh && sorted_cells(&r.step.placement, shapes).to_vec() == want)
+        .max_by(|a, b| a.attack.total_cmp(&b.attack))
+        .copied();
+    match pick {
+        Some(r) => {
+            d.use_hold = r.step.use_hold;
+            d.placement = r.step.placement;
+            d.plan = vec![r.step];
+        }
+        None => stats.ext_illegal += 1,
+    }
 }
 
 fn omax(a: Option<f32>, b: Option<f32>) -> Option<f32> {

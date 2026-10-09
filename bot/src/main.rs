@@ -275,7 +275,6 @@ fn cmd_structures() {
     use std::io::{BufRead, Write};
     let stdout = std::io::stdout();
     let mut out = stdout.lock();
-    let cells_json = |cs: &[(i32, i32)]| cs.iter().map(|(x, y)| format!("[{},{}]", x, y)).collect::<Vec<_>>().join(",");
     for line in std::io::stdin().lock().lines() {
         let Ok(line) = line else { break };
         if line.trim().is_empty() {
@@ -299,8 +298,15 @@ fn cmd_structures() {
                 }
             }
         }
+        let _ = writeln!(out, "{{\"structures\":[{}]}}", structures_json(&b));
+    }
+}
+
+/// The T-spin structures on a board as a JSON array (see `cmd_structures`).
+fn structures_json(b: &board::Board) -> String {
+    let cells_json = |cs: &[(i32, i32)]| cs.iter().map(|(x, y)| format!("[{},{}]", x, y)).collect::<Vec<_>>().join(",");
         let mut items = Vec::new();
-        for (s, vertical) in eval::all_tslots(&b) {
+        for (s, vertical) in eval::all_tslots(b) {
             let mut cells: Vec<(i32, i32)> = s.cells.to_vec();
             let kind = if !vertical {
                 if let Some(sec) = s.second {
@@ -327,8 +333,110 @@ fn cmd_structures() {
             cells.dedup();
             items.push(format!("{{\"kind\":\"{}\",\"lines\":{},\"fill\":{:.3},\"cells\":[{}]}}", kind, s.lines, s.fill, cells_json(&cells)));
         }
-        let _ = writeln!(out, "{{\"structures\":[{}]}}", items.join(","));
+    items.join(",")
+}
+
+/// `bot expand [--mode]`: every legal move from a state, for AtTenTris's lookahead. One stdin
+/// line per state: {"rows": [40 bitmask rows, top to bottom], "piece": "T", "queue": [...],
+/// "hold": null | "S", "b2b": n}. Reply: {"structures": [...], "cands": [{"hold", "piece",
+/// "spin", "lines", "attack", "cells": [x0, y0, ...], "rows": [...], "b2b", "hold_after",
+/// "used" (queue pieces consumed: 1, or 2 for an empty-hold swap), "structures": [...]}]}.
+/// Moves to the same cells with the same hold choice are one move (the higher-attack one).
+fn cmd_expand(a: &Args) {
+    use std::io::{BufRead, Write};
+    let r = rules(a);
+    let shapes = rules::Shapes::for_rules(&r);
+    let mut mg = movegen::MoveGen::new();
+    mg.all_spin = r.all_spin;
+    mg.battle = r.battle;
+    let letter = |v: &serde_json::Value| v.as_str().and_then(|s| s.chars().next()).and_then(rules::Piece::from_letter);
+    let up = |p: rules::Piece| p.letter().to_ascii_uppercase();
+    let stdout = std::io::stdout();
+    let mut out = stdout.lock();
+    let mut buf = Vec::new();
+    for line in std::io::stdin().lock().lines() {
+        let Ok(line) = line else { break };
+        if line.trim().is_empty() {
+            continue;
+        }
+        let v: serde_json::Value = match serde_json::from_str(&line) {
+            Ok(v) => v,
+            Err(e) => {
+                let _ = writeln!(out, "{{\"error\":\"{}\"}}", e);
+                continue;
+            }
+        };
+        let mut b = board::Board::default();
+        for (y, n) in v["rows"].as_array().map(|a| a.as_slice()).unwrap_or(&[]).iter().enumerate().take(rules::H as usize) {
+            b.rows[y] = n.as_u64().unwrap_or(0) as u16;
+        }
+        let b2b = v["b2b"].as_i64().unwrap_or(-1) as i32;
+        let cur = letter(&v["piece"]).expect("piece");
+        let queue: Vec<rules::Piece> = v["queue"].as_array().map(|a| a.iter().filter_map(letter).collect()).unwrap_or_default();
+        let hold = letter(&v["hold"]);
+        let mut choices = vec![(cur, false, hold, 1)];
+        match hold {
+            Some(h) if h != cur => choices.push((h, true, Some(cur), 1)),
+            None if !queue.is_empty() => choices.push((queue[0], true, Some(cur), 2)),
+            _ => {}
+        }
+        let mut keys: Vec<(bool, [(i32, i32); 4])> = Vec::new();
+        let mut attacks: Vec<i32> = Vec::new();
+        let mut items: Vec<String> = Vec::new();
+        for (p, uh, hold_after, used) in choices {
+            mg.generate(&b, p, &shapes, &mut buf);
+            for pl in &buf {
+                let o = search::apply(&b, pl, b2b, &r, &shapes);
+                if o.lock_out {
+                    continue;
+                }
+                let mut cells = pl.abs_cells(&shapes);
+                cells.sort();
+                let key = (uh, cells);
+                let slot = keys.iter().position(|k| *k == key);
+                if let Some(k) = slot {
+                    if o.attack <= attacks[k] {
+                        continue;
+                    }
+                }
+                let spin = match pl.spin { rules::Spin::None => 0, rules::Spin::Mini => 1, _ => 2 };
+                let js = format!("{{\"hold\":{},\"piece\":\"{}\",\"spin\":{},\"lines\":{},\"attack\":{},\"cells\":[{}],\"rows\":[{}],\"b2b\":{},\"hold_after\":{},\"used\":{},\"structures\":[{}]}}",
+                    uh as u8, up(p), spin, o.lines, o.attack,
+                    cells.iter().map(|(x, y)| format!("{},{}", x, y)).collect::<Vec<_>>().join(","),
+                    o.board.rows.iter().map(|r| r.to_string()).collect::<Vec<_>>().join(","), o.b2b,
+                    hold_after.map_or("null".to_string(), |h| format!("\"{}\"", up(h))), used, structures_json(&o.board));
+                match slot {
+                    Some(k) => {
+                        attacks[k] = o.attack;
+                        items[k] = js;
+                    }
+                    None => {
+                        keys.push(key);
+                        attacks.push(o.attack);
+                        items.push(js);
+                    }
+                }
+            }
+        }
+        let _ = writeln!(out, "{{\"structures\":[{}],\"cands\":[{}]}}", structures_json(&b), items.join(","));
+        let _ = out.flush();
     }
+}
+
+/// `bot play-ext [--mode --garbage --pieces --seed]`: one game whose moves come from another
+/// process (AtTenTris). Each turn writes the state as a JSON line to stdout ({"n", "rows",
+/// "piece", "queue", "hold", "b2b"}) and reads the move from stdin ({"hold": 0|1, "cells":
+/// [x0, y0, ...]}); bag, garbage and scoring are the normal game's. Ends with a {"done": true,
+/// ...} line.
+fn cmd_play_ext(a: &Args) {
+    let r = rules(a);
+    let sc = SearchConfig { depth: 1, chance: false, roots: true, ..search_config(a) };
+    let mut s = Searcher::new(sc, weights(a), r);
+    let cfg = GameConfig { pieces: a.get("pieces", 500usize), seed: a.get("seed", 1u64), garbage: garbage(a), label: "ext".into(),
+                           record: false, env_rules: None, dataset: false, external: true };
+    let (st, _) = game::play(&mut s, &cfg);
+    println!("{{\"done\":true,\"seed\":{},\"pieces\":{},\"attack\":{},\"app\":{:.4},\"died\":{},\"tsd\":{},\"tst\":{},\"quads\":{},\"max_height\":{},\"illegal\":{}}}",
+        cfg.seed, st.pieces, st.attack, st.app(), st.died, st.tsd, st.tst, st.quads, st.max_height, st.ext_illegal);
 }
 
 /// `bot dataset --weights W --label L --out DIR [--mode --garbage --games --pieces --seed
@@ -365,7 +473,7 @@ fn cmd_dataset(a: &Args) {
                     if path.exists() {
                         continue;
                     }
-                    let cfg = GameConfig { pieces, seed: sd, garbage: g.clone(), label: label.clone(), record: false, env_rules: None, dataset: true };
+                    let cfg = GameConfig { pieces, seed: sd, garbage: g.clone(), label: label.clone(), record: false, env_rules: None, dataset: true, external: false };
                     let (st, js) = game::play(&mut searcher, &cfg);
                     let part = path.with_extension("part");
                     std::fs::write(&part, js).expect("write");
@@ -459,7 +567,7 @@ fn run_games(sc: &SearchConfig, w: &Weights, r: Rules, env: Option<Rules>, g: &G
                 let mut searcher = Searcher::new(sc, w, r);
                 let mut i = t;
                 while i < games {
-                    let cfg = GameConfig { pieces, seed: seed + i as u64, garbage: g.clone(), label: label.clone(), record, env_rules: env, dataset: false };
+                    let cfg = GameConfig { pieces, seed: seed + i as u64, garbage: g.clone(), label: label.clone(), record, env_rules: env, dataset: false, external: false };
                     let (st, js) = game::play(&mut searcher, &cfg);
                     out.push((i, st, js));
                     i += threads;
@@ -750,6 +858,8 @@ fn main() {
         "probe" => cmd_probe(&a),
         "serve" => cmd_serve(&a),
         "dataset" => cmd_dataset(&a),
+        "expand" => cmd_expand(&a),
+        "play-ext" => cmd_play_ext(&a),
         "structures" => cmd_structures(),
         "battle-parity" => {
             if let Err(e) = battle::parity(a.str("data").expect("--data dump.jsonl")) {
