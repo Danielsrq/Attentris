@@ -36,6 +36,13 @@ pub struct Board {
     /// Gate rules: clears in the open chain, and the opener's value while it is alone.
     pub gate_len: u8,
     pub gate_pending: u8,
+    /// TetrisBattle rules: the combo (consecutive clearing placements), -1 = none, 0 =
+    /// the first clear of a streak. Always -1 in other modes.
+    pub combo: i8,
+    /// Garbage rows received so far. TetrisBattle's grid grows by one row per garbage
+    /// line and never shrinks; its T-spin corner check wraps (Python negative indices)
+    /// only above that grown grid. See battle::py_filled.
+    pub excess: u16,
 }
 
 impl Default for Board {
@@ -50,6 +57,8 @@ impl Default for Board {
             burst_armed: 0,
             gate_len: 0,
             gate_pending: 0,
+            combo: -1,
+            excess: 0,
         }
     }
 }
@@ -148,6 +157,7 @@ impl Board {
             return;
         }
         self.shift_up(n);
+        self.excess = self.excess.saturating_add(n as u16);
         for (i, &hole) in holes.iter().enumerate() {
             self.rows[H as usize - 1 - i] = FULL & !(1 << hole);
         }
@@ -237,6 +247,10 @@ impl Board {
             }
             h = (h ^ v ^ (self.wounds as u64) << 40).wrapping_mul(0xFF51_AFD7_ED55_8CCD);
             h ^= h >> 29;
+        }
+        if self.combo >= 0 {
+            h = (h ^ 0xC0 ^ (self.combo as u64) << 8).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+            h ^= h >> 31;
         }
         if self.burst_armed > 0 {
             h = (h ^ 0xB5 ^ (self.burst_armed as u64) << 8 ^ (self.gate_len as u64) << 16 ^ (self.gate_pending as u64) << 24)

@@ -344,7 +344,7 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         stats.garbage_in += n as u64;
     }
 
-    let shapes = crate::rules::Shapes::new();
+    let shapes = crate::rules::Shapes::for_rules(&env);
     let mut expected: Option<(Piece, [(i32, i32); 4])> = None;
     let counts_at_start = crate::eval::template_counts();
     let mut followup_left = 0u8;
@@ -364,6 +364,11 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
             garbage_rows_total += n_rows as u64;
             garbage_left += n_rows as u64;
             stats.garbage_in += n_rows as u64;
+            // TetrisBattle checks the top visible row after garbage arrives, too.
+            if env.battle && board.rows[crate::rules::BUFFER as usize] != 0 {
+                stats.died = true;
+                break;
+            }
         }
         let spawned = bag.get(drawn);
         let queue: Vec<Piece> = (0..6).map(|i| bag.get(drawn + i)).collect();
@@ -417,7 +422,7 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
             hold = Some(spawned);
         }
         let mut p = d.placement;
-        if cfg.env_rules.is_some() {
+        if cfg.env_rules.is_some() && !env.battle {
             // The bot chose this move believing its own rules; the game scores it by
             // the real ones. Re-detect the spin: only a rotation can make one, and
             // under the real rules a non-T immobile spot may not count.

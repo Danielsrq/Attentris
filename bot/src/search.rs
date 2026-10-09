@@ -113,7 +113,10 @@ pub fn apply(board: &Board, p: &Placement, b2b: i32, rules: &Rules, shapes: &Sha
     let (lines, cleared) = nb.place(cells, p.x as i32, p.y as i32);
     let nb2 = next_b2b(b2b, spin, lines);
     let perfect = lines > 0 && nb.is_empty();
-    let (attack, burst) = if rules.gate {
+    let (attack, burst) = if rules.battle {
+        nb.combo = if lines > 0 { board.combo.saturating_add(1) } else { -1 };
+        (rules.battle_attack(spin, lines, nb.combo as i32, nb2, perfect), false)
+    } else if rules.gate {
         let bonus = if rules.gate_b2b && nb2 >= 1 {
             let b = rules.b2b.bonus(nb2);
             rules.b2b_cap.map_or(b, |c| b.min(c))
@@ -145,14 +148,17 @@ pub fn apply(board: &Board, p: &Placement, b2b: i32, rules: &Rules, shapes: &Sha
         }
         nb.last_clear = t;
     }
-    Outcome { board: nb, lines, cleared, attack, b2b: nb2, lock_out: all_in_buffer && lines == 0, spin, repeat, healed, burst }
+    // TetrisBattle tops out when the top visible row holds anything after the lock.
+    let lock_out = if rules.battle { nb.rows[BUFFER as usize] != 0 } else { all_in_buffer && lines == 0 };
+    Outcome { board: nb, lines, cleared, attack, b2b: nb2, lock_out, spin, repeat, healed, burst }
 }
 
 impl Searcher {
     pub fn new(cfg: SearchConfig, weights: Weights, rules: Rules) -> Searcher {
         let mut mg = MoveGen::new();
         mg.all_spin = rules.all_spin;
-        Searcher { cfg, weights, rules, shapes: Shapes::new(), mg, buf: Vec::with_capacity(256), nodes: 0 }
+        mg.battle = rules.battle;
+        Searcher { cfg, weights, rules, shapes: Shapes::for_rules(&rules), mg, buf: Vec::with_capacity(256), nodes: 0 }
     }
 
     fn value(&self, b: &Board, b2b: i32) -> f32 {

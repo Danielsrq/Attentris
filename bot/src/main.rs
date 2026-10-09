@@ -17,10 +17,12 @@
 //!   --mode burst2           burst, but spin singles do not arm and the window is 2 placements
 //!   --mode gate             training rules: only chains opened by a spin double/triple score
 //!   --mode gate_b2b         gate, plus the B2B bonus on every spin clear of a paid chain
+//!   --mode battle           TetrisBattle's rules (friend's RL bot): its kicks, T-spins only, TETR.IO attack + combos
 //!   --wound-clears N        clears a wound line lasts (default 10)
 //!   --garbage E,R,M         inject R rows every E pieces, hole moves with prob M
 //!   --cheese N              start with N rows of messy garbage
 
+mod battle;
 mod board;
 mod cpu;
 mod eval;
@@ -95,11 +97,12 @@ fn rules_for(a: &Args, mode: Option<&str>) -> Rules {
         Some("burst2") => Rules::burst2(),
         Some("gate") => Rules::gate(),
         Some("gate_b2b") => Rules::gate_b2b(),
+        Some("battle") => Rules::battle(),
         Some("standard") => Rules { all_spin: false, ..Rules::default() },
         // Normal rules are the default, as in the Godot game.
         Some("normal") | None => Rules::normal(),
         Some("competitive") => Rules::default(),
-        Some(m) => panic!("unknown --mode {} (normal | burst | burst2 | gate | gate_b2b | standard | competitive | allspin)", m),
+        Some(m) => panic!("unknown --mode {} (normal | burst | burst2 | gate | gate_b2b | battle | standard | competitive | allspin)", m),
     };
     if a.has("no-allspin") {
         r.all_spin = false;
@@ -561,6 +564,12 @@ fn main() {
         }
         "weights" =>print!("{}", weights(&a).to_text()),
         "probe" => cmd_probe(&a),
+        "battle-parity" => {
+            if let Err(e) = battle::parity(a.str("data").expect("--data dump.jsonl")) {
+                eprintln!("{}", e);
+                std::process::exit(1);
+            }
+        }
         "plan" => cmd_plan(&a),
         other => {
             eprintln!("unknown command {}", other);
