@@ -6,3 +6,6 @@
 vendor/tetrp/
 # Rust build output
 target/
+
+# Friend's RL bot (TetrisBattle), copied in for bot-vs-bot experiments; not ours to commit
+external/tetrisbattle/
