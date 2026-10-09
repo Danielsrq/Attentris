@@ -17,6 +17,10 @@ Overlay tokens (may overlap base tokens), at most P_MAX, by priority:
   T structures (from `bot structures`): tsd, fractal, imperial, stsd, cspin, vertical
   rect12  an empty flat-floored pit 3 wide x 4 deep or 4 wide x 3 deep: exactly the region
           L+J+O, L+S+J or L+Z+J (also L+L+O, J+J+O) fill
+  fit_s, fit_z, fit_t, fit_l, fit_j  a piece-shaped recess: a resting place where a piece with
+          a shaped bottom (S / Z either way up, T nub down, L / J three on top or hook on
+          top) touches the surface under every column -- no gap left -- and the surface
+          around it (its columns +-1) ends up less bumpy. Mask = the piece's cells.
   pit1..pit4  negative space: a run of 1-4 columns below both its side walls (an edge counts
           as a wall), filled with "water" up to the lower wall. pit1 = a well.
 
@@ -35,7 +39,19 @@ P_MAX = 8         # overlay tokens at most
 PIECES = "IOTSZJL"
 STRUCTURE_KINDS = ("imperial", "stsd", "cspin", "fractal", "tsd", "vertical")
 BASE_KINDS = ("sky", "well", "play", "band")
-OVERLAY_KINDS = STRUCTURE_KINDS + ("rect12", "pit1", "pit2", "pit3", "pit4")
+FIT_KINDS = ("fit_s", "fit_z", "fit_t", "fit_l", "fit_j")
+OVERLAY_KINDS = STRUCTURE_KINDS + ("rect12",) + FIT_KINDS + ("pit1", "pit2", "pit3", "pit4")
+
+# Orientations with a shaped bottom: cells (dx, dy) from the lowest cell's row. Flat-bottomed
+# ones (I, O, flat T / L / J, the L / J foot-down verticals) fit any flat stretch and would
+# only add noise.
+FIT_SHAPES = {
+    "fit_s": [("flat", [(0, 0), (1, 0), (1, 1), (2, 1)]), ("upright", [(1, 0), (1, 1), (0, 1), (0, 2)])],
+    "fit_z": [("flat", [(1, 0), (2, 0), (0, 1), (1, 1)]), ("upright", [(0, 0), (0, 1), (1, 1), (1, 2)])],
+    "fit_t": [("nub down", [(1, 0), (0, 1), (1, 1), (2, 1)])],
+    "fit_l": [("three on top", [(0, 0), (0, 1), (1, 1), (2, 1)]), ("hook on top", [(1, 0), (1, 1), (1, 2), (0, 2)])],
+    "fit_j": [("three on top", [(2, 0), (0, 1), (1, 1), (2, 1)]), ("hook on top", [(0, 0), (0, 1), (0, 2), (1, 2)])],
+}
 PIECE_KINDS = ("current", "hold") + tuple("preview%d" % i for i in range(1, 6))
 KINDS = BASE_KINDS + OVERLAY_KINDS + PIECE_KINDS
 
@@ -180,6 +196,35 @@ def pit_tokens(b, h):
     return out
 
 
+def bumpiness(h, lo, hi):
+    return int(sum(abs(int(h[c + 1]) - int(h[c])) for c in range(max(lo, 0), min(hi, COLS - 1))))
+
+
+def fit_tokens(b, h):
+    """Piece-shaped recesses (see the module doc)."""
+    out = []
+    for kind, shapes in FIT_SHAPES.items():
+        for orient, cells in shapes:
+            w = max(dx for dx, _ in cells) + 1
+            low = [min(dy for dx, dy in cells if dx == k) for k in range(w)]
+            top = [max(dy for dx, dy in cells if dx == k) for k in range(w)]
+            for x in range(COLS - w + 1):
+                a = h[x] - low[0]
+                if any(h[x + k] - low[k] != a for k in range(w)) or a + max(top) >= ROWS:
+                    continue
+                after = h.copy()
+                for k in range(w):
+                    after[x + k] = a + top[k] + 1
+                gain = bumpiness(h, x - 1, x + w) - bumpiness(after, x - 1, x + w)
+                if gain <= 0:
+                    continue
+                m = np.zeros((ROWS, COLS), bool)
+                for dx, dy in cells:
+                    m[a + dy, x + dx] = True
+                out.append(Token(kind, m, {"orientation": orient, "gain": gain}))
+    return out
+
+
 def structure_tokens(structures):
     """`bot structures` output (replay coordinates) -> overlay tokens on the visible board."""
     out = []
@@ -199,13 +244,15 @@ def overlay_priority(t):
         return (0, STRUCTURE_KINDS.index(t.kind), -t.extras["lines"], -t.extras["fill"])
     if t.kind == "rect12":
         return (1, 0, 0, 0)
-    return (2, -t.extras["area"], t.extras["width"], 0)
+    if t.kind in FIT_KINDS:
+        return (2, -t.extras["gain"], FIT_KINDS.index(t.kind), 0)
+    return (3, -t.extras["area"], t.extras["width"], 0)
 
 
 def tokenize(b, piece=None, queue=(), hold=None, structures=(), k_board=K_BOARD, p_max=P_MAX):
     """Board (20, 10) bool + pieces -> list of Tokens: base, then overlays, then pieces."""
     toks, h = base_tokens(b, k_board)
-    overlays = structure_tokens(structures) + pit_tokens(b, h)
+    overlays = structure_tokens(structures) + fit_tokens(b, h) + pit_tokens(b, h)
     overlays.sort(key=overlay_priority)
     toks += overlays[:p_max]
     if piece is not None:

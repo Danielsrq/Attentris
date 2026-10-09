@@ -87,7 +87,7 @@ def entry(label, why, b, piece=None, queue=(), hold=None, structs=(), chose=None
     toks = T.tokenize(b, piece, queue, hold, structs)
     assert T.check_partition(toks), label
     _, h = T.base_tokens(b)
-    found = T.structure_tokens(structs) + T.pit_tokens(b, h)
+    found = T.structure_tokens(structs) + T.fit_tokens(b, h) + T.pit_tokens(b, h)
     return {"label": label, "why": why, "board": [[int(v) for v in row] for row in b],
             "piece": piece, "queue": list(queue), "hold": hold, "chose": chose,
             "tokens": [tok_json(t) for t in toks], "overlays_found": len(found)}

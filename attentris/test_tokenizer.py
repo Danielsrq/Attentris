@@ -64,7 +64,27 @@ def test_structures_from_rust():
     toks = T.tokenize(TSD, "T", "IOSZJ", None, s)
     over = [t for t in toks if t.kind == "tsd"][0]
     assert sorted(zip(*np.nonzero(over.mask))) == [(7, 4), (8, 3), (8, 4), (8, 5)]
-    assert len(toks) == 5 + 2 + 7, [t.kind for t in toks]
+    # also an S-shaped recess: an upright S on the 8 / 7 step of columns 3-4 (it would bury the slot)
+    fit = [t for t in toks if t.kind == "fit_s"][0]
+    assert sorted(zip(*np.nonzero(fit.mask))) == [(7, 4), (8, 3), (8, 4), (9, 3)]
+    assert len(toks) == 5 + 3 + 7, [t.kind for t in toks]
+
+
+def test_sz_recesses():
+    # position 10 of the viewer: Z flat on heights 11,10,10 (cols 2-4); position 11: Z upright on 4,5
+    h10 = np.array([14, 13, 11, 10, 10, 11, 8, 8, 10, 12])
+    b = np.zeros((T.ROWS, T.COLS), bool)
+    for c, hc in enumerate(h10):
+        b[:hc, c] = True
+    fits = T.fit_tokens(b, T.heights(b))
+    z = [t for t in fits if t.kind == "fit_z" and t.extras["orientation"] == "flat"]
+    assert any(sorted(zip(*np.nonzero(t.mask))) == [(10, 3), (10, 4), (11, 2), (11, 3)] for t in z), fits
+    h11 = np.array([8, 8, 6, 5, 5, 5, 6, 4, 5, 6])
+    b = np.zeros((T.ROWS, T.COLS), bool)
+    for c, hc in enumerate(h11):
+        b[:hc, c] = True
+    fits = T.fit_tokens(b, T.heights(b))
+    assert any(t.kind == "fit_z" and t.extras["orientation"] == "upright" and t.box[2:] == (7, 8) for t in fits), fits
 
 
 def test_rect12_and_well():

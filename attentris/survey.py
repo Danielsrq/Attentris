@@ -50,7 +50,7 @@ def main():
         for t in over:
             kinds[t.kind] += 1
         _, h = T.base_tokens(b)
-        for t in T.structure_tokens(s) + T.pit_tokens(b, h):
+        for t in T.structure_tokens(s) + T.fit_tokens(b, h) + T.pit_tokens(b, h):
             kinds_before_cap[t.kind] += 1
         for k in want:
             if k not in shown and any(t.kind == k for t in over) and (k != "tsd" or r["piece"] == "t"):
