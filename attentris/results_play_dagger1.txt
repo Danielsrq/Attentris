@@ -1,0 +1,15 @@
+== garbage: none
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+AtTenTris depth 1 style normal no garbage: APP 0.212 (APPfull 0.212), died 0/16, pieces 500 avg, TSD 96, TST 0, quads 45, max height 17, illegal 0, 9.8 ms/move (p90 11.6), 8s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+AtTenTris depth 1 style gate4 no garbage: APP 0.181 (APPfull 0.181), died 0/16, pieces 500 avg, TSD 92, TST 0, quads 10, max height 15, illegal 0, 9.7 ms/move (p90 11.5), 8s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+AtTenTris depth 3 beam 8 style normal no garbage: APP 0.326 (APPfull 0.326), died 0/16, pieces 500 avg, TSD 173, TST 0, quads 128, max height 17, illegal 0, 126.9 ms/move (p90 139.8), 70s
+== garbage: 10,3-4,cheese0.2,0.2
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+AtTenTris depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.316 (APPfull 0.066), died 16/16, pieces 105 avg, TSD 12, TST 0, quads 65, max height 21, illegal 0, 8.9 ms/move (p90 10.9), 5s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+AtTenTris depth 1 style gate4 garbage 10,3-4,cheese0.2,0.2: APP 0.301 (APPfull 0.091), died 16/16, pieces 151 avg, TSD 17, TST 0, quads 94, max height 22, illegal 0, 9.6 ms/move (p90 12.0), 6s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+AtTenTris depth 3 beam 8 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.372 (APPfull 0.102), died 16/16, pieces 136 avg, TSD 13, TST 0, quads 103, max height 22, illegal 0, 99.4 ms/move (p90 128.5), 26s
+all done

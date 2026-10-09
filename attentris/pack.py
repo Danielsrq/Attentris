@@ -136,8 +136,17 @@ def main():
     ap.add_argument("--raw", default=os.path.join(HERE, "data", "raw"))
     ap.add_argument("--out", default=os.path.join(HERE, "data"))
     ap.add_argument("--val-every", type=int, default=10, help="every k-th game (by seed) goes to validation")
+    ap.add_argument("--only", default="", help="pack just this raw directory into OUT/NAME.npz, all of it (e.g. DAgger labels)")
+    ap.add_argument("--name", default="dagger")
     args = ap.parse_args()
     pcores.pin()
+    if args.only:
+        recs = [json.loads(l) for f in sorted(glob.glob(os.path.join(args.only, "*.jsonl"))) for l in open(f)]
+        arrs, dropped = pack(recs)
+        path = os.path.join(args.out, args.name + ".npz")
+        np.savez_compressed(path, **arrs)
+        print("%s: %d positions, %d candidates over NC dropped -> %s" % (args.name, len(recs), dropped, path))
+        return
     files = sorted(glob.glob(os.path.join(args.raw, "*.jsonl")))
     splits = {"train": [], "val": []}
     for f in files:

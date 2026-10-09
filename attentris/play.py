@@ -75,7 +75,7 @@ class Player:
         import torch
         import model as M
         torch.set_num_threads(1)
-        ck = torch.load(model_path, weights_only=False)
+        ck = torch.load(model_path, map_location="cpu", weights_only=False)
         self.net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"])
         self.net.load_state_dict(ck["model"])
         self.net.eval()
@@ -148,7 +148,8 @@ def play_game(args, seed):
         if st.get("done"):
             break
         if args.dump:
-            states.append({"seed": seed, "n": st["n"], "rows": st["rows"], "b2b": st["b2b"]})
+            states.append({"seed": seed, "n": st["n"], "rows": st["rows"], "b2b": st["b2b"], "piece": st["piece"],
+                           "queue": st["queue"], "hold": st["hold"], "style": args.style})
         t0 = time.perf_counter()
         c = pl.decide(st)
         times.append(time.perf_counter() - t0)

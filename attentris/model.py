@@ -33,8 +33,9 @@ class Pos2D(nn.Module):
         self.box_proj = nn.Linear(4 * q, d)
 
     def cells(self):
-        r = torch.arange(20).repeat_interleave(10)
-        c = torch.arange(10).repeat(20)
+        dev = self.row.weight.device
+        r = torch.arange(20, device=dev).repeat_interleave(10)
+        c = torch.arange(10, device=dev).repeat(20)
         return self.row(r) + self.col(c)                       # (200, d)
 
     def box(self, box):
@@ -178,7 +179,7 @@ class AtTenTris(nn.Module):
         y = (cphi + self.c_piece(meta[..., 0]) + self.c_hold(meta[..., 1]) + self.c_spin(meta[..., 2])
              + self.c_lines(meta[..., 3].clamp(max=4)) + self.c_attack(meta[..., 4:5].float() / 10.0)
              + self.pos.box(cbox) + self.style(batch["teacher"]).unsqueeze(1))
-        cmask = torch.zeros(B, cc.shape[1], 200)
+        cmask = torch.zeros(B, cc.shape[1], 200, device=cells.device)
         cmask.scatter_(2, idx, onb.float())
         cfeats, cboth = pair_features(cbox, box, cmask, maskf)
         y, ca = self.cross(y, self.c_bias(cfeats, cboth), pad, ctx=hb, ctx_norm=self.c_norm)

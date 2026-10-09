@@ -1,0 +1,36 @@
+V = the normal teacher's evaluation (normal.txt); higher is better. Reference: search, V 5th pct 5.0, 1st pct -2.7
+
+player                 pieces           n  V mean   V p10 height  holes  hrows   bump
+search                 0-25           400     2.9    -4.0    4.8   0.29   0.27    4.9
+search                 25-50          400    12.9     6.8    7.3   0.35   0.33    5.8
+search                 50-100         800    15.2     9.3    8.0   0.49   0.45    6.2
+search                 100-200       1600    15.2     9.1    7.7   0.46   0.43    6.3
+search                 200-500       4800    15.1     9.7    7.0   0.43   0.40    6.1
+
+greedy_V               0-25           400     0.8    -3.1    5.4   0.14   0.13    5.9
+greedy_V               25-50          400     0.5    -8.3    8.9   1.02   0.82    7.5
+greedy_V               50-100         800    -1.9   -15.4    9.1   1.91   1.62    6.4
+greedy_V               100-200       1600    -7.4   -20.6   10.3   3.81   3.15    5.6
+greedy_V               200-500       4800   -18.4   -34.4   11.7   7.21   5.96    4.7
+
+v1                     0-25           400    -7.0   -16.4    6.0   1.91   1.65    5.1
+v1                     25-50          396   -27.3   -47.7   11.2   8.15   6.63    5.2
+v1                     50-100         599   -42.0   -75.5   12.8  10.54   8.70    5.2
+v1                     100-200        267   -60.7  -105.3   15.1  13.40  11.43    5.2
+
+dagger1                0-25           400    -3.8   -12.7    4.6   1.10   1.02    4.3
+dagger1                25-50          400    -6.8   -16.0    6.8   2.32   2.26    5.1
+dagger1                50-100         800   -10.9   -19.0    8.0   3.61   3.52    5.0
+dagger1                100-200       1600   -14.8   -27.3    8.7   4.79   4.53    5.0
+dagger1                200-500       4800   -15.5   -27.1    8.9   4.96   4.65    5.0
+
+Games that topped out: the last 10 positions; and the first piece where V fell below the reference's 1st percentile for that game phase
+search                 died  0/16 | left the reference range in 16/16 games, median at piece 73
+greedy_V               died  0/16 | left the reference range in 16/16 games, median at piece 28
+v1                     died 16/16 | last 10 before top-out: V -94.6, height 18.1, holes 17.4 | left the reference range in 16/16 games, median at piece 9
+dagger1                died  0/16 | left the reference range in 16/16 games, median at piece 13
+
+Where V is lost, pieces 0-50 (mean contribution w*f, player minus reference; most negative first)
+greedy_V               V gap -7.3: b2b_level -3.3, row_trans -3.0, b2b -1.1, holes -0.7, well_rows -0.5, bump_sq -0.5
+v1                     V gap -25.0: holes -12.3, row_trans -7.9, b2b_level -3.4, well_rows -2.1, danger -1.8, col_trans -1.4
+dagger1                V gap -13.2: holes -3.6, b2b_level -3.5, well_rows -1.9, b2b -1.5, row_trans -1.5, t_double -0.7

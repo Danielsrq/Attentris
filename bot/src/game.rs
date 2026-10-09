@@ -555,7 +555,7 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
 /// as the replay boards; `cands` are the distinct legal first moves (same cells and hold
 /// = one move): [hold, piece, rot, spin 0/1/2, lines, attack, ply1, best | null,
 /// [x0, y0, ... x3, y3]]; `chosen` indexes the move the bot played.
-fn dataset_record(out: &mut String, cfg: &GameConfig, n: usize, board: &Board, spawned: Piece, previews: &[Piece],
+pub fn dataset_record(out: &mut String, cfg: &GameConfig, n: usize, board: &Board, spawned: Piece, previews: &[Piece],
                   hold: Option<Piece>, b2b: i32, d: &crate::search::Decision, env: &crate::rules::Rules,
                   shapes: &crate::rules::Shapes) {
     use std::fmt::Write;

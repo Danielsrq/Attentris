@@ -34,7 +34,7 @@ def load(path):
     return {k: d[k] for k in d.files}
 
 
-def batch_of(d, idx):
+def batch_of(d, idx, device="cpu"):
     b = {
         "cells": torch.from_numpy(d["cells"][idx].astype(np.int64)),
         "tok_kind": torch.from_numpy(d["tok_kind"][idx].astype(np.int64)),
@@ -46,27 +46,30 @@ def batch_of(d, idx):
         "cand_meta": torch.from_numpy(d["cand_meta"][idx].astype(np.int64)).clamp(min=0),
         "teacher": torch.from_numpy(d["teacher"][idx].astype(np.int64)),
     }
+    if device != "cpu":
+        b = {k: v.to(device, non_blocking=True) for k, v in b.items()}
     return b
 
 
-def targets(d, idx, tau):
+def targets(d, idx, tau, device="cpu"):
     chosen = torch.from_numpy(d["chosen"][idx].astype(np.int64))
     best = torch.from_numpy(d["cand_score"][idx][..., 1])                     # (B, NC), nan = pruned
     soft = torch.where(torch.isnan(best), torch.full_like(best, float("-inf")), best / tau).softmax(-1)
     onehot = F.one_hot(chosen, best.shape[1]).float()
-    return chosen, 0.5 * onehot + 0.5 * soft.nan_to_num(0.0)
+    return chosen.to(device), (0.5 * onehot + 0.5 * soft.nan_to_num(0.0)).to(device)
 
 
-def evaluate(net, d, batch, tau):
+def evaluate(net, d, batch, tau, device="cpu"):
     net.eval()
     n = len(d["chosen"])
     stats = {t: [0, 0, 0, 0.0] for t in (0, 1)}        # positions, top1, top3, loss
     with torch.no_grad():
         for s in range(0, n, batch):
             idx = np.arange(s, min(n, s + batch))
-            logit = net(batch_of(d, idx))
-            chosen, tgt = targets(d, idx, tau)
+            logit = net(batch_of(d, idx, device))
+            chosen, tgt = targets(d, idx, tau, device)
             loss = -(tgt * logit.log_softmax(-1).nan_to_num(0.0, neginf=0.0)).sum(-1)
+            logit, chosen, loss = logit.cpu(), chosen.cpu(), loss.cpu()
             top = logit.topk(3, -1).indices
             t1 = top[:, 0] == chosen
             t3 = (top == chosen.unsqueeze(1)).any(-1)
@@ -98,25 +101,30 @@ def main():
     ap.add_argument("--out", default=None, help="checkpoint (default DATA/model.pt)")
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--limit", type=int, default=0, help="use only the first N training positions (smoke test)")
+    ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    ap.add_argument("--train", default="train.npz", help="training file(s) in DATA, comma-separated")
     args = ap.parse_args()
     n_p = pcores.pin()
     torch.set_num_threads(args.threads or n_p or 8)
     torch.manual_seed(0)
     out = args.out or os.path.join(args.data, "model.pt")
 
-    tr = load(os.path.join(args.data, "train.npz"))
+    parts = [load(os.path.join(args.data, f)) for f in args.train.split(",")]
+    tr = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
     va = load(os.path.join(args.data, "val.npz"))
     if args.limit:
         tr = {k: v[:args.limit] for k, v in tr.items()}
     n = len(tr["chosen"])
-    net = M.AtTenTris(d=args.d, layers=args.layers)
+    net = M.AtTenTris(d=args.d, layers=args.layers).to(args.device)
+    print("device", args.device, torch.cuda.get_device_name(0) if args.device == "cuda" else "", flush=True)
     opt = torch.optim.AdamW(net.parameters(), lr=args.lr, weight_decay=0.01)
     steps = args.epochs * math.ceil(n / args.batch)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=args.lr, total_steps=steps, pct_start=0.05)
     start, log = 0, []
     if args.resume and os.path.exists(out):
-        ck = torch.load(out, weights_only=False)
+        ck = torch.load(out, map_location=args.device, weights_only=False)
         net.load_state_dict(ck["model"]); opt.load_state_dict(ck["opt"]); sched.load_state_dict(ck["sched"])
+        net.to(args.device)
         start, log = ck["epoch"] + 1, ck["log"]
     print("params %d, train %d positions, val %d, %d epochs x %d batches" % (
         sum(p.numel() for p in net.parameters()), n, len(va["chosen"]), args.epochs, math.ceil(n / args.batch)), flush=True)
@@ -128,8 +136,8 @@ def main():
         nb = math.ceil(n / args.batch)
         for bi in range(nb):
             idx = np.sort(perm[bi * args.batch:(bi + 1) * args.batch])
-            logit = net(batch_of(tr, idx))
-            _, tgt = targets(tr, idx, args.tau)
+            logit = net(batch_of(tr, idx, args.device))
+            _, tgt = targets(tr, idx, args.tau, args.device)
             loss = -(tgt * logit.log_softmax(-1).nan_to_num(0.0, neginf=0.0)).sum(-1).mean()
             opt.zero_grad()
             loss.backward()
@@ -141,7 +149,7 @@ def main():
                 el = time.time() - t0
                 print("  epoch %d batch %d/%d loss %.3f  (%.0fs, epoch ETA %.0fs)" % (
                     ep + 1, bi, nb, tot / cnt, el, el / (bi + 1) * (nb - bi - 1)), flush=True)
-        ev = evaluate(net, va, 512, args.tau)
+        ev = evaluate(net, va, 512, args.tau, args.device)
         rec = {"epoch": ep + 1, "train_loss": tot / cnt, "val": ev, "secs": time.time() - t0}
         log.append(rec)
         print("epoch %d: train loss %.3f | val normal top1 %.3f top3 %.3f | val gate4 top1 %.3f top3 %.3f | %.0fs" % (

@@ -42,7 +42,7 @@ def main():
     ap.add_argument("--n", type=int, default=400)
     args = ap.parse_args()
     n_p = pcores.pin()
-    ck = torch.load(args.model, weights_only=False)
+    ck = torch.load(args.model, map_location="cpu", weights_only=False)
     net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"])
     net.load_state_dict(ck["model"])
     net.eval()

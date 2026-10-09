@@ -6,16 +6,17 @@
 DIR=$(cd "$(dirname "$0")" && pwd)
 PY="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
 BOT="$DIR/../bot/target/release/bot.exe"
-OUT="$DIR/results_play.txt"
+OUT=${OUT:-$DIR/results_play.txt}
+MODEL=${MODEL:-$DIR/data/model.pt}
 STRESS="10,3-4,cheese0.2,0.2"
 : > "$OUT"
 for g in "" "$STRESS"; do
     gflag=""; [ -n "$g" ] && gflag="--garbage $g"
     echo "== garbage: ${g:-none}" | tee -a "$OUT"
-    "$PY" "$DIR/play.py" --games 16 --depth 1 --style normal $gflag --out "$OUT.games" | tee -a "$OUT"
-    "$PY" "$DIR/play.py" --games 16 --depth 1 --style gate4 $gflag --out "$OUT.games" | tee -a "$OUT"
-    "$PY" "$DIR/play.py" --games 16 --depth 3 --beam 8 --style normal $gflag --out "$OUT.games" | tee -a "$OUT"
-    for w in normal; do
+    "$PY" "$DIR/play.py" --model "$MODEL" --games 16 --depth 1 --style normal $gflag --out "$OUT.games" | tee -a "$OUT"
+    "$PY" "$DIR/play.py" --model "$MODEL" --games 16 --depth 1 --style gate4 $gflag --out "$OUT.games" | tee -a "$OUT"
+    "$PY" "$DIR/play.py" --model "$MODEL" --games 16 --depth 3 --beam 8 --style normal $gflag --out "$OUT.games" | tee -a "$OUT"
+    [ -n "$SKIP_BASE" ] || for w in normal; do
         "$BOT" play --mode normal $gflag --weights "$DIR/../bot/weights/$w.txt" --games 16 --pieces 500 --seed 5001 \
             --depth 1 --no-chance --label "V_greedy_$w" 2>/dev/null | grep -E "^V_greedy" | tee -a "$OUT"
         "$BOT" play --mode normal $gflag --weights "$DIR/../bot/weights/$w.txt" --games 16 --pieces 500 --seed 5001 \

@@ -336,6 +336,61 @@ fn structures_json(b: &board::Board) -> String {
     items.join(",")
 }
 
+/// `bot label --weights W --label L --out FILE [--mode --threads --beam --depth]`: the teacher's
+/// full search on arbitrary states, written as dataset records (game::dataset_record) -- the
+/// labelling step of DAgger. stdin: one state per line, {"seed", "n", "rows": [40 bitmask
+/// rows], "piece", "queue": [previews], "hold", "b2b"}. The unseen bag is taken as all 7
+/// pieces for the chance ply. States with no legal move are skipped.
+fn cmd_label(a: &Args) {
+    use std::io::BufRead;
+    let r = rules(a);
+    let sc = SearchConfig { roots: true, ..search_config(a) };
+    let w = weights(a);
+    let label = a.str("label").unwrap_or("teacher").to_string();
+    let out_path = a.str("out").expect("--out FILE").to_string();
+    let lines: Vec<String> = std::io::stdin().lock().lines().filter_map(|l| l.ok()).filter(|l| !l.trim().is_empty()).collect();
+    let threads = a.get("threads", std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4)).max(1);
+    let done = std::sync::atomic::AtomicUsize::new(0);
+    let t0 = Instant::now();
+    let total = lines.len();
+    let parts: Vec<String> = std::thread::scope(|s| {
+        let hs: Vec<_> = (0..threads).map(|t| {
+            let (sc, w, label, lines, done) = (sc.clone(), w.clone(), label.clone(), &lines, &done);
+            s.spawn(move || {
+                let mut searcher = Searcher::new(sc, w, r);
+                let shapes = rules::Shapes::for_rules(&r);
+                let letter = |v: &serde_json::Value| v.as_str().and_then(|s| s.chars().next()).and_then(rules::Piece::from_letter);
+                let mut out = String::new();
+                for line in lines.iter().skip(t).step_by(threads) {
+                    let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else { continue };
+                    let mut b = board::Board::default();
+                    for (y, n) in v["rows"].as_array().map(|a| a.as_slice()).unwrap_or(&[]).iter().enumerate().take(rules::H as usize) {
+                        b.rows[y] = n.as_u64().unwrap_or(0) as u16;
+                    }
+                    let Some(piece) = letter(&v["piece"]) else { continue };
+                    let mut queue = vec![piece];
+                    queue.extend(v["queue"].as_array().map(|a| a.iter().filter_map(letter).collect::<Vec<_>>()).unwrap_or_default());
+                    let hold = letter(&v["hold"]);
+                    let b2b = v["b2b"].as_i64().unwrap_or(-1) as i32;
+                    if let Some(d) = searcher.search(&b, &queue, hold, b2b, &rules::ALL_PIECES) {
+                        let cfg = GameConfig { pieces: 0, seed: v["seed"].as_u64().unwrap_or(0), garbage: GarbageConfig::default(),
+                                               label: label.clone(), record: false, env_rules: None, dataset: true, external: false };
+                        game::dataset_record(&mut out, &cfg, v["n"].as_u64().unwrap_or(0) as usize, &b, piece, &queue[1..], hold, b2b, &d, &r, &shapes);
+                    }
+                    let k = done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+                    if k % 2000 == 0 {
+                        eprintln!("labelled {}/{} ({:.0}s)", k, total, t0.elapsed().as_secs_f64());
+                    }
+                }
+                out
+            })
+        }).collect();
+        hs.into_iter().map(|h| h.join().unwrap()).collect()
+    });
+    std::fs::write(&out_path, parts.concat()).expect("write --out");
+    eprintln!("labelled {} states -> {} ({:.0}s)", total, out_path, t0.elapsed().as_secs_f64());
+}
+
 /// `bot value --weights W [--mode]`: V of each state on stdin ({"rows": [40 bitmask rows, top
 /// to bottom], "b2b": n} per line). Reply per line: {"v": V, "f": [raw features],
 /// "c": [weight x feature, per feature]} in eval::NAMES order.
@@ -892,6 +947,7 @@ fn main() {
         "dataset" => cmd_dataset(&a),
         "expand" => cmd_expand(&a),
         "value" => cmd_value(&a),
+        "label" => cmd_label(&a),
         "play-ext" => cmd_play_ext(&a),
         "structures" => cmd_structures(),
         "battle-parity" => {
