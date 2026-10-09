@@ -1,0 +1,2 @@
+272000 positions: epoch 8: train loss 2.419 | val normal top1 0.550 top3 0.796 | val gate4 top1 0.540 top3 0.773 | argmax Qs top1 0.465 / 0.484, Q1 top1 0.075 / 0.081 | MAE Q1 20.86 Qs 6.65 | 40s
+544000 positions: epoch 8: train loss 2.302 | val normal top1 0.583 top3 0.822 | val gate4 top1 0.566 top3 0.803 | argmax Qs top1 0.499 / 0.515, Q1 top1 0.126 / 0.118 | MAE Q1 18.93 Qs 6.36 | 80s
