@@ -260,6 +260,76 @@ fn cmd_plan(a: &Args) {
     println!("planned attack {}, nodes {}", total, s.nodes);
 }
 
+/// `bot structures`: the T-spin structures on each board, for AtTenTris's overlay tokens.
+/// One stdin line per board, replay format: {"board": [40 rows, top to bottom, '.' empty]}
+/// (other fields ignored). Reply per line: {"structures": [{"kind", "lines", "fill",
+/// "cells": [[x, y], ...]}]}, coordinates as in the input. Kinds, one per slot:
+///   tsd       flat slot (nub down)                     cells: the T
+///   fractal   flat slot with the same TSD two rows down cells: both T's
+///   imperial  vertical slot the T can turn 180 in      cells: T, turned T, second T
+///   stsd      vertical, the TSD opens at h (y+1)        cells: T + second T
+///   cspin     vertical, h filled, TSD opens at g (y+2)  cells: T + second T
+///   vertical  vertical slot with no second T (TST)      cells: the T
+fn cmd_structures() {
+    use std::io::{BufRead, Write};
+    let stdout = std::io::stdout();
+    let mut out = stdout.lock();
+    let cells_json = |cs: &[(i32, i32)]| cs.iter().map(|(x, y)| format!("[{},{}]", x, y)).collect::<Vec<_>>().join(",");
+    for line in std::io::stdin().lock().lines() {
+        let Ok(line) = line else { break };
+        if line.trim().is_empty() {
+            continue;
+        }
+        let v: serde_json::Value = match serde_json::from_str(&line) {
+            Ok(v) => v,
+            Err(e) => {
+                let _ = writeln!(out, "{{\"error\":\"{}\"}}", e);
+                continue;
+            }
+        };
+        let mut b = board::Board::default();
+        for (y, row) in v["board"].as_array().map(|a| a.as_slice()).unwrap_or(&[]).iter().enumerate() {
+            if y as i32 >= rules::H {
+                break;
+            }
+            for (x, ch) in row.as_str().unwrap_or("").chars().enumerate() {
+                if ch != '.' && ch != ' ' {
+                    b.rows[y] |= 1 << x;
+                }
+            }
+        }
+        let mut items = Vec::new();
+        for (s, vertical) in eval::all_tslots(&b) {
+            let mut cells: Vec<(i32, i32)> = s.cells.to_vec();
+            let kind = if !vertical {
+                if let Some(sec) = s.second {
+                    cells.extend_from_slice(&sec);
+                    "fractal"
+                } else {
+                    "tsd"
+                }
+            } else if let Some(flip) = s.flip {
+                cells.extend_from_slice(&flip);
+                if let Some(sec) = s.flip_second {
+                    cells.extend_from_slice(&sec);
+                }
+                "imperial"
+            } else if let Some(sec) = s.second {
+                // the second T's nub: h (one under the stem bottom's row) or g (two under)
+                let stsd = sec[3].1 == s.cells[3].1;
+                cells.extend_from_slice(&sec);
+                if stsd { "stsd" } else { "cspin" }
+            } else {
+                "vertical"
+            };
+            cells.sort_unstable();
+            cells.dedup();
+            items.push(format!("{{\"kind\":\"{}\",\"lines\":{},\"fill\":{:.3},\"cells\":[{}]}}", kind, s.lines, s.fill, cells_json(&cells)));
+        }
+        let _ = writeln!(out, "{{\"structures\":[{}]}}", items.join(","));
+    }
+}
+
 /// `bot serve --mode battle --weights W [--beam --depth]`: one decision per stdin line.
 /// Request (TetrisBattle coordinates: his grid rows top to bottom, `excess` extra rows):
 ///   {"rows": [...], "excess": e, "piece": "T", "queue": ["I", ...], "hold": null | "S",
@@ -631,6 +701,7 @@ fn main() {
         "weights" =>print!("{}", weights(&a).to_text()),
         "probe" => cmd_probe(&a),
         "serve" => cmd_serve(&a),
+        "structures" => cmd_structures(),
         "battle-parity" => {
             if let Err(e) = battle::parity(a.str("data").expect("--data dump.jsonl")) {
                 eprintln!("{}", e);

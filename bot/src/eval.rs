@@ -323,10 +323,6 @@ pub fn scan_tslots(b: &Board, top: i32) -> TSlots {
 pub fn scan_rows(b: &Board, y_from: i32, y_to: i32) -> TSlots {
     let mut best: Option<TSlot> = None;
     let mut vertical: Option<TSlot> = None;
-    let y0 = y_from.max(1);
-    let pop = |y: i32| -> u32 { if (0..H).contains(&y) { b.rows[y as usize].count_ones() } else { 10 } };
-    // Walls, floor and ceiling count as filled.
-    let filled = |x: i32, y: i32| -> bool { b.blocked(x, y) };
     let consider = |slot: TSlot, best: &mut Option<TSlot>| {
         let better = match best {
             None => true,
@@ -336,6 +332,31 @@ pub fn scan_rows(b: &Board, y_from: i32, y_to: i32) -> TSlots {
             *best = Some(slot);
         }
     };
+    scan_rows_each(b, y_from, y_to, |slot, is_vertical| {
+        consider(slot, &mut best);
+        if is_vertical {
+            consider(slot, &mut vertical);
+        }
+    });
+    // The static prophecies, for the two slots a chain can start from only.
+    TSlots { best: best.map(|s| annotate(b, s)), vertical: vertical.map(|s| annotate(b, s)) }
+}
+
+/// Every T-spin slot on the board with its static prophecy, and whether it is vertical
+/// (for AtTenTris's structure overlays; the bot's V only needs `scan_tslots`).
+pub fn all_tslots(b: &Board) -> Vec<(TSlot, bool)> {
+    let mut out = Vec::new();
+    scan_rows_each(b, 1, H - 1, |slot, is_vertical| out.push((annotate(b, slot), is_vertical)));
+    out
+}
+
+/// The slot scan behind `scan_rows`: calls `hit(slot, is_vertical)` for every slot in
+/// rows y_from..y_to (prophecies not yet added).
+fn scan_rows_each(b: &Board, y_from: i32, y_to: i32, mut hit: impl FnMut(TSlot, bool)) {
+    let y0 = y_from.max(1);
+    let pop = |y: i32| -> u32 { if (0..H).contains(&y) { b.rows[y as usize].count_ones() } else { 10 } };
+    // Walls, floor and ceiling count as filled.
+    let filled = |x: i32, y: i32| -> bool { b.blocked(x, y) };
     for y in y0..y_to.min(H - 1) {
         let pm = padded(b, y - 1);
         let p0 = padded(b, y);
@@ -358,7 +379,7 @@ pub fn scan_rows(b: &Board, y_from: i32, y_to: i32) -> TSlots {
             let bb = pop(y + 1) + 1;
             let lines = (a == 10) as u32 + (bb == 10) as u32;
             let cells = [(x - 1, y), (x, y), (x + 1, y), (x, y + 1)];
-            consider(TSlot { lines, fill: (a + bb) as f32 / 20.0, cells, ..Default::default() }, &mut best);
+            hit(TSlot { lines, fill: (a + bb) as f32 / 20.0, cells, ..Default::default() }, false);
         }
         if y < 3 {
             continue;
@@ -394,13 +415,10 @@ pub fn scan_rows(b: &Board, y_from: i32, y_to: i32) -> TSlots {
                 let flip = (!filled(x - s, y) && filled(x - s, y - 1) && filled(x - s, y + 1))
                     .then_some([(x, y - 1), (x, y), (x - s, y), (x, y + 1)]);
                 let slot = TSlot { lines, fill: (a + bb + cc) as f32 / 30.0, cells, flip, ..Default::default() };
-                consider(slot, &mut best);
-                consider(slot, &mut vertical);
+                hit(slot, true);
             }
         }
     }
-    // The static prophecies, for the two slots a chain can start from only.
-    TSlots { best: best.map(|s| annotate(b, s)), vertical: vertical.map(|s| annotate(b, s)) }
 }
 
 /// Adds a slot's static prophecy (`TSlot::second`, `flip_second`).
