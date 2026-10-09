@@ -395,7 +395,7 @@ fn cmd_label(a: &Args) {
                             }
                         }
                         let cfg = GameConfig { pieces: 0, seed: v["seed"].as_u64().unwrap_or(0), garbage: GarbageConfig::default(),
-                                               label: label.clone(), record: false, env_rules: None, dataset: true, external: false };
+                                               label: label.clone(), record: false, env_rules: None, dataset: true, external: false, shortlist: false };
                         game::dataset_record(&mut out, &cfg, v["n"].as_u64().unwrap_or(0) as usize, &b, piece, &queue[1..], hold, b2b, &d, &r, &shapes);
                     }
                     let k = done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
@@ -538,13 +538,17 @@ fn cmd_expand(a: &Args) {
 /// ...} line.
 fn cmd_play_ext(a: &Args) {
     let r = rules(a);
-    let sc = SearchConfig { depth: 1, chance: false, roots: true, ..search_config(a) };
+    // --shortlist: the other process names the first moves worth searching and this bot's
+    // full search (--weights, --beam, --depth) picks among them; otherwise it names the move.
+    let shortlist = a.has("shortlist");
+    let sc = if shortlist { search_config(a) } else { SearchConfig { depth: 1, chance: false, roots: true, ..search_config(a) } };
     let mut s = Searcher::new(sc, weights(a), r);
     let cfg = GameConfig { pieces: a.get("pieces", 500usize), seed: a.get("seed", 1u64), garbage: garbage(a), label: "ext".into(),
-                           record: false, env_rules: None, dataset: false, external: true };
+                           record: false, env_rules: None, dataset: false, external: !shortlist, shortlist };
     let (st, _) = game::play(&mut s, &cfg);
-    println!("{{\"done\":true,\"seed\":{},\"pieces\":{},\"attack\":{},\"app\":{:.4},\"died\":{},\"tsd\":{},\"tst\":{},\"quads\":{},\"max_height\":{},\"illegal\":{}}}",
-        cfg.seed, st.pieces, st.attack, st.app(), st.died, st.tsd, st.tst, st.quads, st.max_height, st.ext_illegal);
+    println!("{{\"done\":true,\"seed\":{},\"pieces\":{},\"attack\":{},\"app\":{:.4},\"died\":{},\"tsd\":{},\"tst\":{},\"quads\":{},\"max_height\":{},\"illegal\":{},\"search_ms\":{:.2}}}",
+        cfg.seed, st.pieces, st.attack, st.app(), st.died, st.tsd, st.tst, st.quads, st.max_height, st.ext_illegal,
+        st.think_us.iter().map(|&u| u as f64).sum::<f64>() / st.think_us.len().max(1) as f64 / 1000.0);
 }
 
 /// `bot dataset --weights W --label L --out DIR [--mode --garbage --games --pieces --seed
@@ -581,7 +585,7 @@ fn cmd_dataset(a: &Args) {
                     if path.exists() {
                         continue;
                     }
-                    let cfg = GameConfig { pieces, seed: sd, garbage: g.clone(), label: label.clone(), record: false, env_rules: None, dataset: true, external: false };
+                    let cfg = GameConfig { pieces, seed: sd, garbage: g.clone(), label: label.clone(), record: false, env_rules: None, dataset: true, external: false, shortlist: false };
                     let (st, js) = game::play(&mut searcher, &cfg);
                     let part = path.with_extension("part");
                     std::fs::write(&part, js).expect("write");
@@ -675,7 +679,7 @@ fn run_games(sc: &SearchConfig, w: &Weights, r: Rules, env: Option<Rules>, g: &G
                 let mut searcher = Searcher::new(sc, w, r);
                 let mut i = t;
                 while i < games {
-                    let cfg = GameConfig { pieces, seed: seed + i as u64, garbage: g.clone(), label: label.clone(), record, env_rules: env, dataset: false, external: false };
+                    let cfg = GameConfig { pieces, seed: seed + i as u64, garbage: g.clone(), label: label.clone(), record, env_rules: env, dataset: false, external: false, shortlist: false };
                     let (st, js) = game::play(&mut searcher, &cfg);
                     out.push((i, st, js));
                     i += threads;

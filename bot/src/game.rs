@@ -285,6 +285,9 @@ pub struct GameConfig {
     /// Moves come from another process over stdin / stdout (`bot play-ext`); the searcher
     /// only lists the legal moves (`SearchConfig::roots`).
     pub external: bool,
+    /// `bot play-ext --shortlist`: another process names the first moves worth searching
+    /// (stdin: {"moves": [{"hold", "cells"}, ...]}), and this searcher picks among them.
+    pub shortlist: bool,
 }
 
 pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
@@ -392,6 +395,9 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
             .collect::<Vec<_>>()
             .join(",");
 
+        if cfg.shortlist {
+            searcher.root_allow = read_shortlist(n, &board, spawned, &queue[1..], hold, b2b);
+        }
         let nodes_before = searcher.nodes;
         let t0 = std::time::Instant::now();
         let mut d = match searcher.search(&board, &queue, hold, b2b, &bag_next) {
@@ -604,6 +610,40 @@ pub fn dataset_record(out: &mut String, cfg: &GameConfig, n: usize, board: &Boar
             c.best.map_or("null".to_string(), |b| format!("{:.3}", b)), cells);
     }
     let _ = writeln!(out, "],\"chosen\":{}}}", chosen);
+}
+
+fn write_state(n: usize, board: &Board, spawned: Piece, previews: &[Piece], hold: Option<Piece>, b2b: i32) {
+    use std::io::Write;
+    let up = |p: Piece| p.letter().to_ascii_uppercase();
+    let mut o = std::io::stdout().lock();
+    let _ = writeln!(o, "{{\"n\":{},\"rows\":[{}],\"piece\":\"{}\",\"queue\":[{}],\"hold\":{},\"b2b\":{}}}", n,
+        board.rows.iter().map(|r| r.to_string()).collect::<Vec<_>>().join(","), up(spawned),
+        previews.iter().take(5).map(|&p| format!("\"{}\"", up(p))).collect::<Vec<_>>().join(","),
+        hold.map_or("null".to_string(), |p| format!("\"{}\"", up(p))), b2b);
+    let _ = o.flush();
+}
+
+fn parse_move(m: &serde_json::Value) -> (bool, [(i32, i32); 4]) {
+    let uh = m["hold"].as_i64().unwrap_or(0) != 0;
+    let c: Vec<i32> = m["cells"].as_array().map(|a| a.iter().map(|x| x.as_i64().unwrap_or(-99) as i32).collect()).unwrap_or_default();
+    let mut cells = [(-99, -99); 4];
+    for (k, p) in c.chunks(2).take(4).enumerate() {
+        if p.len() == 2 {
+            cells[k] = (p[0], p[1]);
+        }
+    }
+    cells.sort();
+    (uh, cells)
+}
+
+/// `bot play-ext --shortlist`: send the state, read the shortlist of first moves.
+fn read_shortlist(n: usize, board: &Board, spawned: Piece, previews: &[Piece], hold: Option<Piece>, b2b: i32) -> Vec<(bool, [(i32, i32); 4])> {
+    use std::io::BufRead;
+    write_state(n, board, spawned, previews, hold, b2b);
+    let mut line = String::new();
+    std::io::stdin().lock().read_line(&mut line).expect("read shortlist");
+    let v: serde_json::Value = serde_json::from_str(&line).expect("shortlist JSON");
+    v["moves"].as_array().map(|a| a.iter().map(parse_move).collect()).unwrap_or_default()
 }
 
 /// `bot play-ext`: send the state, read the move, and play it if it is one of the legal moves

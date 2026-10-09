@@ -59,6 +59,9 @@ impl Fitness {
                         label: String::new(),
                         record: false,
                         env_rules: None,
+                        dataset: false,
+                        external: false,
+                        shortlist: false,
                     };
                     attack[ci].fetch_add(game::play(&mut searcher, &cfg).0.attack, Ordering::Relaxed);
                     on_job(done.fetch_add(1, Ordering::Relaxed) + 1, total);

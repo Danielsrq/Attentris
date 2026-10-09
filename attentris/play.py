@@ -110,6 +110,15 @@ class Player:
         order = np.argsort(-logp[:n])
         return order[:self.propose] if self.propose else order
 
+    def shortlist(self, st, k):
+        """The policy's top-k first moves (intuition), for the Rust search to choose among."""
+        root = self.expand(st)
+        if not root["cands"]:
+            return []
+        logp, _ = self.scores([(st, root)])
+        n = len(root["cands"])
+        return [root["cands"][int(i)] for i in np.argsort(-logp[0][:n])[:k]]
+
     def decide(self, st):
         root = self.expand(st)
         if not root["cands"]:
@@ -166,6 +175,10 @@ def play_game(args, seed):
     pcores.pin(verbose=False)
     pl = Player(args.model, args.depth, args.beam, {"normal": 0, "gate4": 1}[args.style], args.mode, args.policy, args.propose)
     cmd = [BOT, "play-ext", "--mode", args.mode, "--pieces", str(args.pieces), "--seed", str(seed)]
+    if args.shortlist:
+        w = os.path.join(HERE, "..", "bot", "weights", "normal.txt") if args.style == "normal" else \
+            os.path.join(HERE, "..", "bot", "results", "gate4", "gate4.txt")
+        cmd += ["--shortlist", "--weights", w, "--threads", "1", "--any-cores"]
     if args.garbage:
         cmd += ["--garbage", args.garbage]
     game = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
@@ -179,9 +192,13 @@ def play_game(args, seed):
             states.append({"seed": seed, "n": st["n"], "rows": st["rows"], "b2b": st["b2b"], "piece": st["piece"],
                            "queue": st["queue"], "hold": st["hold"], "style": args.style})
         t0 = time.perf_counter()
-        c = pl.decide(st)
+        if args.shortlist:
+            moves = pl.shortlist(st, args.shortlist)
+            move = {"moves": [{"hold": c["hold"], "cells": c["cells"]} for c in moves]}
+        else:
+            c = pl.decide(st)
+            move = {"hold": c["hold"], "cells": c["cells"]} if c else {"hold": 0, "cells": []}
         times.append(time.perf_counter() - t0)
-        move = {"hold": c["hold"], "cells": c["cells"]} if c else {"hold": 0, "cells": []}
         game.stdin.write(json.dumps(move) + "\n")
         game.stdin.flush()
     game.wait()
@@ -207,6 +224,8 @@ def main():
     ap.add_argument("--style", default="normal", choices=("normal", "gate4"))
     ap.add_argument("--policy", default="logit", choices=("logit", "q1", "qs"), help="score moves by the policy or a value head")
     ap.add_argument("--propose", type=int, default=0, help="with a value head: choose only among the policy's top-k moves (0 = all)")
+    ap.add_argument("--shortlist", type=int, default=0, help="intuition + calculation: the policy's top-k moves, then the "
+                    "teacher's full search (its handcrafted V) picks among them")
     ap.add_argument("--mode", default="normal")
     ap.add_argument("--garbage", default="")
     ap.add_argument("--jobs", type=int, default=0, help="parallel games (0 = P-core logical processors)")
@@ -221,13 +240,14 @@ def main():
     pieces = sum(r["pieces"] for r in res)
     attack = sum(r["attack"] for r in res)
     full = attack / (args.games * args.pieces)
-    line = ("AtTenTris %s%s depth %d%s style %s %s: APP %.3f (APPfull %.3f), died %d/%d, pieces %.0f avg, TSD %d, TST %d, quads %d, "
-            "max height %d, illegal %d, %.1f ms/move (p90 %.1f), %.0fs") % (
-        args.policy, (" top%d" % args.propose) if args.propose else "", args.depth, "" if args.depth <= 1 else " beam %d" % args.beam, args.style, ("garbage " + args.garbage) if args.garbage else "no garbage",
+    line = ("AtTenTris %s%s%s depth %d%s style %s %s: APP %.3f (APPfull %.3f), died %d/%d, pieces %.0f avg, TSD %d, TST %d, quads %d, "
+            "max height %d, illegal %d, %.1f ms/move (p90 %.1f) + search %.1f ms, %.0fs") % (
+        args.policy, (" top%d" % args.propose) if args.propose else "", (" shortlist %d + V search" % args.shortlist) if args.shortlist else "", args.depth, "" if args.depth <= 1 else " beam %d" % args.beam, args.style, ("garbage " + args.garbage) if args.garbage else "no garbage",
         attack / max(1, pieces), full, sum(r["died"] for r in res), args.games, pieces / args.games,
         sum(r["tsd"] for r in res), sum(r["tst"] for r in res), sum(r["quads"] for r in res),
         max(r["max_height"] for r in res), sum(r["illegal"] for r in res),
-        float(np.mean([r["ms_per_move"] for r in res])), float(np.mean([r["ms_p90"] for r in res])), time.time() - t0)
+        float(np.mean([r["ms_per_move"] for r in res])), float(np.mean([r["ms_p90"] for r in res])),
+        float(np.mean([r.get("search_ms", 0.0) for r in res])), time.time() - t0)
     print(line, flush=True)
     if args.dump:
         with open(args.dump, "w") as f:

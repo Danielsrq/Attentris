@@ -102,6 +102,9 @@ pub struct Searcher {
     mg: MoveGen,
     buf: Vec<Placement>,
     pub nodes: u64,
+    /// When not empty, only these first moves (hold flag, sorted cells) are searched: a
+    /// shortlist from outside (AtTenTris's top-k, `bot play-ext --shortlist`).
+    pub root_allow: Vec<(bool, [(i32, i32); 4])>,
 }
 
 /// Outcome of one placement on a board.
@@ -182,7 +185,7 @@ impl Searcher {
         let mut mg = MoveGen::new();
         mg.all_spin = rules.all_spin;
         mg.battle = rules.battle;
-        Searcher { cfg, weights, rules, shapes: Shapes::for_rules(&rules), mg, buf: Vec::with_capacity(256), nodes: 0 }
+        Searcher { cfg, weights, rules, shapes: Shapes::for_rules(&rules), mg, buf: Vec::with_capacity(256), nodes: 0, root_allow: Vec::new() }
     }
 
     fn value(&self, b: &Board, b2b: i32) -> f32 {
@@ -266,6 +269,18 @@ impl Searcher {
         let root = Node { board: *board, hold, qi: 0, b2b, reward: 0.0, score: 0.0, dead: false, path: [empty; MAX_PLAN], plen: 0, root: 0 };
         let mut beam = Vec::new();
         self.expand(&root, queue, &mut beam);
+        if !self.root_allow.is_empty() {
+            let shapes = &self.shapes;
+            let allow = &self.root_allow;
+            let kept: Vec<Node> = beam.iter().copied().filter(|n| {
+                let mut c = n.path[0].placement.abs_cells(shapes);
+                c.sort();
+                !n.dead && allow.contains(&(n.path[0].use_hold, c))
+            }).collect();
+            if !kept.is_empty() {
+                beam = kept;
+            }
+        }
         for (i, n) in beam.iter_mut().enumerate() {
             n.root = i as u16;
         }

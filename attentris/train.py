@@ -143,7 +143,7 @@ def main():
     ap.add_argument("--layers", type=int, default=4)
     ap.add_argument("--out", default=None, help="checkpoint (default DATA/model.pt)")
     ap.add_argument("--resume", action="store_true")
-    ap.add_argument("--limit", type=int, default=0, help="use only the first N training positions (smoke test)")
+    ap.add_argument("--limit", type=int, default=0, help="use a random N-position subset (smoke tests, learning curves)")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--train", default="train.npz", help="training file(s) in DATA, comma-separated")
     ap.add_argument("--w-dense", type=float, default=0.0, help="weight of the dense 1-ply ranking term (v2: 0.5)")
@@ -161,7 +161,8 @@ def main():
     tr = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
     va = load(os.path.join(args.data, "val.npz"))
     if args.limit:
-        tr = {k: v[:args.limit] for k, v in tr.items()}
+        keep = np.sort(np.random.default_rng(123).choice(len(tr["chosen"]), size=min(args.limit, len(tr["chosen"])), replace=False))
+        tr = {k: v[keep] for k, v in tr.items()}   # a random subset (files are in teacher order)
     n = len(tr["chosen"])
     net = M.AtTenTris(d=args.d, layers=args.layers).to(args.device)
     print("device", args.device, torch.cuda.get_device_name(0) if args.device == "cuda" else "", flush=True)

@@ -1,0 +1,13 @@
+== garbage: none
+AtTenTris logit shortlist 1 + V search depth 1 style normal no garbage: APP 0.221 (APPfull 0.221), died 0/16, pieces 500 avg, TSD 103, TST 0, quads 45, max height 19, illegal 0, 7.0 ms/move (p90 7.7) + search 52.6 ms, 33s
+AtTenTris logit shortlist 2 + V search depth 1 style normal no garbage: APP 0.554 (APPfull 0.554), died 0/16, pieces 500 avg, TSD 284, TST 1, quads 182, max height 20, illegal 0, 7.3 ms/move (p90 8.0) + search 59.8 ms, 38s
+AtTenTris logit shortlist 3 + V search depth 1 style normal no garbage: APP 0.851 (APPfull 0.851), died 0/16, pieces 500 avg, TSD 449, TST 0, quads 209, max height 17, illegal 0, 7.2 ms/move (p90 7.9) + search 61.8 ms, 39s
+AtTenTris logit shortlist 5 + V search depth 1 style normal no garbage: APP 1.181 (APPfull 1.181), died 0/16, pieces 500 avg, TSD 594, TST 0, quads 267, max height 14, illegal 0, 7.2 ms/move (p90 7.9) + search 61.8 ms, 38s
+AtTenTris logit shortlist 10 + V search depth 1 style normal no garbage: APP 1.204 (APPfull 1.204), died 0/16, pieces 500 avg, TSD 677, TST 0, quads 220, max height 15, illegal 0, 7.5 ms/move (p90 8.3) + search 64.0 ms, 39s
+== garbage: 10,3-4,cheese0.2,0.2
+AtTenTris logit shortlist 1 + V search depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.352 (APPfull 0.070), died 16/16, pieces 100 avg, TSD 15, TST 0, quads 58, max height 22, illegal 0, 6.6 ms/move (p90 8.1) + search 47.5 ms, 14s
+AtTenTris logit shortlist 2 + V search depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.702 (APPfull 0.636), died 3/16, pieces 453 avg, TSD 204, TST 0, quads 543, max height 21, illegal 0, 6.7 ms/move (p90 7.8) + search 57.0 ms, 35s
+AtTenTris logit shortlist 3 + V search depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.804 (APPfull 0.685), died 3/16, pieces 426 avg, TSD 243, TST 1, quads 539, max height 20, illegal 0, 6.4 ms/move (p90 7.6) + search 56.5 ms, 35s
+AtTenTris logit shortlist 5 + V search depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.981 (APPfull 0.919), died 3/16, pieces 469 avg, TSD 361, TST 1, quads 656, max height 20, illegal 0, 6.9 ms/move (p90 7.8) + search 58.9 ms, 36s
+AtTenTris logit shortlist 10 + V search depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 1.115 (APPfull 0.980), died 4/16, pieces 439 avg, TSD 394, TST 2, quads 646, max height 20, illegal 0, 6.6 ms/move (p90 7.6) + search 58.7 ms, 36s
+all done
