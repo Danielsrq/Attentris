@@ -181,7 +181,7 @@ def play_game(args, seed):
         cmd += ["--shortlist", "--weights", w, "--threads", "1", "--any-cores"]
     if args.garbage:
         cmd += ["--garbage", args.garbage]
-    game = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
+    game = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=open(os.path.join(args.bot_log, "game_s%d.err" % seed), "w") if args.bot_log else subprocess.DEVNULL, text=True, bufsize=1)
     times = []
     states = []
     while True:
@@ -230,6 +230,7 @@ def main():
     ap.add_argument("--garbage", default="")
     ap.add_argument("--jobs", type=int, default=0, help="parallel games (0 = P-core logical processors)")
     ap.add_argument("--out", default="")
+    ap.add_argument("--bot-log", default="", help="directory for each game's bot stderr (debugging)")
     ap.add_argument("--dump", default="", help="write every state reached (seed, n, rows, b2b) to this JSONL")
     args = ap.parse_args()
     n_p = pcores.pin() or 8
