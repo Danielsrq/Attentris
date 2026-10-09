@@ -85,8 +85,8 @@ figure { min-width: 0; width: 100%; }
     12-token budget merged the lowest rows. Filled cells are drawn as dark blocks framed in their token's colour.
     Overlays may overlap anything; at most 8 are kept (T structures first, then 3×4/4×3 pits, then piece-shaped
     recesses, then pits by area). A recess (dotted, in the piece's colour) is a resting place where an S, Z, T (nub down),
-    L or J (three on top / hook on top) touches the surface under every column with no gap and leaves the
-    surrounding columns less bumpy.
+    L or J (three on top / hook on top) touches the surface under every column with no gap, touches filled cells or the edge on at least 2 sides, and leaves the
+    surrounding columns no bumpier.
     The dashed outline is the bot's actual placement. Hover a token to isolate it. Keys: ← →.</p>
 </div>
 
@@ -203,7 +203,7 @@ function render() {
         return `${rows(t)} · merged ${Object.entries(n).map(([k, v]) => `${v} ${k}${v > 1 ? "s" : ""}`).join(" + ")} · ${e.filled} filled`;
       }
       default:
-        if (t.kind.startsWith("fit_")) return `${FIT_NOTE[t.kind]}-shaped recess · ${FIT_NOTE[t.kind]} ${e.orientation} · ${cols(t)} · bumpiness −${e.gain}`;
+        if (t.kind.startsWith("fit_")) return `${FIT_NOTE[t.kind]}-shaped recess · ${FIT_NOTE[t.kind]} ${e.orientation} · ${cols(t)} · ${e.contacts} side contacts${e.gain > 0 ? ` · bumpiness −${e.gain}` : ""}`;
         if (t.kind.startsWith("pit")) return `${cols(t)} · depth ${e.depth} · ${e.area} cells · ${OVERLAY_NOTE[t.kind]}`;
         if (t.kind === "rect12") return `${cols(t)}, ${rows(t)} · ${e.orientation} · ${OVERLAY_NOTE.rect12}`;
         return `${OVERLAY_NOTE[t.kind]} · ${e.lines} line${e.lines === 1 ? "" : "s"} ready · fill ${e.fill.toFixed(2)} · ${t.cells.length} cells`;

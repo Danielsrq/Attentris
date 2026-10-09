@@ -19,8 +19,10 @@ Overlay tokens (may overlap base tokens), at most P_MAX, by priority:
           L+J+O, L+S+J or L+Z+J (also L+L+O, J+J+O) fill
   fit_s, fit_z, fit_t, fit_l, fit_j  a piece-shaped recess: a resting place where a piece with
           a shaped bottom (S / Z either way up, T nub down, L / J three on top or hook on
-          top) touches the surface under every column -- no gap left -- and the surface
-          around it (its columns +-1) ends up less bumpy. Mask = the piece's cells.
+          top) touches the surface under every column -- no gap left -- and sits snugly:
+          at least MIN_CONTACTS of its cells' sides touch a filled cell or the board edge
+          (a piece balanced on a peak only touches the step it rests on), and the surface
+          around it (its columns +-1) is no bumpier afterwards. Mask = its cells.
   pit1..pit4  negative space: a run of 1-4 columns below both its side walls (an edge counts
           as a wall), filled with "water" up to the lower wall. pit1 = a well.
 
@@ -36,6 +38,7 @@ import numpy as np
 ROWS, COLS = 20, 10
 K_BOARD = 12      # base board tokens at most (sky + stack tokens)
 P_MAX = 8         # overlay tokens at most
+MIN_CONTACTS = 2  # side contacts for a piece-shaped recess
 PIECES = "IOTSZJL"
 STRUCTURE_KINDS = ("imperial", "stsd", "cspin", "fractal", "tsd", "vertical")
 BASE_KINDS = ("sky", "well", "play", "band")
@@ -215,13 +218,22 @@ def fit_tokens(b, h):
                 after = h.copy()
                 for k in range(w):
                     after[x + k] = a + top[k] + 1
-                gain = bumpiness(h, x - 1, x + w) - bumpiness(after, x - 1, x + w)
-                if gain <= 0:
-                    continue
                 m = np.zeros((ROWS, COLS), bool)
                 for dx, dy in cells:
                     m[a + dy, x + dx] = True
-                out.append(Token(kind, m, {"orientation": orient, "gain": gain}))
+                # snugness: piece-cell sides against a filled cell or the board edge
+                contacts = 0
+                for dx, dy in cells:
+                    r, c = a + dy, x + dx
+                    for cc in (c - 1, c + 1):
+                        if cc < 0 or cc >= COLS or (not m[r, cc] and b[r, cc]):
+                            contacts += 1
+                if contacts < MIN_CONTACTS:
+                    continue
+                gain = bumpiness(h, x - 1, x + w) - bumpiness(after, x - 1, x + w)
+                if gain < 0:
+                    continue  # snug but leaves the area bumpier (a tower against a wall)
+                out.append(Token(kind, m, {"orientation": orient, "contacts": contacts, "gain": gain}))
     return out
 
 
@@ -245,7 +257,7 @@ def overlay_priority(t):
     if t.kind == "rect12":
         return (1, 0, 0, 0)
     if t.kind in FIT_KINDS:
-        return (2, -t.extras["gain"], FIT_KINDS.index(t.kind), 0)
+        return (2, -t.extras["contacts"], -t.extras["gain"], FIT_KINDS.index(t.kind))
     return (3, -t.extras["area"], t.extras["width"], 0)
 
 

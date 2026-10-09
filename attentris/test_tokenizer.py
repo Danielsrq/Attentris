@@ -67,7 +67,10 @@ def test_structures_from_rust():
     # also an S-shaped recess: an upright S on the 8 / 7 step of columns 3-4 (it would bury the slot)
     fit = [t for t in toks if t.kind == "fit_s"][0]
     assert sorted(zip(*np.nonzero(fit.mask))) == [(7, 4), (8, 3), (8, 4), (9, 3)]
-    assert len(toks) == 5 + 3 + 7, [t.kind for t in toks]
+    # and a J (three on top) filling the dent at column 9; the upright S against the right
+    # wall at columns 8-9 is snug but makes a tower, so it is not a recess
+    assert sorted(t.kind for t in toks if t.kind.startswith("fit_")) == ["fit_j", "fit_s"]
+    assert len(toks) == 5 + 4 + 7, [t.kind for t in toks]
 
 
 def test_sz_recesses():
@@ -85,6 +88,28 @@ def test_sz_recesses():
         b[:hc, c] = True
     fits = T.fit_tokens(b, T.heights(b))
     assert any(t.kind == "fit_z" and t.extras["orientation"] == "upright" and t.box[2:] == (7, 8) for t in fits), fits
+
+
+def fits_on(heights):
+    b = np.zeros((T.ROWS, T.COLS), bool)
+    for c, hc in enumerate(heights):
+        b[:hc, c] = True
+    return {(t.kind, t.extras["orientation"], t.box[2], t.box[3]) for t in T.fit_tokens(b, T.heights(b))}
+
+
+def test_recesses_next_to_cliffs():
+    # viewer 10: the S on 10,10,11 (cols 3-5) is a recess too, although col 6 drops to 8
+    f = fits_on([14, 13, 11, 10, 10, 11, 8, 8, 10, 12])
+    assert ("fit_s", "flat", 3, 5) in f and ("fit_z", "flat", 2, 4) in f, f
+    # viewer 23: the bot's L, hook on top, on 8,6 (cols 1-2); and a J hook on 4,6 (cols 7-8)
+    f = fits_on([9, 8, 6, 5, 4, 4, 0, 4, 6, 7])
+    assert ("fit_l", "hook on top", 1, 2) in f and ("fit_j", "hook on top", 7, 8) in f, f
+    # viewer 25: L hooks down the left staircase, a J hook at the bottom of the right well
+    f = fits_on([10, 6, 6, 4, 2, 0, 0, 0, 2, 6])
+    assert {("fit_l", "hook on top", 3, 4), ("fit_l", "hook on top", 4, 5), ("fit_j", "hook on top", 7, 8)} <= f, f
+    # a piece balanced on a peak is not a recess
+    f = fits_on([3, 5, 4, 2, 2, 2, 2, 2, 2, 2])
+    assert ("fit_s", "upright", 1, 2) not in f, f
 
 
 def test_rect12_and_well():

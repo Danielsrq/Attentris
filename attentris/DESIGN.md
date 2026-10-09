@@ -71,7 +71,10 @@ Key decisions:
 2. **rect12**: an empty pit with a flat floor and walls on both sides (a board edge counts as a wall), 3 wide by 4 deep or 4 wide by 3 deep. The mask is the 12 cells. Brute force confirms that L+J+O, L+S+J and L+Z+J each tile both shapes exactly (2 ways each); L+L+O and J+J+O do too. No other 3-piece set tried does (L+J+T, L+S+Z, J+S+Z, O+S+Z, I+I+O).
 3. **fit_s, fit_z, fit_t, fit_l, fit_j (piece-shaped recesses)**: added after the viewer showed S/Z placements that level the stack and that no token covered. A piece-shaped recess is a resting place for a piece with a shaped bottom where both of these hold:
    - The piece touches the surface under every one of its columns, so it leaves no gap.
-   - The surrounding columns (its own, ±1) end up less bumpy.
+   - It sits snugly: at least 2 of its cells' sides touch a filled cell or the board edge. A piece balanced on a peak touches only the step it rests on.
+   - The surrounding columns (its own, ±1) end up no bumpier. A cliff just outside the recess can cancel the gain, so this only rules out towers.
+
+   (Revised after the viewer: the first rule, "strictly less bumpy", missed the flat S in position 10 and the L/J hooks in 23 and 25.)
 
    The pieces counted:
 
@@ -82,8 +85,8 @@ Key decisions:
    | L, J | three on top, and hook on top |
 
    The mask is the piece's own cells, so the recess is drawn as the S/Z/T/L/J-shaped hole. Flat-bottomed placements fit almost anywhere and are left out.
-   - On 2,500 gate4 boards there are about 0.9 recesses per board.
-   - When an S or Z recess exists, the bot's S/Z move is exactly that recess about 41–42% of the time.
+   - On 2,500 gate4 boards there are about 2.1 recesses per board.
+   - Of the bot's non-clearing S, Z, L and J moves, 23–32% land exactly on a recess token; where a recess of that piece exists, 47–57%.
    - Most of the bot's other S/Z moves deliberately leave one gap or a bump (building overhangs and T-slots), which is construction rather than levelling.
 4. **pit1–pit4 (negative space)**: every run of 1 to 4 columns lying below both its side walls (an edge counts as an infinitely high wall, but not on both sides). The pit is "water-filled" up to the lower wall.
    - pit1 is a well.
