@@ -62,6 +62,7 @@ impl Fitness {
                         dataset: false,
                         external: false,
                         shortlist: false,
+                        all_roots: 0,
                     };
                     attack[ci].fetch_add(game::play(&mut searcher, &cfg).0.attack, Ordering::Relaxed);
                     on_job(done.fetch_add(1, Ordering::Relaxed) + 1, total);

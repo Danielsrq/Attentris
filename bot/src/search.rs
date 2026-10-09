@@ -69,6 +69,21 @@ struct Node {
     root: u16,
 }
 
+/// Fill in `d`'s root search scores from a root-diverse search of the same position
+/// (`SearchConfig::root_keep`): same board, same move generation, so the roots line up.
+pub fn merge_root_best(d: &mut Decision, d2: &Decision) {
+    if d2.roots.len() != d.roots.len() {
+        return;
+    }
+    for (r1, r2) in d.roots.iter_mut().zip(d2.roots.iter()) {
+        r1.best = match (r1.best, r2.best) {
+            (Some(x), Some(y)) => Some(x.max(y)),
+            (x, None) => x,
+            (None, y) => y,
+        };
+    }
+}
+
 /// One legal first move and what the search thought of it (`SearchConfig::roots`).
 #[derive(Clone, Copy, Debug)]
 pub struct RootScore {

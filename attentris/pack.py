@@ -131,6 +131,10 @@ def pack(recs):
     return out, dropped
 
 
+def pack_file(path):
+    return pack([json.loads(l) for l in open(path)])
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--raw", default=os.path.join(HERE, "data", "raw"))
@@ -138,11 +142,22 @@ def main():
     ap.add_argument("--val-every", type=int, default=10, help="every k-th game (by seed) goes to validation")
     ap.add_argument("--only", default="", help="pack just this raw directory into OUT/NAME.npz, all of it (e.g. DAgger labels)")
     ap.add_argument("--name", default="dagger")
+    ap.add_argument("--jobs", type=int, default=1, help="with --only: pack the game files in this many processes")
     args = ap.parse_args()
     pcores.pin()
     if args.only:
-        recs = [json.loads(l) for f in sorted(glob.glob(os.path.join(args.only, "*.jsonl"))) for l in open(f)]
-        arrs, dropped = pack(recs)
+        files = sorted(glob.glob(os.path.join(args.only, "*.jsonl")))
+        if args.jobs > 1:
+            # one file at a time per process: a million JSON records at once would not fit
+            import multiprocessing as mp
+            with mp.get_context("spawn").Pool(args.jobs) as pool:
+                parts = pool.map(pack_file, files, chunksize=4)
+            arrs = {k: np.concatenate([p[0][k] for p in parts]) for k in parts[0][0]}
+            dropped = sum(p[1] for p in parts)
+            recs = arrs["chosen"]
+        else:
+            recs = [json.loads(l) for f in files for l in open(f)]
+            arrs, dropped = pack(recs)
         path = os.path.join(args.out, args.name + ".npz")
         np.savez_compressed(path, **arrs)
         print("%s: %d positions, %d candidates over NC dropped -> %s" % (args.name, len(recs), dropped, path))

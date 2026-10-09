@@ -288,6 +288,9 @@ pub struct GameConfig {
     /// `bot play-ext --shortlist`: another process names the first moves worth searching
     /// (stdin: {"moves": [{"hold", "cells"}, ...]}), and this searcher picks among them.
     pub shortlist: bool,
+    /// With `dataset`: also run a root-diverse search (keeping this many lines per first
+    /// move) so every legal move's record gets a search score. 0 = survivors only.
+    pub all_roots: usize,
 }
 
 pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
@@ -356,6 +359,9 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
     }
 
     let shapes = crate::rules::Shapes::for_rules(&env);
+    let mut diverse = (cfg.dataset && cfg.all_roots > 0).then(|| {
+        Searcher::new(crate::search::SearchConfig { root_keep: cfg.all_roots, ..searcher.cfg.clone() }, searcher.weights.clone(), searcher.rules)
+    });
     let mut expected: Option<(Piece, [(i32, i32); 4])> = None;
     let counts_at_start = crate::eval::template_counts();
     let mut followup_left = 0u8;
@@ -429,7 +435,14 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         }
         let plan_json = if cfg.record { plan_to_json(&board, &d.plan, b2b, searcher, &shapes) } else { String::new() };
         if cfg.dataset {
-            dataset_record(&mut out, cfg, n, &board, spawned, &queue[1..], spawn_hold, b2b, &d, &env, &shapes);
+            match diverse.as_mut().and_then(|dv| dv.search(&board, &queue, spawn_hold, b2b, &bag_next)) {
+                Some(d2) => {
+                    let mut dd = d.clone();
+                    crate::search::merge_root_best(&mut dd, &d2);
+                    dataset_record(&mut out, cfg, n, &board, spawned, &queue[1..], spawn_hold, b2b, &dd, &env, &shapes);
+                }
+                None => dataset_record(&mut out, cfg, n, &board, spawned, &queue[1..], spawn_hold, b2b, &d, &env, &shapes),
+            }
         }
 
         // Advance the queue exactly as Game does: the spawned piece is consumed; an
