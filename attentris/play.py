@@ -142,10 +142,13 @@ def play_game(args, seed):
         cmd += ["--garbage", args.garbage]
     game = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
     times = []
+    states = []
     while True:
         st = readjson(game)
         if st.get("done"):
             break
+        if args.dump:
+            states.append({"seed": seed, "n": st["n"], "rows": st["rows"], "b2b": st["b2b"]})
         t0 = time.perf_counter()
         c = pl.decide(st)
         times.append(time.perf_counter() - t0)
@@ -156,6 +159,7 @@ def play_game(args, seed):
     pl.close()
     st["ms_per_move"] = 1000 * float(np.mean(times)) if times else 0.0
     st["ms_p90"] = 1000 * float(np.percentile(times, 90)) if times else 0.0
+    st["states"] = states
     return st
 
 
@@ -176,6 +180,7 @@ def main():
     ap.add_argument("--garbage", default="")
     ap.add_argument("--jobs", type=int, default=0, help="parallel games (0 = P-core logical processors)")
     ap.add_argument("--out", default="")
+    ap.add_argument("--dump", default="", help="write every state reached (seed, n, rows, b2b) to this JSONL")
     args = ap.parse_args()
     n_p = pcores.pin() or 8
     jobs = args.jobs or n_p
@@ -193,6 +198,13 @@ def main():
         max(r["max_height"] for r in res), sum(r["illegal"] for r in res),
         float(np.mean([r["ms_per_move"] for r in res])), float(np.mean([r["ms_p90"] for r in res])), time.time() - t0)
     print(line, flush=True)
+    if args.dump:
+        with open(args.dump, "w") as f:
+            for r in res:
+                for s_ in r["states"]:
+                    f.write(json.dumps(s_) + "\n")
+    for r in res:
+        r.pop("states", None)
     if args.out:
         with open(args.out, "a") as f:
             f.write(line + "\n")

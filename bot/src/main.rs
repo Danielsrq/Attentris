@@ -336,6 +336,38 @@ fn structures_json(b: &board::Board) -> String {
     items.join(",")
 }
 
+/// `bot value --weights W [--mode]`: V of each state on stdin ({"rows": [40 bitmask rows, top
+/// to bottom], "b2b": n} per line). Reply per line: {"v": V, "f": [raw features],
+/// "c": [weight x feature, per feature]} in eval::NAMES order.
+fn cmd_value(a: &Args) {
+    use std::io::{BufRead, Write};
+    let r = rules(a);
+    let w = weights(a);
+    let stdout = std::io::stdout();
+    let mut out = stdout.lock();
+    for line in std::io::stdin().lock().lines() {
+        let Ok(line) = line else { break };
+        if line.trim().is_empty() {
+            continue;
+        }
+        let v: serde_json::Value = match serde_json::from_str(&line) {
+            Ok(v) => v,
+            Err(e) => {
+                let _ = writeln!(out, "{{\"error\":\"{}\"}}", e);
+                continue;
+            }
+        };
+        let mut b = board::Board::default();
+        for (y, n) in v["rows"].as_array().map(|a| a.as_slice()).unwrap_or(&[]).iter().enumerate().take(rules::H as usize) {
+            b.rows[y] = n.as_u64().unwrap_or(0) as u16;
+        }
+        let f = eval::features(&b, v["b2b"].as_i64().unwrap_or(-1) as i32, r.b2b);
+        let js = |xs: &[f32]| xs.iter().map(|x| format!("{:.4}", x)).collect::<Vec<_>>().join(",");
+        let c: Vec<f32> = (0..eval::NF).map(|i| w.w[i] * f[i]).collect();
+        let _ = writeln!(out, "{{\"v\":{:.4},\"f\":[{}],\"c\":[{}]}}", w.value(&f), js(&f), js(&c));
+    }
+}
+
 /// `bot expand [--mode]`: every legal move from a state, for AtTenTris's lookahead. One stdin
 /// line per state: {"rows": [40 bitmask rows, top to bottom], "piece": "T", "queue": [...],
 /// "hold": null | "S", "b2b": n}. Reply: {"structures": [...], "cands": [{"hold", "piece",
@@ -859,6 +891,7 @@ fn main() {
         "serve" => cmd_serve(&a),
         "dataset" => cmd_dataset(&a),
         "expand" => cmd_expand(&a),
+        "value" => cmd_value(&a),
         "play-ext" => cmd_play_ext(&a),
         "structures" => cmd_structures(),
         "battle-parity" => {
