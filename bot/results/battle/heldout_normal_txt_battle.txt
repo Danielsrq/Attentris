@@ -1,0 +1,2 @@
+normal_txt              1.121  0/20    500   3.62   9.11   0.00   2.49   0.97   0.00   1.29    0/0    86  0.00    0   77.20    1.121
+clears per 100 pieces -- spin singles 2.72, doubles 9.85, triples 0.00; plain 1/2/3/4: 0.73/0.30/0.26/3.62; attack per line 2.87
