@@ -12,6 +12,7 @@ import torch.nn.functional as F
 
 N_KINDS = 31        # len(tokenizer.KINDS); asserted by train.py
 N_PIECES = 8        # IOTSZJL + none
+Q_SCALE = 10.0      # value heads predict teacher scores / Q_SCALE
 
 
 def unpack_masks(packed):
@@ -132,8 +133,14 @@ class AtTenTris(nn.Module):
         self.cross = Block(d, heads)
         self.c_norm = nn.LayerNorm(d)
         self.head = nn.Linear(d, 1)
+        # value heads on the same candidate vector (v2): the teacher's 1-ply score of every
+        # move (attack + V after it) and its 6-ply search score (moves the beam kept),
+        # both in units of Q_SCALE lines of attack
+        self.q1 = nn.Linear(d, 1)
+        self.qs = nn.Linear(d, 1)
 
-    def forward(self, batch, return_attn=False):
+    def forward(self, batch, return_attn=False, heads=False):
+        """Policy logits (B, NC); with heads=True a dict {logit, q1, qs} (Q in Q_SCALE units)."""
         cells = batch["cells"]                                   # (B, 200) long
         B = cells.shape[0]
         phi = self.val(cells) + self.pos.cells()                 # (B, 200, d)
@@ -184,6 +191,7 @@ class AtTenTris(nn.Module):
         cfeats, cboth = pair_features(cbox, box, cmask, maskf)
         y, ca = self.cross(y, self.c_bias(cfeats, cboth), pad, ctx=hb, ctx_norm=self.c_norm)
         logit = self.head(y).squeeze(-1).masked_fill(cpad, float("-inf"))    # (B, NC)
+        out = {"logit": logit, "q1": self.q1(y).squeeze(-1), "qs": self.qs(y).squeeze(-1)} if heads else logit
         if return_attn:
-            return logit, {"self": attn, "cross": ca, "pool": w}
-        return logit
+            return out, {"self": attn, "cross": ca, "pool": w}
+        return out

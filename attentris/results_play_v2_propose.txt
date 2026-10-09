@@ -1,0 +1,12 @@
+== garbage: none
+AtTenTris qs top2 depth 1 style normal no garbage: APP 0.175 (APPfull 0.125), died 9/16, pieces 358 avg, TSD 67, TST 0, quads 29, max height 23, illegal 0, 7.9 ms/move (p90 9.6), 7s
+AtTenTris qs top3 depth 1 style normal no garbage: APP 0.142 (APPfull 0.082), died 11/16, pieces 289 avg, TSD 56, TST 0, quads 15, max height 23, illegal 0, 7.8 ms/move (p90 9.3), 6s
+AtTenTris qs top5 depth 1 style normal no garbage: APP 0.122 (APPfull 0.058), died 13/16, pieces 238 avg, TSD 38, TST 0, quads 4, max height 23, illegal 0, 7.7 ms/move (p90 9.9), 6s
+AtTenTris q1 top3 depth 1 style normal no garbage: APP 0.180 (APPfull 0.161), died 3/16, pieces 447 avg, TSD 72, TST 0, quads 51, max height 22, illegal 0, 11.0 ms/move (p90 10.2), 8s
+AtTenTris qs top3 depth 3 beam 8 style normal no garbage: APP 0.183 (APPfull 0.124), died 9/16, pieces 339 avg, TSD 71, TST 0, quads 12, max height 23, illegal 0, 74.5 ms/move (p90 88.1), 36s
+== garbage: 10,3-4,cheese0.2,0.2
+AtTenTris qs top2 depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.220 (APPfull 0.025), died 16/16, pieces 56 avg, TSD 8, TST 0, quads 18, max height 22, illegal 0, 8.1 ms/move (p90 9.7), 5s
+AtTenTris qs top3 depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.143 (APPfull 0.013), died 16/16, pieces 45 avg, TSD 9, TST 0, quads 6, max height 22, illegal 0, 8.8 ms/move (p90 10.7), 5s
+AtTenTris qs top5 depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.116 (APPfull 0.010), died 16/16, pieces 44 avg, TSD 4, TST 0, quads 5, max height 23, illegal 0, 8.8 ms/move (p90 10.4), 4s
+AtTenTris q1 top3 depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.229 (APPfull 0.029), died 16/16, pieces 64 avg, TSD 11, TST 0, quads 24, max height 21, illegal 0, 8.2 ms/move (p90 9.9), 4s
+all done

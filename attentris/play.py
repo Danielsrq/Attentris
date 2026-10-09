@@ -22,6 +22,7 @@ import time
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import model as M
 import pack as P
 import pcores
 import tokenizer as T
@@ -71,14 +72,19 @@ def arrays(states, teacher):
 
 
 class Player:
-    def __init__(self, model_path, depth, beam, teacher, mode):
+    def __init__(self, model_path, depth, beam, teacher, mode, policy="logit", propose=0):
         import torch
         import model as M
         torch.set_num_threads(1)
         ck = torch.load(model_path, map_location="cpu", weights_only=False)
         self.net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"])
-        self.net.load_state_dict(ck["model"])
+        missing = self.net.load_state_dict(ck["model"], strict=False).missing_keys
+        if policy != "logit" and any(k.startswith(policy + ".") for k in missing):
+            raise SystemExit("%s has no %s head (a v1 checkpoint?)" % (model_path, policy))
         self.net.eval()
+        self.policy = policy
+        self.propose = propose
+        self.qscale = M.Q_SCALE
         self.torch = torch
         self.depth, self.beam, self.teacher = depth, beam, teacher
         self.ex = subprocess.Popen([BOT, "expand", "--mode", mode], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -89,34 +95,56 @@ class Player:
         self.ex.stdin.flush()
         return readjson(self.ex)
 
-    def logprobs(self, pairs):
+    def scores(self, pairs):
+        """Per position: the policy's log-probabilities, and Q in lines of attack from the
+        chosen value head (None when moves are chosen by the policy)."""
         with self.torch.inference_mode():
-            logit = self.net(arrays(pairs, self.teacher))
-        return logit.log_softmax(-1).numpy()
+            out = self.net(arrays(pairs, self.teacher), heads=True)
+        logp = out["logit"].log_softmax(-1).numpy()
+        q = None if self.policy == "logit" else (out[self.policy] * self.qscale).numpy()
+        return logp, q
+
+    def allowed(self, logp, n):
+        """Candidate indices Q may choose from: all, or the policy's top `propose` (so Q is
+        only asked about moves like the ones it was trained on)."""
+        order = np.argsort(-logp[:n])
+        return order[:self.propose] if self.propose else order
 
     def decide(self, st):
         root = self.expand(st)
         if not root["cands"]:
             return None
+        n = len(root["cands"])
         if self.depth <= 1:
-            lp = self.logprobs([(st, root)])[0]
-            return root["cands"][int(np.argmax(lp[:len(root["cands"])]))]
-        # policy beam: (log-prob of the line, first move, state, its expansion)
+            logp, q = self.scores([(st, root)])
+            if q is None:
+                return root["cands"][int(np.argmax(logp[0][:n]))]
+            ids = self.allowed(logp[0], n)
+            return root["cands"][int(ids[np.argmax(q[0][ids])])]
+        # beam: (score so far, first move, state, its expansion). Policy: a line's score is
+        # the sum of its log-probabilities. Q head: attack sent earlier in the line + Q of
+        # the last move (attack + what follows), as the teacher's own beam scores lines.
         frontier = [(0.0, None, st, root)]
         best_line = None
         for ply in range(self.depth):
-            lps = self.logprobs([(s, e) for _, _, s, e in frontier])
+            logps, qs = self.scores([(s, e) for _, _, s, e in frontier])
             kids = []
-            for (score, first, s, e), lp in zip(frontier, lps):
-                for k, c in enumerate(e["cands"][:P.NC]):
-                    kids.append((score + float(lp[k]), first if first is not None else c, s, c))
+            for i, (score, first, s, e) in enumerate(frontier):
+                cands = e["cands"][:P.NC]
+                for k in self.allowed(logps[i], len(cands)):
+                    c = cands[k]
+                    if qs is None:
+                        line = carry = score + float(logps[i][k])
+                    else:
+                        line, carry = score + float(qs[i][k]), score + c["attack"]
+                    kids.append((line, first if first is not None else c, s, c, carry))
             kids.sort(key=lambda x: -x[0])
             kids = kids[:self.beam]
             best_line = kids[0]
             if ply == self.depth - 1:
                 break
             frontier = []
-            for score, first, s, c in kids:
+            for _, first, s, c, score in kids:
                 q = s["queue"]
                 used = c["used"]
                 if used > len(q):          # no known piece left for this line
@@ -136,7 +164,7 @@ class Player:
 
 def play_game(args, seed):
     pcores.pin(verbose=False)
-    pl = Player(args.model, args.depth, args.beam, {"normal": 0, "gate4": 1}[args.style], args.mode)
+    pl = Player(args.model, args.depth, args.beam, {"normal": 0, "gate4": 1}[args.style], args.mode, args.policy, args.propose)
     cmd = [BOT, "play-ext", "--mode", args.mode, "--pieces", str(args.pieces), "--seed", str(seed)]
     if args.garbage:
         cmd += ["--garbage", args.garbage]
@@ -177,6 +205,8 @@ def main():
     ap.add_argument("--depth", type=int, default=1)
     ap.add_argument("--beam", type=int, default=8)
     ap.add_argument("--style", default="normal", choices=("normal", "gate4"))
+    ap.add_argument("--policy", default="logit", choices=("logit", "q1", "qs"), help="score moves by the policy or a value head")
+    ap.add_argument("--propose", type=int, default=0, help="with a value head: choose only among the policy's top-k moves (0 = all)")
     ap.add_argument("--mode", default="normal")
     ap.add_argument("--garbage", default="")
     ap.add_argument("--jobs", type=int, default=0, help="parallel games (0 = P-core logical processors)")
@@ -191,9 +221,9 @@ def main():
     pieces = sum(r["pieces"] for r in res)
     attack = sum(r["attack"] for r in res)
     full = attack / (args.games * args.pieces)
-    line = ("AtTenTris depth %d%s style %s %s: APP %.3f (APPfull %.3f), died %d/%d, pieces %.0f avg, TSD %d, TST %d, quads %d, "
+    line = ("AtTenTris %s%s depth %d%s style %s %s: APP %.3f (APPfull %.3f), died %d/%d, pieces %.0f avg, TSD %d, TST %d, quads %d, "
             "max height %d, illegal %d, %.1f ms/move (p90 %.1f), %.0fs") % (
-        args.depth, "" if args.depth <= 1 else " beam %d" % args.beam, args.style, ("garbage " + args.garbage) if args.garbage else "no garbage",
+        args.policy, (" top%d" % args.propose) if args.propose else "", args.depth, "" if args.depth <= 1 else " beam %d" % args.beam, args.style, ("garbage " + args.garbage) if args.garbage else "no garbage",
         attack / max(1, pieces), full, sum(r["died"] for r in res), args.games, pieces / args.games,
         sum(r["tsd"] for r in res), sum(r["tst"] for r in res), sum(r["quads"] for r in res),
         max(r["max_height"] for r in res), sum(r["illegal"] for r in res),
