@@ -9,7 +9,8 @@ Base tokens partition the 200 cells exactly once:
   well   a clean well: a run of rows with exactly one hole each, all in the same column
          (length 1 = a cheese row). Only in the clean zone at the bottom of the stack.
   play   a row of the top play area: between the clean zone and the sky. The zone's top
-         run counts as play instead if it is a single open row (a TSD's stem row, say).
+         run counts as play instead while it is a single row whose hole is not sealed by
+         the cell directly above (a TSD's stem row, an imperial cross's foot).
   band   two or more adjacent stack tokens merged to keep the board within K tokens
 
 Overlay tokens (may overlap base tokens), at most P_MAX, by priority:
@@ -114,9 +115,14 @@ def base_tokens(b, k_board=K_BOARD):
         r0, r1, hole = run
         return bool(b[r1 + 1:, hole].any())
 
-    # The zone's top run is the active surface, not a well, if it is one open row
-    # (the stem row of a TSD, a half-built row...).
-    if runs and runs[-1][0] == runs[-1][1] and not covered(runs[-1]):
+    def sealed(run):
+        r0, r1, hole = run
+        return r1 + 1 < ROWS and bool(b[r1 + 1, hole])
+
+    # The zone's top run is the active surface, not a well, while it is one row whose hole
+    # is not sealed directly above (a TSD's stem row, an imperial cross's foot, a
+    # half-built row...). Cheese holes are sealed by the next garbage row.
+    while runs and runs[-1][0] == runs[-1][1] and not sealed(runs[-1]):
         runs.pop()
     zone_top = runs[-1][1] + 1 if runs else 0
 
@@ -130,7 +136,7 @@ def base_tokens(b, k_board=K_BOARD):
     # Budget: merge the lowest adjacent pair until the board fits in k_board tokens.
     while len(stack) + len(toks) > k_board and len(stack) >= 2:
         (a0, _, ka, ea), (_, b1, kb, eb) = stack[0], stack[1]
-        stack[0:2] = [(a0, b1, "band", {"merged": [ka, kb]})]
+        stack[0:2] = [(a0, b1, "band", {"merged": ea.get("merged", [ka]) + eb.get("merged", [kb])})]
 
     for r0, r1, kind, ex in stack:
         m = _rows_mask(r0, r1)
