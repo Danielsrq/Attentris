@@ -546,9 +546,9 @@ fn cmd_play_ext(a: &Args) {
     let cfg = GameConfig { pieces: a.get("pieces", 500usize), seed: a.get("seed", 1u64), garbage: garbage(a), label: "ext".into(),
                            record: false, env_rules: None, dataset: false, external: !shortlist, shortlist, all_roots: 0 };
     let (st, _) = game::play(&mut s, &cfg);
-    println!("{{\"done\":true,\"seed\":{},\"pieces\":{},\"attack\":{},\"app\":{:.4},\"died\":{},\"tsd\":{},\"tst\":{},\"quads\":{},\"max_height\":{},\"illegal\":{},\"search_ms\":{:.2}}}",
+    println!("{{\"done\":true,\"seed\":{},\"pieces\":{},\"attack\":{},\"app\":{:.4},\"died\":{},\"tsd\":{},\"tst\":{},\"quads\":{},\"max_height\":{},\"illegal\":{},\"search_ms\":{:.2},\"nodes_per_move\":{:.0}}}",
         cfg.seed, st.pieces, st.attack, st.app(), st.died, st.tsd, st.tst, st.quads, st.max_height, st.ext_illegal,
-        st.think_us.iter().map(|&u| u as f64).sum::<f64>() / st.think_us.len().max(1) as f64 / 1000.0);
+        st.think_us.iter().map(|&u| u as f64).sum::<f64>() / st.think_us.len().max(1) as f64 / 1000.0, st.nodes as f64 / st.pieces.max(1) as f64);
 }
 
 /// `bot dataset --weights W --label L --out DIR [--mode --garbage --games --pieces --seed
