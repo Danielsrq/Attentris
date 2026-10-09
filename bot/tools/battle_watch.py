@@ -36,9 +36,9 @@ POS = [
 ]
 
 
-# display names: CEM-tuned bots by their number of non-zero weights, his by parameter count
-RENAME = {"his_rl": "cms-RL-982k", "cms-RL": "cms-RL-982k", "battle": "dan-cem-22",
-          "battle_d1": "dan-cem-22 (depth 1)", "normal_txt": "dan-cem-29"}
+# display names: ours by method (CEM-tuned V + beam search), his by parameter count
+RENAME = {"his_rl": "cms-RL-982k", "cms-RL": "cms-RL-982k", "battle": "dan-cem+search",
+          "battle_d1": "dan-cem (depth 1)", "normal_txt": "dan-cem+search (normal)"}
 HIS = {"his_rl", "cms-RL", "cms-RL-982k"}
 
 
