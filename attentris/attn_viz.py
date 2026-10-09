@@ -37,6 +37,7 @@ def main():
     ap.add_argument("--data", default=os.path.join(HERE, "data", "val.npz"))
     ap.add_argument("--out", default=os.path.join(HERE, "attn.html"))
     ap.add_argument("--positions", type=int, default=30)
+    ap.add_argument("--label", default="", help="model description shown on the page, e.g. 'v4 · 1.09M positions'")
     args = ap.parse_args()
     n_p = pcores.pin()
     torch.set_num_threads(int(os.environ.get("THREADS", n_p or 8)))
@@ -139,9 +140,16 @@ def main():
         why = "T-spin into a T structure" if i in tspin_rows else ("bot filled a piece-shaped recess" if i in fits else "random position")
         pos.append({"why": why, "teacher": ["normal", "gate4"][d["teacher"][i]], "seed": int(d["seed"][i]), "n": int(d["n"][i]),
                     "board": d["cells"][i].tolist(), "tokens": toks, "chosen": cand(ch),
-                    "top": [cand(int(c)) for c in order[:3]], "rank": int(np.where(order == ch)[0][0]) + 1, "n_cand": nc})
+                    "top": [cand(int(c)) for c in order[:5]], "rank": int(np.where(order == ch)[0][0]) + 1, "n_cand": nc,
+                    "probs": [{"i": int(c), "piece": T.PIECES[d["cand_meta"][i, c][0]], "hold": int(d["cand_meta"][i, c][1]),
+                               "spin": int(d["cand_meta"][i, c][2]), "lines": int(d["cand_meta"][i, c][3]),
+                               "attack": int(d["cand_meta"][i, c][4]), "p": float(prob[c]),
+                               "cells": [int(x) for x in d["cand_cells"][i, c] if x >= 0]} for c in order[:8]],
+                    "rest": float(max(0.0, 1.0 - prob[order[:8]].sum())), "rest_n": max(0, nc - 8)})
     tpl = open(os.path.join(HERE, "attn_template.html"), encoding="utf-8").read()
-    data = json.dumps({"summary": summary, "epochs": len(ck["log"]), "log": ck["log"], "positions": pos}, separators=(",", ":"))
+    model_label = args.label or "%s · %d epochs" % (os.path.basename(args.model), len(ck["log"]))
+    data = json.dumps({"summary": summary, "epochs": len(ck["log"]), "model": model_label, "log": ck["log"], "positions": pos},
+                      separators=(",", ":"))
     with open(args.out, "w", encoding="utf-8") as f:
         f.write(tpl.replace("__DATA__", data))
     print("%d positions -> %s" % (len(pos), args.out))

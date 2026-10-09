@@ -39,6 +39,23 @@ svg.board { width: 100%; max-width: 260px; height: auto; display: block; }
 .row .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
 .toggle { display: flex; gap: 6px; flex-wrap: wrap; }
 .note { color: var(--muted); font-size: 12.5px; max-width: 75ch; }
+.left { display: grid; gap: 14px; justify-items: center; min-width: 0; }
+.queue { display: grid; grid-template-columns: repeat(4, auto); gap: 8px 10px; align-items: end; justify-content: center; }
+.qitem { display: grid; gap: 2px; justify-items: center; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.qitem b { color: var(--fg); font-weight: 600; }
+.qitem svg { width: 46px; height: 24px; }
+.qtitle { grid-column: 1 / -1; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; justify-self: start; }
+table.probs { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; width: 100%; max-width: 460px; }
+table.probs td { padding: 2px 6px; border-bottom: 1px solid var(--line); }
+table.probs td.p { text-align: right; width: 52px; }
+table.probs td.bar { width: 45%; }
+table.probs td.bar span { display: block; height: 9px; border-radius: 3px; background: var(--accent); opacity: .75; }
+table.probs tr.bot td:first-child { font-weight: 700; }
+table.probs tr.pick { cursor: pointer; }
+table.probs tr.pick:hover { background: var(--panel); }
+table.probs tr.on { background: var(--panel); outline: 1px solid var(--accent); }
+table.probs tr.rest td { color: var(--muted); font-style: italic; }
+.modelname { color: var(--muted); }
 .tablewrap { overflow-x: auto; max-width: 100%; flex-basis: 100%; }
 table.agree { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 table.agree th, table.agree td { padding: 3px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
@@ -52,14 +69,19 @@ table.agree td:first-child { text-align: left; font-weight: 600; }
     <h1>AtTenTris attention <span>· where the model looks when it scores a placement</span></h1>
     <div class="nav">
       <button id="prev">← Prev</button><span class="count" id="count"></span><button id="next" class="primary">Next →</button>
+      <select id="jump" aria-label="Jump to position"></select>
     </div>
   </header>
   <div class="summary" id="summary"></div>
   <div class="meta"><div class="label" id="label"></div><div class="sub" id="sub"></div></div>
-  <div class="cands" id="cands"></div>
   <div class="main">
-    <figure><svg class="board" id="board" viewBox="-20 -6 226 418"></svg><figcaption id="cap">Attention of the bot's move</figcaption></figure>
+    <div class="left">
+      <figure><svg class="board" id="board" viewBox="-20 -6 226 418"></svg><figcaption id="cap">Attention of the bot's move</figcaption></figure>
+      <div class="queue" id="queue"></div>
+    </div>
     <div class="list">
+      <h2>The model's move probabilities (click a row to show its attention)</h2>
+      <table class="probs" id="probs"></table>
       <div class="toggle"><button id="dens" class="on">per-cell density</button><button id="mass">whole-token share</button></div>
       <h2>Attention over tokens (mean of 4 heads)</h2>
       <div id="rows"></div>
@@ -94,18 +116,49 @@ function outline(cells, inset) {
   return d;
 }
 const SPIN = ["", " mini", " spin"];
-const candLabel = c => `${c.piece}${c.hold ? " (hold)" : ""}${SPIN[c.spin]}${c.lines ? `, clears ${c.lines}` : ""}${c.attack ? `, sends ${c.attack}` : ""}`;
+const colsOf = c => { if (!c.cells || !c.cells.length) return ""; const xs = c.cells.map(i => i % 10); const a = Math.min(...xs), b = Math.max(...xs); return a === b ? ` · col ${a}` : ` · cols ${a}–${b}`; };
+const candLabel = c => `${c.piece}${c.hold ? " (hold)" : ""}${SPIN[c.spin]}${c.lines ? `, clears ${c.lines}` : ""}${c.attack ? `, sends ${c.attack}` : ""}${colsOf(c)}`;
 
 function render() {
   const p = DATA.positions[idx];
   $("count").textContent = `${idx + 1} / ${DATA.positions.length}`;
   $("label").textContent = `${p.why} · ${p.teacher} teacher · seed ${p.seed}, placement ${p.n}`;
   $("sub").textContent = `Bot played ${candLabel(p.chosen)} — the model ranks it #${p.rank} of ${p.n_cand} (p = ${(p.chosen.p * 100).toFixed(0)}%).`;
-  const opts = [["chosen", "Bot's move", p.chosen]].concat(p.top.map((c, k) => [String(k), `Model #${k + 1}: ${c.piece}${c.i === p.chosen.i ? " = bot" : ""} ${(c.p * 100).toFixed(0)}%`, c]));
-  $("cands").innerHTML = opts.map(([k, l]) => `<button data-k="${k}" class="${sel === k ? "on" : ""}">${l}</button>`).join("");
-  $("cands").querySelectorAll("button").forEach(b => b.onclick = () => { sel = b.dataset.k; render(); });
+  $("jump").value = idx;
   const cand = sel === "chosen" ? p.chosen : p.top[+sel];
   $("cap").textContent = sel === "chosen" ? "Attention of the bot's move" : `Attention of model pick #${+sel + 1}`;
+  // the model's probabilities: top 8, then everything else
+  const selI = cand.i;
+  let pt = p.probs.map((c, k) => {
+    const pick = k < p.top.length;          // attention is available for the top 5
+    const cls = [c.i === p.chosen.i ? "bot" : "", pick ? "pick" : "", c.i === selI ? "on" : ""].join(" ");
+    return `<tr class="${cls}" data-k="${pick ? k : ""}"><td>#${k + 1}</td><td>${candLabel(c)}${c.i === p.chosen.i ? " — <b>bot's move</b>" : ""}</td>` +
+      `<td class="bar"><span style="width:${(100 * c.p / p.probs[0].p).toFixed(1)}%"></span></td><td class="p">${(100 * c.p).toFixed(1)}%</td></tr>`;
+  }).join("");
+  if (p.rest_n > 0) pt += `<tr class="rest"><td></td><td>the other ${p.rest_n} legal moves together</td><td class="bar"></td><td class="p">${(100 * p.rest).toFixed(1)}%</td></tr>`;
+  if (p.rank > p.probs.length) pt += `<tr class="bot pick ${sel === "chosen" ? "on" : ""}" data-k="chosen"><td>#${p.rank}</td><td>${candLabel(p.chosen)} — <b>bot's move</b></td><td class="bar"></td><td class="p">${(100 * p.chosen.p).toFixed(1)}%</td></tr>`;
+  $("probs").innerHTML = pt;
+  $("probs").querySelectorAll("tr.pick").forEach(tr => tr.onclick = () => {
+    const k = tr.dataset.k;
+    sel = k === "chosen" ? "chosen" : (p.top[+k].i === p.chosen.i ? "chosen" : k);
+    render();
+  });
+  // the piece queue, with each piece token's share of the selected move's attention
+  const PIECE_CELLS = { I: [[0,0],[1,0],[2,0],[3,0]], O: [[1,0],[2,0],[1,1],[2,1]], T: [[0,0],[1,0],[2,0],[1,1]],
+    S: [[0,0],[1,0],[1,1],[2,1]], Z: [[1,0],[2,0],[0,1],[1,1]], J: [[0,0],[1,0],[2,0],[0,1]], L: [[0,0],[1,0],[2,0],[2,1]] };
+  const qtok = (kind) => { const j = p.tokens.findIndex(t => t.kind === kind); return j < 0 ? null : [p.tokens[j], cand.attn[j]]; };
+  const mini = (piece) => {
+    if (!piece) return `<svg viewBox="0 0 46 24"><text x="23" y="16" text-anchor="middle" font-size="11" fill="var(--muted)">empty</text></svg>`;
+    return `<svg viewBox="0 0 46 24">` + PIECE_CELLS[piece].map(([x, y]) =>
+      `<rect x="${3 + x * 10}" y="${13 - y * 10}" width="9" height="9" rx="1.5" fill="var(--fg)" opacity="0.75"/>`).join("") + `</svg>`;
+  };
+  const qcell = (kind, name) => {
+    const q = qtok(kind);
+    if (!q) return "";
+    return `<div class="qitem">${mini(q[0].piece)}<b>${name}${q[0].piece ? " " + q[0].piece : ""}</b><span>${(100 * q[1]).toFixed(1)}%</span></div>`;
+  };
+  $("queue").innerHTML = `<div class="qtitle">Pieces (attention share)</div>` + qcell("current", "current") + qcell("hold", "hold") +
+    [1, 2, 3, 4, 5].map(k => qcell("preview" + k, "next " + k)).join("");
 
   // heat per cell
   const heat = new Float64Array(200);
@@ -139,7 +192,7 @@ function render() {
 const S = DATA.summary;
 $("summary").innerHTML = `<div><b>${(S.top1 * 100).toFixed(1)}%</b> <span>top-1 agreement with the bot on ${S.positions.toLocaleString()} held-out positions</span></div>` +
   `<div><b>${(S.pointing * 100).toFixed(0)}%</b> <span>of ${S.pointing_n} T-spins into a T structure: that structure is the most-attended token (random: ${(S.pointing_random * 100).toFixed(0)}%)</span></div>` +
-  `<div><span>${DATA.epochs} training epochs</span></div>`;
+  `<div><span class="modelname">Model: ${DATA.model || (DATA.epochs + " training epochs")}</span></div>`;
 if (S.agreement) {
   const pc = v => `${(v * 100).toFixed(1)}%`;
   const cols = ["top1", "within 0.5", "within 1.0"];
@@ -151,6 +204,8 @@ if (S.agreement) {
 }
 function go(d) { idx = (idx + d + DATA.positions.length) % DATA.positions.length; sel = "chosen"; hover = null; render(); }
 $("prev").onclick = () => go(-1); $("next").onclick = () => go(1);
+$("jump").innerHTML = DATA.positions.map((p, i) => `<option value="${i}">${i + 1}. ${p.why} · ${p.teacher} · seed ${p.seed} #${p.n}</option>`).join("");
+$("jump").onchange = e => { idx = +e.target.value; sel = "chosen"; hover = null; render(); };
 $("dens").onclick = () => { mode = "dens"; $("dens").className = "on"; $("mass").className = ""; render(); };
 $("mass").onclick = () => { mode = "mass"; $("mass").className = "on"; $("dens").className = ""; render(); };
 document.addEventListener("keydown", e => { if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); });
