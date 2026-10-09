@@ -132,6 +132,7 @@ def play_game(args, g):
            "clock": 0.0, "tsd": 0, "tst": 0, "quads": 0, "ko": False} for b in bots]
     # (lock time, placement) of each player's piece in flight
     pending = [None, None]
+    moves = []   # every lock in order, for bot/tools/battle_watch.py
 
     def decide(i):
         t0 = time.perf_counter()
@@ -164,6 +165,8 @@ def play_game(args, g):
         t = s.tetris
         q_before = [list(x) for x in t._garbage_queue]
         g_before = garbage_rows(t.grid)
+        moves.append({"p": i, "t": round(when, 4), "hold": bool(p.use_hold), "rot": p.rot, "x": p.px, "y": p.py,
+                      "tspin": p.tspin, "cells": sorted(list(c) for c in p.cells)})
         out = s.apply(p)
         added = len(garbage_holes(q_before, out["scores"])[:20])
         st[i]["garbage_cleared"] += max(0, g_before + added - garbage_rows(t.grid))
@@ -203,7 +206,7 @@ def play_game(args, g):
         s_["vs"] = 100.0 * (s_["attack"] + s_["garbage_cleared"]) / secs if args.speed != "turn" and secs > 0 else None
         s_["vs_per_piece"] = (s_["attack"] + s_["garbage_cleared"]) / max(1, s_["pieces"])
         s_["think_ms"] = 1000.0 * s_["think"] / max(1, s_["pieces"])
-    return {"game": g, "seed": seed, "speed": args.speed, "winner": winner, "players": st}
+    return {"game": g, "seed": seed, "speed": args.speed, "winner": winner, "players": st, "moves": moves}
 
 
 def main():
