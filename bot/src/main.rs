@@ -260,6 +260,72 @@ fn cmd_plan(a: &Args) {
     println!("planned attack {}, nodes {}", total, s.nodes);
 }
 
+/// `bot serve --mode battle --weights W [--beam --depth]`: one decision per stdin line.
+/// Request (TetrisBattle coordinates: his grid rows top to bottom, `excess` extra rows):
+///   {"rows": [...], "excess": e, "piece": "T", "queue": ["I", ...], "hold": null | "S",
+///    "combo": c, "b2b": n}
+/// Reply: {"hold": bool, "piece": "T", "cells": [[x, y], ...], "t": 0|1|2, "nodes": n}
+/// or {"dead": true} when the piece cannot spawn. Our battle move generator reproduces
+/// his placement set exactly (bot battle-parity), so the cells are one of his options.
+fn cmd_serve(a: &Args) {
+    use std::io::{BufRead, Write};
+    let r = rules(a);
+    let mut s = Searcher::new(search_config(a), weights(a), r);
+    let shapes = rules::Shapes::for_rules(&r);
+    let letter = |v: &serde_json::Value| v.as_str().and_then(|s| s.chars().next()).and_then(rules::Piece::from_letter);
+    let stdout = std::io::stdout();
+    for line in std::io::stdin().lock().lines() {
+        let Ok(line) = line else { break };
+        if line.trim().is_empty() {
+            continue;
+        }
+        let v: serde_json::Value = match serde_json::from_str(&line) {
+            Ok(v) => v,
+            Err(e) => {
+                let _ = writeln!(stdout.lock(), "{{\"error\":\"{}\"}}", e);
+                continue;
+            }
+        };
+        let excess = v["excess"].as_i64().unwrap_or(0) as i32;
+        let shift = rules::BUFFER - excess;
+        let mut b = board::Board { excess: excess.max(0) as u16, ..board::Board::default() };
+        for (y, row) in v["rows"].as_array().map(|a| a.as_slice()).unwrap_or(&[]).iter().enumerate() {
+            let ry = y as i32 + shift;
+            if ry < 0 {
+                continue;
+            }
+            for (x, ch) in row.as_str().unwrap_or("").chars().enumerate() {
+                if ch == 'X' {
+                    b.rows[ry as usize] |= 1 << x;
+                }
+            }
+        }
+        b.combo = v["combo"].as_i64().unwrap_or(-1).clamp(-1, 120) as i8;
+        let b2b = v["b2b"].as_i64().unwrap_or(-1) as i32;
+        let mut queue = vec![letter(&v["piece"]).expect("piece")];
+        queue.extend(v["queue"].as_array().map(|a| a.iter().filter_map(letter).collect::<Vec<_>>()).unwrap_or_default());
+        let hold = letter(&v["hold"]);
+        let nodes0 = s.nodes;
+        let reply = match s.search(&b, &queue, hold, b2b, &rules::ALL_PIECES) {
+            None => "{\"dead\":true}".to_string(),
+            Some(d) => {
+                let p = d.placement;
+                let cells = p.abs_cells(&shapes).iter().map(|&(x, y)| format!("[{},{}]", x, y - shift)).collect::<Vec<_>>().join(",");
+                let t = match p.spin {
+                    rules::Spin::Full => 2,
+                    rules::Spin::Mini => 1,
+                    rules::Spin::None => 0,
+                };
+                format!("{{\"hold\":{},\"piece\":\"{}\",\"cells\":[{}],\"t\":{},\"nodes\":{}}}",
+                    d.use_hold, p.piece.letter().to_ascii_uppercase(), cells, t, s.nodes - nodes0)
+            }
+        };
+        let mut out = stdout.lock();
+        let _ = writeln!(out, "{}", reply);
+        let _ = out.flush();
+    }
+}
+
 /// Plays `games` games (seeds seed..seed+games) across threads. Returns per-game stats
 /// and the concatenated JSONL when recording.
 /// `r` = the rules the bot searches with; `env` = the rules the game applies, if different.
@@ -564,6 +630,7 @@ fn main() {
         }
         "weights" =>print!("{}", weights(&a).to_text()),
         "probe" => cmd_probe(&a),
+        "serve" => cmd_serve(&a),
         "battle-parity" => {
             if let Err(e) = battle::parity(a.str("data").expect("--data dump.jsonl")) {
                 eprintln!("{}", e);
