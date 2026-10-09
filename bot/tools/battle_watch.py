@@ -36,11 +36,19 @@ POS = [
 ]
 
 
+RENAME = {"his_rl": "cms-RL"}  # older match files used his_rl
+
+
 class Playback:
     def __init__(self, rec, turn_pps):
         self.rec = rec
         self.sims = [new_player(i, rec["seed"]) for i in range(2)]
-        self.names = [p["bot"] for p in rec["players"]]
+        self.raw = [p["bot"] for p in rec["players"]]
+        self.names = [RENAME.get(n, n) for n in self.raw]
+        # the match alternates who moves first; keep his bot on the right whatever the order
+        self.side = [1 if n in RENAME.values() else 0 for n in self.names]
+        if self.side[0] == self.side[1]:
+            self.side = [0, 1]
         self.moves = rec["moves"]
         if rec["speed"] == "turn":  # no clock: show both players at turn_pps each
             self.times = [(k + 1) / (2.0 * turn_pps) for k in range(len(self.moves))]
@@ -88,7 +96,7 @@ def draw(screen, r, font, small, pb, clock_s, speed, paused):
     r.drawByName("gamescreen", 0, 0)
     for i in range(2):
         t = pb.sims[i].tetris
-        pos = POS[i]
+        pos = POS[pb.side[i]]
         r.drawScreen(t, *pos["drawscreen"])
         pygame.draw.rect(screen, (30, 30, 30), pos["attack_clean"])
         for j in range(min(t._attacked, 20)):
@@ -105,7 +113,7 @@ def draw(screen, r, font, small, pb, clock_s, speed, paused):
         screen.blit(small.render(pb.last[i], True, (255, 220, 120)), (lx, 522))
         if pb.done():
             r.drawByName("transparent", *pos["transparent"])
-            win = pb.rec["winner"] == pb.names[i]
+            win = pb.rec["winner"] == pb.raw[i]
             r.drawByName("you_win" if win else "you_lose", *pos["you_win" if win else "you_lose"])
             if pb.ko[i]:
                 r.drawByName("ko", *pos["ko"])
@@ -137,7 +145,7 @@ def main():
     speed = args.speed
     paused = False
     pb = Playback(recs[gi], args.turn_pps)
-    pygame.display.set_caption("%s vs %s" % tuple(pb.names))
+    pygame.display.set_caption("%s vs %s" % tuple(n for _, n in sorted(zip(pb.side, pb.names))))
     t = 0.0
     while True:
         dt = clock.tick(60) / 1000.0

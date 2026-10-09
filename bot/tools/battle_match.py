@@ -68,7 +68,7 @@ def garbage_rows(grid):
 
 
 class HisBot:
-    name = "his_rl"
+    name = "cms-RL"
 
     def __init__(self, model, budget_frames=0):
         self.net, self.cfg = load_net(model)
