@@ -72,7 +72,20 @@ def rows_to_strings(rows):
     return ["".join("#" if (r >> c) & 1 else "." for c in range(10)) for r in rows]
 
 
+DOOMED = -500.0   # every move's search score below this: a lost position (all lines top out)
+
+
+def doomed(r):
+    best = [c[7] for c in r["cands"] if c[7] is not None]
+    return bool(best) and max(best) < DOOMED
+
+
 def pack(recs):
+    """Arrays for the records; lost positions (see DOOMED) are left out -- with every line
+    topping out, the teacher's pick among them is arbitrary and teaches nothing."""
+    kept = [r for r in recs if not doomed(r)]
+    lost = len(recs) - len(kept)
+    recs = kept
     n = len(recs)
     out = {
         "cells": np.zeros((n, 200), np.uint8),
@@ -128,6 +141,7 @@ def pack(recs):
         out["n_cand"][i] = len(order)
         out["teacher"][i] = TEACHERS.index(r["teacher"])
         out["seed"][i], out["n"][i] = r["seed"], r["n"]
+    out["_lost"] = np.array([lost])
     return out, dropped
 
 
@@ -154,13 +168,15 @@ def main():
                 parts = pool.map(pack_file, files, chunksize=4)
             arrs = {k: np.concatenate([p[0][k] for p in parts]) for k in parts[0][0]}
             dropped = sum(p[1] for p in parts)
-            recs = arrs["chosen"]
         else:
             recs = [json.loads(l) for f in files for l in open(f)]
             arrs, dropped = pack(recs)
+        lost = int(arrs.pop("_lost").sum())
         path = os.path.join(args.out, args.name + ".npz")
         np.savez_compressed(path, **arrs)
-        print("%s: %d positions, %d candidates over NC dropped -> %s" % (args.name, len(recs), dropped, path))
+        teach = np.bincount(arrs["teacher"], minlength=2)
+        print("%s: %d positions (normal %d, gate4 %d), %d lost positions left out, %d candidates over NC dropped -> %s" % (
+            args.name, len(arrs["chosen"]), teach[0], teach[1], lost, dropped, path))
         return
     files = sorted(glob.glob(os.path.join(args.raw, "*.jsonl")))
     splits = {"train": [], "val": []}
@@ -171,6 +187,7 @@ def main():
     for name, recs in splits.items():
         t0 = time.time()
         arrs, dropped = pack(recs)
+        arrs.pop("_lost")
         path = os.path.join(args.out, name + ".npz")
         np.savez_compressed(path, **arrs)
         teach = np.bincount(arrs["teacher"], minlength=2)
