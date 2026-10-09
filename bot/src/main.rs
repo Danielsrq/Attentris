@@ -82,6 +82,7 @@ fn search_config(a: &Args) -> SearchConfig {
         chance: !a.has("no-chance"),
         chance_top: a.get("chance-top", d.chance_top),
         death: d.death,
+        roots: false,
     }
 }
 
@@ -330,6 +331,53 @@ fn cmd_structures() {
     }
 }
 
+/// `bot dataset --weights W --label L --out DIR [--mode --garbage --games --pieces --seed
+/// --threads --beam --depth]`: AtTenTris training data. One file per game,
+/// DIR/L_s<seed>.jsonl (see game::dataset_record); finished games are skipped, so an
+/// interrupted run resumes where it stopped.
+fn cmd_dataset(a: &Args) {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let r = rules(a);
+    let sc = SearchConfig { roots: true, ..search_config(a) };
+    let w = weights(a);
+    let g = garbage(a);
+    let label = a.str("label").unwrap_or("teacher").to_string();
+    let dir = std::path::PathBuf::from(a.str("out").expect("--out DIR"));
+    std::fs::create_dir_all(&dir).expect("create --out");
+    let games = a.get("games", 10usize);
+    let pieces = a.get("pieces", 500usize);
+    let seed = a.get("seed", 1u64);
+    let threads = a.get("threads", std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4)).max(1);
+    let next = AtomicUsize::new(0);
+    let t0 = Instant::now();
+    std::thread::scope(|s| {
+        for _ in 0..threads.min(games) {
+            let (sc, w, g, label, dir, next) = (sc.clone(), w.clone(), g.clone(), label.clone(), dir.clone(), &next);
+            s.spawn(move || {
+                let mut searcher = Searcher::new(sc, w, r);
+                loop {
+                    let i = next.fetch_add(1, Ordering::Relaxed);
+                    if i >= games {
+                        break;
+                    }
+                    let sd = seed + i as u64;
+                    let path = dir.join(format!("{}_s{}.jsonl", label, sd));
+                    if path.exists() {
+                        continue;
+                    }
+                    let cfg = GameConfig { pieces, seed: sd, garbage: g.clone(), label: label.clone(), record: false, env_rules: None, dataset: true };
+                    let (st, js) = game::play(&mut searcher, &cfg);
+                    let part = path.with_extension("part");
+                    std::fs::write(&part, js).expect("write");
+                    std::fs::rename(&part, &path).expect("rename");
+                    println!("{} seed {}: {} pieces, APP {:.3}{}  ({:.0}s)", label, sd, st.pieces, st.app(),
+                        if st.died { ", died" } else { "" }, t0.elapsed().as_secs_f64());
+                }
+            });
+        }
+    });
+}
+
 /// `bot serve --mode battle --weights W [--beam --depth]`: one decision per stdin line.
 /// Request (TetrisBattle coordinates: his grid rows top to bottom, `excess` extra rows):
 ///   {"rows": [...], "excess": e, "piece": "T", "queue": ["I", ...], "hold": null | "S",
@@ -411,7 +459,7 @@ fn run_games(sc: &SearchConfig, w: &Weights, r: Rules, env: Option<Rules>, g: &G
                 let mut searcher = Searcher::new(sc, w, r);
                 let mut i = t;
                 while i < games {
-                    let cfg = GameConfig { pieces, seed: seed + i as u64, garbage: g.clone(), label: label.clone(), record, env_rules: env };
+                    let cfg = GameConfig { pieces, seed: seed + i as u64, garbage: g.clone(), label: label.clone(), record, env_rules: env, dataset: false };
                     let (st, js) = game::play(&mut searcher, &cfg);
                     out.push((i, st, js));
                     i += threads;
@@ -701,6 +749,7 @@ fn main() {
         "weights" =>print!("{}", weights(&a).to_text()),
         "probe" => cmd_probe(&a),
         "serve" => cmd_serve(&a),
+        "dataset" => cmd_dataset(&a),
         "structures" => cmd_structures(),
         "battle-parity" => {
             if let Err(e) = battle::parity(a.str("data").expect("--data dump.jsonl")) {

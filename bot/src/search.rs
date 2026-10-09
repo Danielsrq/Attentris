@@ -30,11 +30,13 @@ pub struct SearchConfig {
     pub chance_top: usize,
     /// Reward charged when a line dies (no legal placement / lock-out).
     pub death: f32,
+    /// Also report every root placement with its scores (`Decision::roots`), for datasets.
+    pub roots: bool,
 }
 
 impl Default for SearchConfig {
     fn default() -> Self {
-        SearchConfig { beam: 64, depth: 6, use_hold: true, chance: true, chance_top: 12, death: -1000.0 }
+        SearchConfig { beam: 64, depth: 6, use_hold: true, chance: true, chance_top: 12, death: -1000.0, roots: false }
     }
 }
 
@@ -59,6 +61,21 @@ struct Node {
     /// The placements that led here from the root; path[0] is the move to play.
     path: [Step; MAX_PLAN],
     plen: u8,
+    /// Index of the root placement this line starts with.
+    root: u16,
+}
+
+/// One legal first move and what the search thought of it (`SearchConfig::roots`).
+#[derive(Clone, Copy, Debug)]
+pub struct RootScore {
+    pub step: Step,
+    /// Attack the move itself sends.
+    pub attack: f32,
+    /// attack + V(board after the move): the 1-ply score.
+    pub ply1: f32,
+    /// Best line through this move that survived to the last ply (before the chance
+    /// ply), or None if the beam pruned every line through it.
+    pub best: Option<f32>,
 }
 
 #[derive(Clone, Debug)]
@@ -68,6 +85,9 @@ pub struct Decision {
     /// The whole best line, starting with this move. Later steps are what the bot
     /// expects to play if nothing new changes its mind.
     pub plan: Vec<Step>,
+    /// With `SearchConfig::roots`: every root placement, and which one was played.
+    pub roots: Vec<RootScore>,
+    pub chosen_root: usize,
 }
 
 pub struct Searcher {
@@ -184,7 +204,7 @@ impl Searcher {
                 path[plen as usize] = Step { use_hold: used_hold, placement: *p };
                 plen += 1;
             }
-            out.push(Node { board: o.board, hold: new_hold, qi: next_qi, b2b: o.b2b, reward, score, dead: false, path, plen });
+            out.push(Node { board: o.board, hold: new_hold, qi: next_qi, b2b: o.b2b, reward, score, dead: false, path, plen, root: node.root });
         }
         self.buf = buf;
     }
@@ -239,9 +259,20 @@ impl Searcher {
     /// `queue` = [current, previews...]; `bag` = pieces the first unseen draw can be.
     pub fn search(&mut self, board: &Board, queue: &[Piece], hold: Option<Piece>, b2b: i32, bag: &[Piece]) -> Option<Decision> {
         let empty = Step { use_hold: false, placement: Placement { piece: Piece::I, rot: 0, x: 0, y: 0, spin: crate::rules::Spin::None, kick: -1 } };
-        let root = Node { board: *board, hold, qi: 0, b2b, reward: 0.0, score: 0.0, dead: false, path: [empty; MAX_PLAN], plen: 0 };
+        let root = Node { board: *board, hold, qi: 0, b2b, reward: 0.0, score: 0.0, dead: false, path: [empty; MAX_PLAN], plen: 0, root: 0 };
         let mut beam = Vec::new();
         self.expand(&root, queue, &mut beam);
+        for (i, n) in beam.iter_mut().enumerate() {
+            n.root = i as u16;
+        }
+        let mut roots: Vec<RootScore> = if self.cfg.roots {
+            beam.iter()
+                .filter(|n| !n.dead)
+                .map(|n| RootScore { step: n.path[0], attack: n.reward, ply1: n.score, best: None })
+                .collect()
+        } else {
+            Vec::new()
+        };
         if beam.iter().all(|n| n.dead) {
             return None;
         }
@@ -261,6 +292,15 @@ impl Searcher {
             beam = next;
         }
         prune(&mut beam, self.cfg.beam, &mut seen);
+        if self.cfg.roots {
+            for n in &beam {
+                if let Some(r) = roots.get_mut(n.root as usize) {
+                    if !n.dead && r.best.map_or(true, |b| n.score > b) {
+                        r.best = Some(n.score);
+                    }
+                }
+            }
+        }
 
         if self.cfg.chance && plies >= queue.len() {
             let k = self.cfg.chance_top.min(beam.len());
@@ -275,7 +315,8 @@ impl Searcher {
         }
         let best = &beam[0];
         let plan = best.path[..best.plen as usize].to_vec();
-        Some(Decision { use_hold: plan[0].use_hold, placement: plan[0].placement, plan })
+        let chosen_root = best.root as usize;
+        Some(Decision { use_hold: plan[0].use_hold, placement: plan[0].placement, plan, roots, chosen_root })
     }
 }
 

@@ -277,6 +277,9 @@ pub struct GameConfig {
     /// The rules the game actually applies, when they differ from the rules the bot
     /// searches with (`--believe`). None = the bot knows the real rules.
     pub env_rules: Option<crate::rules::Rules>,
+    /// Write AtTenTris dataset records (one per position, every root placement with its
+    /// search scores) instead of viewer JSONL. Needs `SearchConfig::roots`.
+    pub dataset: bool,
 }
 
 pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
@@ -411,6 +414,9 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
             expected = Some((s.placement.piece, sorted_cells(&s.placement, &shapes)));
         }
         let plan_json = if cfg.record { plan_to_json(&board, &d.plan, b2b, searcher, &shapes) } else { String::new() };
+        if cfg.dataset {
+            dataset_record(&mut out, cfg, n, &board, spawned, &queue[1..], spawn_hold, b2b, &d, &env, &shapes);
+        }
 
         // Advance the queue exactly as Game does: the spawned piece is consumed; an
         // empty-hold swap consumes one more.
@@ -535,6 +541,69 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         stats.tmpl_search[i] = counts[i] - counts_at_start[i];
     }
     (stats, out)
+}
+
+/// One AtTenTris training position. Rows are bitmasks, top to bottom (bit x = column x),
+/// as the replay boards; `cands` are the distinct legal first moves (same cells and hold
+/// = one move): [hold, piece, rot, spin 0/1/2, lines, attack, ply1, best | null,
+/// [x0, y0, ... x3, y3]]; `chosen` indexes the move the bot played.
+fn dataset_record(out: &mut String, cfg: &GameConfig, n: usize, board: &Board, spawned: Piece, previews: &[Piece],
+                  hold: Option<Piece>, b2b: i32, d: &crate::search::Decision, env: &crate::rules::Rules,
+                  shapes: &crate::rules::Shapes) {
+    use std::fmt::Write;
+    let mut keys: Vec<(bool, [(i32, i32); 4])> = Vec::new();
+    let mut cands: Vec<crate::search::RootScore> = Vec::new();
+    let mut chosen = 0usize;
+    for (i, r) in d.roots.iter().enumerate() {
+        let key = (r.step.use_hold, sorted_cells(&r.step.placement, shapes));
+        let k = match keys.iter().position(|q| *q == key) {
+            Some(k) => {
+                // a twin (another rotation / route to the same cells): keep the better scores
+                let c = &mut cands[k];
+                if r.ply1 > c.ply1 {
+                    let best = c.best;
+                    *c = *r;
+                    c.best = omax(best, r.best);
+                } else {
+                    c.best = omax(c.best, r.best);
+                }
+                k
+            }
+            None => {
+                keys.push(key);
+                cands.push(*r);
+                keys.len() - 1
+            }
+        };
+        if i == d.chosen_root {
+            chosen = k;
+        }
+    }
+    let letter = |p: Piece| p.letter().to_ascii_uppercase();
+    let _ = write!(out, "{{\"teacher\":\"{}\",\"seed\":{},\"n\":{},\"rows\":[{}],\"piece\":\"{}\",\"queue\":[{}],\"hold\":{},\"b2b\":{},\"cands\":[",
+        cfg.label, cfg.seed, n,
+        board.rows.iter().map(|r| r.to_string()).collect::<Vec<_>>().join(","),
+        letter(spawned),
+        previews.iter().take(5).map(|&p| format!("\"{}\"", letter(p))).collect::<Vec<_>>().join(","),
+        hold.map_or("null".to_string(), |p| format!("\"{}\"", letter(p))), b2b);
+    for (k, c) in cands.iter().enumerate() {
+        let p = &c.step.placement;
+        let o = crate::search::apply(board, p, b2b, env, shapes);
+        let spin = match p.spin { Spin::None => 0, Spin::Mini => 1, _ => 2 };
+        let cells = keys[k].1.iter().map(|(x, y)| format!("{},{}", x, y)).collect::<Vec<_>>().join(",");
+        let _ = write!(out, "{}[{},\"{}\",{},{},{},{},{:.3},{},[{}]]", if k > 0 { "," } else { "" },
+            c.step.use_hold as u8, letter(p.piece), p.rot, spin, o.lines, c.attack, c.ply1,
+            c.best.map_or("null".to_string(), |b| format!("{:.3}", b)), cells);
+    }
+    let _ = writeln!(out, "],\"chosen\":{}}}", chosen);
+}
+
+fn omax(a: Option<f32>, b: Option<f32>) -> Option<f32> {
+    match (a, b) {
+        (Some(x), Some(y)) => Some(x.max(y)),
+        (x, None) => x,
+        (None, y) => y,
+    }
 }
 
 fn sorted_cells(p: &crate::board::Placement, shapes: &crate::rules::Shapes) -> [(i32, i32); 4] {
