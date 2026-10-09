@@ -22,6 +22,7 @@ import torch.nn.functional as F
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import model as M
+import pcores
 import tokenizer as T
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -91,14 +92,15 @@ def main():
     ap.add_argument("--batch", type=int, default=256)
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--tau", type=float, default=2.0)
-    ap.add_argument("--threads", type=int, default=16)
+    ap.add_argument("--threads", type=int, default=0, help="0 = one per P-core logical processor")
     ap.add_argument("--d", type=int, default=64)
     ap.add_argument("--layers", type=int, default=4)
     ap.add_argument("--out", default=None, help="checkpoint (default DATA/model.pt)")
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--limit", type=int, default=0, help="use only the first N training positions (smoke test)")
     args = ap.parse_args()
-    torch.set_num_threads(args.threads)
+    n_p = pcores.pin()
+    torch.set_num_threads(args.threads or n_p or 8)
     torch.manual_seed(0)
     out = args.out or os.path.join(args.data, "model.pt")
 

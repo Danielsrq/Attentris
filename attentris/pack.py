@@ -29,6 +29,7 @@ import time
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import pcores
 import tokenizer as T
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -136,6 +137,7 @@ def main():
     ap.add_argument("--out", default=os.path.join(HERE, "data"))
     ap.add_argument("--val-every", type=int, default=10, help="every k-th game (by seed) goes to validation")
     args = ap.parse_args()
+    pcores.pin()
     files = sorted(glob.glob(os.path.join(args.raw, "*.jsonl")))
     splits = {"train": [], "val": []}
     for f in files:

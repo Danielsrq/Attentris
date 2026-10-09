@@ -1,0 +1,159 @@
+<title>AtTenTris Attention</title>
+<style>
+:root {
+  --bg: #f4f3ee; --panel: #ffffff; --fg: #1d2127; --muted: #5c626b; --line: #d8d5ca;
+  --empty: #ebeae4; --filled: #3a3f47; --grid: #ffffff; --accent: #2c55c9; --accent-fg: #ffffff;
+  --heat: 214, 84, 20; --move: #111418; --pick: #2c55c9; --hover: #0f8a6a; --bar: #e0763a;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
+  --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
+  --heat: 255, 140, 70; --move: #f4f5f7; --pick: #7d9cff; --hover: #4fd1a8; --bar: #ff9a5c; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
+  --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
+  --heat: 255, 140, 70; --move: #f4f5f7; --pick: #7d9cff; --hover: #4fd1a8; --bar: #ff9a5c; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 14px/1.45 "IBM Plex Sans", system-ui, sans-serif; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: grid; gap: 14px; }
+header { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
+h1 { font-size: 18px; margin: 0; } h1 span { color: var(--muted); font-weight: 400; }
+.nav, .cands { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button, select { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+button.primary, button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.count { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 64px; text-align: center; }
+.summary { display: flex; flex-wrap: wrap; gap: 8px 24px; font-variant-numeric: tabular-nums; }
+.summary b { font-size: 17px; }
+.summary span { color: var(--muted); }
+.meta .label { font-weight: 600; font-size: 15px; } .meta .sub { color: var(--muted); }
+.main { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 640px) { .main { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; display: grid; gap: 6px; justify-items: center; min-width: 0; }
+figcaption { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+svg.board { width: 100%; max-width: 260px; height: auto; display: block; }
+.list { display: grid; gap: 4px; min-width: 0; }
+.list h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 6px 0 4px; font-weight: 600; }
+.row { display: grid; grid-template-columns: 92px minmax(0, 1fr) 52px; gap: 10px; align-items: center; padding: 2px 6px; border-radius: 5px; }
+.row:hover { background: var(--panel); outline: 1px solid var(--line); }
+.row .k { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 13px; font-weight: 600; }
+.row .bar { height: 10px; border-radius: 3px; background: var(--bar); min-width: 1px; }
+.row .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.toggle { display: flex; gap: 6px; flex-wrap: wrap; }
+.note { color: var(--muted); font-size: 12.5px; max-width: 75ch; }
+.tablewrap { overflow-x: auto; max-width: 100%; flex-basis: 100%; }
+table.agree { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.agree th, table.agree td { padding: 3px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.agree th { color: var(--muted); font-weight: 600; font-size: 12px; }
+table.agree td:first-child { text-align: left; font-weight: 600; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+
+<div class="wrap">
+  <header>
+    <h1>AtTenTris attention <span>· where the model looks when it scores a placement</span></h1>
+    <div class="nav">
+      <button id="prev">← Prev</button><span class="count" id="count"></span><button id="next" class="primary">Next →</button>
+    </div>
+  </header>
+  <div class="summary" id="summary"></div>
+  <div class="meta"><div class="label" id="label"></div><div class="sub" id="sub"></div></div>
+  <div class="cands" id="cands"></div>
+  <div class="main">
+    <figure><svg class="board" id="board" viewBox="-20 -6 226 418"></svg><figcaption id="cap">Attention of the bot's move</figcaption></figure>
+    <div class="list">
+      <div class="toggle"><button id="dens" class="on">per-cell density</button><button id="mass">whole-token share</button></div>
+      <h2>Attention over tokens (mean of 4 heads)</h2>
+      <div id="rows"></div>
+    </div>
+  </div>
+  <p class="note">The heat is the selected candidate's cross-attention over the board tokens, drawn through the token masks.
+    <b>Per-cell density</b> divides each token's share by its size, so a 4-cell T slot and the 100-cell sky compare fairly;
+    <b>whole-token share</b> paints every cell of a token with its full share. Overlapping overlays add up.
+    Dashed outline: the move the bot played. Solid blue: the candidate selected above. Hover a token row to outline it.
+    Attention shows where information was routed from, not proof of what decided the move.</p>
+</div>
+
+<script>
+const DATA = __DATA__;
+const CS = 20, ROWS = 20, COLS = 10;
+let idx = 0, sel = "chosen", mode = "dens", hover = null;
+const $ = id => document.getElementById(id);
+const X = c => c * CS, Y = r => (ROWS - 1 - r) * CS;
+const rc = i => [Math.floor(i / 10), i % 10];
+
+function outline(cells, inset) {
+  const set = new Set(cells);
+  let d = "";
+  for (const i of cells) {
+    const [r, c] = rc(i);
+    const x0 = X(c) + inset, x1 = X(c) + CS - inset, y0 = Y(r) + inset, y1 = Y(r) + CS - inset;
+    if (r + 1 >= ROWS || !set.has(i + 10)) d += `M${x0} ${y0}H${x1}`;
+    if (r - 1 < 0 || !set.has(i - 10)) d += `M${x0} ${y1}H${x1}`;
+    if (c - 1 < 0 || !set.has(i - 1)) d += `M${x0} ${y0}V${y1}`;
+    if (c + 1 >= COLS || !set.has(i + 1)) d += `M${x1} ${y0}V${y1}`;
+  }
+  return d;
+}
+const SPIN = ["", " mini", " spin"];
+const candLabel = c => `${c.piece}${c.hold ? " (hold)" : ""}${SPIN[c.spin]}${c.lines ? `, clears ${c.lines}` : ""}${c.attack ? `, sends ${c.attack}` : ""}`;
+
+function render() {
+  const p = DATA.positions[idx];
+  $("count").textContent = `${idx + 1} / ${DATA.positions.length}`;
+  $("label").textContent = `${p.why} · ${p.teacher} teacher · seed ${p.seed}, placement ${p.n}`;
+  $("sub").textContent = `Bot played ${candLabel(p.chosen)} — the model ranks it #${p.rank} of ${p.n_cand} (p = ${(p.chosen.p * 100).toFixed(0)}%).`;
+  const opts = [["chosen", "Bot's move", p.chosen]].concat(p.top.map((c, k) => [String(k), `Model #${k + 1}: ${c.piece}${c.i === p.chosen.i ? " = bot" : ""} ${(c.p * 100).toFixed(0)}%`, c]));
+  $("cands").innerHTML = opts.map(([k, l]) => `<button data-k="${k}" class="${sel === k ? "on" : ""}">${l}</button>`).join("");
+  $("cands").querySelectorAll("button").forEach(b => b.onclick = () => { sel = b.dataset.k; render(); });
+  const cand = sel === "chosen" ? p.chosen : p.top[+sel];
+  $("cap").textContent = sel === "chosen" ? "Attention of the bot's move" : `Attention of model pick #${+sel + 1}`;
+
+  // heat per cell
+  const heat = new Float64Array(200);
+  const board = p.tokens.map((t, j) => [t, cand.attn[j]]).filter(([t]) => t.cells.length);
+  for (const [t, a] of board) for (const i of t.cells) heat[i] += mode === "dens" ? a / t.cells.length : a;
+  const mx = Math.max(...heat) || 1;
+
+  let s = "";
+  for (const r of [0, 4, 9, 14, 19]) s += `<text x="-6" y="${Y(r) + 14}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${r + 1}</text>`;
+  for (let i = 0; i < 200; i++) {
+    const [r, c] = rc(i);
+    s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="var(--empty)" stroke="var(--grid)" stroke-width="1"/>`;
+    if (heat[i] > 0) s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="rgb(var(--heat))" opacity="${(0.08 + 0.85 * heat[i] / mx).toFixed(3)}"/>`;
+    if (p.board[i]) s += `<rect x="${X(c) + 4}" y="${Y(r) + 4}" width="${CS - 8}" height="${CS - 8}" rx="2" fill="var(--filled)" opacity="0.8"/>`;
+  }
+  if (hover) s += `<path d="${outline(hover.cells, 1)}" stroke="var(--hover)" stroke-width="2.5" fill="none"/>`;
+  s += `<path d="${outline(p.chosen.cells, 1.5)}" stroke="var(--move)" stroke-width="2" stroke-dasharray="4 3" fill="none"/>`;
+  if (cand !== p.chosen) s += `<path d="${outline(cand.cells, 3)}" stroke="var(--pick)" stroke-width="2.5" fill="none"/>`;
+  $("board").innerHTML = s;
+
+  const rows = p.tokens.map((t, j) => ({ t, a: cand.attn[j] })).sort((a, b) => b.a - a.a);
+  const top = rows[0].a || 1;
+  $("rows").innerHTML = rows.map(({ t, a }, k) => `<div class="row" data-k="${k}"><span class="k">${t.kind}${t.piece ? " " + t.piece : ""}</span>` +
+    `<span class="bar" style="width:${(100 * a / top).toFixed(1)}%"></span><span class="v">${(100 * a).toFixed(1)}%</span></div>`).join("");
+  $("rows").querySelectorAll(".row").forEach(el => {
+    el.onmouseenter = () => { const t = rows[+el.dataset.k].t; if (t.cells.length) { hover = t; render(); } };
+    el.onmouseleave = () => { if (hover) { hover = null; render(); } };
+  });
+}
+
+const S = DATA.summary;
+$("summary").innerHTML = `<div><b>${(S.top1 * 100).toFixed(1)}%</b> <span>top-1 agreement with the bot on ${S.positions.toLocaleString()} held-out positions</span></div>` +
+  `<div><b>${(S.pointing * 100).toFixed(0)}%</b> <span>of ${S.pointing_n} T-spins into a T structure: that structure is the most-attended token (random: ${(S.pointing_random * 100).toFixed(0)}%)</span></div>` +
+  `<div><span>${DATA.epochs} training epochs</span></div>`;
+if (S.agreement) {
+  const pc = v => `${(v * 100).toFixed(1)}%`;
+  const cols = ["top1", "within 0.5", "within 1.0"];
+  let t = `<table class="agree"><tr><th></th>${["normal", "gate4"].map(n => `<th colspan="3">${n} teacher</th>`).join("")}</tr>` +
+    `<tr><th></th>${["normal", "gate4"].map(() => cols.map(c => `<th>${c === "top1" ? "same move" : "search score " + c}</th>`).join("")).join("")}</tr>`;
+  for (const who of ["model", "greedy V"])
+    t += `<tr><td>${who === "model" ? "AtTenTris (one pass)" : "our V, 1 ply"}</td>${["normal", "gate4"].map(n => cols.map(c => `<td>${pc(S.agreement[who][n][c])}</td>`).join("")).join("")}</tr>`;
+  $("summary").insertAdjacentHTML("beforeend", `<div class="tablewrap">${t}</table></div>`);
+}
+function go(d) { idx = (idx + d + DATA.positions.length) % DATA.positions.length; sel = "chosen"; hover = null; render(); }
+$("prev").onclick = () => go(-1); $("next").onclick = () => go(1);
+$("dens").onclick = () => { mode = "dens"; $("dens").className = "on"; $("mass").className = ""; render(); };
+$("mass").onclick = () => { mode = "mass"; $("mass").className = "on"; $("dens").className = ""; render(); };
+document.addEventListener("keydown", e => { if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); });
+{ const m = /^#p(\d+)$/.exec(location.hash); if (m) idx = Math.min(+m[1], DATA.positions.length) - 1 || 0; }
+render();
+</script>
