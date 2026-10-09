@@ -36,7 +36,10 @@ POS = [
 ]
 
 
-RENAME = {"his_rl": "cms-RL"}  # older match files used his_rl
+# display names: CEM-tuned bots by their number of non-zero weights, his by parameter count
+RENAME = {"his_rl": "cms-RL-982k", "cms-RL": "cms-RL-982k", "battle": "dan-cem-22",
+          "battle_d1": "dan-cem-22 (depth 1)", "normal_txt": "dan-cem-29"}
+HIS = {"his_rl", "cms-RL", "cms-RL-982k"}
 
 
 class Playback:
@@ -47,7 +50,7 @@ class Playback:
         self.raw = [p["bot"] for p in rec["players"]]
         self.names = [RENAME.get(n, n) for n in self.raw]
         # the match alternates who moves first; keep his bot on the right whatever the order
-        self.side = [1 if n in RENAME.values() else 0 for n in self.names]
+        self.side = [1 if n in HIS else 0 for n in self.raw]
         if self.side[0] == self.side[1]:
             self.side = [0, 1]
         self.moves = rec["moves"]
