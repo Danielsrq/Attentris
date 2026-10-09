@@ -6,7 +6,7 @@ exactly what was played; realtime / cap games play back on their own clock.
     set PYTHONPATH=.
     .venv\\Scripts\\python ..\\..\\bot\\tools\\battle_watch.py ..\\..\\bot\\results\\battle\\match_battle_realtime.jsonl --game 3
 
-Keys: space pause, right arrow one piece (while paused), up / down speed x2 / /2,
+Keys: space pause, left / right arrow one piece back / forward (shift: 10), up / down speed x2 / /2,
 n / p next / previous game, r restart, esc quit.
 """
 import argparse
@@ -42,6 +42,7 @@ RENAME = {"his_rl": "cms-RL"}  # older match files used his_rl
 class Playback:
     def __init__(self, rec, turn_pps):
         self.rec = rec
+        self.turn_pps = turn_pps
         self.sims = [new_player(i, rec["seed"]) for i in range(2)]
         self.raw = [p["bot"] for p in rec["players"]]
         self.names = [RENAME.get(n, n) for n in self.raw]
@@ -59,6 +60,14 @@ class Playback:
         self.pieces = [0, 0]
         self.last = ["", ""]
         self.ko = [False, False]
+
+    def seek(self, k):
+        '''The playback after k moves: forward from here, backward by replaying from the start.'''
+        k = max(0, min(k, len(self.moves)))
+        pb = self if k >= self.k else Playback(self.rec, self.turn_pps)
+        while pb.k < k:
+            pb.step()
+        return pb
 
     def done(self):
         return self.k >= len(self.moves)
@@ -104,21 +113,25 @@ def draw(screen, r, font, small, pb, clock_s, speed, paused):
             a[1] -= 18 * j
             pygame.draw.rect(screen, (255, 0, 0), a)
         app = pb.sent[i] / max(1, pb.pieces[i])
+        # average over the elapsed game time (turn games have no clock of their own)
+        pps = "-" if pb.rec["speed"] == "turn" or clock_s <= 0 else "%.2f" % (pb.pieces[i] / clock_s)
         lx, ly = pos["label"]
         pygame.draw.rect(screen, (15, 15, 20), (lx - 2, ly - 2, 184, 22))
         screen.blit(font.render(pb.names[i], True, (240, 240, 240)), (lx, ly))
-        info = "pcs %d  sent %d  APP %.2f  b2b %d  combo %d" % (pb.pieces[i], pb.sent[i], app, t.b2b_count, max(0, t.combo))
-        pygame.draw.rect(screen, (15, 15, 20), (lx - 2, 503, 300, 38))
-        screen.blit(small.render(info, True, (220, 220, 220)), (lx, 505))
-        screen.blit(small.render(pb.last[i], True, (255, 220, 120)), (lx, 522))
+        pygame.draw.rect(screen, (15, 15, 20), (lx - 2, 503, 290, 54))
+        screen.blit(small.render("pcs %d  sent %d  APP %.2f  PPS %s" % (pb.pieces[i], pb.sent[i], app, pps),
+                                 True, (220, 220, 220)), (lx, 505))
+        b2b = "-" if t.b2b_count < 0 else "%d" % t.b2b_count   # -1 = no chain
+        screen.blit(small.render("b2b %s  combo %d" % (b2b, max(0, t.combo)), True, (220, 220, 220)), (lx, 522))
+        screen.blit(small.render(pb.last[i], True, (255, 220, 120)), (lx, 539))
         if pb.done():
             r.drawByName("transparent", *pos["transparent"])
             win = pb.rec["winner"] == pb.raw[i]
             r.drawByName("you_win" if win else "you_lose", *pos["you_win" if win else "you_lose"])
             if pb.ko[i]:
                 r.drawByName("ko", *pos["ko"])
-    status = "game %d  seed %d  %s  t=%.1fs  x%g%s   [space pause, -> step, up/down speed, n/p game, r restart]" % (
-        pb.rec["game"], pb.rec["seed"], pb.rec["speed"], clock_s, speed, "  PAUSED" if paused else "")
+    status = "game %d  %s  t=%.1fs  piece %d/%d  x%g%s  space pause  <-/-> step (shift 10)  up/down speed  n/p game  r restart" % (
+        pb.rec["game"], pb.rec["speed"], clock_s, pb.k, len(pb.moves), speed, "  PAUSED" if paused else "")
     pygame.draw.rect(screen, (15, 15, 20), (0, SCREENHEIGHT - 22, SCREENWIDTH, 22))
     screen.blit(small.render(status, True, (200, 200, 200)), (6, SCREENHEIGHT - 19))
 
@@ -158,9 +171,11 @@ def main():
                 return
             if e.key == pygame.K_SPACE:
                 paused = not paused
-            elif e.key == pygame.K_RIGHT and not pb.done():
-                pb.step()
-                t = pb.times[pb.k - 1]
+            elif e.key in (pygame.K_RIGHT, pygame.K_LEFT):
+                n = 10 if e.mod & pygame.KMOD_SHIFT else 1
+                pb = pb.seek(pb.k + (n if e.key == pygame.K_RIGHT else -n))
+                t = pb.times[pb.k - 1] if pb.k else 0.0
+                paused = True
             elif e.key == pygame.K_UP:
                 speed *= 2
             elif e.key == pygame.K_DOWN:

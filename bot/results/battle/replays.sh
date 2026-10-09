@@ -25,4 +25,5 @@ rec() {
 rec battle "$DIR/battle.txt" realtime ""
 rec battle_d1 "$DIR/battle.txt" realtime "--depth 1 --no-chance"
 rec normal_txt "$ROOT/bot/weights/normal.txt" turn ""
+rec battle "$DIR/battle.txt" cap:2 ""
 echo "all done"
