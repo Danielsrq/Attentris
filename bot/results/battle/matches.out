@@ -1,0 +1,31 @@
+== battle, turn
+game 19: winner battle   battle app 0.919 pcs 37  his_rl app 0.784 pcs 37 KO
+wins: {'battle': 19, 'his_rl': 1}
+battle     APP 0.926  VS/piece 1.182  pieces 25  think 55.1 ms  PPS -  VS -  KOs 1  TSD 34  TST 0  quads 33  mismatches 0
+his_rl     APP 0.550  VS/piece 0.653  pieces 25  think 21.2 ms  PPS -  VS -  KOs 19  TSD 42  TST 0  quads 13  mismatches 0
+== battle, realtime
+game 17: winner battle   battle app 0.949 pcs 39  his_rl app 0.667 pcs 51 KO
+wins: {'battle': 18, 'his_rl': 2}
+battle     APP 0.912  VS/piece 1.199  pieces 31  think 53.8 ms  PPS 5.84  VS 699.4  KOs 2  TSD 42  TST 0  quads 42  mismatches 0
+his_rl     APP 0.620  VS/piece 0.751  pieces 37  think 27.5 ms  PPS 6.95  VS 518.7  KOs 18  TSD 64  TST 0  quads 24  mismatches 0
+== battle, cap:2
+game 19: winner battle   battle app 1.062 pcs 48  his_rl app 0.958 pcs 48 KO
+wins: {'battle': 19, 'his_rl': 1}
+battle     APP 0.980  VS/piece 1.269  pieces 29  think 53.8 ms  PPS 1.98  VS 251.5  KOs 1  TSD 36  TST 0  quads 44  mismatches 0
+his_rl     APP 0.665  VS/piece 0.816  pieces 30  think 21.2 ms  PPS 1.98  VS 162.0  KOs 19  TSD 51  TST 0  quads 24  mismatches 0
+== battle_d1, turn
+game 19: winner his_rl   battle_d1 app 0.316 pcs 38 KO  his_rl app 0.568 pcs 37
+wins: {'his_rl': 13, 'battle_d1': 7}
+battle_d1  APP 0.320  VS/piece 0.463  pieces 34  think 20.6 ms  PPS -  VS -  KOs 13  TSD 10  TST 0  quads 19  mismatches 0
+his_rl     APP 0.585  VS/piece 0.660  pieces 34  think 52.8 ms  PPS -  VS -  KOs 7  TSD 60  TST 0  quads 12  mismatches 0
+== battle_d1, realtime
+game 19: winner battle_d1 battle_d1 app 0.429 pcs 35  his_rl app 0.290 pcs 31 KO
+wins: {'his_rl': 13, 'battle_d1': 7}
+battle_d1  APP 0.336  VS/piece 0.439  pieces 45  think 24.6 ms  PPS 8.34  VS 362.5  KOs 13  TSD 14  TST 0  quads 27  mismatches 0
+his_rl     APP 0.565  VS/piece 0.636  pieces 35  think 65.0 ms  PPS 6.53  VS 415.6  KOs 7  TSD 62  TST 0  quads 13  mismatches 0
+== normal_txt, turn
+game 16: winner normal_txt his_rl app 0.750 pcs 36 KO  normal_txt app 1.000 pcs 35
+wins: {'normal_txt': 18, 'his_rl': 2}
+his_rl     APP 0.581  VS/piece 0.694  pieces 26  think 22.5 ms  PPS -  VS -  KOs 18  TSD 44  TST 0  quads 16  mismatches 0
+normal_txt APP 0.842  VS/piece 1.080  pieces 26  think 56.9 ms  PPS -  VS -  KOs 2  TSD 35  TST 0  quads 33  mismatches 0
+all done

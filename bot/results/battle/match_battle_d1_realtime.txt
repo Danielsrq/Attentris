@@ -1,0 +1,23 @@
+game  2: winner his_rl   his_rl app 0.514 pcs 35  battle_d1 app 0.125 pcs 40 KO
+game  0: winner his_rl   his_rl app 0.946 pcs 37  battle_d1 app 0.523 pcs 44 KO
+game  1: winner his_rl   battle_d1 app 0.143 pcs 49 KO  his_rl app 0.688 pcs 32
+game  3: winner battle_d1 battle_d1 app 0.486 pcs 35  his_rl app 0.424 pcs 33 KO
+game  7: winner battle_d1 battle_d1 app 0.327 pcs 55  his_rl app 0.378 pcs 37 KO
+game  4: winner his_rl   his_rl app 0.816 pcs 38  battle_d1 app 0.489 pcs 47 KO
+game  5: winner battle_d1 battle_d1 app 0.608 pcs 51  his_rl app 0.780 pcs 41 KO
+game  6: winner his_rl   his_rl app 0.667 pcs 54  battle_d1 app 0.292 pcs 72 KO
+game 10: winner battle_d1 his_rl app 0.391 pcs 23 KO  battle_d1 app 0.478 pcs 23
+game 11: winner his_rl   battle_d1 app 0.250 pcs 44 KO  his_rl app 0.667 pcs 27
+game  9: winner his_rl   battle_d1 app 0.171 pcs 41 KO  his_rl app 0.455 pcs 33
+game 15: winner his_rl   battle_d1 app 0.146 pcs 41 KO  his_rl app 0.556 pcs 27
+game 18: winner his_rl   his_rl app 0.419 pcs 31  battle_d1 app 0.182 pcs 33 KO
+game 12: winner his_rl   his_rl app 0.400 pcs 35  battle_d1 app 0.136 pcs 59 KO
+game 14: winner his_rl   his_rl app 0.667 pcs 30  battle_d1 app 0.160 pcs 50 KO
+game  8: winner his_rl   his_rl app 0.769 pcs 52  battle_d1 app 0.508 pcs 63 KO
+game 13: winner his_rl   battle_d1 app 0.431 pcs 51 KO  his_rl app 0.667 pcs 45
+game 16: winner battle_d1 his_rl app 0.360 pcs 25 KO  battle_d1 app 0.344 pcs 32
+game 17: winner battle_d1 battle_d1 app 0.500 pcs 42  his_rl app 0.447 pcs 38 KO
+game 19: winner battle_d1 battle_d1 app 0.429 pcs 35  his_rl app 0.290 pcs 31 KO
+wins: {'his_rl': 13, 'battle_d1': 7}
+battle_d1  APP 0.336  VS/piece 0.439  pieces 45  think 24.6 ms  PPS 8.34  VS 362.5  KOs 13  TSD 14  TST 0  quads 27  mismatches 0
+his_rl     APP 0.565  VS/piece 0.636  pieces 35  think 65.0 ms  PPS 6.53  VS 415.6  KOs 7  TSD 62  TST 0  quads 13  mismatches 0
