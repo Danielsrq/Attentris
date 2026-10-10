@@ -53,10 +53,13 @@ def main():
     pcores.pin()
     ck = torch.load(args.model, map_location="cpu", weights_only=False)
     a = ck["args"]
-    net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in a["merge"].split(",")], sky=a.get("tome_sky", False))
+    net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in a["merge"].split(",")], sky=a.get("tome_sky", False),
+                          pretok=a.get("tome_pretok", False), flat_bias=a.get("tome_flat", False))
     net.load_state_dict(ck["model"])
     net.to(args.device).eval()
     d = TR.load(args.data)
+    if a.get("tome_pretok"):
+        d["pretok"] = np.load(args.data.replace(".npz", ".pretok.npy"))
     idx = np.random.default_rng(0).choice(len(d["chosen"]), size=min(args.n, len(d["chosen"])), replace=False)
     idx.sort()
     res = {False: collections.defaultdict(list), True: collections.defaultdict(list)}

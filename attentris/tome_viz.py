@@ -35,10 +35,13 @@ def main():
     torch.set_num_threads(8)
     ck = torch.load(args.model, map_location="cpu", weights_only=False)
     a = ck["args"]
-    net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in a["merge"].split(",")], sky=a.get("tome_sky", False))
+    net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in a["merge"].split(",")], sky=a.get("tome_sky", False),
+                          pretok=a.get("tome_pretok", False), flat_bias=a.get("tome_flat", False))
     net.load_state_dict(ck["model"])
     net.eval()
     d = TR.load(args.data)
+    if a.get("tome_pretok"):
+        d["pretok"] = np.load(args.data.replace(".npz", ".pretok.npy"))
     s = open(args.src, encoding="utf-8").read()
     src = json.JSONDecoder().raw_decode(s[s.index('{"summary"'):])[0]["positions"]
     at = {(int(d["teacher"][i]), int(d["seed"][i]), int(d["n"][i])): i for i in range(len(d["chosen"]))}

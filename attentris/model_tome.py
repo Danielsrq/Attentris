@@ -22,6 +22,14 @@ column from the start (its cells' mean embedding + a sky embedding + the column 
 positions start with ~77 tokens (stack cells + sky columns) instead of 200 and the merge budget
 goes to the stack. Sky columns are ordinary mergeable tokens: they may join each other or the
 cells next to them.
+
+pretok=True (v3): the rule part of tome_tok.py, precomputed per position (batch["pretok"], one group
+id per cell: 0 = sky, 1.. = solid blocks, -1 = single cell): one sky token (the rows above the
+tallest column, with the 10 column heights as extras, as AtTenTris's sky), one token per solid
+filled block (>= 2 x 2), and single cells for everything else below the sky (the air above lower
+columns, wells, holes, gaps, ragged surface cells). All of them merge as usual. flat_bias=True uses
+AtTenTris's FLAT-2D pair-feature MLP for the self-attention instead of the centre-offset table
+(affordable at ~45 tokens).
 """
 import math
 
@@ -34,6 +42,7 @@ import tokenizer as T
 
 PIECE_FIRST = T.KINDS.index("current")       # current, hold, preview1..5 are contiguous in KINDS
 N_PIECE_TOK = 7
+N_GROUPS = 17                                   # sky + up to 16 blocks (pretok.py caps at 24; data max 12)
 
 
 class Attn(nn.Module):
@@ -103,10 +112,16 @@ def adjacency(mask):
 
 
 class AtTenTrisToMe(nn.Module):
-    def __init__(self, d=64, heads=4, layers=4, merge=(0.0, 0.45, 0.45, 0.45), n_teachers=2, sky=False):
+    def __init__(self, d=64, heads=4, layers=4, merge=(0.0, 0.45, 0.45, 0.45), n_teachers=2, sky=False,
+                 pretok=False, flat_bias=False):
         super().__init__()
         assert len(merge) == layers
-        self.d, self.merge, self.sky = d, tuple(merge), sky
+        assert not (sky and pretok)
+        self.d, self.merge, self.sky, self.pretok, self.flat_bias = d, tuple(merge), sky, pretok, flat_bias
+        if pretok:
+            self.sky_emb = nn.Parameter(torch.zeros(d))
+            self.block_emb = nn.Parameter(torch.zeros(d))
+            self.sky_heights = nn.Linear(10, d)                   # the 10 column heights / 20, as AtTenTris's sky extras
         if sky:
             self.sky_emb = nn.Parameter(torch.zeros(d))
             self.sky_h = nn.Embedding(21, d)                      # the column's height 0..20
@@ -116,7 +131,7 @@ class AtTenTrisToMe(nn.Module):
         self.slot = nn.Embedding(N_PIECE_TOK, d)                 # current / hold / preview1..5
         self.piece = nn.Embedding(M.N_PIECES, d)
         self.is_cell = nn.Parameter(torch.zeros(d))
-        self.bias = RelBias(heads)
+        self.bias = M.Bias(heads) if flat_bias else RelBias(heads)
         self.blocks = nn.ModuleList(Block(d, heads) for _ in range(layers))
         # candidates and heads: as AtTenTris
         self.c_piece = nn.Embedding(M.N_PIECES, d)
@@ -226,11 +241,41 @@ class AtTenTrisToMe(nn.Module):
             is_cell = torch.cat([is_cell[:, :200], torch.ones(B, 10, dtype=torch.bool, device=dev), is_cell[:, 200:]], 1)
             par0 = torch.cat([par0[:, :200], (cols % 2).expand(B, 10), par0[:, 200:]], 1)
             alive, x, size, mask, box, is_cell, par0 = self._compact(alive, x, size, mask, box, is_cell, par0)
+        if self.pretok:
+            grp = batch["pretok"].long()                                            # (B, 200)
+            K = N_GROUPS
+            gmask = (grp[:, None, :] == torch.arange(K, device=dev).view(1, K, 1)).float()   # (B, K, 200)
+            gsize = gmask.sum(-1)
+            gx = (gmask @ phi) / gsize.clamp(min=1.0)[..., None] + self.is_cell
+            g = cells.view(B, 20, 10).bool()
+            h = torch.where(g, torch.arange(1, 21, device=dev).view(1, 20, 1), torch.zeros(1, 20, 1, dtype=torch.long, device=dev)).amax(1)
+            gx[:, 0] = gx[:, 0] + self.sky_emb + self.sky_heights(h.float() / 20.0)
+            gx[:, 1:] = gx[:, 1:] + self.block_emb
+            big = torch.full_like(r, 99)
+            rr, cc = r.expand(B, K, 200), c.expand(B, K, 200)
+            on = gmask > 0
+            gbox = torch.stack([torch.where(on, rr, big).amin(-1), torch.where(on, rr, -big).amax(-1),
+                                torch.where(on, cc, big).amin(-1), torch.where(on, cc, -big).amax(-1)], -1)
+            galive = gsize > 0
+            gbox = torch.where(galive[..., None], gbox, torch.full_like(gbox, -1))
+            first = on.float().argmax(-1)                                           # a cell of the group
+            gpar = (first // 10 + first % 10) % 2
+            x = torch.cat([x[:, :200], gx, x[:, 200:]], 1)
+            size = torch.cat([size[:, :200], gsize.clamp(min=1.0), size[:, 200:]], 1)
+            mask = torch.cat([mask[:, :200], gmask, mask[:, 200:]], 1)
+            box = torch.cat([box[:, :200], gbox, box[:, 200:]], 1)
+            alive = torch.cat([alive[:, :200] & (grp < 0), galive, alive[:, 200:]], 1)
+            is_cell = torch.cat([is_cell[:, :200], torch.ones(B, K, dtype=torch.bool, device=dev), is_cell[:, 200:]], 1)
+            par0 = torch.cat([par0[:, :200], gpar, par0[:, 200:]], 1)
+            alive, x, size, mask, box, is_cell, par0 = self._compact(alive, x, size, mask, box, is_cell, par0)
         merged_yet = False
         attn, trace = [], []
         for blk, frac in zip(self.blocks, self.merge):
             adj = adjacency(mask)
-            bias = self.bias(mask, size, is_cell, adj)
+            if self.flat_bias:
+                bias = self.bias(*M.pair_features(box, box, mask, mask))
+            else:
+                bias = self.bias(mask, size, is_cell, adj)
             h = blk.n1(x)
             y, a, keys = blk.att(h, h, bias, ~alive, torch.log(size.clamp(min=1.0)))
             x = x + y

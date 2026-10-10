@@ -49,6 +49,8 @@ def batch_of(d, idx, device="cpu"):
         "cand_meta": torch.from_numpy(d["cand_meta"][idx].astype(np.int64)).clamp(min=0),
         "teacher": torch.from_numpy(d["teacher"][idx].astype(np.int64)),
     }
+    if "pretok" in d:
+        b["pretok"] = torch.from_numpy(d["pretok"][idx].astype(np.int64))
     if device != "cpu":
         b = {k: v.to(device, non_blocking=True) for k, v in b.items()}
     return b
@@ -148,6 +150,8 @@ def main():
     ap.add_argument("--arch", default="attentris", choices=("attentris", "tome"), help="tome = AtTenTris-ToMe (model_tome.py)")
     ap.add_argument("--merge", default="0,0.45,0.45,0.45", help="tome: fraction of cell tokens merged after attention, per layer")
     ap.add_argument("--tome-sky", action="store_true", help="tome: the sky starts as one token per column (model_tome sky=True)")
+    ap.add_argument("--tome-pretok", action="store_true", help="tome v3: one sky + solid blocks + single cells (needs <file>.pretok.npy, pretok.py)")
+    ap.add_argument("--tome-flat", action="store_true", help="tome: FLAT-2D pair-feature bias in the self-attention")
     ap.add_argument("--bucket", type=int, default=0, help="group batches by token count within chunks of this many batches (0 = off)")
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--save-every", type=int, default=300, help="mid-epoch checkpoint every N batches (0 = epoch ends only)")
@@ -172,15 +176,20 @@ def main():
             raise SystemExit("%s holds a %s checkpoint; refusing to overwrite it with %s (pick another --out)" % (out, prev, args.arch))
 
     parts = [load(os.path.join(args.data, f)) for f in args.train.split(",")]
+    if args.tome_pretok:
+        for p, f in zip(parts, args.train.split(",")):
+            p["pretok"] = np.load(os.path.join(args.data, f.replace(".npz", ".pretok.npy")))
     tr = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
     va = load(os.path.join(args.data, "val.npz"))
+    if args.tome_pretok:
+        va["pretok"] = np.load(os.path.join(args.data, "val.pretok.npy"))
     if args.limit:
         keep = np.sort(np.random.default_rng(123).choice(len(tr["chosen"]), size=min(args.limit, len(tr["chosen"])), replace=False))
         tr = {k: v[keep] for k, v in tr.items()}   # a random subset (files are in teacher order)
     n = len(tr["chosen"])
     if args.arch == "tome":
         net = MT.AtTenTrisToMe(d=args.d, layers=args.layers, merge=[float(f) for f in args.merge.split(",")],
-                               sky=args.tome_sky).to(args.device)
+                               sky=args.tome_sky, pretok=args.tome_pretok, flat_bias=args.tome_flat).to(args.device)
     else:
         net = M.AtTenTris(d=args.d, layers=args.layers).to(args.device)
     print("device", args.device, torch.cuda.get_device_name(0) if args.device == "cuda" else "", flush=True)
@@ -207,7 +216,9 @@ def main():
     for _ in range(start):
         rng.permutation(n)                                    # the same batch order as an uninterrupted run
     length = None
-    if args.bucket:
+    if args.bucket and "pretok" in tr:
+        length = (tr["pretok"] == -1).sum(1) + tr["pretok"].max(1).astype(np.int64) + 1     # single cells + sky + blocks
+    elif args.bucket:
         # tokens a position starts with (stack cells + sky columns): batches of similar length pad less
         g = tr["cells"].reshape(-1, 20, 10).astype(bool)
         h = np.where(g, np.arange(1, 21)[None, :, None], 0).max(1)
