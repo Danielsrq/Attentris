@@ -24,6 +24,7 @@ button.primary, button.on { background: var(--accent); border-color: var(--accen
 .summary { display: flex; flex-wrap: wrap; gap: 8px 24px; font-variant-numeric: tabular-nums; }
 .summary b { font-size: 17px; }
 .summary span { color: var(--muted); }
+.k .note { color: var(--muted); font-weight: 400; }
 .meta .label { font-weight: 600; font-size: 15px; } .meta .sub { color: var(--muted); }
 .main { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: start; }
 @media (max-width: 640px) { .main { grid-template-columns: minmax(0, 1fr); } }
@@ -181,7 +182,7 @@ function render() {
 
   const rows = p.tokens.map((t, j) => ({ t, a: cand.attn[j] })).sort((a, b) => b.a - a.a);
   const top = rows[0].a || 1;
-  $("rows").innerHTML = rows.map(({ t, a }, k) => `<div class="row" data-k="${k}"><span class="k">${t.kind}${t.piece ? " " + t.piece : ""}</span>` +
+  $("rows").innerHTML = rows.map(({ t, a }, k) => `<div class="row" data-k="${k}"><span class="k">${t.kind}${t.piece ? " " + t.piece : ""}${t.note ? ` <span class="note">${t.note}</span>` : ""}</span>` +
     `<span class="bar" style="width:${(100 * a / top).toFixed(1)}%"></span><span class="v">${(100 * a).toFixed(1)}%</span></div>`).join("");
   $("rows").querySelectorAll(".row").forEach(el => {
     el.onmouseenter = () => { const t = rows[+el.dataset.k].t; if (t.cells.length) { hover = t; render(); } };

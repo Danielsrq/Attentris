@@ -37,6 +37,8 @@ def main():
     ap.add_argument("--data", default=os.path.join(HERE, "data", "val.npz"))
     ap.add_argument("--out", default=os.path.join(HERE, "attn.html"))
     ap.add_argument("--positions", type=int, default=30)
+    ap.add_argument("--keep", default="", help="an earlier attn.html: show its positions first, same order (by seed, placement)")
+    ap.add_argument("--extra", type=int, default=6, help="v5 tokens: up to this many covered-slot fills, setup plays, T setups")
     ap.add_argument("--label", default="", help="model description shown on the page, e.g. 'v4 · 1.09M positions'")
     args = ap.parse_args()
     n_p = pcores.pin()
@@ -119,6 +121,43 @@ def main():
             break
     show += fits
     show += [int(i) for i in rng.choice(n, size=max(0, args.positions - len(show)), replace=False)]
+    if args.keep:
+        # the earlier viewer's positions, in its order (indices differ between packings)
+        old = open(args.keep, encoding="utf-8").read()
+        old = json.JSONDecoder().raw_decode(old[old.index('{"summary"'):])[0]["positions"]
+        at = {(int(d["teacher"][i]), int(d["seed"][i]), int(d["n"][i])): i for i in range(n)}
+        show = [int(at[(["normal", "gate4"].index(q["teacher"]), q["seed"], q["n"])]) for q in old]
+    # v5 tokens: the teacher's move fills a covered slot / plays a setup; positions with a T setup
+    why_new = {}
+    if ck["model"]["kind.weight"].shape[0] > 31:
+        slot_ids = {T.KINDS.index(k) for k in T.SLOT_KINDS}
+        setup_ids = {T.KINDS.index(k) for k in T.SETUP_KINDS}
+        groups = {"covered": [], "setup": [], "tsetup": []}
+        for i in rng.permutation(n):
+            i = int(i)
+            if i in show:
+                continue
+            if all(len(g) >= args.extra for g in groups.values()):
+                break
+            ch = d["chosen"][i]
+            cells = [int(c) for c in d["cand_cells"][i, ch] if c >= 0]
+            masks = M.unpack_masks(d["tok_mask"][i])
+            for j, kd in enumerate(d["tok_kind"][i]):
+                inside = len(cells) == 4 and bool(masks[j][cells].all())
+                if kd in slot_ids and d["tok_extra"][i, j, 7] > 0.5 and inside and len(groups["covered"]) < args.extra:
+                    groups["covered"].append(i)
+                    why_new[i] = "bot filled a covered slot (%s-spin)" % T.KINDS[kd][4:].upper()
+                    break
+                if kd in setup_ids and inside and len(groups["setup"]) < args.extra:
+                    groups["setup"].append(i)
+                    why_new[i] = "bot played a setup (%s)" % T.KINDS[kd]
+                    break
+                if kd == T.KINDS.index("setup_t") and len(groups["tsetup"]) < args.extra:
+                    groups["tsetup"].append(i)
+                    why_new[i] = "a T-slot setup is on offer"
+                    break
+        for g in ("covered", "setup", "tsetup"):
+            show += groups[g]
     pos = []
     for i in show:
         prob, cross = run(net, d, np.array([i]))
@@ -128,7 +167,15 @@ def main():
         order = np.argsort(-prob[:nc])
         masks = M.unpack_masks(d["tok_mask"][i])
         kinds = d["tok_kind"][i]
-        toks = [{"kind": T.KINDS[kd], "cells": np.nonzero(masks[j])[0].tolist(),
+        def note(j, kd):
+            k, e = T.KINDS[kd], d["tok_extra"][i, j]
+            if k in T.SLOT_KINDS and len(T.KINDS) > 27:
+                lines = int(round(float(e[8]) * 3))
+                return ("covered" if e[7] > 0.5 else "open") + (" · %d line%s" % (lines, "s" * (lines > 1)) if lines else "")
+            if k in T.SETUP_KINDS:
+                return "slot for %d lines" % int(round(float(e[0]) * 3))
+            return None
+        toks = [{"kind": T.KINDS[kd], "note": note(j, kd), "cells": np.nonzero(masks[j])[0].tolist(),
                  "piece": T.PIECES[d["tok_piece"][i, j]] if d["tok_piece"][i, j] >= 0 and d["tok_piece"][i, j] < 7 else None}
                 for j, kd in enumerate(kinds) if kd >= 0]
 
@@ -137,7 +184,7 @@ def main():
             return {"i": int(c), "cells": [int(x) for x in d["cand_cells"][i, c] if x >= 0], "piece": T.PIECES[m[0]],
                     "hold": int(m[1]), "spin": int(m[2]), "lines": int(m[3]), "attack": int(m[4]),
                     "p": float(prob[c]), "attn": [float(cross[c, j]) for j, kd in enumerate(kinds) if kd >= 0]}
-        why = "T-spin into a T structure" if i in tspin_rows else ("bot filled a piece-shaped recess" if i in fits else "random position")
+        why = why_new[i] if i in why_new else "T-spin into a T structure" if i in tspin_rows else ("bot filled a piece-shaped recess" if i in fits else "random position")
         pos.append({"why": why, "teacher": ["normal", "gate4"][d["teacher"][i]], "seed": int(d["seed"][i]), "n": int(d["n"][i]),
                     "board": d["cells"][i].tolist(), "tokens": toks, "chosen": cand(ch),
                     "top": [cand(int(c)) for c in order[:5]], "rank": int(np.where(order == ch)[0][0]) + 1, "n_cand": nc,
