@@ -138,7 +138,7 @@ The overlays are tsd {(9,3), (9,4), (9,5), (8,4)} with 2 lines, and pit2 {(9,3),
 
 ## Model spec
 
-Sizes: **d = 64, H = 4 (head width 16), L = 4**, n ≈ 8 to 27. That is roughly 200k parameters, small enough to train on CPU.
+Sizes: **d = 64, H = 4 (head width 16), L = 4**, n ≈ 8 to 31 (27 before v5). As built: 273k parameters (274.5k from v5); trained on the GPU since DAgger round 1 (CPU is fine for inference). Full diagram under "Architecture as implemented" below.
 
 **1. Cell stage (no CNN).** Every cell gets its value and its absolute 2D position. Shape 200 × d.
 
@@ -173,7 +173,87 @@ A final cross-attention block (candidates attend to the board tokens, not to eac
 
 *Why the change:* a placement's 4 cells are almost always empty cells in the Sky or a play row. With the original head (mean of q·H_cell over the 4 cells), every candidate in the Sky reads the same Sky vector plus a position term, so the head could only learn a position prior. Candidate tokens also give the explanation directly: **the candidate's cross-attention row, drawn through M, is "what the model looked at when it scored this placement."** That is exactly the T-overhang picture we want.
 
-**7. Value head.** It pools the board tokens to a scalar and is trained on the teacher's evaluation (optional and auxiliary).
+**7. Value heads (as built, v2 on).** Two more linear layers on each candidate's final vector, beside the policy logit: **Qs** predicts the teacher's search score of that move and **Q1** its 1-ply score (both in units of 10 lines of attack). From v3 on only Qs is trained (Q1 has weight 0).
+
+### Architecture as implemented (v4 / v5 / v5.1, `model.py`)
+
+273k parameters (274.5k with the v5 kind table of 40); one forward pass is about 13M multiply-adds. Shapes are for one position: NT ≤ 31 board-side tokens (12 base + 12 overlays + 7 pieces; 27 before v5), NC ≤ 96 candidate slots (about 46 legal moves on average, the rest padding). d = 64, 4 heads of width 16, feed-forward width 256. Everything right of the dividing line is learned and trained end to end from the same loss; everything left of it is rules (Rust and the Python tokenizer).
+
+```
+ RULES (no learning)                       MODEL (learned)
+ ===================                       ===============
+
+ board 20×10 (0/1) ──────────────────────► Φ = E_val[cell] + E_row[r] + E_col[c]               200 × 64
+                                                 │
+ tokenizer ── per token j: kind τ_j,             │  region pooling, one learned query per kind:
+   mask M_j (cells), box (rows/cols lo-hi),      │    w_jc = softmax_c over M_j of  q_τj · (W_k Φ_c) / √64
+   12 extras; piece tokens: piece, no mask       │    z_j  = Σ_c w_jc · (W_v Φ_c)
+                                                 ▼
+                                           x_j = z_j + E_kind[τ_j] + PE_box(box_j) + W_extra·extras_j
+                                                     (+ E_piece[p] for current / hold / preview tokens)   NT × 64
+                                                 │
+ FLAT-2D pair features, token j vs token k:      │
+   4 row-span offsets (lo/hi × lo/hi), 4 col-    │
+   span offsets, |M_j ∩ M_k|  → 9 numbers ─────► B_self = MLP_self(9 → 32 → 4 heads)       4 × NT × NT
+   (a pair without boxes, e.g. a piece token:     │   computed ONCE, shared by all 4 layers
+    a learned constant per head)                  │
+                                                 ▼
+                         ┌──────────────── self-attention block × 4 (pre-norm) ────────────────┐
+                         │ h = LN1(x)                                                          │
+                         │ Q = W_q h,  K = W_k h,  V = W_v h          (per head: NT × 16)       │
+                         │ A = softmax( Q Kᵀ / √16  +  B_self )       ← FLAT-2D bias goes HERE, │
+                         │                                              into the scores         │
+                         │ x = x + W_o · concat_heads(A V)            ← residual add after W_o  │
+                         │ x = x + FF(LN2(x))      FF = Linear 64→256, GELU, Linear 256→64      │
+                         └─────────────────────────────────────────────────────────────────────┘
+                                                 │  t_1 … t_NT  (board tokens after self-attention)
+                                                 │
+ move generator (Rust `bot expand`) ── every     │
+ legal placement of the current piece and of     │
+ the hold piece (or next piece if hold empty):   │
+   4 cells, piece, used hold?, spin             │
+   (none / mini / full), lines, attack          │
+        │                                        │
+        ▼   candidate embedding (learned):       │
+   c_i = mean of Φ at its 4 cells                │   (raw cell vectors, not encoder outputs)
+       + E_cpiece[piece] + E_hold[0/1]           │
+       + E_spin[0..2] + E_lines[0..4]            │
+       + W_attack · (attack / 10)                │
+       + PE_box(bounding box of its 4 cells)     │
+       + E_style[teacher]                        │   NC × 64 (padding slots masked)
+        │                                        │
+ FLAT-2D pair features, candidate i vs           │
+ token j (candidate box + its 4 cells as mask) ► B_cross = MLP_cross(9 → 32 → 4 heads)     4 × NC × NT
+        │                                        │
+        ▼                                        ▼
+                         ┌──────────────── cross-attention block × 1 (pre-norm) ───────────────┐
+                         │ h = LN1(c),  m = LN_ctx(t)                                          │
+                         │ Q = W_q h      ← queries from the candidates only                   │
+                         │ K = W_k m,  V = W_v m   ← keys and values from the board tokens only│
+                         │ A = softmax_j( Q Kᵀ / √16  +  B_cross )    NC × NT per head         │
+                         │       ← the row A_i is "where move i looked" (the viewer's bars)    │
+                         │ c = c + W_o · concat_heads(A V)            ← residual add after W_o  │
+                         │ c = c + FF(LN2(c))                                                  │
+                         │ board tokens are read, not changed; candidates never see each other │
+                         └─────────────────────────────────────────────────────────────────────┘
+                                                 │  f_1 … f_NC   (one 64-vector per move)
+                         ┌───────────────────────┼───────────────────────┐
+                         ▼                       ▼                       ▼
+                 policy: Linear 64→1      Qs: Linear 64→1         Q1: Linear 64→1
+                 one logit per move       search score / 10       1-ply score / 10 (weight 0)
+                 padding → −∞
+                         │
+                         ▼
+                 softmax over the moves → probabilities; argmax (or top-k for search)
+                 index i → the i-th placement in the move generator's list (no unembedding)
+```
+
+Notes:
+
+- **Separate weights.** The 4 self-attention blocks, the cross block, the two bias MLPs (B_self, B_cross), the cell/token embeddings and the candidate embeddings each have their own parameters. W_q, W_k, W_v, W_o above are per block.
+- **The bias is not a residual term.** FLAT-2D enters each attention layer only through the scores before the softmax: geometry (overlap, distance) tilts which tokens get weight; the residual stream only ever receives W_o times the weighted values.
+- **Legality needs no mask.** Every candidate comes from the move generator, so illegal moves never exist as tokens; the only mask is for padding slots.
+- **One pass scores every move.** All candidates go through the cross block together (one batched matrix multiply), each independently; they compete only in the final softmax. This is a pointer-network style output (Vinyals et al., 2015): the vocabulary is rebuilt for every position.
 
 ## Interpretability
 
