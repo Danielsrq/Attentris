@@ -16,6 +16,12 @@ is cheaper than AtTenTris's FLAT-2D MLP (which at 207 x 207 pairs x 512 position
 and memory): a learned table over the row / column offset between the two blobs' centres, plus
 a learned value for blobs that touch (4-adjacent), per head. The candidates' cross-attention
 keeps the FLAT-2D MLP (<= 96 x ~41 pairs).
+
+sky=True (v2, "pre-tokenized sky"): the empty cells above each column's top are one token per
+column from the start (its cells' mean embedding + a sky embedding + the column height), so
+positions start with ~77 tokens (stack cells + sky columns) instead of 200 and the merge budget
+goes to the stack. Sky columns are ordinary mergeable tokens: they may join each other or the
+cells next to them.
 """
 import math
 
@@ -97,10 +103,13 @@ def adjacency(mask):
 
 
 class AtTenTrisToMe(nn.Module):
-    def __init__(self, d=64, heads=4, layers=4, merge=(0.0, 0.45, 0.45, 0.45), n_teachers=2):
+    def __init__(self, d=64, heads=4, layers=4, merge=(0.0, 0.45, 0.45, 0.45), n_teachers=2, sky=False):
         super().__init__()
         assert len(merge) == layers
-        self.d, self.merge = d, tuple(merge)
+        self.d, self.merge, self.sky = d, tuple(merge), sky
+        if sky:
+            self.sky_emb = nn.Parameter(torch.zeros(d))
+            self.sky_h = nn.Embedding(21, d)                      # the column's height 0..20
         self.random_merge = False      # analysis baseline: merge random adjacent pairs (same schedule)
         self.val = nn.Embedding(2, d)
         self.pos = M.Pos2D(d)
@@ -123,13 +132,12 @@ class AtTenTrisToMe(nn.Module):
 
     # ---------------------------------------------------------------- merging
     @staticmethod
-    def _merge(x, size, mask, box, alive, is_cell, keys, frac, first, adj):
+    def _merge(x, size, mask, box, alive, is_cell, keys, frac, first, adj, par0):
         B, N, d = x.shape
         dev = x.device
         cand = alive & is_cell
         if first:
-            idx = torch.arange(N, device=dev)
-            par = torch.where(idx < 200, (idx // 10 + idx % 10) % 2, torch.zeros_like(idx)).expand(B, N)
+            par = par0                                           # checkerboard for cells (sky columns: by column)
         else:
             par = (torch.cumsum(cand.long(), 1) - 1) % 2
         A = cand & (par == 0)
@@ -163,7 +171,15 @@ class AtTenTrisToMe(nn.Module):
         keep = int(alive.sum(1).max())
         o = (~alive).int().argsort(dim=1, stable=True)[:, :keep]
         g = lambda t: torch.gather(t, 1, o.view(B, keep, *([1] * (t.dim() - 2))).expand(B, keep, *t.shape[2:]))
-        return g(x), g(size), g(mask), g(box), g(alive), g(is_cell)
+        return g(x), g(size), g(mask), g(box), g(alive), g(is_cell), g(par0)
+
+    @staticmethod
+    def _compact(alive, *ts):
+        B = alive.shape[0]
+        keep = int(alive.sum(1).max())
+        o = (~alive).int().argsort(dim=1, stable=True)[:, :keep]
+        g = lambda t: torch.gather(t, 1, o.view(B, keep, *([1] * (t.dim() - 2))).expand(B, keep, *t.shape[2:]))
+        return [g(alive)] + [g(t) for t in ts]
 
     # ---------------------------------------------------------------- forward
     def forward(self, batch, return_attn=False, heads=False):
@@ -191,6 +207,25 @@ class AtTenTrisToMe(nn.Module):
         alive = torch.cat([torch.ones(B, 200, dtype=torch.bool, device=dev), pvalid], 1)
         is_cell = torch.cat([torch.ones(B, 200, dtype=torch.bool, device=dev),
                              torch.zeros(B, N_PIECE_TOK, dtype=torch.bool, device=dev)], 1)
+        par0 = torch.cat([((r + c) % 2).expand(B, 200), torch.zeros(B, N_PIECE_TOK, dtype=torch.long, device=dev)], 1)
+        if self.sky:
+            g = cells.view(B, 20, 10).bool()
+            rows = torch.arange(1, 21, device=dev).view(1, 20, 1)
+            h = torch.where(g, rows, torch.zeros_like(rows)).amax(1)               # (B, 10) column heights
+            sky_cell = (r.view(1, 20, 10) >= h[:, None, :]).view(B, 200)          # above each column's top
+            smask = (sky_cell.view(B, 20, 10).unsqueeze(1) & (c.view(1, 1, 20, 10) == torch.arange(10, device=dev).view(1, 10, 1, 1))).view(B, 10, 200).float()
+            ssize = smask.sum(-1)
+            sx = (smask @ phi) / ssize.clamp(min=1.0)[..., None] + self.is_cell + self.sky_emb + self.sky_h(h)
+            cols = torch.arange(10, device=dev)
+            sbox = torch.stack([h, torch.full_like(h, 19), cols.expand(B, 10), cols.expand(B, 10)], -1)
+            x = torch.cat([x[:, :200], sx, x[:, 200:]], 1)
+            size = torch.cat([size[:, :200], ssize.clamp(min=1.0), size[:, 200:]], 1)
+            mask = torch.cat([mask[:, :200], smask, mask[:, 200:]], 1)
+            box = torch.cat([box[:, :200], sbox, box[:, 200:]], 1)
+            alive = torch.cat([alive[:, :200] & ~sky_cell, ssize > 0, alive[:, 200:]], 1)
+            is_cell = torch.cat([is_cell[:, :200], torch.ones(B, 10, dtype=torch.bool, device=dev), is_cell[:, 200:]], 1)
+            par0 = torch.cat([par0[:, :200], (cols % 2).expand(B, 10), par0[:, 200:]], 1)
+            alive, x, size, mask, box, is_cell, par0 = self._compact(alive, x, size, mask, box, is_cell, par0)
         merged_yet = False
         attn, trace = [], []
         for blk, frac in zip(self.blocks, self.merge):
@@ -203,7 +238,7 @@ class AtTenTrisToMe(nn.Module):
             if frac > 0:
                 if self.random_merge:
                     keys = torch.randn_like(keys)
-                x, size, mask, box, alive, is_cell = self._merge(x, size, mask, box, alive, is_cell, keys, frac, not merged_yet, adj)
+                x, size, mask, box, alive, is_cell, par0 = self._merge(x, size, mask, box, alive, is_cell, keys, frac, not merged_yet, adj, par0)
                 merged_yet = True
             x = x + blk.ff(blk.n2(x))
             if return_attn:

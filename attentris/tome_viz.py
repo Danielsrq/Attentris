@@ -35,7 +35,7 @@ def main():
     torch.set_num_threads(8)
     ck = torch.load(args.model, map_location="cpu", weights_only=False)
     a = ck["args"]
-    net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in a["merge"].split(",")])
+    net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in a["merge"].split(",")], sky=a.get("tome_sky", False))
     net.load_state_dict(ck["model"])
     net.eval()
     d = TR.load(args.data)

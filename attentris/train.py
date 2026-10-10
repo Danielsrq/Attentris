@@ -147,6 +147,8 @@ def main():
     ap.add_argument("--out", default=None, help="checkpoint (default DATA/model.pt; DATA/model_tome.pt for --arch tome)")
     ap.add_argument("--arch", default="attentris", choices=("attentris", "tome"), help="tome = AtTenTris-ToMe (model_tome.py)")
     ap.add_argument("--merge", default="0,0.45,0.45,0.45", help="tome: fraction of cell tokens merged after attention, per layer")
+    ap.add_argument("--tome-sky", action="store_true", help="tome: the sky starts as one token per column (model_tome sky=True)")
+    ap.add_argument("--bucket", type=int, default=0, help="group batches by token count within chunks of this many batches (0 = off)")
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--save-every", type=int, default=300, help="mid-epoch checkpoint every N batches (0 = epoch ends only)")
     ap.add_argument("--seed", type=int, default=0, help="weight init and batch order")
@@ -177,7 +179,8 @@ def main():
         tr = {k: v[keep] for k, v in tr.items()}   # a random subset (files are in teacher order)
     n = len(tr["chosen"])
     if args.arch == "tome":
-        net = MT.AtTenTrisToMe(d=args.d, layers=args.layers, merge=[float(f) for f in args.merge.split(",")]).to(args.device)
+        net = MT.AtTenTrisToMe(d=args.d, layers=args.layers, merge=[float(f) for f in args.merge.split(",")],
+                               sky=args.tome_sky).to(args.device)
     else:
         net = M.AtTenTris(d=args.d, layers=args.layers).to(args.device)
     print("device", args.device, torch.cuda.get_device_name(0) if args.device == "cuda" else "", flush=True)
@@ -203,6 +206,27 @@ def main():
     rng = np.random.default_rng(args.seed)
     for _ in range(start):
         rng.permutation(n)                                    # the same batch order as an uninterrupted run
+    length = None
+    if args.bucket:
+        # tokens a position starts with (stack cells + sky columns): batches of similar length pad less
+        g = tr["cells"].reshape(-1, 20, 10).astype(bool)
+        h = np.where(g, np.arange(1, 21)[None, :, None], 0).max(1)
+        length = (np.arange(20)[None, :, None] < h[:, None, :]).sum((1, 2)) + (h < 20).sum(1)
+
+    def order_of(perm):
+        """The epoch's position order: random, or (with --bucket) sorted by length inside chunks of
+        `bucket` batches, the batches then shuffled, so every batch is a random draw of similar size."""
+        if length is None:
+            return perm
+        span = args.bucket * args.batch
+        out = []
+        for s0 in range(0, n, span):
+            ch = perm[s0:s0 + span]
+            out.append(ch[np.argsort(length[ch], kind="stable")])
+        o = np.concatenate(out)
+        nb_ = math.ceil(n / args.batch)
+        bo = np.random.default_rng(int(perm[0])).permutation(nb_)
+        return np.concatenate([o[b * args.batch:(b + 1) * args.batch] for b in bo])
 
     def save(path, ep, extra):
         torch.save(dict({"model": net.state_dict(), "opt": opt.state_dict(), "sched": sched.state_dict(), "epoch": ep,
@@ -211,7 +235,7 @@ def main():
 
     for ep in range(start, args.epochs):
         t0 = time.time()
-        perm = rng.permutation(n)
+        perm = order_of(rng.permutation(n))
         tot, cnt = 0.0, 0
         first = 0
         if perm0 is not None and ep == start:
