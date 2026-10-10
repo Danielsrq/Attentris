@@ -7,7 +7,9 @@ targets only, never inputs.
 
     <python with torch> attentris/train.py [--epochs 8 --batch 256 --threads 16]
 
-Checkpoint after every epoch (attentris/data/model.pt, plus the log); --resume continues.
+Checkpoint after every epoch (attentris/data/model.pt, plus the log) and every --save-every
+batches within an epoch (the epoch's batch order is saved too); --resume continues from the last
+one, mid-epoch included.
 """
 import argparse
 import json
@@ -146,6 +148,7 @@ def main():
     ap.add_argument("--arch", default="attentris", choices=("attentris", "tome"), help="tome = AtTenTris-ToMe (model_tome.py)")
     ap.add_argument("--merge", default="0,0.45,0.45,0.45", help="tome: fraction of cell tokens merged after attention, per layer")
     ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--save-every", type=int, default=300, help="mid-epoch checkpoint every N batches (0 = epoch ends only)")
     ap.add_argument("--seed", type=int, default=0, help="weight init and batch order")
     ap.add_argument("--init", default="", help="warm start: load these model weights, fresh optimizer and schedule")
     ap.add_argument("--limit", type=int, default=0, help="use a random N-position subset (smoke tests, learning curves)")
@@ -182,6 +185,7 @@ def main():
     steps = args.epochs * math.ceil(n / args.batch)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=args.lr, total_steps=steps, pct_start=0.05)
     start, log = 0, []
+    start_batch, perm0, tot0, cnt0 = 0, None, 0.0, 0
     if args.init:
         ck0 = torch.load(args.init, map_location=args.device, weights_only=False)
         net.load_state_dict(ck0["model"])
@@ -191,15 +195,29 @@ def main():
         net.load_state_dict(ck["model"]); opt.load_state_dict(ck["opt"]); sched.load_state_dict(ck["sched"])
         net.to(args.device)
         start, log = ck["epoch"] + 1, ck["log"]
+        if ck.get("batch") is not None:                       # a mid-epoch checkpoint
+            start, start_batch, perm0, tot0, cnt0 = ck["epoch"], ck["batch"] + 1, ck["perm"], ck["tot"], ck["cnt"]
+        print("resuming at epoch %d, batch %d" % (start + 1, start_batch), flush=True)
     print("params %d, train %d positions, val %d, %d epochs x %d batches" % (
         sum(p.numel() for p in net.parameters()), n, len(va["chosen"]), args.epochs, math.ceil(n / args.batch)), flush=True)
     rng = np.random.default_rng(args.seed)
+    for _ in range(start):
+        rng.permutation(n)                                    # the same batch order as an uninterrupted run
+
+    def save(path, ep, extra):
+        torch.save(dict({"model": net.state_dict(), "opt": opt.state_dict(), "sched": sched.state_dict(), "epoch": ep,
+                         "log": log, "args": vars(args), "tok_version": T.TOK_VERSION}, **extra), path + ".tmp")
+        os.replace(path + ".tmp", path)                       # never a half-written checkpoint
+
     for ep in range(start, args.epochs):
         t0 = time.time()
         perm = rng.permutation(n)
         tot, cnt = 0.0, 0
+        first = 0
+        if perm0 is not None and ep == start:
+            perm, first, tot, cnt = perm0, start_batch, tot0, cnt0
         nb = math.ceil(n / args.batch)
-        for bi in range(nb):
+        for bi in range(first, nb):
             idx = np.sort(perm[bi * args.batch:(bi + 1) * args.batch])
             o = net(batch_of(tr, idx, args.device), heads=True)
             loss = compute_loss(o, tr, idx, args, args.device)[0].mean()
@@ -212,7 +230,9 @@ def main():
             if bi % 50 == 0:
                 el = time.time() - t0
                 print("  epoch %d batch %d/%d loss %.3f  (%.0fs, epoch ETA %.0fs)" % (
-                    ep + 1, bi, nb, tot / cnt, el, el / (bi + 1) * (nb - bi - 1)), flush=True)
+                    ep + 1, bi, nb, tot / cnt, el, el / (bi - first + 1) * (nb - bi - 1)), flush=True)
+            if args.save_every and bi % args.save_every == args.save_every - 1 and bi < nb - 1:
+                save(out, ep, {"batch": bi, "perm": perm, "tot": tot, "cnt": cnt})
         ev = evaluate(net, va, 512, args, args.device)
         rec = {"epoch": ep + 1, "train_loss": tot / cnt, "val": ev, "secs": time.time() - t0}
         log.append(rec)
@@ -222,8 +242,7 @@ def main():
             ev["normal"]["qs_top1"], ev["gate4"]["qs_top1"], ev["normal"]["q1_top1"], ev["gate4"]["q1_top1"],
             (ev["normal"]["q1_mae"] + ev["gate4"]["q1_mae"]) / 2, (ev["normal"]["qs_mae"] + ev["gate4"]["qs_mae"]) / 2,
             time.time() - t0), flush=True)
-        torch.save({"model": net.state_dict(), "opt": opt.state_dict(), "sched": sched.state_dict(), "epoch": ep,
-                    "log": log, "args": vars(args), "tok_version": T.TOK_VERSION}, out)
+        save(out, ep, {"batch": None})
         with open(out + ".log.json", "w") as f:
             json.dump(log, f, indent=1)
 
