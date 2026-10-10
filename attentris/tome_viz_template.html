@@ -1,0 +1,199 @@
+<title>AtTenTris-ToMe Blobs</title>
+<style>
+:root {
+  --bg: #f4f3ee; --panel: #ffffff; --fg: #1d2127; --muted: #5c626b; --line: #d8d5ca;
+  --empty: #ebeae4; --filled: #3a3f47; --grid: #ffffff; --accent: #2c55c9; --accent-fg: #ffffff;
+  --heat: 214, 84, 20; --move: #111418; --pick: #2c55c9; --bar: #e0763a; --edge: #1d2127;
+  --blob-l-empty: 86%; --blob-l-filled: 42%;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
+  --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
+  --heat: 255, 140, 70; --move: #f4f5f7; --pick: #7d9cff; --bar: #ff9a5c; --edge: #e7e9ec;
+  --blob-l-empty: 30%; --blob-l-filled: 62%; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
+  --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
+  --heat: 255, 140, 70; --move: #f4f5f7; --pick: #7d9cff; --bar: #ff9a5c; --edge: #e7e9ec;
+  --blob-l-empty: 30%; --blob-l-filled: 62%; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 14px/1.45 "IBM Plex Sans", system-ui, sans-serif; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: grid; gap: 14px; }
+header { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
+h1 { font-size: 18px; margin: 0; text-wrap: balance; } h1 span { color: var(--muted); font-weight: 400; }
+.nav, .toggle { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button, select { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+button.primary, button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+select { max-width: min(420px, 100%); }
+.count { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 64px; text-align: center; }
+.summary { display: flex; flex-wrap: wrap; gap: 8px 24px; font-variant-numeric: tabular-nums; }
+.summary b { font-size: 17px; } .summary span { color: var(--muted); }
+.meta .label { font-weight: 600; font-size: 15px; } .meta .sub { color: var(--muted); }
+.main { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 680px) { .main { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; display: grid; gap: 8px; justify-items: center; min-width: 0; }
+figcaption { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); text-align: center; }
+svg.board { width: 100%; max-width: 260px; height: auto; display: block; }
+.list { display: grid; gap: 6px; min-width: 0; }
+.list h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 8px 0 2px; font-weight: 600; }
+table.probs { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; width: 100%; max-width: 480px; }
+table.probs td { padding: 2px 6px; border-bottom: 1px solid var(--line); }
+table.probs td.p { text-align: right; width: 52px; }
+table.probs td.bar { width: 40%; }
+table.probs td.bar span { display: block; height: 9px; border-radius: 3px; background: var(--accent); opacity: .75; }
+table.probs tr { cursor: pointer; }
+table.probs tr:hover { background: var(--panel); }
+table.probs tr.on { background: var(--panel); outline: 1px solid var(--accent); }
+.row { display: grid; grid-template-columns: 130px minmax(0, 1fr) 52px; gap: 10px; align-items: center; padding: 2px 6px; border-radius: 5px; }
+.row:hover { background: var(--panel); outline: 1px solid var(--line); }
+.row .k { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px; }
+.row .barw { height: 10px; border-radius: 3px; background: var(--bar); min-width: 1px; }
+.row .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.note { color: var(--muted); font-size: 12.5px; max-width: 78ch; }
+.stats { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+
+<div class="wrap">
+  <header>
+    <h1>AtTenTris-ToMe blobs <span>· how 200 cells merge, and where each move looks</span></h1>
+    <div class="nav">
+      <button id="prev">← Prev</button><span class="count" id="count"></span><button id="next" class="primary">Next →</button>
+      <select id="jump" aria-label="Jump to position"></select>
+    </div>
+  </header>
+  <div class="summary" id="summary"></div>
+  <div class="meta"><div class="label" id="label"></div><div class="sub" id="sub"></div></div>
+  <div class="main">
+    <figure>
+      <svg class="board" id="board" viewBox="-20 -6 226 418"></svg>
+      <figcaption id="cap"></figcaption>
+      <div class="toggle" id="views"></div>
+      <div class="stats" id="stats"></div>
+    </figure>
+    <div class="list">
+      <h2>Move probabilities (click a row to show its attention)</h2>
+      <table class="probs" id="probs"></table>
+      <h2>Where the selected move looked: final tokens, mean of 4 heads</h2>
+      <div id="rows"></div>
+    </div>
+  </div>
+  <p class="note">No rule tokenizer: the board enters as 200 cell tokens plus 7 piece tokens. After attention in layers 2, 3 and 4, the most similar
+    4-adjacent blobs merge (45% of the cell tokens each time), so every blob is a connected region; candidates then cross-attend to the final blobs.
+    <b>Layer views</b> colour each blob (darker = filled cells, lighter = empty cells) with its outline. <b>Attention</b> paints the selected move's
+    cross-attention through the final blobs, divided by blob size so a big sky blob and a 3-cell gap compare fairly. Dashed outline: the teacher's move;
+    blue: the selected move (the model's top pick by default). Keys: ← →.</p>
+</div>
+
+<script>
+const DATA = __DATA__;
+const CS = 20, ROWS = 20, COLS = 10;
+const P = DATA.positions;
+let idx = 0, view = null, sel = 0;
+const $ = id => document.getElementById(id);
+const X = c => c * CS, Y = r => (ROWS - 1 - r) * CS;
+const SPIN = ["", " mini", " spin"];
+const candLabel = c => `${c.piece}${c.hold ? " (hold)" : ""}${SPIN[c.spin]}${c.lines ? `, ${c.lines} line${c.lines > 1 ? "s" : ""}` : ""}`;
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+function outline(cells, inset) {
+  const set = new Set(cells);
+  let d = "";
+  for (const k of cells) {
+    const r = Math.floor(k / COLS), c = k % COLS;
+    const x0 = X(c) + inset, x1 = X(c) + CS - inset, y0 = Y(r) + inset, y1 = Y(r) + CS - inset;
+    if (r + 1 >= ROWS || !set.has(k + COLS)) d += `M${x0} ${y0}H${x1}`;
+    if (r - 1 < 0 || !set.has(k - COLS)) d += `M${x0} ${y1}H${x1}`;
+    if (c - 1 < 0 || !set.has(k - 1)) d += `M${x0} ${y0}V${y1}`;
+    if (c + 1 >= COLS || !set.has(k + 1)) d += `M${x1} ${y0}V${y1}`;
+  }
+  return d;
+}
+
+function axis() {
+  let s = "";
+  for (const r of [0, 4, 9, 14, 19]) s += `<text x="-6" y="${Y(r) + 14}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${r + 1}</text>`;
+  for (let c = 0; c < COLS; c++) s += `<text x="${X(c) + 10}" y="${ROWS * CS + 11}" text-anchor="middle" font-size="9" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${c}</text>`;
+  return s;
+}
+
+function blobColour(n, filled) {
+  const h = (n * 137.508 + 20) % 360;
+  return `hsl(${h.toFixed(0)} 55% ${filled ? css("--blob-l-filled") : css("--blob-l-empty")})`;
+}
+
+function render() {
+  const p = P[idx];
+  const views = p.layers.map((L, i) => ({ key: "L" + i, name: `after layer ${L.layer}` })).concat([{ key: "attn", name: "attention" }]);
+  if (!view || !views.some(v => v.key === view)) view = "attn";
+  $("count").textContent = `${idx + 1} / ${P.length}`;
+  $("jump").value = idx;
+  $("label").textContent = `${p.why} · ${p.teacher} teacher · seed ${p.seed}, placement ${p.n}`;
+  $("sub").textContent = `Teacher played ${candLabel(p.chosen)}: the model ranks it #${p.rank} of ${p.n_cand} (p = ${(100 * p.chosen.p).toFixed(0)}%).`;
+  $("views").innerHTML = views.map(v => `<button data-v="${v.key}" class="${v.key === view ? "on" : ""}">${v.name}</button>`).join("");
+  $("views").querySelectorAll("button").forEach(b => b.onclick = () => { view = b.dataset.v; render(); });
+  const cand = p.top[sel] || p.chosen;
+  let s = axis();
+  const board = p.board;
+  if (view === "attn") {
+    // cross-attention of the selected move through the final blobs, per cell = share / blob size
+    const dens = new Array(200).fill(0);
+    p.final.forEach((t, j) => { if (t && t.cells) for (const k of t.cells) dens[k] += cand.attn[j] / t.cells.length; });
+    const mx = Math.max(...dens, 1e-9);
+    for (let k = 0; k < 200; k++) {
+      const r = Math.floor(k / COLS), c = k % COLS;
+      s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="var(--empty)" stroke="var(--grid)" stroke-width="1"/>`;
+      s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="rgba(var(--heat), ${(0.85 * dens[k] / mx).toFixed(3)})"/>`;
+      if (board[k]) s += `<rect x="${X(c) + 4}" y="${Y(r) + 4}" width="${CS - 8}" height="${CS - 8}" rx="2" fill="var(--filled)" opacity="0.7"/>`;
+    }
+    p.final.forEach(t => { if (t && t.cells) s += `<path d="${outline(t.cells, 0.5)}" stroke="var(--edge)" stroke-opacity="0.35" stroke-width="1" fill="none"/>`; });
+    $("cap").textContent = `Attention of ${sel === null ? "the teacher's move" : "model pick #" + (sel + 1)}`;
+    const nb = p.final.filter(t => t && t.cells).length;
+    $("stats").textContent = `${nb} board blobs + ${p.final.filter(t => t && t.piece).length} piece tokens after the last merge`;
+  } else {
+    const L = p.layers[+view.slice(1)];
+    const owner = new Array(200).fill(-1);
+    L.blobs.forEach((b, n) => b.forEach(k => owner[k] = n));
+    for (let k = 0; k < 200; k++) {
+      const r = Math.floor(k / COLS), c = k % COLS;
+      s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="${blobColour(owner[k], board[k])}" stroke="var(--grid)" stroke-width="0.5"/>`;
+      if (board[k]) s += `<rect x="${X(c) + 6}" y="${Y(r) + 6}" width="${CS - 12}" height="${CS - 12}" rx="2" fill="var(--filled)" opacity="0.35"/>`;
+    }
+    L.blobs.forEach(b => { s += `<path d="${outline(b, 0.75)}" stroke="var(--edge)" stroke-width="1.6" fill="none"/>`; });
+    $("cap").textContent = `Blobs after layer ${L.layer}`;
+    const sizes = L.blobs.map(b => b.length).sort((a, b) => b - a);
+    $("stats").textContent = `${L.blobs.length} blobs · largest ${sizes.slice(0, 3).join(", ")} cells · ${sizes.filter(x => x === 1).length} single cells`;
+  }
+  s += `<path d="${outline(p.chosen.cells, 1.5)}" stroke="var(--move)" stroke-width="2" stroke-dasharray="4 3" fill="none"/>`;
+  s += `<path d="${outline(cand.cells, 3.5)}" stroke="var(--pick)" stroke-width="2.5" fill="none"/>`;
+  $("board").innerHTML = s;
+
+  $("probs").innerHTML = p.top.map((c, k) => `<tr class="${k === sel ? "on" : ""}" data-k="${k}"><td>#${k + 1}</td><td>${candLabel(c)}${c.i === p.chosen.i ? " — <b>teacher's move</b>" : ""}</td>` +
+    `<td class="bar"><span style="width:${(100 * c.p).toFixed(1)}%"></span></td><td class="p">${(100 * c.p).toFixed(1)}%</td></tr>`).join("") +
+    (p.rank > p.top.length ? `<tr class="${sel === null ? "on" : ""}" data-k="t"><td>#${p.rank}</td><td>${candLabel(p.chosen)} — <b>teacher's move</b></td><td class="bar"><span style="width:${(100 * p.chosen.p).toFixed(1)}%"></span></td><td class="p">${(100 * p.chosen.p).toFixed(1)}%</td></tr>` : "");
+  $("probs").querySelectorAll("tr").forEach(tr => tr.onclick = () => { sel = tr.dataset.k === "t" ? null : +tr.dataset.k; view = "attn"; render(); });
+
+  const rows = p.final.map((t, j) => ({ t, a: cand.attn[j] })).filter(o => o.t).sort((a, b) => b.a - a.a).slice(0, 10);
+  const mx = Math.max(...rows.map(o => o.a), 1e-9);
+  $("rows").innerHTML = rows.map(({ t, a }) => {
+    let name;
+    if (t.piece) name = `${t.kind} ${t.p || "–"}`;
+    else {
+      const rs = t.cells.map(k => Math.floor(k / COLS)), cs = t.cells.map(k => k % COLS);
+      const nf = t.cells.filter(k => board[k]).length;
+      name = `blob ${t.cells.length} cell${t.cells.length > 1 ? "s" : ""} · r${Math.min(...rs) + 1}–${Math.max(...rs) + 1} c${Math.min(...cs)}–${Math.max(...cs)} · ${nf ? (nf === t.cells.length ? "filled" : nf + " filled") : "empty"}`;
+    }
+    return `<div class="row"><span class="k">${name}</span><span class="barw" style="width:${(100 * a / mx).toFixed(1)}%"></span><span class="v">${(100 * a).toFixed(1)}%</span></div>`;
+  }).join("");
+}
+
+function go(dlt) { idx = (idx + dlt + P.length) % P.length; sel = 0; render(); }
+$("prev").onclick = () => go(-1);
+$("next").onclick = () => go(1);
+$("jump").innerHTML = P.map((p, i) => `<option value="${i}">${i + 1}. ${p.why} · ${p.teacher} · seed ${p.seed} #${p.n}</option>`).join("");
+$("jump").onchange = e => { idx = +e.target.value; sel = 0; render(); };
+document.addEventListener("keydown", e => { if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); });
+const v = DATA.val || {};
+$("summary").innerHTML = `<div><b>${DATA.model}</b></div>` +
+  (v.normal !== undefined ? `<div><b>${(100 * v.normal).toFixed(1)}% / ${(100 * v.gate4).toFixed(1)}%</b> <span>top-1 agreement with the normal / gate4 teacher (10,000 held-out positions)</span></div>` : "");
+render();
+</script>
