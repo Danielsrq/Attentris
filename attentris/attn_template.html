@@ -98,7 +98,8 @@ table.agree td:first-child { text-align: left; font-weight: 600; }
 <script>
 const DATA = __DATA__;
 const CS = 20, ROWS = 20, COLS = 10;
-let idx = 0, sel = "chosen", mode = "dens", hover = null;
+let idx = 0, sel = null, mode = "dens", hover = null;
+const firstSel = p => (p.top[0].i === p.chosen.i ? "chosen" : "0");   // default: the model's own top move
 const $ = id => document.getElementById(id);
 const X = c => c * CS, Y = r => (ROWS - 1 - r) * CS;
 const rc = i => [Math.floor(i / 10), i % 10];
@@ -203,13 +204,14 @@ if (S.agreement) {
     t += `<tr><td>${who === "model" ? "AtTenTris (one pass)" : "our V, 1 ply"}</td>${["normal", "gate4"].map(n => cols.map(c => `<td>${pc(S.agreement[who][n][c])}</td>`).join("")).join("")}</tr>`;
   $("summary").insertAdjacentHTML("beforeend", `<div class="tablewrap">${t}</table></div>`);
 }
-function go(d) { idx = (idx + d + DATA.positions.length) % DATA.positions.length; sel = "chosen"; hover = null; render(); }
+function go(d) { idx = (idx + d + DATA.positions.length) % DATA.positions.length; sel = firstSel(DATA.positions[idx]); hover = null; render(); }
 $("prev").onclick = () => go(-1); $("next").onclick = () => go(1);
 $("jump").innerHTML = DATA.positions.map((p, i) => `<option value="${i}">${i + 1}. ${p.why} · ${p.teacher} · seed ${p.seed} #${p.n}</option>`).join("");
-$("jump").onchange = e => { idx = +e.target.value; sel = "chosen"; hover = null; render(); };
+$("jump").onchange = e => { idx = +e.target.value; sel = firstSel(DATA.positions[idx]); hover = null; render(); };
 $("dens").onclick = () => { mode = "dens"; $("dens").className = "on"; $("mass").className = ""; render(); };
 $("mass").onclick = () => { mode = "mass"; $("mass").className = "on"; $("dens").className = ""; render(); };
 document.addEventListener("keydown", e => { if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); });
 { const m = /^#p(\d+)$/.exec(location.hash); if (m) idx = Math.min(+m[1], DATA.positions.length) - 1 || 0; }
+sel = firstSel(DATA.positions[idx]);
 render();
 </script>
