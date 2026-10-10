@@ -1,0 +1,49 @@
+epoch 1: val top1 0.493 / 0.477
+epoch 2: val top1 0.539 / 0.531
+epoch 3: val top1 0.563 / 0.560
+epoch 4: val top1 0.590 / 0.580
+epoch 5: val top1 0.598 / 0.593
+epoch 6: val top1 0.610 / 0.602
+epoch 7: val top1 0.613 / 0.597
+epoch 8: val top1 0.612 / 0.600
+tome_sky: AtTenTris logit depth 1 style normal no garbage: APP 0.483 (APPfull 0.483), died 0/64, pieces 500 avg, TSD 1067, TST 7, quads 539, max height 20, illegal 0, 20.7 ms/move (p90 25.2) + search 21.3 ms, 47s
+tome_sky: AtTenTris logit depth 2 beam 4 style normal no garbage: APP 0.638 (APPfull 0.638), died 0/64, pieces 500 avg, TSD 1389, TST 15, quads 738, max height 20, illegal 0, 83.3 ms/move (p90 108.9) + search 83.9 ms, 176s
+tome_sky: AtTenTris logit depth 3 beam 8 style normal no garbage: APP 0.760 (APPfull 0.760), died 0/64, pieces 500 avg, TSD 1610, TST 19, quads 842, max height 20, illegal 0, 269.2 ms/move (p90 378.1) + search 269.9 ms, 557s
+tome_sky latency: AtTenTris logit depth 1 style normal no garbage: APP 0.524 (APPfull 0.524), died 0/8, pieces 500 avg, TSD 125, TST 0, quads 85, max height 18, illegal 0, 7.5 ms/move (p90 8.9) + search 7.7 ms, 32s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.28    12%                     0.19     0%            L2:34% L3:43% L4:22%
+  sky                  2000      0.30     4%                     0.29     2%            L2:40% L3:29% L4:29%
+  pit2                 1750      0.19     2%                     0.17     1%            L2:90% L3:4% L4:5%
+  well                 1685      0.24     6%                     0.16     0%            L2:1% L3:21% L4:77%
+  pit1                 1385      0.22     2%                     0.19     1%            L2:100%
+  fit_j open           1289      0.15     0%                     0.13     0%            L2:99% L3:0% L4:0%
+  fit_l open           1284      0.15     0%                     0.13     0%            L2:99% L3:0% L4:0%
+  tsd                  1150      0.29     7%                     0.25     5%            L2:93% L3:1% L4:4%
+  pit3                 1135      0.20     1%                     0.18     0%            L2:83% L3:11% L4:5%
+  fit_z open           1065      0.12     0%                     0.12     0%            L2:97% L3:0% L4:2%
+  fit_s open            993      0.12     0%                     0.12     0%            L2:96% L3:0% L4:2%
+  pit4                  740      0.22     1%                     0.20     1%            L2:85% L3:9% L4:4%
+  fit_j covered         690      0.25     2%                     0.23     2%            L2:98% L3:0% L4:0%
+  fit_l covered         628      0.26     2%                     0.23     2%            L2:98% L3:0% L4:1%
+  fit_t open            590      0.11     0%                     0.11     0%            L2:100%
+  fit_z covered         328      0.28    11%                     0.24     4%            L2:91% L3:3% L4:4%
+  fit_s covered         272      0.27     6%                     0.24     2%            L2:94% L3:3% L4:1%
+  setup_t               207      0.15     1%                     0.13     0%            L2:95% L3:1% L4:2%
+  fit_i covered         135      0.27     4%                     0.28    14%            L2:86% L4:13%
+  fractal                98      0.18     0%                     0.18     0%            L2:98% L4:1%
+  setup_j                84      0.14     0%                     0.14     0%            L2:96% L3:1% L4:2%
+  imperial               77      0.35    44%                     0.29     3%            L2:32% L3:9% L4:58%
+  setup_l                72      0.14     0%                     0.14     0%            L2:93% L4:6%
+  setup_s                71      0.18     1%                     0.16     1%            L2:95% L3:4%
+  setup_z                60      0.15     0%                     0.14     0%            L2:98% L4:1%
+  setup_i                28      0.12     0%                     0.10     0%            L2:92% L4:7%
+  rect12                 12      0.25     0%                     0.21     0%            L2:8% L3:91%
+  vertical               11      0.61    91%                     0.44    36%            L2:45% L3:9% L4:45%
+  stsd                    8      0.47    88%                     0.35    12%            L2:12% L3:25% L4:62%
+  cspin                   4      0.28     0%                     0.22     0%            L2:75% L4:25%
+  band                    4      0.29     0%                     0.15     0%            L4:100%
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+72 positions -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/tome_sky_viz.html
+tome_sky post done

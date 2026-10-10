@@ -1,0 +1,8 @@
+epoch 1: train loss 3.182 | val normal top1 0.493 top3 0.743 | val gate4 top1 0.477 top3 0.724 | argmax Qs top1 0.390 / 0.420, Q1 top1 0.029 / 0.032 | MAE Q1 18.86 Qs 7.67 | 358s
+epoch 2: train loss 2.602 | val normal top1 0.539 top3 0.780 | val gate4 top1 0.531 top3 0.763 | argmax Qs top1 0.449 / 0.470, Q1 top1 0.030 / 0.026 | MAE Q1 18.34 Qs 6.78 | 324s
+epoch 3: train loss 2.468 | val normal top1 0.563 top3 0.807 | val gate4 top1 0.560 top3 0.798 | argmax Qs top1 0.444 / 0.479, Q1 top1 0.025 / 0.021 | MAE Q1 19.07 Qs 6.45 | 353s
+epoch 4: train loss 2.373 | val normal top1 0.590 top3 0.829 | val gate4 top1 0.580 top3 0.817 | argmax Qs top1 0.518 / 0.517, Q1 top1 0.022 / 0.017 | MAE Q1 18.83 Qs 6.36 | 337s
+epoch 5: train loss 2.313 | val normal top1 0.598 top3 0.845 | val gate4 top1 0.593 top3 0.823 | argmax Qs top1 0.514 / 0.526, Q1 top1 0.019 / 0.018 | MAE Q1 18.92 Qs 6.20 | 329s
+epoch 6: train loss 2.272 | val normal top1 0.610 top3 0.849 | val gate4 top1 0.602 top3 0.830 | argmax Qs top1 0.533 / 0.537, Q1 top1 0.018 / 0.017 | MAE Q1 18.85 Qs 6.18 | 341s
+epoch 7: train loss 2.247 | val normal top1 0.613 top3 0.851 | val gate4 top1 0.597 top3 0.834 | argmax Qs top1 0.534 / 0.537, Q1 top1 0.016 / 0.016 | MAE Q1 18.84 Qs 6.13 | 371s
+epoch 8: train loss 2.234 | val normal top1 0.612 top3 0.852 | val gate4 top1 0.600 top3 0.832 | argmax Qs top1 0.534 / 0.541, Q1 top1 0.016 / 0.016 | MAE Q1 18.89 Qs 6.13 | 327s
