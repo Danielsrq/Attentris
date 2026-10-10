@@ -82,14 +82,14 @@ figure { min-width: 0; width: 100%; }
   <div class="legend" id="legend"></div>
   <p class="note"><b>v5.1 overlays.</b> <b>fit_x</b> (dotted, the piece's colour) is a slot for piece x, exactly its 4 cells:
     <i>open</i> = a resting place on the surface, judged after its line clears; <i>covered</i> = a spin placement under an
-    overhang that the move generator can reach (S, Z, L, J, I; T structures have their own kinds). <b>hang</b> (brown) is the
-    filled overhang directly above covered slots, one token per distinct overhang. <b>setup_x</b> (magenta, dashed) is a placement
+    overhang that the move generator can reach (S, Z, L, J, I; T structures have their own kinds); the overhang itself is
+    implied, as a tsd implies its T cap. <b>setup_x</b> (magenta, dashed) is a placement
     of the current or hold piece, clearing no lines, that creates a NEW spin slot of 2+ lines for an upcoming piece x; its mask is
     the setup placement only, and hovering it draws the future slot as a faint ghost.</p>
   <p class="note">Base tokens tile the board exactly once: sky (rows above the highest filled cell), clean wells
     (runs of one-hole rows sharing a column; length 1 = cheese), one token per play-area row, and bands where the
     12-token budget merged the lowest rows. Filled cells are drawn as dark blocks framed in their token's colour.
-    Overlays may overlap anything; at most 12 are kept (T structures, covered slots, hangs, setups, 3×4/4×3 pits, open
+    Overlays may overlap anything; at most 12 are kept (T structures, covered slots, setups, 3×4/4×3 pits, open
     slots, then pits by area). An open slot rests on the surface, touches filled cells or the edge on at least 2 sides,
     leaves the surrounding columns no bumpier, and buries no empty cell once its lines clear.
     The dashed outline is the bot's actual placement. Hover a token to isolate it. Keys: ← →.</p>
@@ -243,7 +243,7 @@ $("jump").onchange = e => { idx = +e.target.value; focus = null; render(); };
 document.addEventListener("keydown", e => { if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); });
 $("legend").innerHTML = [["sky", "--sky"], ["well", "--well-a"], ["play row", "--play-a"], ["band", "--band"]]
   .map(([n, v]) => `<span><span class="sw" style="background:var(${v})"></span>${n}</span>`).join("") +
-  ["tsd", "fractal", "imperial", "stsd", "cspin", "vertical", "rect12", "fit_s", "fit_z", "fit_t", "fit_l", "fit_j", "fit_i", "hang", "setup_t", "pit1"].map(k =>
+  ["tsd", "fractal", "imperial", "stsd", "cspin", "vertical", "rect12", "fit_s", "fit_z", "fit_t", "fit_l", "fit_j", "fit_i", "setup_t", "pit1"].map(k =>
   `<span><span class="sw ring" style="border-color:var(${OVERLAY_VAR[k]})${k.startsWith("fit_") ? ";border-style:dotted" : k.startsWith("setup_") ? ";border-style:dashed" : ""}"></span>${k === "pit1" ? "pit1–4" : k === "setup_t" ? "setup_x" : k}</span>`).join("") +
   `<span><svg width="18" height="10"><path d="M1 5H17" stroke="var(--move)" stroke-width="2" stroke-dasharray="4 3"/></svg>bot's move</span>`;
 render();

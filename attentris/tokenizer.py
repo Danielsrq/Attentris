@@ -39,8 +39,9 @@ ROWS, COLS = 20, 10
 K_BOARD = 12      # base board tokens at most (sky + stack tokens)
 P_MAX = 12        # overlay tokens at most (v5: 12, was 8)
 # Tokenizer versions: 4 = pre-v5 checkpoints; 5 = v5 (covered slot masks include their hang,
-# setup masks include their future slot); 51 = v5.1 (slot masks are exactly the tetromino, the
-# overhang is its own "hang" token, setup masks are the setup placement only). Checkpoints
+# setup masks include their future slot); 51 = v5.1 (slot masks are exactly the tetromino, no
+# overhang cells and no separate hang token -- a covered slot already implies its overhang, the
+# way a tsd implies its T cap; setup masks are the setup placement only). Checkpoints
 # record the version they were trained with ("tok_version").
 TOK_VERSION = 51
 MIN_CONTACTS = 2  # side contacts for a piece-shaped recess
@@ -64,7 +65,7 @@ PIECE_KINDS = ("current", "hold") + tuple("preview%d" % i for i in range(1, 6))
 # v5 additions, appended so the indices of every earlier kind stay the same (old packed data
 # and checkpoints keep working): covered I slots, and setups (an overhang one piece away).
 SETUP_KINDS = ("setup_s", "setup_z", "setup_t", "setup_l", "setup_j", "setup_i")
-NEW_KINDS = ("fit_i",) + SETUP_KINDS + ("hang",)    # "hang": v5.1
+NEW_KINDS = ("fit_i",) + SETUP_KINDS + ("hang",)    # "hang": reserved, not emitted
 SLOT_KINDS = FIT_KINDS + ("fit_i",)       # fit_X = a slot for piece X, open (recess) or covered (spin)
 KINDS = BASE_KINDS + OVERLAY_KINDS + PIECE_KINDS + NEW_KINDS
 OVERLAY_KINDS = OVERLAY_KINDS + NEW_KINDS
@@ -273,12 +274,10 @@ def fit_tokens(b, h, post_clear=True):
 def structure_tokens(structures, version=TOK_VERSION):
     """`bot structures` output (replay coordinates) -> overlay tokens on the visible board.
     T structures keep their kind; covered piece slots ("slot_x", v5) become fit_x tokens with
-    covered = 1, their mask exactly the piece's cells; the filled overhang above a covered
-    slot becomes a "hang" token (one per distinct overhang, shared by the slots under it);
-    setups keep their kind, mask = the setup placement only (the slot it creates does not exist
+    covered = 1, their mask exactly the piece's cells (the overhang above them is implied, like
+    a tsd's cap; the "hang" kind stays in KINDS, unused); setups keep their kind, mask = the setup placement only (the slot it creates does not exist
     yet), the slot's centre in the extras. version=5 reproduces the v5 masks."""
     out = []
-    hangs = {}
     for s in structures:
         m = np.zeros((ROWS, COLS), bool)
         extra_cells = s.get("hang", []) + s.get("slot", []) if version < 51 else []
@@ -291,10 +290,6 @@ def structure_tokens(structures, version=TOK_VERSION):
         k = s["kind"]
         if k.startswith("slot_"):
             out.append(Token("fit_" + k[5:], m, {"orientation": "spin", "contacts": 0, "gain": 0, "covered": 1, "lines": s["lines"]}))
-            hc = frozenset((39 - y, x) for x, y in s.get("hang", []) if 0 <= 39 - y < ROWS)
-            if version >= 51 and hc:
-                n, lines = hangs.get(hc, (0, 0))
-                hangs[hc] = (n + 1, max(lines, s["lines"]))
         elif k.startswith("setup_"):
             sl = [(39 - y, x) for x, y in s.get("slot", [])]
             sr = float(np.mean([r for r, _ in sl])) if sl else 0.0
@@ -302,11 +297,6 @@ def structure_tokens(structures, version=TOK_VERSION):
             out.append(Token(k, m, {"lines": s["lines"], "by": s.get("by"), "slot_r": sr, "slot_c": sc, "slot_cells": sl}))
         else:
             out.append(Token(k, m, {"lines": s["lines"], "fill": s["fill"]}))
-    for hc, (n, lines) in hangs.items():
-        m = np.zeros((ROWS, COLS), bool)
-        for r, c in hc:
-            m[r, c] = True
-        out.append(Token("hang", m, {"slots": n, "lines": lines}))
     return out
 
 

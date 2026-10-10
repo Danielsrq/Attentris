@@ -2,7 +2,7 @@
 # Is v5's depth-1 dying (5/64; v4 0/64) the tokenizer or the luck of one training run?
 #  (a) v4 tokens again with a different seed (init + batch order): data/model_v4_s1.pt
 #  (b) v5.1 tokens, seed 0: data/model_v51.pt. v5.1 = slot masks exactly the tetromino, the
-#      overhang a separate "hang" token, setup masks the setup placement only (slot centre in
+#      overhang implied (no hang token), setup masks the setup placement only (slot centre in
 #      its extras)
 # (a) trains on the GPU (started separately; this script waits for it) while (b) packs on the
 # P-cores; then (b) trains; then 64-game play tests (depth 1, depth 2 beam 4, depth 3 beam 8;
