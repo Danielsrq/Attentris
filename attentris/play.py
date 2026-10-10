@@ -77,12 +77,18 @@ class Player:
         import model as M
         torch.set_num_threads(1)
         ck = torch.load(model_path, map_location="cpu", weights_only=False)
-        self.net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0])
+        tome = ck["args"].get("arch") == "tome"
+        if tome:      # AtTenTris-ToMe: reads only the cells, the piece tokens and the candidates
+            import model_tome as MT
+            self.net = MT.AtTenTrisToMe(d=ck["args"]["d"], layers=ck["args"]["layers"],
+                                        merge=[float(f) for f in ck["args"]["merge"].split(",")])
+        else:
+            self.net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0])
         missing = self.net.load_state_dict(ck["model"], strict=False).missing_keys
         if policy != "logit" and any(k.startswith(policy + ".") for k in missing):
             raise SystemExit("%s has no %s head (a v1 checkpoint?)" % (model_path, policy))
         self.net.eval()
-        self.tok_version = ck.get("tok_version", 5 if ck["model"]["kind.weight"].shape[0] > 31 else 4)
+        self.tok_version = 4 if tome else ck.get("tok_version", 5 if ck["model"]["kind.weight"].shape[0] > 31 else 4)
         self.policy = policy
         self.propose = propose
         self.qscale = M.Q_SCALE
