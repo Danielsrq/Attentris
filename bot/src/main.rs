@@ -310,6 +310,7 @@ fn cmd_structures() {
             items.push(t);
         }
         if v.get("slots").and_then(|x| x.as_bool()).unwrap_or(false) || pieces.is_some() {
+            slots.overhang_filter = v["setup_filter"].as_bool().unwrap_or(false);
             items.extend(slots.json(&b, pieces));
         }
         let _ = writeln!(out, "{{\"structures\":[{}]}}", items.join(","));
@@ -327,6 +328,11 @@ struct SlotScan {
     shapes: rules::Shapes,
     rules: Rules,
     buf: Vec<board::Placement>,
+    /// Setups: only try placements that create an overhang (a cell of the piece directly
+    /// above an empty cell). A new spin slot needs a roof, so this skips the lookahead for
+    /// placements that sit flat on the surface; it can miss a setup that only adds a side
+    /// wall next to an existing roof.
+    pub overhang_filter: bool,
 }
 
 type Cells4 = [(i32, i32); 4];
@@ -336,7 +342,7 @@ impl SlotScan {
         let rules = Rules::normal();
         let mut mg = movegen::MoveGen::new();
         mg.all_spin = true;
-        SlotScan { mg, shapes: rules::Shapes::for_rules(&rules), rules, buf: Vec::new() }
+        SlotScan { mg, shapes: rules::Shapes::for_rules(&rules), rules, buf: Vec::new(), overhang_filter: false }
     }
 
     fn lines_after(b: &board::Board, cells: &Cells4) -> u32 {
@@ -422,12 +428,17 @@ impl SlotScan {
             let placements = buf.clone();
             self.buf = buf;
             for pl in &placements {
+                let mut pc = pl.abs_cells(&self.shapes);
+                pc.sort();
+                if self.overhang_filter && !pc.iter().any(|&(x, y)| {
+                    y + 1 < rules::H && (b.rows[(y + 1) as usize] >> x) & 1 == 0 && !pc.contains(&(x, y + 1))
+                }) {
+                    continue;
+                }
                 let o = search::apply(b, pl, -1, &self.rules, &self.shapes);
                 if o.lock_out || o.lines > 0 {
                     continue;
                 }
-                let mut pc = pl.abs_cells(&self.shapes);
-                pc.sort();
                 for (q, old) in &before {
                     for (c, lines) in self.spin_slots(&o.board, *q, 2) {
                         if !old.contains(&c) && !setups.iter().any(|s| s.4 == c && s.1 == *q) {
