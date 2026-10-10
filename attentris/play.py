@@ -92,7 +92,7 @@ class Player:
                                    stderr=subprocess.DEVNULL, text=True, bufsize=1)
 
     def expand(self, st):
-        self.ex.stdin.write(json.dumps(st) + "\n")
+        self.ex.stdin.write(json.dumps(dict(st, slots=True) if self.tok_version >= 5 else st) + "\n")
         self.ex.stdin.flush()
         return readjson(self.ex)
 

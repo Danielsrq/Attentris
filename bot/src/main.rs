@@ -676,7 +676,9 @@ fn cmd_expand(a: &Args) {
         if !t.is_empty() {
             st.push(t);
         }
-        st.extend(slots.json(&b, Some((cur, queue.clone(), hold))));
+        if v["slots"].as_bool().unwrap_or(false) {
+            st.extend(slots.json(&b, Some((cur, queue.clone(), hold))));
+        }
         let _ = writeln!(out, "{{\"structures\":[{}],\"cands\":[{}]}}", st.join(","), items.join(","));
         let _ = out.flush();
     }
