@@ -124,7 +124,7 @@ function blobColour(n, filled) {
 function render() {
   const p = P[idx];
   const views = p.layers.map((L, i) => ({ key: "L" + i, name: `after layer ${L.layer}` })).concat([{ key: "attn", name: "attention" }]);
-  if (!view || !views.some(v => v.key === view)) view = "attn";
+  if (!view || !views.some(v => v.key === view)) view = "L" + (p.layers.length - 1);   // default: the final blobs
   $("count").textContent = `${idx + 1} / ${P.length}`;
   $("jump").value = idx;
   $("label").textContent = `${p.why} · ${p.teacher} teacher · seed ${p.seed}, placement ${p.n}`;

@@ -29,6 +29,7 @@ def main():
     ap.add_argument("--src", default=os.path.join(HERE, "attn_v51.html"), help="take the positions (and their labels) from this viewer page")
     ap.add_argument("--out", default=os.path.join(HERE, "tome_viz.html"))
     ap.add_argument("--label", default="")
+    ap.add_argument("--random", type=int, default=0, help="also show this many random validation positions")
     args = ap.parse_args()
     pcores.pin()
     torch.set_num_threads(8)
@@ -41,7 +42,20 @@ def main():
     s = open(args.src, encoding="utf-8").read()
     src = json.JSONDecoder().raw_decode(s[s.index('{"summary"'):])[0]["positions"]
     at = {(int(d["teacher"][i]), int(d["seed"][i]), int(d["n"][i])): i for i in range(len(d["chosen"]))}
-    idx = np.array([at[(["normal", "gate4"].index(q["teacher"]), q["seed"], q["n"])] for q in src])
+    idx = [at[(["normal", "gate4"].index(q["teacher"]), q["seed"], q["n"])] for q in src]
+    if args.random:
+        rng = np.random.default_rng(7)
+        extra = [int(i) for i in rng.permutation(len(d["chosen"])) if int(i) not in set(idx)][:args.random]
+        for i in extra:
+            toks = []
+            for j, kd in enumerate(d["tok_kind"][i]):
+                if kd >= 0 and T.KINDS[kd] in SLOTS:
+                    pc = int(d["tok_piece"][i, j])
+                    toks.append({"kind": T.KINDS[kd], "piece": T.PIECES[pc] if 0 <= pc < 7 else None})
+            src.append({"why": "random sample", "teacher": ["normal", "gate4"][d["teacher"][i]], "seed": int(d["seed"][i]),
+                        "n": int(d["n"][i]), "tokens": toks})
+        idx += extra
+    idx = np.array(idx)
     with torch.no_grad():
         out, info = net(TR.batch_of(d, idx, "cpu"), return_attn=True)
     prob = out.softmax(-1).numpy()
