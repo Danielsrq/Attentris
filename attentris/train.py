@@ -143,6 +143,7 @@ def main():
     ap.add_argument("--layers", type=int, default=4)
     ap.add_argument("--out", default=None, help="checkpoint (default DATA/model.pt)")
     ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--init", default="", help="warm start: load these model weights, fresh optimizer and schedule")
     ap.add_argument("--limit", type=int, default=0, help="use a random N-position subset (smoke tests, learning curves)")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--train", default="train.npz", help="training file(s) in DATA, comma-separated")
@@ -170,6 +171,10 @@ def main():
     steps = args.epochs * math.ceil(n / args.batch)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=args.lr, total_steps=steps, pct_start=0.05)
     start, log = 0, []
+    if args.init:
+        ck0 = torch.load(args.init, map_location=args.device, weights_only=False)
+        net.load_state_dict(ck0["model"])
+        print("warm start from %s (%d epochs)" % (args.init, len(ck0.get("log", []))), flush=True)
     if args.resume and os.path.exists(out):
         ck = torch.load(out, map_location=args.device, weights_only=False)
         net.load_state_dict(ck["model"]); opt.load_state_dict(ck["opt"]); sched.load_state_dict(ck["sched"])
