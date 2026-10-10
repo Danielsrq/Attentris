@@ -178,7 +178,7 @@ function render() {
   }
   if (hover) s += `<path d="${outline(hover.cells, 1)}" stroke="var(--hover)" stroke-width="2.5" fill="none"/>`;
   s += `<path d="${outline(p.chosen.cells, 1.5)}" stroke="var(--move)" stroke-width="2" stroke-dasharray="4 3" fill="none"/>`;
-  if (cand !== p.chosen) s += `<path d="${outline(cand.cells, 3)}" stroke="var(--pick)" stroke-width="2.5" fill="none"/>`;
+  s += `<path d="${outline(cand.cells, 3.5)}" stroke="var(--pick)" stroke-width="2.5" fill="none"/>`;
   $("board").innerHTML = s;
 
   const rows = p.tokens.map((t, j) => ({ t, a: cand.attn[j] })).sort((a, b) => b.a - a.a);
