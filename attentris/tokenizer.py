@@ -299,7 +299,7 @@ def structure_tokens(structures, version=TOK_VERSION):
             sl = [(39 - y, x) for x, y in s.get("slot", [])]
             sr = float(np.mean([r for r, _ in sl])) if sl else 0.0
             sc = float(np.mean([c for _, c in sl])) if sl else 0.0
-            out.append(Token(k, m, {"lines": s["lines"], "by": s.get("by"), "slot_r": sr, "slot_c": sc}))
+            out.append(Token(k, m, {"lines": s["lines"], "by": s.get("by"), "slot_r": sr, "slot_c": sc, "slot_cells": sl}))
         else:
             out.append(Token(k, m, {"lines": s["lines"], "fill": s["fill"]}))
     for hc, (n, lines) in hangs.items():
