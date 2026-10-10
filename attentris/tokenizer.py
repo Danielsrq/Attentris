@@ -37,7 +37,7 @@ import numpy as np
 
 ROWS, COLS = 20, 10
 K_BOARD = 12      # base board tokens at most (sky + stack tokens)
-P_MAX = 8         # overlay tokens at most
+P_MAX = 12        # overlay tokens at most (v5: 12, was 8)
 MIN_CONTACTS = 2  # side contacts for a piece-shaped recess
 PIECES = "IOTSZJL"
 STRUCTURE_KINDS = ("imperial", "stsd", "cspin", "fractal", "tsd", "vertical")
@@ -56,7 +56,13 @@ FIT_SHAPES = {
     "fit_j": [("three on top", [(2, 0), (0, 1), (1, 1), (2, 1)]), ("hook on top", [(0, 0), (0, 1), (0, 2), (1, 2)])],
 }
 PIECE_KINDS = ("current", "hold") + tuple("preview%d" % i for i in range(1, 6))
-KINDS = BASE_KINDS + OVERLAY_KINDS + PIECE_KINDS
+# v5 additions, appended so the indices of every earlier kind stay the same (old packed data
+# and checkpoints keep working): covered I slots, and setups (an overhang one piece away).
+SETUP_KINDS = ("setup_s", "setup_z", "setup_t", "setup_l", "setup_j", "setup_i")
+NEW_KINDS = ("fit_i",) + SETUP_KINDS
+SLOT_KINDS = FIT_KINDS + ("fit_i",)       # fit_X = a slot for piece X, open (recess) or covered (spin)
+KINDS = BASE_KINDS + OVERLAY_KINDS + PIECE_KINDS + NEW_KINDS
+OVERLAY_KINDS = OVERLAY_KINDS + NEW_KINDS
 
 
 @dataclass
@@ -203,24 +209,46 @@ def bumpiness(h, lo, hi):
     return int(sum(abs(int(h[c + 1]) - int(h[c])) for c in range(max(lo, 0), min(hi, COLS - 1))))
 
 
-def fit_tokens(b, h):
-    """Piece-shaped recesses (see the module doc)."""
+def holes_of(b):
+    """Empty cells below the top of their column."""
+    filled = np.maximum.accumulate(b[::-1], axis=0)[::-1]
+    return int((filled & ~b).sum())
+
+
+def fit_tokens(b, h, post_clear=True):
+    """Open piece slots ("recesses", see the module doc). v5: judged on the board after the
+    piece's line clears, so a T dropping into a T-shaped gap over a well, which completes two
+    rows and leaves the well open, counts (position 28 of the attention viewer)."""
     out = []
+    holes0 = holes_of(b)
     for kind, shapes in FIT_SHAPES.items():
         for orient, cells in shapes:
             w = max(dx for dx, _ in cells) + 1
             low = [min(dy for dx, dy in cells if dx == k) for k in range(w)]
             top = [max(dy for dx, dy in cells if dx == k) for k in range(w)]
             for x in range(COLS - w + 1):
-                a = h[x] - low[0]
-                if any(h[x + k] - low[k] != a for k in range(w)) or a + max(top) >= ROWS:
+                a = max(h[x + k] - low[k] for k in range(w))      # where it comes to rest
+                if a + max(top) >= ROWS:
                     continue
-                after = h.copy()
-                for k in range(w):
-                    after[x + k] = a + top[k] + 1
                 m = np.zeros((ROWS, COLS), bool)
                 for dx, dy in cells:
                     m[a + dy, x + dx] = True
+                nb = b | m
+                full = nb.all(axis=1)
+                lines = int(full.sum())
+                gap = any(h[x + k] - low[k] != a for k in range(w))
+                if lines:
+                    nb = np.concatenate([nb[~full], np.zeros((lines, COLS), bool)])
+                if gap and (not post_clear or lines == 0 or holes_of(nb) > holes0):
+                    continue                                       # it would bury a cell
+                if not post_clear:
+                    lines = 0                                      # v4: no line clears, no lines extra
+                if lines:
+                    after = heights(nb)
+                else:
+                    after = h.copy()
+                    for k in range(w):
+                        after[x + k] = a + top[k] + 1
                 # snugness: piece-cell sides against a filled cell or the board edge
                 contacts = 0
                 for dx, dy in cells:
@@ -233,38 +261,57 @@ def fit_tokens(b, h):
                 gain = bumpiness(h, x - 1, x + w) - bumpiness(after, x - 1, x + w)
                 if gain < 0:
                     continue  # snug but leaves the area bumpier (a tower against a wall)
-                out.append(Token(kind, m, {"orientation": orient, "contacts": contacts, "gain": gain}))
+                out.append(Token(kind, m, {"orientation": orient, "contacts": contacts, "gain": gain, "covered": 0, "lines": lines}))
     return out
 
 
 def structure_tokens(structures):
-    """`bot structures` output (replay coordinates) -> overlay tokens on the visible board."""
+    """`bot structures` output (replay coordinates) -> overlay tokens on the visible board.
+    T structures keep their kind; covered piece slots ("slot_x", v5) become fit_x tokens with
+    covered = 1, their mask the piece's cells plus its overhang; setups keep their kind, mask
+    = the setup placement's cells plus the slot it creates."""
     out = []
     for s in structures:
         m = np.zeros((ROWS, COLS), bool)
-        for x, y in s["cells"]:
+        for x, y in s["cells"] + s.get("hang", []) + s.get("slot", []):
             r = 39 - y
             if 0 <= r < ROWS and 0 <= x < COLS:
                 m[r, x] = True
-        if m.any():
-            out.append(Token(s["kind"], m, {"lines": s["lines"], "fill": s["fill"]}))
+        if not m.any():
+            continue
+        k = s["kind"]
+        if k.startswith("slot_"):
+            out.append(Token("fit_" + k[5:], m, {"orientation": "spin", "contacts": 0, "gain": 0, "covered": 1, "lines": s["lines"]}))
+        elif k.startswith("setup_"):
+            out.append(Token(k, m, {"lines": s["lines"], "by": s.get("by")}))
+        else:
+            out.append(Token(k, m, {"lines": s["lines"], "fill": s["fill"]}))
     return out
 
 
 def overlay_priority(t):
     if t.kind in STRUCTURE_KINDS:
         return (0, STRUCTURE_KINDS.index(t.kind), -t.extras["lines"], -t.extras["fill"])
+    if t.kind in SLOT_KINDS and t.extras.get("covered"):
+        return (1, -t.extras["lines"], SLOT_KINDS.index(t.kind), 0)
+    if t.kind in SETUP_KINDS:
+        return (2, -t.extras["lines"], SETUP_KINDS.index(t.kind), 0)
     if t.kind == "rect12":
-        return (1, 0, 0, 0)
-    if t.kind in FIT_KINDS:
-        return (2, -t.extras["contacts"], -t.extras["gain"], FIT_KINDS.index(t.kind))
-    return (3, -t.extras["area"], t.extras["width"], 0)
+        return (3, 0, 0, 0)
+    if t.kind in SLOT_KINDS:
+        return (4, -t.extras.get("lines", 0), -t.extras["contacts"], -t.extras["gain"])
+    return (5, -t.extras["area"], t.extras["width"], 0)
 
 
-def tokenize(b, piece=None, queue=(), hold=None, structures=(), k_board=K_BOARD, p_max=P_MAX):
-    """Board (20, 10) bool + pieces -> list of Tokens: base, then overlays, then pieces."""
+def tokenize(b, piece=None, queue=(), hold=None, structures=(), k_board=K_BOARD, p_max=P_MAX, version=5):
+    """Board (20, 10) bool + pieces -> list of Tokens: base, then overlays, then pieces.
+    version=4 reproduces the tokens pre-v5 checkpoints were trained on (T structures only,
+    open fits without line clears, at most 8 overlays)."""
     toks, h = base_tokens(b, k_board)
-    overlays = structure_tokens(structures) + fit_tokens(b, h) + pit_tokens(b, h)
+    if version < 5:
+        structures = [s for s in structures if s["kind"] in STRUCTURE_KINDS]
+        p_max = min(p_max, 8)
+    overlays = structure_tokens(structures) + fit_tokens(b, h, post_clear=version >= 5) + pit_tokens(b, h)
     overlays.sort(key=overlay_priority)
     toks += overlays[:p_max]
     if piece is not None:
@@ -287,10 +334,18 @@ def check_partition(toks):
     return bool((cover == 1).all())
 
 
-def structures_for(boards40, exe=None):
-    """Runs `bot structures` over replay boards (one subprocess for the whole list)."""
+def structures_for(boards40, exe=None, pieces=None):
+    """Runs `bot structures` over replay boards (one subprocess for the whole list). With
+    `pieces` (per board: (piece, queue, hold)) it also returns covered piece slots and setups."""
     exe = exe or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bot", "target", "release", "bot.exe")
-    inp = "".join(json.dumps({"board": b}) + "\n" for b in boards40)
+    reqs = []
+    for i, b in enumerate(boards40):
+        r = {"board": b}
+        if pieces is not None:
+            pc, q, hd = pieces[i]
+            r.update({"piece": pc.upper(), "queue": [x.upper() for x in q], "hold": hd.upper() if hd else None})
+        reqs.append(r)
+    inp = "".join(json.dumps(r) + "\n" for r in reqs)
     res = subprocess.run([exe, "structures"], input=inp, capture_output=True, text=True, check=True)
     return [json.loads(l)["structures"] for l in res.stdout.splitlines() if l.strip()]
 

@@ -40,7 +40,7 @@ def readjson(proc):
             return json.loads(line)
 
 
-def arrays(states, teacher):
+def arrays(states, teacher, version=5):
     """Model inputs for a list of (state, expand-result) pairs; returns the batch dict."""
     import torch
     n = len(states)
@@ -52,7 +52,7 @@ def arrays(states, teacher):
          "teacher": np.full(n, teacher, np.int64)}
     for i, (st, ex) in enumerate(states):
         b = T.board_from_replay(P.rows_to_strings(st["rows"]))
-        toks = T.tokenize(b, st["piece"], st["queue"], st["hold"], ex["structures"])
+        toks = T.tokenize(b, st["piece"], st["queue"], st["hold"], ex["structures"], version=version)
         a["cells"][i] = b.reshape(-1)
         for j, t in enumerate(toks[:NT]):
             a["tok_kind"][i, j] = P.KIND_ID[t.kind]
@@ -77,11 +77,12 @@ class Player:
         import model as M
         torch.set_num_threads(1)
         ck = torch.load(model_path, map_location="cpu", weights_only=False)
-        self.net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"])
+        self.net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0])
         missing = self.net.load_state_dict(ck["model"], strict=False).missing_keys
         if policy != "logit" and any(k.startswith(policy + ".") for k in missing):
             raise SystemExit("%s has no %s head (a v1 checkpoint?)" % (model_path, policy))
         self.net.eval()
+        self.tok_version = 5 if ck["model"]["kind.weight"].shape[0] > 31 else 4
         self.policy = policy
         self.propose = propose
         self.qscale = M.Q_SCALE
@@ -99,7 +100,7 @@ class Player:
         """Per position: the policy's log-probabilities, and Q in lines of attack from the
         chosen value head (None when moves are chosen by the policy)."""
         with self.torch.inference_mode():
-            out = self.net(arrays(pairs, self.teacher), heads=True)
+            out = self.net(arrays(pairs, self.teacher, self.tok_version), heads=True)
         logp = out["logit"].log_softmax(-1).numpy()
         q = None if self.policy == "logit" else (out[self.policy] * self.qscale).numpy()
         return logp, q

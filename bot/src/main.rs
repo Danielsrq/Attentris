@@ -276,6 +276,8 @@ fn cmd_structures() {
     use std::io::{BufRead, Write};
     let stdout = std::io::stdout();
     let mut out = stdout.lock();
+    let mut slots = SlotScan::new();
+    let letter = |v: &serde_json::Value| v.as_str().and_then(|s| s.chars().next()).and_then(rules::Piece::from_letter);
     for line in std::io::stdin().lock().lines() {
         let Ok(line) = line else { break };
         if line.trim().is_empty() {
@@ -299,7 +301,148 @@ fn cmd_structures() {
                 }
             }
         }
-        let _ = writeln!(out, "{{\"structures\":[{}]}}", structures_json(&b));
+        // with "piece" (and "queue", "hold"): also piece slots and setups (SlotScan)
+        let pieces = letter(&v["piece"]).map(|p| (p,
+            v["queue"].as_array().map(|a| a.iter().filter_map(letter).collect::<Vec<_>>()).unwrap_or_default(), letter(&v["hold"])));
+        let mut items: Vec<String> = Vec::new();
+        let t = structures_json(&b);
+        if !t.is_empty() {
+            items.push(t);
+        }
+        if v.get("slots").and_then(|x| x.as_bool()).unwrap_or(false) || pieces.is_some() {
+            items.extend(slots.json(&b, pieces));
+        }
+        let _ = writeln!(out, "{{\"structures\":[{}]}}", items.join(","));
+    }
+}
+
+/// AtTenTris piece-slot tokens (see `cmd_structures`). Covered slots: spin placements of
+/// S, Z, L, J and I that the move generator can actually reach (immobile spots under an
+/// overhang), with the rows they would complete and their "hang" -- the filled cells
+/// directly above the piece in its columns. Setups (when the pieces are known): a placement
+/// of the current or hold piece, clearing no rows, that creates a NEW spin slot of 2+ lines
+/// for a queued piece (T included, full spins only) -- an overhang one piece away.
+struct SlotScan {
+    mg: movegen::MoveGen,
+    shapes: rules::Shapes,
+    rules: Rules,
+    buf: Vec<board::Placement>,
+}
+
+type Cells4 = [(i32, i32); 4];
+
+impl SlotScan {
+    fn new() -> SlotScan {
+        let rules = Rules::normal();
+        let mut mg = movegen::MoveGen::new();
+        mg.all_spin = true;
+        SlotScan { mg, shapes: rules::Shapes::for_rules(&rules), rules, buf: Vec::new() }
+    }
+
+    fn lines_after(b: &board::Board, cells: &Cells4) -> u32 {
+        let mut rows: Vec<i32> = cells.iter().map(|c| c.1).collect();
+        rows.sort_unstable();
+        rows.dedup();
+        rows.iter().filter(|&&y| {
+            (0..rules::H).contains(&y) && {
+                let mut r = b.rows[y as usize];
+                for &(x, cy) in cells {
+                    if cy == y {
+                        r |= 1 << x;
+                    }
+                }
+                r.count_ones() == rules::W as u32
+            }
+        }).count() as u32
+    }
+
+    fn hang(b: &board::Board, cells: &Cells4) -> Vec<(i32, i32)> {
+        let mut out = Vec::new();
+        let mut cols: Vec<i32> = cells.iter().map(|c| c.0).collect();
+        cols.sort_unstable();
+        cols.dedup();
+        for x in cols {
+            let top = cells.iter().filter(|c| c.0 == x).map(|c| c.1).min().unwrap();
+            let mut y = top - 1;
+            while y >= 0 && (b.rows[y as usize] >> x) & 1 == 1 {
+                out.push((x, y));
+                y -= 1;
+            }
+        }
+        out
+    }
+
+    /// Reachable spin placements of `piece` (T: full spins only) with the lines they clear.
+    fn spin_slots(&mut self, b: &board::Board, piece: rules::Piece, min_lines: u32) -> Vec<(Cells4, u32)> {
+        let mut buf = std::mem::take(&mut self.buf);
+        self.mg.generate(b, piece, &self.shapes, &mut buf);
+        let mut out: Vec<(Cells4, u32)> = Vec::new();
+        for pl in &buf {
+            let ok = match pl.spin {
+                rules::Spin::None => false,
+                rules::Spin::Full => true,
+                _ => piece != rules::Piece::T,
+            };
+            if !ok {
+                continue;
+            }
+            let mut c = pl.abs_cells(&self.shapes);
+            c.sort();
+            let lines = Self::lines_after(b, &c);
+            if lines >= min_lines && !out.iter().any(|(oc, _)| *oc == c) {
+                out.push((c, lines));
+            }
+        }
+        self.buf = buf;
+        out
+    }
+
+    fn json(&mut self, b: &board::Board, pieces: Option<(rules::Piece, Vec<rules::Piece>, Option<rules::Piece>)>) -> Vec<String> {
+        use rules::Piece;
+        let cj = |cs: &[(i32, i32)]| cs.iter().map(|(x, y)| format!("[{},{}]", x, y)).collect::<Vec<_>>().join(",");
+        let lower = |p: Piece| p.letter().to_ascii_lowercase();
+        let mut items = Vec::new();
+        for piece in [Piece::S, Piece::Z, Piece::L, Piece::J, Piece::I] {
+            for (c, lines) in self.spin_slots(b, piece, 1) {
+                items.push(format!("{{\"kind\":\"slot_{}\",\"covered\":1,\"lines\":{},\"fill\":0,\"cells\":[{}],\"hang\":[{}]}}",
+                    lower(piece), lines, cj(&c), cj(&Self::hang(b, &c))));
+            }
+        }
+        let Some((cur, queue, hold)) = pieces else { return items };
+        // pieces that could use a slot later: the next two and the one in hold
+        let mut targets: Vec<Piece> = queue.iter().take(2).copied().chain(hold).filter(|&p| p != Piece::O).collect();
+        targets.sort_by_key(|&p| p as u8);
+        targets.dedup();
+        let before: Vec<(Piece, Vec<Cells4>)> = targets.iter().map(|&q| (q, self.spin_slots(b, q, 2).into_iter().map(|x| x.0).collect())).collect();
+        let placers: Vec<Piece> = std::iter::once(cur).chain(hold.or_else(|| queue.first().copied())).collect();
+        let mut setups: Vec<(u32, Piece, Piece, Cells4, Cells4)> = Vec::new();
+        for &pp in &placers {
+            let mut buf = std::mem::take(&mut self.buf);
+            self.mg.generate(b, pp, &self.shapes, &mut buf);
+            let placements = buf.clone();
+            self.buf = buf;
+            for pl in &placements {
+                let o = search::apply(b, pl, -1, &self.rules, &self.shapes);
+                if o.lock_out || o.lines > 0 {
+                    continue;
+                }
+                let mut pc = pl.abs_cells(&self.shapes);
+                pc.sort();
+                for (q, old) in &before {
+                    for (c, lines) in self.spin_slots(&o.board, *q, 2) {
+                        if !old.contains(&c) && !setups.iter().any(|s| s.4 == c && s.1 == *q) {
+                            setups.push((lines, *q, pp, pc, c));
+                        }
+                    }
+                }
+            }
+        }
+        setups.sort_by(|a, b| b.0.cmp(&a.0));
+        for (lines, q, pp, pc, c) in setups.into_iter().take(6) {
+            items.push(format!("{{\"kind\":\"setup_{}\",\"lines\":{},\"fill\":0,\"by\":\"{}\",\"cells\":[{}],\"slot\":[{}]}}",
+                lower(q), lines, pp.letter().to_ascii_uppercase(), cj(&pc), cj(&c)));
+        }
+        items
     }
 }
 
@@ -462,6 +605,7 @@ fn cmd_expand(a: &Args) {
     let stdout = std::io::stdout();
     let mut out = stdout.lock();
     let mut buf = Vec::new();
+    let mut slots = SlotScan::new();
     for line in std::io::stdin().lock().lines() {
         let Ok(line) = line else { break };
         if line.trim().is_empty() {
@@ -526,7 +670,14 @@ fn cmd_expand(a: &Args) {
                 }
             }
         }
-        let _ = writeln!(out, "{{\"structures\":[{}],\"cands\":[{}]}}", structures_json(&b), items.join(","));
+        // the root's structures as AtTenTris v5 tokenizes them: T structures + piece slots + setups
+        let mut st: Vec<String> = Vec::new();
+        let t = structures_json(&b);
+        if !t.is_empty() {
+            st.push(t);
+        }
+        st.extend(slots.json(&b, Some((cur, queue.clone(), hold))));
+        let _ = writeln!(out, "{{\"structures\":[{}],\"cands\":[{}]}}", st.join(","), items.join(","));
         let _ = out.flush();
     }
 }

@@ -60,9 +60,13 @@ def extras(t):
         e[0], e[1] = x["lines"] / 3.0, x["fill"]
     elif k == "rect12":
         e[0] = float(x["orientation"] == "4x3")
-    elif k in T.FIT_KINDS:
-        e[FIT_ORIENT.index(x["orientation"])] = 1.0
+    elif k in T.SLOT_KINDS:
+        if x["orientation"] in FIT_ORIENT:
+            e[FIT_ORIENT.index(x["orientation"])] = 1.0
         e[5], e[6] = x["contacts"] / 8.0, x["gain"] / 6.0
+        e[7], e[8] = float(x.get("covered", 0)), x.get("lines", 0) / 3.0
+    elif k in T.SETUP_KINDS:
+        e[0] = x["lines"] / 3.0
     elif k.startswith("pit"):
         e[0], e[1], e[2], e[3] = x["width"] / 4.0, x["depth"] / 20.0, x["level"] / 20.0, x["area"] / 40.0
     return e
@@ -104,7 +108,7 @@ def pack(recs):
         "n": np.zeros(n, np.int32),
     }
     boards40 = [rows_to_strings(r["rows"]) for r in recs]
-    structs = T.structures_for(boards40)
+    structs = T.structures_for(boards40, pieces=[(r["piece"], r["queue"], r["hold"]) for r in recs])
     dropped = 0
     for i, (r, b40, s) in enumerate(zip(recs, boards40, structs)):
         b = T.board_from_replay(b40)

@@ -42,7 +42,7 @@ def main():
     n_p = pcores.pin()
     torch.set_num_threads(int(os.environ.get("THREADS", n_p or 8)))
     ck = torch.load(args.model, map_location="cpu", weights_only=False)
-    net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"])
+    net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0])
     net.load_state_dict(ck["model"])
     net.eval()
     d = TR.load(args.data)

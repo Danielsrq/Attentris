@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-N_KINDS = 31        # len(tokenizer.KINDS); asserted by train.py
+N_KINDS = 40        # >= len(tokenizer.KINDS) (34 in v5); asserted by train.py. Pre-v5 checkpoints have 31
 N_PIECES = 8        # IOTSZJL + none
 Q_SCALE = 10.0      # value heads predict teacher scores / Q_SCALE
 
@@ -111,14 +111,14 @@ class Block(nn.Module):
 
 
 class AtTenTris(nn.Module):
-    def __init__(self, d=64, heads=4, layers=4, n_extra=12, n_teachers=2):
+    def __init__(self, d=64, heads=4, layers=4, n_extra=12, n_teachers=2, n_kinds=N_KINDS):
         super().__init__()
         self.d = d
         self.val = nn.Embedding(2, d)
         self.pos = Pos2D(d)
         self.Wk, self.Wv = nn.Linear(d, d, bias=False), nn.Linear(d, d, bias=False)
-        self.kind_query = nn.Embedding(N_KINDS, d)               # pooling query per token kind
-        self.kind = nn.Embedding(N_KINDS, d)
+        self.kind_query = nn.Embedding(n_kinds, d)               # pooling query per token kind
+        self.kind = nn.Embedding(n_kinds, d)
         self.piece = nn.Embedding(N_PIECES, d)
         self.extra = nn.Linear(n_extra, d)
         self.bias = Bias(heads)
