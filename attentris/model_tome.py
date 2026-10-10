@@ -101,6 +101,7 @@ class AtTenTrisToMe(nn.Module):
         super().__init__()
         assert len(merge) == layers
         self.d, self.merge = d, tuple(merge)
+        self.random_merge = False      # analysis baseline: merge random adjacent pairs (same schedule)
         self.val = nn.Embedding(2, d)
         self.pos = M.Pos2D(d)
         self.slot = nn.Embedding(N_PIECE_TOK, d)                 # current / hold / preview1..5
@@ -200,6 +201,8 @@ class AtTenTrisToMe(nn.Module):
             x = x + y
             attn.append(a)
             if frac > 0:
+                if self.random_merge:
+                    keys = torch.randn_like(keys)
                 x, size, mask, box, alive, is_cell = self._merge(x, size, mask, box, alive, is_cell, keys, frac, not merged_yet, adj)
                 merged_yet = True
             x = x + blk.ff(blk.n2(x))
