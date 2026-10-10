@@ -1,14 +1,13 @@
-"""ToMe v3 pre-tokenization (no learning): the sky as one token per column, solid filled blocks as
-one token each, every other cell (below the sky) as a single-cell token for the model to merge.
+"""ToMe v3 pre-tokenization (no learning): one sky token, solid filled blocks as one token each,
+every other cell (below the sky) as a single-cell token for the model to merge.
 
-Sky (enclosure-aware): in each column, the empty cells from the LOWER of its two neighbours' tops
-upwards (a wall counts as full height) -- or from its own top, if that is higher. So the open air
-above the stack is sky, but a well or a gap below both neighbours stays as cells (a plain
-"above the column's own top" rule would swallow every open well into a sky column).
+Sky: the full-width rectangle of rows above the tallest column (AtTenTris's sky). The air below
+it, between the stack surface and that row, deliberately stays as single cells, so merging
+decides how to group it (wells and gaps included).
 
-Blocks: per row, the horizontal runs of filled cells; identical runs in consecutive rows stack
-into one rectangle (a unique decomposition, no tie-breaking). A rectangle becomes a block only if
-it is at least 2 x 2; smaller ones stay as single cells.
+Blocks: greedy largest solid rectangles. Repeatedly take the largest all-filled rectangle of at
+least 2 x 2 among the filled cells not yet used (ties: lowest row, then leftmost column, then the
+taller one); stop when none is left. Every other filled cell stays a single cell.
 
     python attentris/tome_tok.py --src attentris/tome_viz.html --out attentris/tome_tok.html
 """
@@ -20,49 +19,45 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
+# every rectangle (r0, r1, c0, c1) of at least 2 x 2 on the 20 x 10 board
+_R0, _R1, _C0, _C1 = [np.array(v) for v in zip(*[(r0, r1, c0, c1) for r0 in range(20) for r1 in range(r0 + 1, 20)
+                                                    for c0 in range(10) for c1 in range(c0 + 1, 10)])]
+_AREA = (_R1 - _R0 + 1) * (_C1 - _C0 + 1)
+_ORDER = np.lexsort((-(_R1 - _R0), _C0, _R0, -_AREA))      # largest first; then lowest, leftmost, taller
 
-def sky_start(h):
-    """Row from which each column is sky (see the module doc); h = column heights."""
-    pad = np.concatenate([[20], h, [20]])
-    return np.maximum(h, np.minimum(pad[:-2], pad[2:]))
+
+def blocks_of(filled):
+    """Greedy largest solid rectangles (>= 2 x 2) of a (20, 10) bool array -> list of (r0, r1, c0, c1)."""
+    avail = np.asarray(filled, bool).copy()
+    out = []
+    while True:
+        P = np.zeros((21, 11), np.int32)
+        P[1:, 1:] = avail.cumsum(0).cumsum(1)
+        s = P[_R1 + 1, _C1 + 1] - P[_R0, _C1 + 1] - P[_R1 + 1, _C0] + P[_R0, _C0]
+        full = (s == _AREA)[_ORDER]
+        if not full.any():
+            return out
+        k = _ORDER[np.argmax(full)]
+        r0, r1, c0, c1 = int(_R0[k]), int(_R1[k]), int(_C0[k]), int(_C1[k])
+        out.append((r0, r1, c0, c1))
+        avail[r0:r1 + 1, c0:c1 + 1] = False
 
 
-def pretokenize(board, min_w=2, min_h=2):
+def pretokenize(board):
     """board: (20, 10) bool, row 0 = bottom. Returns a list of (kind, cells) with cells as flat
-    indices r * 10 + c; kinds 'sky' (one per column with sky), 'block', 'cell'. Every cell of the
-    board is in exactly one token."""
+    indices r * 10 + c; kinds 'sky' (at most one), 'block', 'cell'. Every cell of the board is in
+    exactly one token."""
     g = np.asarray(board, bool)
-    h = np.where(g, np.arange(1, 21)[:, None], 0).max(0)
-    s0 = sky_start(h)
+    top = int(np.where(g.any(1))[0].max()) + 1 if g.any() else 0      # rows 0..top-1 hold the stack
     toks = []
-    for c in range(10):
-        if s0[c] < 20:
-            toks.append(("sky", [r * 10 + c for r in range(s0[c], 20)]))
-    rects, open_runs = [], {}
-    for r in range(20):
-        runs, c = [], 0
-        while c < 10:
-            if g[r, c]:
-                c0 = c
-                while c < 10 and g[r, c]:
-                    c += 1
-                runs.append((c0, c - 1))
-            else:
-                c += 1
-        new = {run: open_runs.get(run, r) for run in runs}
-        rects += [(r0, r - 1, run[0], run[1]) for run, r0 in open_runs.items() if run not in new]
-        open_runs = new
-    rects += [(r0, 19, run[0], run[1]) for run, r0 in open_runs.items()]
+    if top < 20:
+        toks.append(("sky", list(range(top * 10, 200))))
     used = np.zeros(200, bool)
-    for r0, r1, c0, c1 in sorted(rects):
-        if r1 - r0 + 1 >= min_h and c1 - c0 + 1 >= min_w:
-            cells = [r * 10 + c for r in range(r0, r1 + 1) for c in range(c0, c1 + 1)]
-            toks.append(("block", cells))
-            used[cells] = True
-    for r in range(20):
-        for c in range(10):
-            if r < s0[c] and not used[r * 10 + c]:
-                toks.append(("cell", [r * 10 + c]))
+    for r0, r1, c0, c1 in blocks_of(g):
+        cells = [r * 10 + c for r in range(r0, r1 + 1) for c in range(c0, c1 + 1)]
+        toks.append(("block", cells))
+        used[cells] = True
+    toks += [("cell", [k]) for k in range(top * 10) if not used[k]]
     return toks
 
 

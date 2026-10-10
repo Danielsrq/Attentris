@@ -47,7 +47,7 @@ svg.board { width: 100%; max-width: 260px; height: auto; display: block; }
 
 <div class="wrap">
   <header>
-    <h1>ToMe v3 pre-tokens <span>· sky columns + solid blocks, the rest left as cells</span></h1>
+    <h1>ToMe v3 pre-tokens <span>· one sky + solid blocks, the rest left as cells</span></h1>
     <div class="nav">
       <button id="prev">← Prev</button><span class="count" id="count"></span><button id="next" class="primary">Next →</button>
       <select id="jump" aria-label="Jump to position"></select>
@@ -61,18 +61,17 @@ svg.board { width: 100%; max-width: 260px; height: auto; display: block; }
       <h2>Blocks (hover to outline)</h2>
       <div class="blocks" id="blocks"></div>
       <div class="legend">
-        <span><span class="sw" style="background:var(--sky)"></span>sky column (one token each)</span>
+        <span><span class="sw" style="background:var(--sky)"></span>sky (one token: the rows above the tallest column)</span>
         <span><span class="sw" style="background:hsl(200 55% var(--blob-l))"></span>solid block (one token each, own colour)</span>
         <span><span class="sw" style="background:var(--cell-filled)"></span>single filled cell</span>
-        <span><span class="sw" style="background:var(--empty);border:1px solid var(--line)"></span>single empty cell (below the sky: wells, holes, gaps)</span>
+        <span><span class="sw" style="background:var(--empty);border:1px solid var(--line)"></span>single empty cell (below the sky: air above the surface, wells, holes, gaps)</span>
       </div>
     </div>
   </div>
-  <p class="note">No model here: this is only the rule part of a possible ToMe v3. Sky: in each column, the empty cells from the lower of its two
-    neighbours' tops upwards (a wall counts as full), one token per column; so a well or a gap below both neighbours stays as cells.
-    Filled cells are split into horizontal runs per row, and identical runs in consecutive rows stack into a rectangle; rectangles of at least 2 × 2
-    become one block token. Every other cell below the surface (holes, wells, slots, ragged surface cells, small filled pieces) stays a single
-    cell, left for merging. Dashed outline: the teacher's move. The same 72 positions as the ToMe blob viewer.</p>
+  <p class="note">No model here: this is only the rule part of a possible ToMe v3. Sky: one token, the full-width rows above the tallest column (as in
+    AtTenTris). Everything below it that is not in a block stays a single cell, including the air above lower columns, so merging decides
+    how to group it. Blocks: the largest solid filled rectangle (at least 2 × 2) is taken first, then the next largest among the cells
+    left, and so on (ties: lowest row, then leftmost). Dashed outline: the teacher's move. The same 72 positions as the ToMe blob viewer.</p>
 </div>
 
 <script>
