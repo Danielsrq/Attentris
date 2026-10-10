@@ -67,6 +67,7 @@ def extras(t):
         e[7], e[8] = float(x.get("covered", 0)), x.get("lines", 0) / 3.0
     elif k in T.SETUP_KINDS:
         e[0] = x["lines"] / 3.0
+        e[1], e[2] = x.get("slot_r", 0.0) / 20.0, x.get("slot_c", 0.0) / 10.0   # where the slot will be (v5.1)
     elif k.startswith("pit"):
         e[0], e[1], e[2], e[3] = x["width"] / 4.0, x["depth"] / 20.0, x["level"] / 20.0, x["area"] / 40.0
     return e

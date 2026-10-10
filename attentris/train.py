@@ -143,6 +143,7 @@ def main():
     ap.add_argument("--layers", type=int, default=4)
     ap.add_argument("--out", default=None, help="checkpoint (default DATA/model.pt)")
     ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--seed", type=int, default=0, help="weight init and batch order")
     ap.add_argument("--init", default="", help="warm start: load these model weights, fresh optimizer and schedule")
     ap.add_argument("--limit", type=int, default=0, help="use a random N-position subset (smoke tests, learning curves)")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -155,7 +156,7 @@ def main():
     args = ap.parse_args()
     n_p = pcores.pin()
     torch.set_num_threads(args.threads or n_p or 8)
-    torch.manual_seed(0)
+    torch.manual_seed(args.seed)
     out = args.out or os.path.join(args.data, "model.pt")
 
     parts = [load(os.path.join(args.data, f)) for f in args.train.split(",")]
@@ -182,7 +183,7 @@ def main():
         start, log = ck["epoch"] + 1, ck["log"]
     print("params %d, train %d positions, val %d, %d epochs x %d batches" % (
         sum(p.numel() for p in net.parameters()), n, len(va["chosen"]), args.epochs, math.ceil(n / args.batch)), flush=True)
-    rng = np.random.default_rng(0)
+    rng = np.random.default_rng(args.seed)
     for ep in range(start, args.epochs):
         t0 = time.time()
         perm = rng.permutation(n)

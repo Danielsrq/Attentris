@@ -269,11 +269,12 @@ def structure_tokens(structures):
     """`bot structures` output (replay coordinates) -> overlay tokens on the visible board.
     T structures keep their kind; covered piece slots ("slot_x", v5) become fit_x tokens with
     covered = 1, their mask the piece's cells plus its overhang; setups keep their kind, mask
-    = the setup placement's cells plus the slot it creates."""
+    = the setup placement's cells only (v5.1; the slot it creates does not exist yet), and the
+    slot's centre goes into the extras."""
     out = []
     for s in structures:
         m = np.zeros((ROWS, COLS), bool)
-        for x, y in s["cells"] + s.get("hang", []) + s.get("slot", []):
+        for x, y in s["cells"] + s.get("hang", []):
             r = 39 - y
             if 0 <= r < ROWS and 0 <= x < COLS:
                 m[r, x] = True
@@ -283,7 +284,10 @@ def structure_tokens(structures):
         if k.startswith("slot_"):
             out.append(Token("fit_" + k[5:], m, {"orientation": "spin", "contacts": 0, "gain": 0, "covered": 1, "lines": s["lines"]}))
         elif k.startswith("setup_"):
-            out.append(Token(k, m, {"lines": s["lines"], "by": s.get("by")}))
+            sl = [(39 - y, x) for x, y in s.get("slot", [])]
+            sr = float(np.mean([r for r, _ in sl])) if sl else 0.0
+            sc = float(np.mean([c for _, c in sl])) if sl else 0.0
+            out.append(Token(k, m, {"lines": s["lines"], "by": s.get("by"), "slot_r": sr, "slot_c": sc}))
         else:
             out.append(Token(k, m, {"lines": s["lines"], "fill": s["fill"]}))
     return out
