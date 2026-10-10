@@ -174,6 +174,9 @@ def main():
                 return ("covered" if e[7] > 0.5 else "open") + (" · %d line%s" % (lines, "s" * (lines > 1)) if lines else "")
             if k in T.SETUP_KINDS:
                 return "slot for %d lines" % int(round(float(e[0]) * 3))
+            if k == "hang":
+                n_s = int(round(float(e[1]) * 4))
+                return "over %d slot%s · %d lines" % (n_s, "s" * (n_s > 1), int(round(float(e[0]) * 3)))
             return None
         toks = [{"kind": T.KINDS[kd], "note": note(j, kd), "cells": np.nonzero(masks[j])[0].tolist(),
                  "piece": T.PIECES[d["tok_piece"][i, j]] if d["tok_piece"][i, j] >= 0 and d["tok_piece"][i, j] < 7 else None}

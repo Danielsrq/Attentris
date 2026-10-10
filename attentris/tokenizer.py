@@ -38,6 +38,11 @@ import numpy as np
 ROWS, COLS = 20, 10
 K_BOARD = 12      # base board tokens at most (sky + stack tokens)
 P_MAX = 12        # overlay tokens at most (v5: 12, was 8)
+# Tokenizer versions: 4 = pre-v5 checkpoints; 5 = v5 (covered slot masks include their hang,
+# setup masks include their future slot); 51 = v5.1 (slot masks are exactly the tetromino, the
+# overhang is its own "hang" token, setup masks are the setup placement only). Checkpoints
+# record the version they were trained with ("tok_version").
+TOK_VERSION = 51
 MIN_CONTACTS = 2  # side contacts for a piece-shaped recess
 PIECES = "IOTSZJL"
 STRUCTURE_KINDS = ("imperial", "stsd", "cspin", "fractal", "tsd", "vertical")
@@ -59,7 +64,7 @@ PIECE_KINDS = ("current", "hold") + tuple("preview%d" % i for i in range(1, 6))
 # v5 additions, appended so the indices of every earlier kind stay the same (old packed data
 # and checkpoints keep working): covered I slots, and setups (an overhang one piece away).
 SETUP_KINDS = ("setup_s", "setup_z", "setup_t", "setup_l", "setup_j", "setup_i")
-NEW_KINDS = ("fit_i",) + SETUP_KINDS
+NEW_KINDS = ("fit_i",) + SETUP_KINDS + ("hang",)    # "hang": v5.1
 SLOT_KINDS = FIT_KINDS + ("fit_i",)       # fit_X = a slot for piece X, open (recess) or covered (spin)
 KINDS = BASE_KINDS + OVERLAY_KINDS + PIECE_KINDS + NEW_KINDS
 OVERLAY_KINDS = OVERLAY_KINDS + NEW_KINDS
@@ -265,16 +270,19 @@ def fit_tokens(b, h, post_clear=True):
     return out
 
 
-def structure_tokens(structures):
+def structure_tokens(structures, version=TOK_VERSION):
     """`bot structures` output (replay coordinates) -> overlay tokens on the visible board.
     T structures keep their kind; covered piece slots ("slot_x", v5) become fit_x tokens with
-    covered = 1, their mask the piece's cells plus its overhang; setups keep their kind, mask
-    = the setup placement's cells only (v5.1; the slot it creates does not exist yet), and the
-    slot's centre goes into the extras."""
+    covered = 1, their mask exactly the piece's cells; the filled overhang above a covered
+    slot becomes a "hang" token (one per distinct overhang, shared by the slots under it);
+    setups keep their kind, mask = the setup placement only (the slot it creates does not exist
+    yet), the slot's centre in the extras. version=5 reproduces the v5 masks."""
     out = []
+    hangs = {}
     for s in structures:
         m = np.zeros((ROWS, COLS), bool)
-        for x, y in s["cells"] + s.get("hang", []):
+        extra_cells = s.get("hang", []) + s.get("slot", []) if version < 51 else []
+        for x, y in s["cells"] + extra_cells:
             r = 39 - y
             if 0 <= r < ROWS and 0 <= x < COLS:
                 m[r, x] = True
@@ -283,6 +291,10 @@ def structure_tokens(structures):
         k = s["kind"]
         if k.startswith("slot_"):
             out.append(Token("fit_" + k[5:], m, {"orientation": "spin", "contacts": 0, "gain": 0, "covered": 1, "lines": s["lines"]}))
+            hc = frozenset((39 - y, x) for x, y in s.get("hang", []) if 0 <= 39 - y < ROWS)
+            if version >= 51 and hc:
+                n, lines = hangs.get(hc, (0, 0))
+                hangs[hc] = (n + 1, max(lines, s["lines"]))
         elif k.startswith("setup_"):
             sl = [(39 - y, x) for x, y in s.get("slot", [])]
             sr = float(np.mean([r for r, _ in sl])) if sl else 0.0
@@ -290,6 +302,11 @@ def structure_tokens(structures):
             out.append(Token(k, m, {"lines": s["lines"], "by": s.get("by"), "slot_r": sr, "slot_c": sc}))
         else:
             out.append(Token(k, m, {"lines": s["lines"], "fill": s["fill"]}))
+    for hc, (n, lines) in hangs.items():
+        m = np.zeros((ROWS, COLS), bool)
+        for r, c in hc:
+            m[r, c] = True
+        out.append(Token("hang", m, {"slots": n, "lines": lines}))
     return out
 
 
@@ -298,6 +315,8 @@ def overlay_priority(t):
         return (0, STRUCTURE_KINDS.index(t.kind), -t.extras["lines"], -t.extras["fill"])
     if t.kind in SLOT_KINDS and t.extras.get("covered"):
         return (1, -t.extras["lines"], SLOT_KINDS.index(t.kind), 0)
+    if t.kind == "hang":
+        return (1.5, -t.extras["lines"], -t.extras["slots"], 0)
     if t.kind in SETUP_KINDS:
         return (2, -t.extras["lines"], SETUP_KINDS.index(t.kind), 0)
     if t.kind == "rect12":
@@ -307,7 +326,7 @@ def overlay_priority(t):
     return (5, -t.extras["area"], t.extras["width"], 0)
 
 
-def tokenize(b, piece=None, queue=(), hold=None, structures=(), k_board=K_BOARD, p_max=P_MAX, version=5):
+def tokenize(b, piece=None, queue=(), hold=None, structures=(), k_board=K_BOARD, p_max=P_MAX, version=TOK_VERSION):
     """Board (20, 10) bool + pieces -> list of Tokens: base, then overlays, then pieces.
     version=4 reproduces the tokens pre-v5 checkpoints were trained on (T structures only,
     open fits without line clears, at most 8 overlays)."""
@@ -315,7 +334,7 @@ def tokenize(b, piece=None, queue=(), hold=None, structures=(), k_board=K_BOARD,
     if version < 5:
         structures = [s for s in structures if s["kind"] in STRUCTURE_KINDS]
         p_max = min(p_max, 8)
-    overlays = structure_tokens(structures) + fit_tokens(b, h, post_clear=version >= 5) + pit_tokens(b, h)
+    overlays = structure_tokens(structures, version) + fit_tokens(b, h, post_clear=version >= 5) + pit_tokens(b, h)
     overlays.sort(key=overlay_priority)
     toks += overlays[:p_max]
     if piece is not None:

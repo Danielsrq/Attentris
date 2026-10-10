@@ -40,7 +40,7 @@ def readjson(proc):
             return json.loads(line)
 
 
-def arrays(states, teacher, version=5):
+def arrays(states, teacher, version=T.TOK_VERSION):
     """Model inputs for a list of (state, expand-result) pairs; returns the batch dict."""
     import torch
     n = len(states)
@@ -82,7 +82,7 @@ class Player:
         if policy != "logit" and any(k.startswith(policy + ".") for k in missing):
             raise SystemExit("%s has no %s head (a v1 checkpoint?)" % (model_path, policy))
         self.net.eval()
-        self.tok_version = 5 if ck["model"]["kind.weight"].shape[0] > 31 else 4
+        self.tok_version = ck.get("tok_version", 5 if ck["model"]["kind.weight"].shape[0] > 31 else 4)
         self.policy = policy
         self.propose = propose
         self.qscale = M.Q_SCALE

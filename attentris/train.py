@@ -213,7 +213,7 @@ def main():
             (ev["normal"]["q1_mae"] + ev["gate4"]["q1_mae"]) / 2, (ev["normal"]["qs_mae"] + ev["gate4"]["qs_mae"]) / 2,
             time.time() - t0), flush=True)
         torch.save({"model": net.state_dict(), "opt": opt.state_dict(), "sched": sched.state_dict(), "epoch": ep,
-                    "log": log, "args": vars(args)}, out)
+                    "log": log, "args": vars(args), "tok_version": T.TOK_VERSION}, out)
         with open(out + ".log.json", "w") as f:
             json.dump(log, f, indent=1)
 
