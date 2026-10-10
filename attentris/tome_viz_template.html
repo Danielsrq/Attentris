@@ -4,18 +4,18 @@
   --bg: #f4f3ee; --panel: #ffffff; --fg: #1d2127; --muted: #5c626b; --line: #d8d5ca;
   --empty: #ebeae4; --filled: #3a3f47; --grid: #ffffff; --accent: #2c55c9; --accent-fg: #ffffff;
   --heat: 214, 84, 20; --move: #111418; --pick: #2c55c9; --bar: #e0763a; --edge: #1d2127;
-  --blob-l-empty: 86%; --blob-l-filled: 42%;
+  --blob-l-empty: 86%; --blob-l-filled: 42%; --hl: #d61f69;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
   --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
   --heat: 255, 140, 70; --move: #f4f5f7; --pick: #7d9cff; --bar: #ff9a5c; --edge: #e7e9ec;
-  --blob-l-empty: 30%; --blob-l-filled: 62%; color-scheme: dark } }
+  --blob-l-empty: 30%; --blob-l-filled: 62%; --hl: #ff5fa2; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
   --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
   --heat: 255, 140, 70; --move: #f4f5f7; --pick: #7d9cff; --bar: #ff9a5c; --edge: #e7e9ec;
-  --blob-l-empty: 30%; --blob-l-filled: 62%; color-scheme: dark }
+  --blob-l-empty: 30%; --blob-l-filled: 62%; --hl: #ff5fa2; color-scheme: dark }
 body { background: var(--bg); color: var(--fg); font: 14px/1.45 "IBM Plex Sans", system-ui, sans-serif; }
 .wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: grid; gap: 14px; }
 header { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
@@ -44,7 +44,8 @@ table.probs tr { cursor: pointer; }
 table.probs tr:hover { background: var(--panel); }
 table.probs tr.on { background: var(--panel); outline: 1px solid var(--accent); }
 .row { display: grid; grid-template-columns: 130px minmax(0, 1fr) 52px; gap: 10px; align-items: center; padding: 2px 6px; border-radius: 5px; }
-.row:hover { background: var(--panel); outline: 1px solid var(--line); }
+.row:hover, .row.on { background: var(--panel); outline: 1px solid var(--line); }
+.row { cursor: default; }
 .row .k { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px; }
 .row .barw { height: 10px; border-radius: 3px; background: var(--bar); min-width: 1px; }
 .row .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
@@ -81,14 +82,14 @@ table.probs tr.on { background: var(--panel); outline: 1px solid var(--accent); 
     4-adjacent blobs merge (45% of the cell tokens each time), so every blob is a connected region; candidates then cross-attend to the final blobs.
     <b>Layer views</b> colour each blob (darker = filled cells, lighter = empty cells) with its outline. <b>Attention</b> paints the selected move's
     cross-attention through the final blobs, divided by blob size so a big sky blob and a 3-cell gap compare fairly. Dashed outline: the teacher's move;
-    blue: the selected move (the model's top pick by default). Keys: ← →.</p>
+    blue: the selected move (the model's top pick by default). Hover a row of the token list to outline that blob in pink. Keys: ← →.</p>
 </div>
 
 <script>
 const DATA = __DATA__;
 const CS = 20, ROWS = 20, COLS = 10;
 const P = DATA.positions;
-let idx = 0, view = null, sel = 0;
+let idx = 0, view = null, sel = 0, hoverJ = null;   // hoverJ: final token highlighted from the list
 const $ = id => document.getElementById(id);
 const X = c => c * CS, Y = r => (ROWS - 1 - r) * CS;
 const SPIN = ["", " mini", " spin"];
@@ -165,6 +166,15 @@ function render() {
   }
   s += `<path d="${outline(p.chosen.cells, 1.5)}" stroke="var(--move)" stroke-width="2" stroke-dasharray="4 3" fill="none"/>`;
   s += `<path d="${outline(cand.cells, 3.5)}" stroke="var(--pick)" stroke-width="2.5" fill="none"/>`;
+  const hb = hoverJ !== null && p.final[hoverJ] && p.final[hoverJ].cells ? p.final[hoverJ].cells : null;
+  if (hb) {
+    const inside = new Set(hb);
+    for (let k = 0; k < 200; k++) if (!inside.has(k)) {
+      const r = Math.floor(k / COLS), c = k % COLS;
+      s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="var(--bg)" opacity="0.6"/>`;
+    }
+    s += `<path d="${outline(hb, 1)}" stroke="var(--hl)" stroke-width="3.5" fill="none"/>`;
+  }
   $("board").innerHTML = s;
 
   $("probs").innerHTML = p.top.map((c, k) => `<tr class="${k === sel ? "on" : ""}" data-k="${k}"><td>#${k + 1}</td><td>${candLabel(c)}${c.i === p.chosen.i ? " — <b>teacher's move</b>" : ""}</td>` +
@@ -172,9 +182,9 @@ function render() {
     (p.rank > p.top.length ? `<tr class="${sel === null ? "on" : ""}" data-k="t"><td>#${p.rank}</td><td>${candLabel(p.chosen)} — <b>teacher's move</b></td><td class="bar"><span style="width:${(100 * p.chosen.p).toFixed(1)}%"></span></td><td class="p">${(100 * p.chosen.p).toFixed(1)}%</td></tr>` : "");
   $("probs").querySelectorAll("tr").forEach(tr => tr.onclick = () => { sel = tr.dataset.k === "t" ? null : +tr.dataset.k; view = "attn"; render(); });
 
-  const rows = p.final.map((t, j) => ({ t, a: cand.attn[j] })).filter(o => o.t).sort((a, b) => b.a - a.a).slice(0, 10);
+  const rows = p.final.map((t, j) => ({ t, a: cand.attn[j], j })).filter(o => o.t).sort((a, b) => b.a - a.a).slice(0, 10);
   const mx = Math.max(...rows.map(o => o.a), 1e-9);
-  $("rows").innerHTML = rows.map(({ t, a }) => {
+  $("rows").innerHTML = rows.map(({ t, a, j }) => {
     let name;
     if (t.piece) name = `${t.kind} ${t.p || "–"}`;
     else {
@@ -182,11 +192,16 @@ function render() {
       const nf = t.cells.filter(k => board[k]).length;
       name = `blob ${t.cells.length} cell${t.cells.length > 1 ? "s" : ""} · r${Math.min(...rs) + 1}–${Math.max(...rs) + 1} c${Math.min(...cs)}–${Math.max(...cs)} · ${nf ? (nf === t.cells.length ? "filled" : nf + " filled") : "empty"}`;
     }
-    return `<div class="row"><span class="k">${name}</span><span class="barw" style="width:${(100 * a / mx).toFixed(1)}%"></span><span class="v">${(100 * a).toFixed(1)}%</span></div>`;
+    return `<div class="row${j === hoverJ ? " on" : ""}" data-j="${j}"><span class="k">${name}</span><span class="barw" style="width:${(100 * a / mx).toFixed(1)}%"></span><span class="v">${(100 * a).toFixed(1)}%</span></div>`;
   }).join("");
 }
 
-function go(dlt) { idx = (idx + dlt + P.length) % P.length; sel = 0; render(); }
+function go(dlt) { idx = (idx + dlt + P.length) % P.length; sel = 0; hoverJ = null; render(); }
+document.getElementById("rows").addEventListener("mouseover", e => {
+  const el = e.target.closest(".row"); const j = el ? +el.dataset.j : null;
+  if (j !== hoverJ) { hoverJ = j; render(); }
+});
+document.getElementById("rows").addEventListener("mouseleave", () => { if (hoverJ !== null) { hoverJ = null; render(); } });
 $("prev").onclick = () => go(-1);
 $("next").onclick = () => go(1);
 $("jump").innerHTML = P.map((p, i) => `<option value="${i}">${i + 1}. ${p.why} · ${p.teacher} · seed ${p.seed} #${p.n}</option>`).join("");
