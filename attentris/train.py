@@ -22,6 +22,7 @@ import torch.nn.functional as F
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import model as M
+import model_tome as MT
 import pcores
 import tokenizer as T
 
@@ -141,7 +142,9 @@ def main():
     ap.add_argument("--threads", type=int, default=0, help="0 = one per P-core logical processor")
     ap.add_argument("--d", type=int, default=64)
     ap.add_argument("--layers", type=int, default=4)
-    ap.add_argument("--out", default=None, help="checkpoint (default DATA/model.pt)")
+    ap.add_argument("--out", default=None, help="checkpoint (default DATA/model.pt; DATA/model_tome.pt for --arch tome)")
+    ap.add_argument("--arch", default="attentris", choices=("attentris", "tome"), help="tome = AtTenTris-ToMe (model_tome.py)")
+    ap.add_argument("--merge", default="0,0.45,0.45,0.45", help="tome: fraction of cell tokens merged after attention, per layer")
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--seed", type=int, default=0, help="weight init and batch order")
     ap.add_argument("--init", default="", help="warm start: load these model weights, fresh optimizer and schedule")
@@ -157,7 +160,11 @@ def main():
     n_p = pcores.pin()
     torch.set_num_threads(args.threads or n_p or 8)
     torch.manual_seed(args.seed)
-    out = args.out or os.path.join(args.data, "model.pt")
+    out = args.out or os.path.join(args.data, "model_tome.pt" if args.arch == "tome" else "model.pt")
+    if os.path.exists(out) and not args.resume:
+        prev = torch.load(out, map_location="cpu", weights_only=False).get("args", {}).get("arch", "attentris")
+        if prev != args.arch:
+            raise SystemExit("%s holds a %s checkpoint; refusing to overwrite it with %s (pick another --out)" % (out, prev, args.arch))
 
     parts = [load(os.path.join(args.data, f)) for f in args.train.split(",")]
     tr = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
@@ -166,7 +173,10 @@ def main():
         keep = np.sort(np.random.default_rng(123).choice(len(tr["chosen"]), size=min(args.limit, len(tr["chosen"])), replace=False))
         tr = {k: v[keep] for k, v in tr.items()}   # a random subset (files are in teacher order)
     n = len(tr["chosen"])
-    net = M.AtTenTris(d=args.d, layers=args.layers).to(args.device)
+    if args.arch == "tome":
+        net = MT.AtTenTrisToMe(d=args.d, layers=args.layers, merge=[float(f) for f in args.merge.split(",")]).to(args.device)
+    else:
+        net = M.AtTenTris(d=args.d, layers=args.layers).to(args.device)
     print("device", args.device, torch.cuda.get_device_name(0) if args.device == "cuda" else "", flush=True)
     opt = torch.optim.AdamW(net.parameters(), lr=args.lr, weight_decay=0.01)
     steps = args.epochs * math.ceil(n / args.batch)
