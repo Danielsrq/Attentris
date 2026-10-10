@@ -1,0 +1,31 @@
+train: 89920 positions (normal 44920, gate4 45000), 180 games, 233s, 0 candidates over NC=96 dropped -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/data/v5\train.npz (45 MB)
+val: 10000 positions (normal 5000, gate4 5000), 20 games, 26s, 0 candidates over NC=96 dropped -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/data/v5\val.npz (5 MB)
+dagger1: 24074 positions (normal 7647, gate4 16427), 0 lost positions left out, 0 candidates over NC dropped -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/data/v5\dagger1.npz
+train1m: 972726 positions (normal 472726, gate4 500000), 0 lost positions left out, 0 candidates over NC dropped -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/data/v5\train1m.npz
+packed
+epoch 1: train loss 3.012 | val normal top1 0.526 top3 0.769 | val gate4 top1 0.521 top3 0.759 | argmax Qs top1 0.377 / 0.434, Q1 top1 0.134 / 0.125 | MAE Q1 23.82 Qs 6.98 | 171s
+epoch 2: train loss 2.506 | val normal top1 0.561 top3 0.811 | val gate4 top1 0.557 top3 0.800 | argmax Qs top1 0.479 / 0.482, Q1 top1 0.164 / 0.158 | MAE Q1 21.04 Qs 6.53 | 165s
+epoch 3: train loss 2.385 | val normal top1 0.583 top3 0.828 | val gate4 top1 0.575 top3 0.812 | argmax Qs top1 0.474 / 0.510, Q1 top1 0.218 / 0.208 | MAE Q1 19.94 Qs 6.35 | 165s
+epoch 4: train loss 2.314 | val normal top1 0.601 top3 0.839 | val gate4 top1 0.588 top3 0.828 | argmax Qs top1 0.513 / 0.537, Q1 top1 0.254 / 0.235 | MAE Q1 18.56 Qs 6.22 | 166s
+epoch 5: train loss 2.264 | val normal top1 0.607 top3 0.843 | val gate4 top1 0.598 top3 0.831 | argmax Qs top1 0.530 / 0.543, Q1 top1 0.267 / 0.258 | MAE Q1 18.06 Qs 6.11 | 165s
+epoch 6: train loss 2.227 | val normal top1 0.619 top3 0.849 | val gate4 top1 0.605 top3 0.837 | argmax Qs top1 0.540 / 0.550, Q1 top1 0.267 / 0.258 | MAE Q1 17.30 Qs 6.07 | 167s
+epoch 7: train loss 2.201 | val normal top1 0.619 top3 0.849 | val gate4 top1 0.611 top3 0.839 | argmax Qs top1 0.542 / 0.555, Q1 top1 0.265 / 0.261 | MAE Q1 17.46 Qs 6.00 | 166s
+epoch 8: train loss 2.187 | val normal top1 0.623 top3 0.851 | val gate4 top1 0.611 top3 0.838 | argmax Qs top1 0.545 / 0.558, Q1 top1 0.266 / 0.263 | MAE Q1 17.39 Qs 6.01 | 166s
+== garbage: none
+AtTenTris logit depth 1 style normal no garbage: APP 0.557 (APPfull 0.536), died 5/64, pieces 481 avg, TSD 1213, TST 12, quads 754, max height 23, illegal 0, 15.6 ms/move (p90 23.6) + search 16.4 ms, 38s
+AtTenTris logit depth 2 beam 4 style normal no garbage: APP 0.670 (APPfull 0.670), died 0/64, pieces 500 avg, TSD 1475, TST 17, quads 835, max height 21, illegal 0, 65.6 ms/move (p90 79.4) + search 66.4 ms, 140s
+AtTenTris logit depth 3 beam 8 style normal no garbage: APP 0.799 (APPfull 0.799), died 0/64, pieces 500 avg, TSD 1737, TST 28, quads 902, max height 19, illegal 0, 175.4 ms/move (p90 203.2) + search 175.8 ms, 357s
+AtTenTris logit shortlist 10 + V search depth 1 style normal no garbage: APP 1.213 (APPfull 1.213), died 0/64, pieces 500 avg, TSD 2703, TST 1, quads 864, max height 15, illegal 0, 12.0 ms/move (p90 14.0) + search 61.6 ms, 151s
+== garbage: 10,3-4,cheese0.2,0.2
+AtTenTris logit depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.677 (APPfull 0.286), died 61/64, pieces 211 avg, TSD 412, TST 2, quads 921, max height 23, illegal 0, 12.1 ms/move (p90 14.5) + search 12.5 ms, 16s
+AtTenTris logit depth 2 beam 4 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.751 (APPfull 0.362), died 56/64, pieces 241 avg, TSD 545, TST 3, quads 1112, max height 23, illegal 0, 49.7 ms/move (p90 59.5) + search 50.1 ms, 59s
+AtTenTris logit depth 3 beam 8 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.801 (APPfull 0.457), died 53/64, pieces 285 avg, TSD 746, TST 2, quads 1370, max height 22, illegal 0, 156.3 ms/move (p90 186.7) + search 156.7 ms, 200s
+AtTenTris logit shortlist 10 + V search depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 1.115 (APPfull 0.999), died 17/64, pieces 448 avg, TSD 1718, TST 7, quads 2560, max height 21, illegal 0, 10.7 ms/move (p90 12.7) + search 58.4 ms, 137s
+== latency, one game at a time (--jobs 1, 8 games)
+model_v5.pt: AtTenTris logit depth 1 style normal no garbage: APP 0.476 (APPfull 0.476), died 0/8, pieces 500 avg, TSD 141, TST 1, quads 76, max height 20, illegal 0, 6.0 ms/move (p90 6.9) + search 6.2 ms, 26s
+model_v5.pt: AtTenTris logit depth 2 beam 4 style normal no garbage: APP 0.681 (APPfull 0.681), died 0/8, pieces 500 avg, TSD 195, TST 3, quads 90, max height 18, illegal 0, 25.9 ms/move (p90 29.8) + search 26.1 ms, 106s
+model_v5.pt: AtTenTris logit depth 3 beam 8 style normal no garbage: APP 0.825 (APPfull 0.825), died 0/8, pieces 500 avg, TSD 223, TST 3, quads 120, max height 15, illegal 0, 82.6 ms/move (p90 95.8) + search 82.9 ms, 333s
+model_v4b.pt: AtTenTris logit depth 1 style normal no garbage: APP 0.578 (APPfull 0.578), died 0/8, pieces 500 avg, TSD 170, TST 0, quads 94, max height 19, illegal 0, 4.4 ms/move (p90 4.9) + search 4.6 ms, 20s
+model_v4b.pt: AtTenTris logit depth 2 beam 4 style normal no garbage: APP 0.697 (APPfull 0.697), died 0/8, pieces 500 avg, TSD 200, TST 1, quads 92, max height 19, illegal 0, 17.5 ms/move (p90 18.8) + search 17.7 ms, 72s
+model_v4b.pt: AtTenTris logit depth 3 beam 8 style normal no garbage: APP 0.825 (APPfull 0.825), died 0/8, pieces 500 avg, TSD 224, TST 1, quads 101, max height 20, illegal 0, 51.5 ms/move (p90 54.2) + search 51.7 ms, 209s
+v5 done
