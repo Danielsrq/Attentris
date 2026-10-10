@@ -1,0 +1,146 @@
+<title>AtTenTris-ToMe Pre-tokens</title>
+<style>
+:root {
+  --bg: #f4f3ee; --panel: #ffffff; --fg: #1d2127; --muted: #5c626b; --line: #d8d5ca;
+  --empty: #ebeae4; --filled: #3a3f47; --grid: #ffffff; --accent: #2c55c9; --accent-fg: #ffffff;
+  --move: #111418; --edge: #1d2127; --sky: #cfe0f3; --cell-filled: #8b9099;
+  --blob-l: 46%;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
+  --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
+  --move: #f4f5f7; --edge: #e7e9ec; --sky: #23344a; --cell-filled: #6c727c; --blob-l: 58%; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
+  --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
+  --move: #f4f5f7; --edge: #e7e9ec; --sky: #23344a; --cell-filled: #6c727c; --blob-l: 58%; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 14px/1.45 "IBM Plex Sans", system-ui, sans-serif; }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: grid; gap: 14px; }
+header { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
+h1 { font-size: 18px; margin: 0; text-wrap: balance; } h1 span { color: var(--muted); font-weight: 400; }
+.nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button, select { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+select { max-width: min(420px, 100%); }
+.count { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 64px; text-align: center; }
+.meta .label { font-weight: 600; font-size: 15px; } .meta .sub { color: var(--muted); font-variant-numeric: tabular-nums; }
+.main { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 640px) { .main { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; display: grid; gap: 6px; justify-items: center; min-width: 0; }
+figcaption { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+svg.board { width: 100%; max-width: 260px; height: auto; display: block; }
+.list { display: grid; gap: 10px; min-width: 0; }
+.list h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0; font-weight: 600; }
+.tiles { display: flex; flex-wrap: wrap; gap: 10px; }
+.tile { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 8px 12px; min-width: 110px; }
+.tile b { font-size: 20px; font-variant-numeric: tabular-nums; display: block; }
+.tile span { color: var(--muted); font-size: 12px; }
+.blocks { display: grid; gap: 3px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px; }
+.blocks div { display: flex; gap: 8px; align-items: center; padding: 2px 6px; border-radius: 5px; }
+.blocks div:hover { background: var(--panel); outline: 1px solid var(--line); }
+.sw { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+.note { color: var(--muted); font-size: 12.5px; max-width: 78ch; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+
+<div class="wrap">
+  <header>
+    <h1>ToMe v3 pre-tokens <span>· sky columns + solid blocks, the rest left as cells</span></h1>
+    <div class="nav">
+      <button id="prev">← Prev</button><span class="count" id="count"></span><button id="next" class="primary">Next →</button>
+      <select id="jump" aria-label="Jump to position"></select>
+    </div>
+  </header>
+  <div class="meta"><div class="label" id="label"></div><div class="sub" id="sub"></div></div>
+  <div class="main">
+    <figure><svg class="board" id="board" viewBox="-20 -6 226 418"></svg><figcaption>Starting tokens (before any merging)</figcaption></figure>
+    <div class="list">
+      <div class="tiles" id="tiles"></div>
+      <h2>Blocks (hover to outline)</h2>
+      <div class="blocks" id="blocks"></div>
+      <div class="legend">
+        <span><span class="sw" style="background:var(--sky)"></span>sky column (one token each)</span>
+        <span><span class="sw" style="background:hsl(200 55% var(--blob-l))"></span>solid block (one token each, own colour)</span>
+        <span><span class="sw" style="background:var(--cell-filled)"></span>single filled cell</span>
+        <span><span class="sw" style="background:var(--empty);border:1px solid var(--line)"></span>single empty cell (below the sky: wells, holes, gaps)</span>
+      </div>
+    </div>
+  </div>
+  <p class="note">No model here: this is only the rule part of a possible ToMe v3. Sky: in each column, the empty cells from the lower of its two
+    neighbours' tops upwards (a wall counts as full), one token per column; so a well or a gap below both neighbours stays as cells.
+    Filled cells are split into horizontal runs per row, and identical runs in consecutive rows stack into a rectangle; rectangles of at least 2 × 2
+    become one block token. Every other cell below the surface (holes, wells, slots, ragged surface cells, small filled pieces) stays a single
+    cell, left for merging. Dashed outline: the teacher's move. The same 72 positions as the ToMe blob viewer.</p>
+</div>
+
+<script>
+const DATA = __DATA__;
+const CS = 20, ROWS = 20, COLS = 10, P = DATA.positions;
+let idx = 0, focus = null;
+const $ = id => document.getElementById(id);
+const X = c => c * CS, Y = r => (ROWS - 1 - r) * CS;
+function outline(cells, inset) {
+  const set = new Set(cells); let d = "";
+  for (const k of cells) {
+    const r = Math.floor(k / COLS), c = k % COLS;
+    const x0 = X(c) + inset, x1 = X(c) + CS - inset, y0 = Y(r) + inset, y1 = Y(r) + CS - inset;
+    if (r + 1 >= ROWS || !set.has(k + COLS)) d += `M${x0} ${y0}H${x1}`;
+    if (r - 1 < 0 || !set.has(k - COLS)) d += `M${x0} ${y1}H${x1}`;
+    if (c - 1 < 0 || !set.has(k - 1)) d += `M${x0} ${y0}V${y1}`;
+    if (c + 1 >= COLS || !set.has(k + 1)) d += `M${x1} ${y0}V${y1}`;
+  }
+  return d;
+}
+function axis() {
+  let s = "";
+  for (const r of [0, 4, 9, 14, 19]) s += `<text x="-6" y="${Y(r) + 14}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${r + 1}</text>`;
+  for (let c = 0; c < COLS; c++) s += `<text x="${X(c) + 10}" y="${ROWS * CS + 11}" text-anchor="middle" font-size="9" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${c}</text>`;
+  return s;
+}
+const hue = n => (n * 137.508 + 200) % 360;
+function render() {
+  const p = P[idx], b = p.board;
+  $("count").textContent = `${idx + 1} / ${P.length}`; $("jump").value = idx;
+  $("label").textContent = `${p.why} · ${p.teacher} teacher · seed ${p.seed}, placement ${p.n}`;
+  const sky = p.tokens.filter(t => t.kind === "sky"), blocks = p.tokens.filter(t => t.kind === "block"), cells = p.tokens.filter(t => t.kind === "cell");
+  const filledCells = cells.filter(t => b[t.cells[0]]).length;
+  $("sub").textContent = `${p.tokens.length} tokens = ${sky.length} sky + ${blocks.length} block${blocks.length === 1 ? "" : "s"} + ${cells.length} single cells (${filledCells} filled, ${cells.length - filledCells} empty), + 7 piece tokens`;
+  $("tiles").innerHTML = [[p.tokens.length, "tokens to start"], [blocks.reduce((a, t) => a + t.cells.length, 0), "cells inside blocks"], [cells.length, "single cells left to merge"]]
+    .map(([v, l]) => `<div class="tile"><b>${v}</b><span>${l}</span></div>`).join("");
+  let s = axis();
+  const kindOf = new Array(200).fill(null), blockOf = new Array(200).fill(-1);
+  p.tokens.forEach(t => t.cells.forEach(k => kindOf[k] = t.kind));
+  blocks.forEach((t, n) => t.cells.forEach(k => blockOf[k] = n));
+  for (let k = 0; k < 200; k++) {
+    const r = Math.floor(k / COLS), c = k % COLS;
+    let fill = "var(--empty)";
+    if (kindOf[k] === "sky") fill = "var(--sky)";
+    else if (kindOf[k] === "block") fill = `hsl(${hue(blockOf[k]).toFixed(0)} 55% var(--blob-l))`;
+    else if (b[k]) fill = "var(--cell-filled)";
+    const dim = focus !== null && blockOf[k] !== focus ? ' opacity="0.35"' : "";
+    s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="${fill}" stroke="var(--grid)" stroke-width="1"${dim}/>`;
+    if (kindOf[k] === "cell") s += `<rect x="${X(c) + 7}" y="${Y(r) + 7}" width="6" height="6" rx="1.5" fill="none" stroke="var(--muted)" stroke-width="1"${dim}/>`;
+  }
+  sky.forEach(t => { s += `<path d="${outline(t.cells, 0.5)}" stroke="var(--edge)" stroke-opacity="0.25" stroke-width="1" fill="none"/>`; });
+  blocks.forEach((t, n) => { s += `<path d="${outline(t.cells, 0.75)}" stroke="var(--edge)" stroke-width="${focus === n ? 3 : 1.8}" fill="none"/>`; });
+  s += `<path d="${outline(p.chosen, 1.5)}" stroke="var(--move)" stroke-width="2" stroke-dasharray="4 3" fill="none"/>`;
+  $("board").innerHTML = s;
+  $("blocks").innerHTML = blocks.length ? blocks.map((t, n) => {
+    const rs = t.cells.map(k => Math.floor(k / COLS)), cs = t.cells.map(k => k % COLS);
+    const w = Math.max(...cs) - Math.min(...cs) + 1, h = Math.max(...rs) - Math.min(...rs) + 1;
+    return `<div data-n="${n}"><span class="sw" style="background:hsl(${hue(n).toFixed(0)} 55% var(--blob-l))"></span>${w} × ${h} · cols ${Math.min(...cs)}–${Math.max(...cs)}, rows ${Math.min(...rs) + 1}–${Math.max(...rs) + 1}</div>`;
+  }).join("") : `<div>none (no solid 2 × 2 region)</div>`;
+  $("blocks").querySelectorAll("div[data-n]").forEach(el => {
+    el.onmouseenter = () => { focus = +el.dataset.n; render(); };
+    el.onmouseleave = () => { focus = null; render(); };
+  });
+}
+function go(dl) { idx = (idx + dl + P.length) % P.length; focus = null; render(); }
+$("prev").onclick = () => go(-1); $("next").onclick = () => go(1);
+$("jump").innerHTML = P.map((p, i) => `<option value="${i}">${i + 1}. ${p.why} · ${p.tokens.length} tokens</option>`).join("");
+$("jump").onchange = e => { idx = +e.target.value; focus = null; render(); };
+document.addEventListener("keydown", e => { if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); });
+render();
+</script>
