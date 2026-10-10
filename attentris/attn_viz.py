@@ -127,8 +127,9 @@ def main():
         old = json.JSONDecoder().raw_decode(old[old.index('{"summary"'):])[0]["positions"]
         at = {(int(d["teacher"][i]), int(d["seed"][i]), int(d["n"][i])): i for i in range(n)}
         show = [int(at[(["normal", "gate4"].index(q["teacher"]), q["seed"], q["n"])]) for q in old]
+        old_why = {s_: q["why"] for s_, q in zip(show, old)}
     # v5 tokens: the teacher's move fills a covered slot / plays a setup; positions with a T setup
-    why_new = {}
+    why_new = dict(old_why) if args.keep else {}
     if ck["model"]["kind.weight"].shape[0] > 31:
         slot_ids = {T.KINDS.index(k) for k in T.SLOT_KINDS}
         setup_ids = {T.KINDS.index(k) for k in T.SETUP_KINDS}
