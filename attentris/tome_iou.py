@@ -55,7 +55,7 @@ def main():
     a = ck["args"]
     net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in a["merge"].split(",")], sky=a.get("tome_sky", False),
                           pretok=a.get("tome_pretok", False), flat_bias=a.get("tome_flat", False),
-                          streams=a.get("tome_streams", 1))
+                          streams=a.get("tome_streams", 1), budget=MT.budget_of(a.get("tome_budget", "")))
     net.load_state_dict(ck["model"])
     net.to(args.device).eval()
     d = TR.load(args.data)

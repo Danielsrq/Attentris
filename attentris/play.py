@@ -84,7 +84,8 @@ class Player:
             self.net = MT.AtTenTrisToMe(d=ck["args"]["d"], layers=ck["args"]["layers"],
                                         merge=[float(f) for f in (merge or ck["args"]["merge"]).split(",")], sky=ck["args"].get("tome_sky", False),
                                         pretok=ck["args"].get("tome_pretok", False), flat_bias=ck["args"].get("tome_flat", False),
-                                        streams=ck["args"].get("tome_streams", 1), n_teachers=ck["model"]["style.weight"].shape[0])
+                                        streams=ck["args"].get("tome_streams", 1), n_teachers=ck["model"]["style.weight"].shape[0],
+                                        budget=MT.budget_of(ck["args"].get("tome_budget", "")))
             self.n_styles = ck["model"]["style.weight"].shape[0]
         else:
             self.net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0],

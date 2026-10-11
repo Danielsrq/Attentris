@@ -118,10 +118,24 @@ def adjacency(mask):
     return adj & ~torch.eye(N, dtype=torch.bool, device=mask.device)
 
 
+def budget_of(s):
+    """--tome-budget BASE,AT,SLOPE,FIRST (a checkpoint's args) -> the `budget` dict (None if empty)."""
+    if not s:
+        return None
+    base, at, slope, first = (float(v) for v in s.split(","))
+    return {"base": base, "at": at, "slope": slope, "first": first}
+
+
 class AtTenTrisToMe(nn.Module):
     def __init__(self, d=64, heads=4, layers=4, merge=(0.0, 0.45, 0.45, 0.45), n_teachers=2, sky=False,
-                 pretok=False, flat_bias=False, streams=1):
+                 pretok=False, flat_bias=False, streams=1, budget=None):
         super().__init__()
+        # budget (dict or None): a per-position merge plan instead of fixed fractions. The layers with
+        # merge > 0 merge; at the first, each position's board-token count n0 sets a budget
+        # T = base + max(0, (n0 - at) * slope) blobs per stream; the first step merges `first` of the
+        # tokens, the rest reach T in equal-ratio steps at the last merging layer; no merging if
+        # n0 <= T. E.g. {"base": 20, "at": 36, "slope": 0.25, "first": 0.10}.
+        self.budget = budget
         assert streams <= heads
         self.streams, self.heads = streams, heads
         if streams > 1:
@@ -157,8 +171,18 @@ class AtTenTrisToMe(nn.Module):
         self.qs = nn.Linear(d, 1)
 
     # ---------------------------------------------------------------- merging
+    def budget_plan(self, n0, n_steps):
+        """Planned board-token counts after each merging step, per position and stream (n0: (B, S))."""
+        bp = self.budget
+        T = torch.minimum(bp["base"] + ((n0 - bp["at"]) * bp["slope"]).clamp(min=0), n0)
+        n1 = torch.maximum(n0 - (bp.get("first", 0.0) * n0).floor(), T)
+        out = [n1]
+        for j in range(1, n_steps):
+            out.append(torch.maximum(n1 * (T / n1.clamp(min=1)) ** (j / max(1, n_steps - 1)), T))
+        return torch.stack(out, -1).round()
+
     @staticmethod
-    def _merge(x, size, mask, box, alive, is_cell, keys, frac, first, adj, par0, stream=None, n_streams=1, heads=4):
+    def _merge(x, size, mask, box, alive, is_cell, keys, frac, first, adj, par0, stream=None, n_streams=1, heads=4, r_plan=None):
         B, N, d = x.shape
         dev = x.device
         if stream is None:
@@ -188,7 +212,7 @@ class AtTenTrisToMe(nn.Module):
         sel = torch.zeros_like(ok)
         for st in range(n_streams):                              # each stream merges its own share
             ins = stream == st
-            r = (frac * (cand & ins).sum(1).float()).floor().long()
+            r = (frac * (cand & ins).sum(1).float()).floor().long() if r_plan is None else r_plan[:, st]
             sc = score.masked_fill(~(ok & ins), float("-inf"))
             order = sc.argsort(-1, descending=True)
             rank = torch.empty_like(order).scatter_(1, order, torch.arange(N, device=dev).expand(B, N))
@@ -297,6 +321,7 @@ class AtTenTrisToMe(nn.Module):
         merged_yet = False
         stream = torch.zeros(B, x.shape[1], dtype=torch.long, device=dev)
         attn, trace = [], []
+        plan, step, n_steps = None, 0, sum(1 for f in self.merge if f > 0)
         for blk, frac in zip(self.blocks, self.merge):
             adj = adjacency(mask)
             if self.flat_bias:
@@ -320,8 +345,16 @@ class AtTenTrisToMe(nn.Module):
                     stream = torch.cat([torch.full_like(stream, st) for st in range(K)], 1)
                     alive, x, size, mask, box, is_cell, par0, stream, keys = self._compact(alive, x, size, mask, box, is_cell, par0, stream, keys)
                     adj = adjacency(mask)
+                r_plan = None
+                if self.budget is not None:
+                    cand = alive & is_cell
+                    cnt = torch.stack([(cand & (stream == s_)).sum(1) for s_ in range(self.streams)], 1).float()   # (B, S)
+                    if plan is None:
+                        plan = self.budget_plan(cnt, n_steps)                      # (B, S, n_steps) planned counts
+                    r_plan = (cnt - plan[..., step]).clamp(min=0).floor().long()
                 x, size, mask, box, alive, is_cell, par0, stream = self._merge(
-                    x, size, mask, box, alive, is_cell, keys, frac, not merged_yet, adj, par0, stream, self.streams, self.heads)
+                    x, size, mask, box, alive, is_cell, keys, frac, not merged_yet, adj, par0, stream, self.streams, self.heads, r_plan)
+                step += 1
                 merged_yet = True
             x = x + blk.ff(blk.n2(x))
             if return_attn:

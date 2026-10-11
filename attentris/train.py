@@ -155,6 +155,8 @@ def main():
     ap.add_argument("--tome-sky", action="store_true", help="tome: the sky starts as one token per column (model_tome sky=True)")
     ap.add_argument("--tome-pretok", action="store_true", help="tome v3: one sky + solid blocks + single cells (needs <file>.pretok.npy, pretok.py)")
     ap.add_argument("--tome-flat", action="store_true", help="tome: FLAT-2D pair-feature bias in the self-attention")
+    ap.add_argument("--tome-budget", default="", help="tome: per-position merge plan BASE,AT,SLOPE,FIRST (e.g. 20,36,0.25,0.10): "
+                    "budget BASE + (n0 - AT) * SLOPE blobs per stream, first step FIRST, then equal ratios; --merge > 0 marks the merging layers")
     ap.add_argument("--tome-streams", type=int, default=1, help="tome v4: merging streams (partitions), stream s merges by head s's keys")
     ap.add_argument("--micro", type=int, default=1, help="split each batch into this many micro-batches (same gradient, less GPU memory)")
     ap.add_argument("--bucket", type=int, default=0, help="group batches by token count within chunks of this many batches (0 = off)")
@@ -236,7 +238,7 @@ def main():
     if args.arch == "tome":
         net = MT.AtTenTrisToMe(d=args.d, layers=args.layers, merge=[float(f) for f in args.merge.split(",")],
                                sky=args.tome_sky, pretok=args.tome_pretok, flat_bias=args.tome_flat,
-                               streams=args.tome_streams, n_teachers=args.n_teachers).to(args.device)
+                               streams=args.tome_streams, n_teachers=args.n_teachers, budget=MT.budget_of(args.tome_budget)).to(args.device)
     else:
         net = M.AtTenTris(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops,
                           n_teachers=args.n_teachers).to(args.device)
