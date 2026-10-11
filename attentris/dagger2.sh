@@ -5,7 +5,7 @@
 #      dataset seeds), 100 games each of: greedy, sampled (temperature 0.5: more varied games; 1.0 was too random, 0.15 APP), and
 #      with garbage (10,3-4,cheese0.2,0.2: the high-stack boards where the models die); every state
 #      dumped with the student's move entropy
-#   2. select (dagger_select.py): states near deaths, danger boards, teacher-value drops, unsure
+#   2. select (dagger_select.py): states near deaths, danger boards, holes rising, unsure
 #      student moves, + 10% random; duplicates dropped
 #   3. label: the normal teacher's search with a WIDER beam (128 instead of 64), every legal move
 #      scored (--all-roots 1)
@@ -32,7 +32,8 @@ for m in v51 tome_v4; do
         echo "$tag: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --games 100 --depth 1 $extra --out "$D/$tag.games" --dump "$D/$tag.jsonl" | grep "^AtTenTris")"
     done
 done
-[ -f "$D/selected.jsonl" ] || "$PYC" "$DIR/dagger_select.py" --games "$D/*.games" --states "$D/*.jsonl" --out "$D/selected.jsonl"
+WD=$(cygpath -m "$D")   # Windows-style path: Windows Python cannot glob /c/... paths
+[ -f "$D/selected.jsonl" ] || "$PYC" "$DIR/dagger_select.py" --games "$WD/*.games" --states "$WD/*.jsonl" --out "$WD/selected.jsonl"
 if [ ! -f "$OUTD/selected_labelled.jsonl" ]; then
     "$BOT" label --mode normal --weights "$DIR/../bot/weights/normal.txt" --label normal --threads 16 --all-roots 1 --beam 128 \
         --out "$OUTD/selected_labelled.jsonl.part" < "$D/selected.jsonl" && mv "$OUTD/selected_labelled.jsonl.part" "$OUTD/selected_labelled.jsonl"

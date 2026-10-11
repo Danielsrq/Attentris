@@ -43,7 +43,7 @@ def main():
     ap.add_argument("--holes", type=int, default=10)
     ap.add_argument("--holes-up", type=int, default=4, help="holes added over the window")
     ap.add_argument("--window", type=int, default=10)
-    ap.add_argument("--entropy", type=float, default=2.0)
+    ap.add_argument("--entropy", type=float, default=3.0, help="~ the top 10%% of student move entropies (dagger2: p90 = 3.02)")
     ap.add_argument("--random", type=float, default=0.10)
     args = ap.parse_args()
     rng = random.Random(0)
