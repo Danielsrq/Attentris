@@ -22,3 +22,5 @@ model_v51_dagger_ft: AtTenTris logit depth 2 beam 4 style normal no garbage: APP
    d1 + garbage x64: pieces 186 | 247 | 276 (died 62 | 57 | 55)
    depth 2 beam 4:   v5.1 0.726 | dagger 0.742 | dagger-ft 0.745 (0 died each)
    val2 top1:        0.372 | 0.406 | 0.404)
+model_v51_dagger_ft: 
+dagger2 train done Sun Oct 11 17:07:53 MPST 2026
