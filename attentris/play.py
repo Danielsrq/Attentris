@@ -72,7 +72,7 @@ def arrays(states, teacher, version=T.TOK_VERSION):
 
 
 class Player:
-    def __init__(self, model_path, depth, beam, teacher, mode, policy="logit", propose=0):
+    def __init__(self, model_path, depth, beam, teacher, mode, policy="logit", propose=0, temp=0.0, seed=0):
         import torch
         import model as M
         torch.set_num_threads(1)
@@ -94,6 +94,7 @@ class Player:
         self.tok_version = 4 if tome else ck.get("tok_version", 5 if ck["model"]["kind.weight"].shape[0] > 31 else 4)
         self.policy = policy
         self.propose = propose
+        self.temp, self.rng, self.last_entropy = temp, np.random.default_rng(seed), None
         self.qscale = M.Q_SCALE
         self.torch = torch
         self.depth, self.beam, self.teacher = depth, beam, teacher
@@ -140,8 +141,15 @@ class Player:
         n = len(root["cands"])
         if self.depth <= 1:
             logp, q = self.scores([(st, root)])
+            lp = logp[0][:n]
+            pr = np.exp(lp - lp.max())
+            pr /= pr.sum()
+            self.last_entropy = float(-(pr * np.log(np.clip(pr, 1e-12, None))).sum())   # for DAgger selection
             if q is None:
-                return root["cands"][int(np.argmax(logp[0][:n]))]
+                if self.temp > 0:                     # sample (DAgger collection: more varied student games)
+                    t = np.exp((lp - lp.max()) / self.temp)
+                    return root["cands"][int(self.rng.choice(n, p=t / t.sum()))]
+                return root["cands"][int(np.argmax(lp))]
             ids = self.allowed(logp[0], n)
             return root["cands"][int(ids[np.argmax(q[0][ids])])]
         # beam: (score so far, first move, state, its expansion). Policy: a line's score is
@@ -187,7 +195,8 @@ class Player:
 
 def play_game(args, seed):
     pcores.pin(verbose=False)
-    pl = Player(args.model, args.depth, args.beam, {"normal": 0, "gate4": 1}[args.style], args.mode, args.policy, args.propose)
+    pl = Player(args.model, args.depth, args.beam, {"normal": 0, "gate4": 1}[args.style], args.mode, args.policy, args.propose,
+                temp=args.temp, seed=seed)
     cmd = [BOT, "play-ext", "--mode", args.mode, "--pieces", str(args.pieces), "--seed", str(seed)]
     if args.shortlist or args.takeover >= 0:
         w = os.path.join(HERE, "..", "bot", "weights", "normal.txt") if args.style == "normal" else \
@@ -205,6 +214,7 @@ def play_game(args, seed):
         if args.dump:
             states.append({"seed": seed, "n": st["n"], "rows": st["rows"], "b2b": st["b2b"], "piece": st["piece"],
                            "queue": st["queue"], "hold": st["hold"], "style": args.style})
+            dumped = states[-1]
         t0 = time.perf_counter()
         if args.takeover >= 0:
             # the model plays until move `takeover`, then the teacher's own search (every legal move offered)
@@ -220,6 +230,8 @@ def play_game(args, seed):
         else:
             c = pl.decide(st)
             move = {"hold": c["hold"], "cells": c["cells"]} if c else {"hold": 0, "cells": []}
+            if args.dump and pl.last_entropy is not None:
+                dumped["entropy"] = round(pl.last_entropy, 4)
         times.append(time.perf_counter() - t0)
         game.stdin.write(json.dumps(move) + "\n")
         game.stdin.flush()
@@ -246,6 +258,7 @@ def main():
     ap.add_argument("--style", default="normal", choices=("normal", "gate4"))
     ap.add_argument("--policy", default="logit", choices=("logit", "q1", "qs"), help="score moves by the policy or a value head")
     ap.add_argument("--propose", type=int, default=0, help="with a value head: choose only among the policy's top-k moves (0 = all)")
+    ap.add_argument("--temp", type=float, default=0.0, help="depth 1: sample moves from the policy at this temperature (0 = argmax)")
     ap.add_argument("--takeover", type=int, default=-1, help="the model plays until this move, then the teacher's full search takes over (0 = teacher alone)")
     ap.add_argument("--shortlist", type=int, default=0, help="intuition + calculation: the policy's top-k moves, then the "
                     "teacher's full search (its handcrafted V) picks among them")
