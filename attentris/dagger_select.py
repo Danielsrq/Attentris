@@ -4,8 +4,9 @@
 Kept (each state tagged with every reason that applies):
   death     within --before-death moves of a death (the decay that killed the game)
   danger    stack >= --height rows or >= --holes holes (where recovery skill matters)
-  vdrop     the teacher's 1-ply value (bot value) fell by >= --vdrop over the last --window student
-            moves (where the board starts going wrong, before any death)
+  holes_up  the board's holes rose by >= --holes-up over the last --window student moves (where it
+            starts going wrong, well before any death; holes, not the teacher's 1-ply value: greedy V
+            alone plays worst of all, the teacher's strength is its search)
   unsure    the student's move distribution has entropy >= --entropy (not learned well)
   random    --random of the remaining states (ordinary coverage)
 Exact duplicates (same board, pieces, hold) are dropped. Writes the selected states in the format
@@ -38,9 +39,9 @@ def main():
     ap.add_argument("--states", nargs="+", required=True, help="play.py --dump files (glob ok), same runs")
     ap.add_argument("--out", required=True)
     ap.add_argument("--before-death", type=int, default=60)
-    ap.add_argument("--height", type=int, default=14)
-    ap.add_argument("--holes", type=int, default=8)
-    ap.add_argument("--vdrop", type=float, default=15.0, help="teacher V drop (its own units) over the window")
+    ap.add_argument("--height", type=int, default=15)
+    ap.add_argument("--holes", type=int, default=10)
+    ap.add_argument("--holes-up", type=int, default=4, help="holes added over the window")
     ap.add_argument("--window", type=int, default=10)
     ap.add_argument("--entropy", type=float, default=2.0)
     ap.add_argument("--random", type=float, default=0.10)
@@ -67,14 +68,9 @@ def main():
     allst = [s for g in games.values() for s in sorted(g, key=lambda s: s["n"])]
     print("%d games, %d states, %d deaths" % (len(games), len(allst), len(deaths)), flush=True)
 
-    # teacher 1-ply value of every state (one bot process)
-    inp = "".join(json.dumps({"rows": s["rows"], "b2b": s["b2b"]}) + "\n" for s in allst)
-    out = subprocess.run([BOT, "value", "--weights", os.path.join(HERE, "..", "bot", "weights", "normal.txt")],
-                         input=inp, capture_output=True, text=True, check=True).stdout
-    vals = [json.loads(l).get("v") for l in out.splitlines() if l.startswith("{")]
-    assert len(vals) == len(allst), (len(vals), len(allst))
-    for s, v in zip(allst, vals):
-        s["v"] = v
+    for s in allst:
+        b = T.board_from_replay(P.rows_to_strings(s["rows"]))
+        s["_h"], s["_holes"] = int(T.heights(b).max()), T.holes_of(b)
 
     reasons = collections.Counter()
     picked, seen = [], set()
@@ -82,16 +78,15 @@ def main():
         g.sort(key=lambda s: s["n"])
         dn = deaths.get(key)
         for i, s in enumerate(g):
-            b = T.board_from_replay(P.rows_to_strings(s["rows"]))
-            h, holes = int(T.heights(b).max()), T.holes_of(b)
+            h, holes = s["_h"], s["_holes"]
             why = []
             if dn is not None and s["n"] >= dn - args.before_death:
                 why.append("death")
             if h >= args.height or holes >= args.holes:
                 why.append("danger")
             j = i - args.window
-            if j >= 0 and s["v"] is not None and g[j]["v"] is not None and g[j]["v"] - s["v"] >= args.vdrop:
-                why.append("vdrop")
+            if j >= 0 and holes - g[j]["_holes"] >= args.holes_up:
+                why.append("holes_up")
             if s.get("entropy", 0.0) >= args.entropy:
                 why.append("unsure")
             if not why and rng.random() < args.random:
