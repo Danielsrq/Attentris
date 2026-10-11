@@ -3,16 +3,16 @@
 :root {
   --bg: #f4f3ee; --panel: #ffffff; --fg: #1d2127; --muted: #5c626b; --line: #d8d5ca;
   --empty: #ebeae4; --filled: #3a3f47; --grid: #ffffff; --accent: #2c55c9; --accent-fg: #ffffff;
-  --heat: 214, 84, 20; --move: #111418; --pick: #2c55c9; --hover: #0f8a6a; --bar: #e0763a;
+  --heat: 214, 84, 20; --cool: 38, 104, 196; --move: #111418; --pick: #2c55c9; --hover: #0f8a6a; --bar: #e0763a;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
   --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
-  --heat: 255, 140, 70; --move: #f4f5f7; --pick: #7d9cff; --hover: #4fd1a8; --bar: #ff9a5c; color-scheme: dark } }
+  --heat: 255, 140, 70; --cool: 110, 170, 255; --move: #f4f5f7; --pick: #7d9cff; --hover: #4fd1a8; --bar: #ff9a5c; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
   --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
-  --heat: 255, 140, 70; --move: #f4f5f7; --pick: #7d9cff; --hover: #4fd1a8; --bar: #ff9a5c; color-scheme: dark }
+  --heat: 255, 140, 70; --cool: 110, 170, 255; --move: #f4f5f7; --pick: #7d9cff; --hover: #4fd1a8; --bar: #ff9a5c; color-scheme: dark }
 body { background: var(--bg); color: var(--fg); font: 14px/1.45 "IBM Plex Sans", system-ui, sans-serif; }
 .wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: grid; gap: 14px; }
 header { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
@@ -34,6 +34,8 @@ svg.board { width: 100%; max-width: 260px; height: auto; display: block; }
 .list { display: grid; gap: 4px; min-width: 0; }
 .list h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 6px 0 4px; font-weight: 600; }
 .row { display: grid; grid-template-columns: 112px minmax(0, 1fr) 46px 50px 54px; gap: 8px; align-items: center; padding: 2px 6px; border-radius: 5px; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin: 0 2px 0 8px; }
 .row.head { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; }
 .row .num { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; }
 .row .num.pos { color: var(--fg); } .row .num.neg { color: var(--muted); }
@@ -87,7 +89,10 @@ table.agree td:first-child { text-align: left; font-weight: 600; }
       <h2>The model's move probabilities (click a row to show its attention)</h2>
       <table class="probs" id="probs"></table>
       <div class="toggle"><button id="dens" class="on">per-cell density</button><button id="mass">whole-token share</button></div>
-      <div class="toggle" id="src"><button data-s="attn" class="on">attention</button><button data-s="gattn">geometry only (FLAT-2D)</button><button data-s="cattn">content only (Q·K)</button></div>
+      <div class="toggle" id="src"><button data-s="attn" class="on">attention</button><button data-s="gattn">geometry only (FLAT-2D)</button><button data-s="cattn">content only (Q·K)</button><button data-s="geo">geometry bias, signed</button></div>
+      <div class="legend" id="signed" hidden><span class="sw" style="background:rgb(var(--cool))"></span>negative (pushes attention away)
+        <span class="sw" style="background:var(--empty);border:1px solid var(--line)"></span>0
+        <span class="sw" style="background:rgb(var(--heat))"></span>positive (pulls attention in)</div>
       <h2>Attention over tokens (mean of 4 heads)</h2>
       <div id="rows"></div>
     </div>
@@ -174,17 +179,26 @@ function render() {
 
   // heat per cell
   const heat = new Float64Array(200);
+  const signed = src === "geo" && cand.geo;
+  $("signed").hidden = !signed;
   const hsrc = cand[src] || cand.attn;
   const board = p.tokens.map((t, j) => [t, hsrc[j]]).filter(([t]) => t.cells.length);
-  for (const [t, a] of board) for (const i of t.cells) heat[i] += mode === "dens" ? a / t.cells.length : a;
-  const mx = Math.max(...heat) || 1;
+  const cover = new Float64Array(200);
+  if (signed) {            // the raw bias of each token on its cells (mean where tokens overlap)
+    for (const [t, v] of board) for (const i of t.cells) { heat[i] += v; cover[i] += 1; }
+    for (let i = 0; i < 200; i++) if (cover[i]) heat[i] /= cover[i];
+  } else {
+    for (const [t, a] of board) for (const i of t.cells) heat[i] += mode === "dens" ? a / t.cells.length : a;
+  }
+  const mx = signed ? (Math.max(...heat.map(Math.abs)) || 1) : (Math.max(...heat) || 1);
 
   let s = "";
   for (const r of [0, 4, 9, 14, 19]) s += `<text x="-6" y="${Y(r) + 14}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${r + 1}</text>`;
   for (let i = 0; i < 200; i++) {
     const [r, c] = rc(i);
     s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="var(--empty)" stroke="var(--grid)" stroke-width="1"/>`;
-    if (heat[i] > 0) s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="rgb(var(--heat))" opacity="${(0.08 + 0.85 * heat[i] / mx).toFixed(3)}"/>`;
+    if (signed && cover[i]) s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="rgb(var(${heat[i] >= 0 ? "--heat" : "--cool"}))" opacity="${(0.85 * Math.abs(heat[i]) / mx).toFixed(3)}"/>`;
+    else if (!signed && heat[i] > 0) s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="rgb(var(--heat))" opacity="${(0.08 + 0.85 * heat[i] / mx).toFixed(3)}"/>`;
     if (p.board[i]) s += `<rect x="${X(c) + 4}" y="${Y(r) + 4}" width="${CS - 8}" height="${CS - 8}" rx="2" fill="var(--filled)" opacity="0.8"/>`;
   }
   if (hover) s += `<path d="${outline(hover.cells, 1)}" stroke="var(--hover)" stroke-width="2.5" fill="none"/>`;
@@ -194,10 +208,10 @@ function render() {
 
   const rows = p.tokens.map((t, j) => ({ t, a: cand.attn[j], g: cand.geo ? cand.geo[j] : null, c: cand.cont ? cand.cont[j] : null })).sort((a, b) => b.a - a.a);
   const top = rows[0].a || 1;
-  const sg = v => v === null ? "" : `<span class="num ${v >= 0 ? "pos" : "neg"}">${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}</span>`;
+  const sg = (v, col) => v === null ? "" : `<span class="num"${col ? ` style="color:rgb(var(${v >= 0 ? "--heat" : "--cool"}))"` : ""}>${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}</span>`;
   $("rows").innerHTML = `<div class="row head"><span class="k">token</span><span>attention</span><span class="v">share</span><span class="num">geom.</span><span class="num">content</span></div>` +
     rows.map(({ t, a, g, c }, k) => `<div class="row" data-k="${k}"><span class="k">${t.kind}${t.piece ? " " + t.piece : ""}${t.note ? ` <span class="note">${t.note}</span>` : ""}</span>` +
-    `<span class="bar" style="width:${(100 * a / top).toFixed(1)}%"></span><span class="v">${(100 * a).toFixed(1)}%</span>${sg(g)}${sg(c)}</div>`).join("");
+    `<span class="bar" style="width:${(100 * a / top).toFixed(1)}%"></span><span class="v">${(100 * a).toFixed(1)}%</span>${sg(g, true)}${sg(c)}</div>`).join("");
   $("rows").querySelectorAll(".row[data-k]").forEach(el => {
     el.onmouseenter = () => { const t = rows[+el.dataset.k].t; if (t.cells.length) { hover = t; render(); } };
     el.onmouseleave = () => { if (hover) { hover = null; render(); } };
