@@ -204,6 +204,10 @@ def play_game(args, seed):
         cmd += ["--shortlist", "--weights", w, "--threads", "1", "--any-cores"]
     if args.garbage:
         cmd += ["--garbage", args.garbage]
+    if args.replay:   # Godot replay of the game (bot play-ext --replay)
+        name = os.path.basename(args.model).replace("model_", "").replace(".pt", "") + "_d%d" % args.depth
+        os.makedirs(args.replay, exist_ok=True)
+        cmd += ["--replay", os.path.join(args.replay, "%s_s%d.jsonl" % (name, seed)), "--label", name]
     game = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=open(os.path.join(args.bot_log, "game_s%d.err" % seed), "w") if args.bot_log else subprocess.DEVNULL, text=True, bufsize=1)
     times = []
     states = []
@@ -258,6 +262,7 @@ def main():
     ap.add_argument("--style", default="normal", choices=("normal", "gate4"))
     ap.add_argument("--policy", default="logit", choices=("logit", "q1", "qs"), help="score moves by the policy or a value head")
     ap.add_argument("--propose", type=int, default=0, help="with a value head: choose only among the policy's top-k moves (0 = all)")
+    ap.add_argument("--replay", default="", help="directory: write each game as a Godot replay (JSONL, the viewer's format)")
     ap.add_argument("--temp", type=float, default=0.0, help="depth 1: sample moves from the policy at this temperature (0 = argmax)")
     ap.add_argument("--takeover", type=int, default=-1, help="the model plays until this move, then the teacher's full search takes over (0 = teacher alone)")
     ap.add_argument("--shortlist", type=int, default=0, help="intuition + calculation: the policy's top-k moves, then the "
