@@ -153,6 +153,7 @@ def main():
     ap.add_argument("--tome-pretok", action="store_true", help="tome v3: one sky + solid blocks + single cells (needs <file>.pretok.npy, pretok.py)")
     ap.add_argument("--tome-flat", action="store_true", help="tome: FLAT-2D pair-feature bias in the self-attention")
     ap.add_argument("--tome-streams", type=int, default=1, help="tome v4: merging streams (partitions), stream s merges by head s's keys")
+    ap.add_argument("--micro", type=int, default=1, help="split each batch into this many micro-batches (same gradient, less GPU memory)")
     ap.add_argument("--bucket", type=int, default=0, help="group batches by token count within chunks of this many batches (0 = off)")
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--save-every", type=int, default=300, help="mid-epoch checkpoint every N batches (0 = epoch ends only)")
@@ -256,10 +257,13 @@ def main():
         nb = math.ceil(n / args.batch)
         for bi in range(first, nb):
             idx = np.sort(perm[bi * args.batch:(bi + 1) * args.batch])
-            o = net(batch_of(tr, idx, args.device), heads=True)
-            loss = compute_loss(o, tr, idx, args, args.device)[0].mean()
             opt.zero_grad()
-            loss.backward()
+            loss = 0.0
+            for part in np.array_split(idx, args.micro):        # same batch, less memory: gradients add up
+                o = net(batch_of(tr, part, args.device), heads=True)
+                lp = compute_loss(o, tr, part, args, args.device)[0].sum() / len(idx)
+                lp.backward()
+                loss = loss + lp.detach()
             torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)
             opt.step()
             sched.step()

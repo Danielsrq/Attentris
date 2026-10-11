@@ -124,8 +124,9 @@ function blobColour(n, filled) {
 
 function render() {
   const p = P[idx];
-  const views = p.layers.map((L, i) => ({ key: "L" + i, name: `after layer ${L.layer}` })).concat([{ key: "attn", name: "attention" }]);
-  if (!view || !views.some(v => v.key === view)) view = "L" + (p.layers.length - 1);   // default: the final blobs
+  const multi = (DATA.streams || 1) > 1;
+  const views = p.layers.map((L, i) => ({ key: "L" + i, name: `after layer ${L.layer}${multi ? " · stream " + (L.stream + 1) : ""}` })).concat([{ key: "attn", name: "attention" }]);
+  if (!view || !views.some(v => v.key === view)) view = "L" + (p.layers.length - (multi ? DATA.streams : 1));   // default: the final blobs (stream 1)
   $("count").textContent = `${idx + 1} / ${P.length}`;
   $("jump").value = idx;
   $("label").textContent = `${p.why} · ${p.teacher} teacher · seed ${p.seed}, placement ${p.n}`;
@@ -160,7 +161,7 @@ function render() {
       if (board[k]) s += `<rect x="${X(c) + 6}" y="${Y(r) + 6}" width="${CS - 12}" height="${CS - 12}" rx="2" fill="var(--filled)" opacity="0.35"/>`;
     }
     L.blobs.forEach(b => { s += `<path d="${outline(b, 0.75)}" stroke="var(--edge)" stroke-width="1.6" fill="none"/>`; });
-    $("cap").textContent = `Blobs after layer ${L.layer}`;
+    $("cap").textContent = `Blobs after layer ${L.layer}${multi ? ", stream " + (L.stream + 1) : ""}`;
     const sizes = L.blobs.map(b => b.length).sort((a, b) => b - a);
     $("stats").textContent = `${L.blobs.length} blobs · largest ${sizes.slice(0, 3).join(", ")} cells · ${sizes.filter(x => x === 1).length} single cells`;
   }
@@ -190,7 +191,7 @@ function render() {
     else {
       const rs = t.cells.map(k => Math.floor(k / COLS)), cs = t.cells.map(k => k % COLS);
       const nf = t.cells.filter(k => board[k]).length;
-      name = `blob ${t.cells.length} cell${t.cells.length > 1 ? "s" : ""} · r${Math.min(...rs) + 1}–${Math.max(...rs) + 1} c${Math.min(...cs)}–${Math.max(...cs)} · ${nf ? (nf === t.cells.length ? "filled" : nf + " filled") : "empty"}`;
+      name = `${multi ? "s" + (t.stream + 1) + " · " : ""}blob ${t.cells.length} cell${t.cells.length > 1 ? "s" : ""} · r${Math.min(...rs) + 1}–${Math.max(...rs) + 1} c${Math.min(...cs)}–${Math.max(...cs)} · ${nf ? (nf === t.cells.length ? "filled" : nf + " filled") : "empty"}`;
     }
     return `<div class="row${j === hoverJ ? " on" : ""}" data-j="${j}"><span class="k">${name}</span><span class="barw" style="width:${(100 * a / mx).toFixed(1)}%"></span><span class="v">${(100 * a).toFixed(1)}%</span></div>`;
   }).join("");

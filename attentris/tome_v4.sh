@@ -10,7 +10,7 @@ PYG="$DIR/.venv/Scripts/python.exe"
 M="$DIR/data/model_tome_v4.pt"
 "$PYG" "$DIR/pretok.py" --data "$DIR/data/v51" | grep -v pinned
 R=""; [ -f "$M" ] && R="--resume"
-"$PYG" "$DIR/train.py" --arch tome --tome-pretok --tome-flat --tome-streams 2 --merge 0,0.17,0.17,0.17 --bucket 50 --data "$DIR/data/v51" \
+"$PYG" "$DIR/train.py" --arch tome --tome-pretok --tome-flat --tome-streams 2 --micro 2 --merge 0,0.17,0.17,0.17 --bucket 50 --data "$DIR/data/v51" \
     --train train.npz,dagger1.npz,train1m.npz --epochs 8 --batch 512 --lr 1.5e-3 --device cuda \
     --w-dense 0 --w-q1 0 --w-qs 1 --seed 0 --out "$M" $R >> "$DIR/train_tome_v4.out" 2>&1
 grep "^epoch" "$DIR/train_tome_v4.out" | tee "$DIR/results_tome_v4_train.txt"

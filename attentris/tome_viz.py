@@ -71,15 +71,19 @@ def main():
         for li in merge_layers:
             t = info["merges"][li]
             mk, al = t["mask"][k].numpy() > 0.5, t["alive"][k].numpy()
-            layers.append({"layer": li + 1, "blobs": [np.nonzero(mk[j])[0].tolist() for j in np.nonzero(al)[0] if mk[j].any()]})
+            sm = t["stream"][k].numpy() if "stream" in t else np.zeros(len(al), int)
+            for st in range(getattr(net, "streams", 1)):
+                layers.append({"layer": li + 1, "stream": st,
+                               "blobs": [np.nonzero(mk[j])[0].tolist() for j in np.nonzero(al)[0] if mk[j].any() and sm[j] == st]})
         last = info["merges"][-1]
         mk, al = last["mask"][k].numpy() > 0.5, last["alive"][k].numpy()
+        sm = last["stream"][k].numpy() if "stream" in last else np.zeros(len(al), int)
         final = []                                              # the tokens the candidates attend to, in tensor order
         for j in range(len(al)):
             if not al[j]:
                 final.append(None)
             elif mk[j].any():
-                final.append({"cells": np.nonzero(mk[j])[0].tolist()})
+                final.append({"cells": np.nonzero(mk[j])[0].tolist(), "stream": int(sm[j])})
             else:
                 final.append({"piece": True})
         # name the piece tokens: the model keeps them in their packed order (current, hold, previews)
@@ -107,7 +111,8 @@ def main():
     log = ck["log"]
     label = args.label or "AtTenTris-ToMe · 200 cells + 7 pieces · adjacency-constrained merging (layers 2–4) · %d epochs" % len(log)
     last_val = log[-1]["val"] if log else {}
-    data = json.dumps({"model": label, "val": {k: v["top1"] for k, v in last_val.items()}, "positions": pos}, separators=(",", ":"))
+    data = json.dumps({"model": label, "streams": getattr(net, "streams", 1), "val": {k: v["top1"] for k, v in last_val.items()},
+                       "positions": pos}, separators=(",", ":"))
     tpl = open(os.path.join(HERE, "tome_viz_template.html"), encoding="utf-8").read()
     with open(args.out, "w", encoding="utf-8") as f:
         f.write(tpl.replace("__DATA__", data))
