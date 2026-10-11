@@ -37,7 +37,7 @@ for m in model_v51 model_v51_dagger model_v51_dagger_ft; do
     echo "$m: $("$PYC" "$DIR/play.py" --model "$DIR/data/$m.pt" --games 64 --depth 1 --seed 33001 --garbage 10,3-4,cheese0.2,0.2 | grep "^AtTenTris")" | tee -a "$OUT"
 done
 for m in model_v51_dagger model_v51_dagger_ft; do
-    for db in "2 4" "3 8"; do
+    for db in "2 4"      ; do
         set -- $db
         echo "$m: $("$PYC" "$DIR/play.py" --model "$DIR/data/$m.pt" --games 64 --depth $1 --beam $2 | grep "^AtTenTris")" | tee -a "$OUT"
     done

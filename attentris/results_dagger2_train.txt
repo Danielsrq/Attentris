@@ -1,0 +1,24 @@
+== dagger2 training Sun Oct 11 16:18:14 MPST 2026
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+model_v51.pt on val_dagger2.npz (normal, 9737): top1 0.372 top3 0.635 loss 3.074 | argmax Qs top1 0.322 | MAE Qs 8.59
+== v51_dagger
+epoch 8: train loss 2.263 | val normal top1 0.617 top3 0.847 | val gate4 top1 0.605 top3 0.833 | argmax Qs top1 0.541 / 0.538, Q1 top1 0.317 / 0.311 | MAE Q1 16.23 Qs 6.04 | 199s
+epoch 8: val2 (val_dagger2.npz, 9737) top1 0.406 top3 0.665 loss 2.828 | argmax Qs top1 0.364 | MAE Qs 7.14
+== v51_dagger_ft
+epoch 3: train loss 2.371 | val normal top1 0.621 top3 0.850 | val gate4 top1 0.610 top3 0.842 | argmax Qs top1 0.547 / 0.561, Q1 top1 0.265 / 0.267 | MAE Q1 16.78 Qs 6.08 | 50s
+epoch 3: val2 (val_dagger2.npz, 9737) top1 0.404 top3 0.667 loss 2.840 | argmax Qs top1 0.363 | MAE Qs 7.22
+model_v51: AtTenTris logit depth 1 style normal no garbage: APP 0.587 (APPfull 0.586), died 1/256, pieces 500 avg, TSD 5364, TST 66, quads 3187, max height 23, illegal 0, 15.6 ms/move (p90 19.2) + search 16.2 ms, 136s
+model_v51: AtTenTris logit depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.655 (APPfull 0.243), died 62/64, pieces 186 avg, TSD 360, TST 3, quads 765, max height 22, illegal 0, 13.9 ms/move (p90 17.1) + search 14.5 ms, 17s
+model_v51_dagger: AtTenTris logit depth 1 style normal no garbage: APP 0.646 (APPfull 0.646), died 0/256, pieces 500 avg, TSD 5353, TST 43, quads 4002, max height 16, illegal 0, 14.2 ms/move (p90 16.9) + search 14.7 ms, 123s
+model_v51_dagger: AtTenTris logit depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.678 (APPfull 0.335), died 57/64, pieces 247 avg, TSD 523, TST 5, quads 1079, max height 22, illegal 0, 12.5 ms/move (p90 15.0) + search 13.0 ms, 18s
+model_v51_dagger_ft: AtTenTris logit depth 1 style normal no garbage: APP 0.640 (APPfull 0.640), died 0/256, pieces 500 avg, TSD 5823, TST 55, quads 3538, max height 17, illegal 0, 13.7 ms/move (p90 16.0) + search 14.1 ms, 118s
+model_v51_dagger_ft: AtTenTris logit depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.693 (APPfull 0.383), died 55/64, pieces 276 avg, TSD 575, TST 1, quads 1205, max height 23, illegal 0, 12.6 ms/move (p90 15.1) + search 13.0 ms, 19s
+model_v51_dagger: AtTenTris logit depth 2 beam 4 style normal no garbage: APP 0.742 (APPfull 0.742), died 0/64, pieces 500 avg, TSD 1523, TST 11, quads 1023, max height 15, illegal 0, 62.8 ms/move (p90 74.8) + search 63.3 ms, 131s
+model_v51_dagger: AtTenTris logit depth 3 beam 8 style normal no garbage: APP 0.855 (APPfull 0.855), died 0/64, pieces 500 avg, TSD 1712, TST 17, quads 1132, max height 16, illegal 0, 191.4 ms/move (p90 226.7) + search 191.9 ms, 389s
+model_v51_dagger_ft: AtTenTris logit depth 2 beam 4 style normal no garbage: APP 0.745 (APPfull 0.745), died 0/64, pieces 500 avg, TSD 1620, TST 6, quads 951, max height 15, illegal 0, 58.2 ms/move (p90 68.0) + search 58.7 ms, 121s
+(note: depth 3 was meant to be dropped mid-run; the edit to the running script did not take effect,
+ so 5.1-dagger got a depth-3 test; an ft depth-3 line may follow. Summary:
+   depth 1 x256:     v5.1 0.587 (1 died) | dagger 0.646 (0) | dagger-ft 0.640 (0)
+   d1 + garbage x64: pieces 186 | 247 | 276 (died 62 | 57 | 55)
+   depth 2 beam 4:   v5.1 0.726 | dagger 0.742 | dagger-ft 0.745 (0 died each)
+   val2 top1:        0.372 | 0.406 | 0.404)
