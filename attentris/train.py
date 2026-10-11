@@ -152,6 +152,7 @@ def main():
     ap.add_argument("--tome-sky", action="store_true", help="tome: the sky starts as one token per column (model_tome sky=True)")
     ap.add_argument("--tome-pretok", action="store_true", help="tome v3: one sky + solid blocks + single cells (needs <file>.pretok.npy, pretok.py)")
     ap.add_argument("--tome-flat", action="store_true", help="tome: FLAT-2D pair-feature bias in the self-attention")
+    ap.add_argument("--tome-streams", type=int, default=1, help="tome v4: merging streams (partitions), stream s merges by head s's keys")
     ap.add_argument("--bucket", type=int, default=0, help="group batches by token count within chunks of this many batches (0 = off)")
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--save-every", type=int, default=300, help="mid-epoch checkpoint every N batches (0 = epoch ends only)")
@@ -189,7 +190,8 @@ def main():
     n = len(tr["chosen"])
     if args.arch == "tome":
         net = MT.AtTenTrisToMe(d=args.d, layers=args.layers, merge=[float(f) for f in args.merge.split(",")],
-                               sky=args.tome_sky, pretok=args.tome_pretok, flat_bias=args.tome_flat).to(args.device)
+                               sky=args.tome_sky, pretok=args.tome_pretok, flat_bias=args.tome_flat,
+                               streams=args.tome_streams).to(args.device)
     else:
         net = M.AtTenTris(d=args.d, layers=args.layers).to(args.device)
     print("device", args.device, torch.cuda.get_device_name(0) if args.device == "cuda" else "", flush=True)

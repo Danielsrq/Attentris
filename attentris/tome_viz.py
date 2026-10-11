@@ -36,7 +36,8 @@ def main():
     ck = torch.load(args.model, map_location="cpu", weights_only=False)
     a = ck["args"]
     net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in a["merge"].split(",")], sky=a.get("tome_sky", False),
-                          pretok=a.get("tome_pretok", False), flat_bias=a.get("tome_flat", False))
+                          pretok=a.get("tome_pretok", False), flat_bias=a.get("tome_flat", False),
+                          streams=a.get("tome_streams", 1))
     net.load_state_dict(ck["model"])
     net.eval()
     d = TR.load(args.data)

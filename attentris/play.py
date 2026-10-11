@@ -82,7 +82,8 @@ class Player:
             import model_tome as MT
             self.net = MT.AtTenTrisToMe(d=ck["args"]["d"], layers=ck["args"]["layers"],
                                         merge=[float(f) for f in ck["args"]["merge"].split(",")], sky=ck["args"].get("tome_sky", False),
-                                        pretok=ck["args"].get("tome_pretok", False), flat_bias=ck["args"].get("tome_flat", False))
+                                        pretok=ck["args"].get("tome_pretok", False), flat_bias=ck["args"].get("tome_flat", False),
+                                        streams=ck["args"].get("tome_streams", 1))
         else:
             self.net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0])
         missing = self.net.load_state_dict(ck["model"], strict=False).missing_keys

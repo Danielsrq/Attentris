@@ -30,6 +30,13 @@ filled block (>= 2 x 2), and single cells for everything else below the sky (the
 columns, wells, holes, gaps, ragged surface cells). All of them merge as usual. flat_bias=True uses
 AtTenTris's FLAT-2D pair-feature MLP for the self-attention instead of the centre-offset table
 (affordable at ~45 tokens).
+
+streams=K > 1 (v4, multi-partition): at the first merging layer the cell tokens are copied into K
+streams (+ a learned stream embedding); each stream merges only within itself, judging similarity
+with attention head s's keys, so the board ends up tiled K different ways and one cell can belong
+to a blob in every stream (a TSD and the well under it can both be blobs). The streams never
+branch further; all their tokens attend to each other (FLAT-2D's overlap feature then sees blobs of
+different streams sharing cells), and the candidates cross-attend to the blobs of every stream.
 """
 import math
 
@@ -113,8 +120,12 @@ def adjacency(mask):
 
 class AtTenTrisToMe(nn.Module):
     def __init__(self, d=64, heads=4, layers=4, merge=(0.0, 0.45, 0.45, 0.45), n_teachers=2, sky=False,
-                 pretok=False, flat_bias=False):
+                 pretok=False, flat_bias=False, streams=1):
         super().__init__()
+        assert streams <= heads
+        self.streams, self.heads = streams, heads
+        if streams > 1:
+            self.stream_emb = nn.Embedding(streams, d)
         assert len(merge) == layers
         assert not (sky and pretok)
         self.d, self.merge, self.sky, self.pretok, self.flat_bias = d, tuple(merge), sky, pretok, flat_bias
@@ -147,26 +158,41 @@ class AtTenTrisToMe(nn.Module):
 
     # ---------------------------------------------------------------- merging
     @staticmethod
-    def _merge(x, size, mask, box, alive, is_cell, keys, frac, first, adj, par0):
+    def _merge(x, size, mask, box, alive, is_cell, keys, frac, first, adj, par0, stream=None, n_streams=1, heads=4):
         B, N, d = x.shape
         dev = x.device
+        if stream is None:
+            stream = torch.zeros(B, N, dtype=torch.long, device=dev)
         cand = alive & is_cell
         if first:
             par = par0                                           # checkerboard for cells (sky columns: by column)
         else:
-            par = (torch.cumsum(cand.long(), 1) - 1) % 2
+            par = torch.zeros_like(stream)
+            for st in range(n_streams):                          # alternate within each stream
+                cs = cand & (stream == st)
+                par = torch.where(stream == st, (torch.cumsum(cs.long(), 1) - 1) % 2, par)
         A = cand & (par == 0)
         Bs = cand & (par == 1)
-        kn = F.normalize(keys, dim=-1)
-        S = kn @ kn.transpose(1, 2)
-        valid = A[:, :, None] & Bs[:, None, :] & adj
+        if n_streams > 1:
+            # stream s judges similarity with head s's keys
+            kh = F.normalize(keys.view(B, N, heads, d // heads), dim=-1)
+            Sh = torch.einsum("bnhd,bmhd->bhnm", kh, kh)
+            S = Sh.gather(1, (stream % heads)[:, None, :, None].expand(B, 1, N, N)).squeeze(1)
+        else:
+            kn = F.normalize(keys, dim=-1)
+            S = kn @ kn.transpose(1, 2)
+        valid = A[:, :, None] & Bs[:, None, :] & adj & (stream[:, :, None] == stream[:, None, :])
         S = S.masked_fill(~valid, float("-inf"))
         score, dst = S.max(-1)                                   # (B, N): best adjacent B per A token
         ok = torch.isfinite(score)
-        r = (frac * cand.sum(1).float()).floor().long()          # merges wanted per position
-        order = score.masked_fill(~ok, float("-inf")).argsort(-1, descending=True)
-        rank = torch.empty_like(order).scatter_(1, order, torch.arange(N, device=dev).expand(B, N))
-        sel = ok & (rank < r[:, None])
+        sel = torch.zeros_like(ok)
+        for st in range(n_streams):                              # each stream merges its own share
+            ins = stream == st
+            r = (frac * (cand & ins).sum(1).float()).floor().long()
+            sc = score.masked_fill(~(ok & ins), float("-inf"))
+            order = sc.argsort(-1, descending=True)
+            rank = torch.empty_like(order).scatter_(1, order, torch.arange(N, device=dev).expand(B, N))
+            sel = sel | (ok & ins & (rank < r[:, None]))
         self_w = size * sel
         xs = x * size[..., None]
         add = torch.zeros_like(xs).scatter_add(1, dst[..., None].expand(-1, -1, d), xs * sel[..., None])
@@ -186,7 +212,7 @@ class AtTenTrisToMe(nn.Module):
         keep = int(alive.sum(1).max())
         o = (~alive).int().argsort(dim=1, stable=True)[:, :keep]
         g = lambda t: torch.gather(t, 1, o.view(B, keep, *([1] * (t.dim() - 2))).expand(B, keep, *t.shape[2:]))
-        return g(x), g(size), g(mask), g(box), g(alive), g(is_cell), g(par0)
+        return g(x), g(size), g(mask), g(box), g(alive), g(is_cell), g(par0), g(stream)
 
     @staticmethod
     def _compact(alive, *ts):
@@ -269,6 +295,7 @@ class AtTenTrisToMe(nn.Module):
             par0 = torch.cat([par0[:, :200], gpar, par0[:, 200:]], 1)
             alive, x, size, mask, box, is_cell, par0 = self._compact(alive, x, size, mask, box, is_cell, par0)
         merged_yet = False
+        stream = torch.zeros(B, x.shape[1], dtype=torch.long, device=dev)
         attn, trace = [], []
         for blk, frac in zip(self.blocks, self.merge):
             adj = adjacency(mask)
@@ -283,11 +310,22 @@ class AtTenTrisToMe(nn.Module):
             if frac > 0:
                 if self.random_merge:
                     keys = torch.randn_like(keys)
-                x, size, mask, box, alive, is_cell, par0 = self._merge(x, size, mask, box, alive, is_cell, keys, frac, not merged_yet, adj, par0)
+                if self.streams > 1 and not merged_yet:
+                    # split: copy the tokens into K streams (pieces only once), then compact
+                    K = self.streams
+                    x = torch.cat([x + self.stream_emb.weight[st] for st in range(K)], 1)
+                    keys = torch.cat([keys] * K, 1)
+                    size, mask, box, is_cell, par0 = [torch.cat([t_] * K, 1) for t_ in (size, mask, box, is_cell, par0)]
+                    alive = torch.cat([alive] + [alive & is_cell[:, :alive.shape[1]]] * (K - 1), 1)
+                    stream = torch.cat([torch.full_like(stream, st) for st in range(K)], 1)
+                    alive, x, size, mask, box, is_cell, par0, stream, keys = self._compact(alive, x, size, mask, box, is_cell, par0, stream, keys)
+                    adj = adjacency(mask)
+                x, size, mask, box, alive, is_cell, par0, stream = self._merge(
+                    x, size, mask, box, alive, is_cell, keys, frac, not merged_yet, adj, par0, stream, self.streams, self.heads)
                 merged_yet = True
             x = x + blk.ff(blk.n2(x))
             if return_attn:
-                trace.append({"mask": mask.detach(), "alive": alive.detach(), "size": size.detach()})
+                trace.append({"mask": mask.detach(), "alive": alive.detach(), "size": size.detach(), "stream": stream.detach()})
         hb, pad = x, ~alive
 
         # --- candidates (as AtTenTris) ---
