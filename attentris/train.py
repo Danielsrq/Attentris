@@ -161,6 +161,7 @@ def main():
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--save-every", type=int, default=300, help="mid-epoch checkpoint every N batches (0 = epoch ends only)")
     ap.add_argument("--seed", type=int, default=0, help="weight init and batch order")
+    ap.add_argument("--drop-kinds", default="", help="ablation: token kinds to blank, by prefix, comma-separated (e.g. setup_)")
     ap.add_argument("--n-teachers", type=int, default=2, help="style rows (3: + danger); a smaller --init checkpoint grows, new rows copied from normal")
     ap.add_argument("--init", default="", help="warm start: load these model weights, fresh optimizer and schedule")
     ap.add_argument("--limit", type=int, default=0, help="use a random N-position subset (smoke tests, learning curves)")
@@ -200,6 +201,18 @@ def main():
         va2["pretok"] = np.load(os.path.join(args.data, args.val2.replace(".npz", ".pretok.npy")))
     if args.tome_pretok:
         va["pretok"] = np.load(os.path.join(args.data, "val.pretok.npy"))
+    if args.drop_kinds:      # ablation: blank these token kinds everywhere (training and validation)
+        ids = [i for i, k in enumerate(T.KINDS) if any(k.startswith(p) for p in args.drop_kinds.split(","))]
+        n_tr = int(np.isin(tr["tok_kind"], ids).sum())
+        for dd in [tr, va] + ([va2] if va2 is not None else []):
+            m = np.isin(dd["tok_kind"], ids)
+            dd["tok_kind"][m] = -1
+            dd["tok_mask"][m] = 0
+            dd["tok_box"][m] = -1
+            dd["tok_extra"][m] = 0
+            dd["tok_piece"][m] = -1
+        print("dropped token kinds %s: %d tokens in training (%.3f per position)" % (
+            ",".join(T.KINDS[i] for i in ids), n_tr, n_tr / len(tr["chosen"])), flush=True)
     if args.limit:
         keep = np.sort(np.random.default_rng(123).choice(len(tr["chosen"]), size=min(args.limit, len(tr["chosen"])), replace=False))
         tr = {k: v[keep] for k, v in tr.items()}   # a random subset (files are in teacher order)

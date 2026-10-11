@@ -96,6 +96,7 @@ class Player:
             raise SystemExit("%s has no %s head (a v1 checkpoint?)" % (model_path, policy))
         self.net.eval()
         self.tok_version = 4 if tome else ck.get("tok_version", 5 if ck["model"]["kind.weight"].shape[0] > 31 else 4)
+        self.no_setups = "setup_" in ck["args"].get("drop_kinds", "")
         self.policy = policy
         self.propose = propose
         self.temp, self.rng, self.last_entropy = temp, np.random.default_rng(seed), None
@@ -106,7 +107,10 @@ class Player:
                                    stderr=subprocess.DEVNULL, text=True, bufsize=1)
 
     def expand(self, st):
-        self.ex.stdin.write(json.dumps(dict(st, slots=True) if self.tok_version >= 5 else st) + "\n")
+        q = dict(st, slots=True) if self.tok_version >= 5 else st
+        if self.no_setups:       # a setup-ablation checkpoint: the bot skips the setup lookahead
+            q = dict(q, setups=False)
+        self.ex.stdin.write(json.dumps(q) + "\n")
         self.ex.stdin.flush()
         return readjson(self.ex)
 

@@ -838,7 +838,9 @@ fn cmd_expand(a: &Args) {
         }
         if v["slots"].as_bool().unwrap_or(false) {
             slots.overhang_filter = v["setup_filter"].as_bool().unwrap_or(false);
-            st.extend(slots.json(&b, Some((cur, queue.clone(), hold))));
+            // "setups": false -> covered slots only, no setup lookahead (the setup ablation)
+            let pieces = if v["setups"].as_bool().unwrap_or(true) { Some((cur, queue.clone(), hold)) } else { None };
+            st.extend(slots.json(&b, pieces));
         }
         let _ = writeln!(out, "{{\"structures\":[{}],\"cands\":[{}]}}", st.join(","), items.join(","));
         let _ = out.flush();
