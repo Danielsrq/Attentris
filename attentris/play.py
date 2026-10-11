@@ -199,8 +199,8 @@ def play_game(args, seed):
                 temp=args.temp, seed=seed, merge=args.merge)
     cmd = [BOT, "play-ext", "--mode", args.mode, "--pieces", str(args.pieces), "--seed", str(seed)]
     if args.shortlist or args.takeover >= 0:
-        w = os.path.join(HERE, "..", "bot", "weights", "normal.txt") if args.style == "normal" else \
-            os.path.join(HERE, "..", "bot", "results", "gate4", "gate4.txt")
+        w = args.teacher_weights or (os.path.join(HERE, "..", "bot", "weights", "normal.txt") if args.style == "normal" else
+                                     os.path.join(HERE, "..", "bot", "results", "gate4", "gate4.txt"))
         cmd += ["--shortlist", "--weights", w, "--threads", "1", "--any-cores"]
     if args.garbage:
         cmd += ["--garbage", args.garbage]
@@ -267,6 +267,7 @@ def main():
     ap.add_argument("--replay", default="", help="directory: write each game as a Godot replay (JSONL, the viewer's format)")
     ap.add_argument("--temp", type=float, default=0.0, help="depth 1: sample moves from the policy at this temperature (0 = argmax)")
     ap.add_argument("--takeover", type=int, default=-1, help="the model plays until this move, then the teacher's full search takes over (0 = teacher alone)")
+    ap.add_argument("--teacher-weights", default="", help="--shortlist / --takeover: the teacher's weights (default normal.txt, gate4.txt for --style gate4)")
     ap.add_argument("--shortlist", type=int, default=0, help="intuition + calculation: the policy's top-k moves, then the "
                     "teacher's full search (its handcrafted V) picks among them")
     ap.add_argument("--mode", default="normal")
