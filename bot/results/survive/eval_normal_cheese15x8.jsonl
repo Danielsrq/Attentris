@@ -1,0 +1,16 @@
+{"seed":33001,"pieces":30,"attack":14,"app":0.4667,"died":true,"max_height":13,"garbage_in":18,"garbage_cleared":2,"garbage":[[15,9,1],[30,9,1]]}
+{"seed":33002,"pieces":30,"attack":8,"app":0.2667,"died":true,"max_height":15,"garbage_in":17,"garbage_cleared":1,"garbage":[[15,9,1],[30,8,1]]}
+{"seed":33003,"pieces":45,"attack":16,"app":0.3556,"died":true,"max_height":17,"garbage_in":26,"garbage_cleared":6,"garbage":[[15,9,1],[30,8,1],[45,9,1]]}
+{"seed":33004,"pieces":30,"attack":13,"app":0.4333,"died":true,"max_height":14,"garbage_in":17,"garbage_cleared":1,"garbage":[[15,8,1],[30,9,1]]}
+{"seed":33005,"pieces":30,"attack":20,"app":0.6667,"died":true,"max_height":14,"garbage_in":17,"garbage_cleared":0,"garbage":[[15,8,1],[30,9,1]]}
+{"seed":33006,"pieces":45,"attack":18,"app":0.4000,"died":true,"max_height":21,"garbage_in":25,"garbage_cleared":7,"garbage":[[15,9,1],[30,8,1],[45,8,1]]}
+{"seed":33007,"pieces":60,"attack":22,"app":0.3667,"died":true,"max_height":21,"garbage_in":34,"garbage_cleared":15,"garbage":[[15,9,1],[30,8,1],[45,8,1],[60,9,1]]}
+{"seed":33008,"pieces":30,"attack":18,"app":0.6000,"died":true,"max_height":15,"garbage_in":16,"garbage_cleared":0,"garbage":[[15,8,1],[30,8,1]]}
+{"seed":33009,"pieces":30,"attack":11,"app":0.3667,"died":true,"max_height":16,"garbage_in":18,"garbage_cleared":0,"garbage":[[15,9,1],[30,9,1]]}
+{"seed":33010,"pieces":45,"attack":36,"app":0.8000,"died":true,"max_height":13,"garbage_in":26,"garbage_cleared":10,"garbage":[[15,9,1],[30,8,1],[45,9,1]]}
+{"seed":33011,"pieces":30,"attack":16,"app":0.5333,"died":true,"max_height":15,"garbage_in":18,"garbage_cleared":1,"garbage":[[15,9,1],[30,9,1]]}
+{"seed":33012,"pieces":45,"attack":27,"app":0.6000,"died":true,"max_height":21,"garbage_in":26,"garbage_cleared":7,"garbage":[[15,8,1],[30,9,1],[45,9,1]]}
+{"seed":33013,"pieces":31,"attack":18,"app":0.5806,"died":true,"max_height":20,"garbage_in":18,"garbage_cleared":2,"garbage":[[15,9,1],[30,9,1]]}
+{"seed":33014,"pieces":45,"attack":19,"app":0.4222,"died":true,"max_height":17,"garbage_in":26,"garbage_cleared":9,"garbage":[[15,9,1],[30,8,1],[45,9,1]]}
+{"seed":33015,"pieces":45,"attack":20,"app":0.4444,"died":true,"max_height":22,"garbage_in":24,"garbage_cleared":5,"garbage":[[15,8,1],[30,8,1],[45,8,1]]}
+{"seed":33016,"pieces":45,"attack":28,"app":0.6222,"died":true,"max_height":18,"garbage_in":26,"garbage_cleared":9,"garbage":[[15,8,1],[30,9,1],[45,9,1]]}
