@@ -1,0 +1,19 @@
+== garbage: none
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+AtTenTris depth 1 style normal no garbage: APP 0.157 (APPfull 0.033), died 16/16, pieces 104 avg, TSD 12, TST 0, quads 5, max height 22, illegal 0, 8.3 ms/move (p90 10.1), 5s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+AtTenTris depth 1 style gate4 no garbage: APP 0.133 (APPfull 0.097), died 10/16, pieces 365 avg, TSD 37, TST 1, quads 12, max height 22, illegal 0, 7.9 ms/move (p90 9.5), 9s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+AtTenTris depth 3 beam 8 style normal no garbage: APP 0.222 (APPfull 0.063), died 16/16, pieces 141 avg, TSD 37, TST 0, quads 14, max height 23, illegal 0, 93.3 ms/move (p90 113.7), 20s
+V_greedy_normal         0.271  0/16    500   2.39   1.16   0.00   0.86   0.28   1.56  15.03    0/0    11  0.00    0    0.23    0.271
+search_normal           1.217  0/16    500   2.67   8.29   0.03   5.38   0.03   5.28   0.05    0/0   113  0.00    0   85.15    1.217
+== garbage: 10,3-4,cheese0.2,0.2
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+AtTenTris depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.205 (APPfull 0.018), died 16/16, pieces 43 avg, TSD 2, TST 0, quads 13, max height 24, illegal 0, 7.5 ms/move (p90 9.1), 4s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+AtTenTris depth 1 style gate4 garbage 10,3-4,cheese0.2,0.2: APP 0.192 (APPfull 0.023), died 16/16, pieces 61 avg, TSD 3, TST 0, quads 19, max height 23, illegal 0, 8.3 ms/move (p90 10.0), 4s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+AtTenTris depth 3 beam 8 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.286 (APPfull 0.028), died 16/16, pieces 49 avg, TSD 6, TST 0, quads 20, max height 23, illegal 0, 108.0 ms/move (p90 135.0), 13s
+V_greedy_normal         0.324 16/16     85   3.81   1.17   0.00   0.66   0.59   1.32  21.47 215/469     6  0.00    0    0.42    0.055
+search_normal           1.125  5/16    409   8.90   6.04   0.00   4.17   0.38   5.46   5.71 2107/2252    49  0.00    0   93.95    0.921
+all done

@@ -59,6 +59,10 @@ impl Fitness {
                         label: String::new(),
                         record: false,
                         env_rules: None,
+                        dataset: false,
+                        external: false,
+                        shortlist: false,
+                        all_roots: 0,
                     };
                     attack[ci].fetch_add(game::play(&mut searcher, &cfg).0.attack, Ordering::Relaxed);
                     on_job(done.fetch_add(1, Ordering::Relaxed) + 1, total);
@@ -354,18 +358,30 @@ pub fn cmd_tune(a: &Args) {
     let n = NF;
 
     let frozen = frozen_mask(a);
+    // --fix name,...: weights held at their STARTING value (--freeze holds them at 0).
+    let mut fixed = [false; NF];
+    for name in a.str("fix").map(|s| s.split(',').collect::<Vec<_>>()).unwrap_or_default() {
+        fixed[eval::index_of(name).unwrap_or_else(|| panic!("--fix: unknown feature {}", name))] = true;
+    }
     let mut start_w: Vec<f64> = weights(a).w.iter().map(|&x| x as f64).collect();
     let mut init_sd: Vec<f64> = start_w.iter().map(|m| m.abs() * 0.5 + 0.2).collect();
     for i in 0..n {
         if frozen[i] {
             start_w[i] = 0.0;
+        }
+        if frozen[i] || fixed[i] {
             init_sd[i] = 0.0;
         }
     }
-    assert!(algo == "cem" || !frozen.iter().any(|&x| x), "--freeze is only supported with --algo cem");
+    let held = |i: usize| frozen[i] || fixed[i];
+    assert!(algo == "cem" || !(0..n).any(held), "--freeze / --fix are only supported with --algo cem");
     if frozen.iter().any(|&x| x) {
         let names: Vec<&str> = (0..n).filter(|&i| frozen[i]).map(|i| eval::NAMES[i]).collect();
         println!("frozen at 0: {}", names.join(" "));
+    }
+    if fixed.iter().any(|&x| x) {
+        let names: Vec<String> = (0..n).filter(|&i| fixed[i]).map(|i| format!("{} {:.2}", eval::NAMES[i], start_w[i] * unit_factor()[i])).collect();
+        println!("fixed at start: {}", names.join(", "));
     }
     let mut st = TuneState {
         generation: 0,
@@ -454,8 +470,8 @@ pub fn cmd_tune(a: &Args) {
                     st.mean[i] = m;
                     // Noise floor that decays, so the search does not collapse early.
                     st.sd[i] = v.sqrt() + 0.1 * (1.0 - g_i as f64 / gens as f64);
-                    if frozen[i] {
-                        st.mean[i] = 0.0;
+                    if frozen[i] || fixed[i] {
+                        st.mean[i] = start_w[i];
                         st.sd[i] = 0.0;
                     }
                 }
@@ -593,6 +609,24 @@ pub fn cmd_landscape(a: &Args, what: &str) {
     let dir = a.str("save").unwrap_or("results/landscape").to_string();
     let _ = std::fs::create_dir_all(&dir);
     match what {
+        "slices" if a.str("only").is_some() => {
+            // One weight set to the listed values (normalised units), the rest held at a
+            // weights file: `--only t_vertical --values 0,1,2,...` -> slice_<name>.csv.
+            let base = normalised_weights_file(a.str("weights").expect("--weights"));
+            let name = a.str("only").unwrap();
+            let i = eval::index_of(name).unwrap_or_else(|| panic!("--only: unknown feature {}", name));
+            let values: Vec<f64> = a.str("values").expect("--values a,b,c").split(',').map(|v| v.parse().expect("--values")).collect();
+            let points: Vec<Vec<f64>> = values.iter().map(|&v| { let mut p = base.clone(); p[i] = v; p }).collect();
+            println!("slice {}: {} points x {} games x {} pieces (base value {:.3})", name, points.len(), f.games, f.pieces, base[i]);
+            let tag = a.str("tag").unwrap_or("");
+            let fits = eval_cached(&f, &points, seed, &dir, &format!("slice_{}{}", name, tag));
+            let mut out = format!("{},fitness\n", name);
+            for (v, ft) in values.iter().zip(&fits) {
+                out += &format!("{:.4},{:.5}\n", v, ft);
+                println!("  {:>8.3}  {:.4}", v, ft);
+            }
+            std::fs::write(format!("{}/slice_{}{}.csv", dir, name, tag), out).unwrap();
+        }
         "slices" => {
             // One-dimensional cuts: every weight moved alone around a weights file.
             let base = normalised_weights_file(a.str("weights").expect("--weights"));

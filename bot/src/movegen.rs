@@ -23,6 +23,12 @@ const TABLE: usize = 1024;
 
 pub struct MoveGen {
     pub all_spin: bool,
+    /// TetrisBattle rotation and spins (battle.rs) instead of SRS.
+    pub battle: bool,
+    /// Battle BFS: per (x, y, rot, tspin) the smallest lock-delay count seen, stamped.
+    bvisit: Vec<u32>,
+    bground: Vec<u8>,
+    bqueue: Vec<(i8, i8, u8, u8, u8)>,
     visited: Vec<u32>,
     stamp: u32,
     queue: Vec<(i8, i8, u8)>,
@@ -35,6 +41,10 @@ impl MoveGen {
     pub fn new() -> MoveGen {
         MoveGen {
             all_spin: true,
+            battle: false,
+            bvisit: vec![0; STATES * 3],
+            bground: vec![0; STATES * 3],
+            bqueue: Vec::with_capacity(4096),
             visited: vec![0; STATES],
             stamp: 0,
             queue: Vec::with_capacity(1024),
@@ -52,6 +62,9 @@ impl MoveGen {
     /// All reachable placements for `piece` on `board`. Empty when spawn is blocked
     /// (block-out).
     pub fn generate(&mut self, board: &Board, piece: Piece, shapes: &Shapes, out: &mut Vec<Placement>) {
+        if self.battle {
+            return self.generate_battle(board, piece, shapes, out);
+        }
         out.clear();
         self.stamp = self.stamp.wrapping_add(1);
         if self.stamp == 0 {
@@ -110,6 +123,77 @@ impl MoveGen {
                     }
                     break;
                 }
+            }
+        }
+    }
+
+    /// TetrisBattle's search(): every state reachable from spawn with left / right / soft
+    /// drop / cw / ccw (no 180), at most MAX_GROUND_OPS actions while resting; the T-spin
+    /// flag is set by each rotation and kept through moves. Every resting state is a
+    /// placement (the hard drop from above lands on one) with that state's flag.
+    fn generate_battle(&mut self, board: &Board, piece: Piece, shapes: &Shapes, out: &mut Vec<Placement>) {
+        use crate::battle::{collide, rotate, MAX_GROUND_OPS, SPAWN};
+        out.clear();
+        self.stamp = self.stamp.wrapping_add(1);
+        if self.stamp == 0 {
+            self.visited.iter_mut().for_each(|v| *v = 0);
+            self.bvisit.iter_mut().for_each(|v| *v = 0);
+            self.key_stamp.iter_mut().for_each(|v| *v = 0);
+            self.stamp = 1;
+        }
+        let stamp = self.stamp;
+        let (sx, sy) = SPAWN;
+        if collide(board, piece, 0, sx, sy) {
+            return;
+        }
+        let bidx = |x: i32, y: i32, r: usize, t: u8| Self::idx(x, y, r) * 3 + t as usize;
+        self.bqueue.clear();
+        self.bqueue.push((sx as i8, sy as i8, 0, 0, 0));
+        let i0 = bidx(sx, sy, 0, 0);
+        self.bvisit[i0] = stamp;
+        self.bground[i0] = 0;
+        let mut head = 0;
+        while head < self.bqueue.len() {
+            let (x8, y8, r8, t, g) = self.bqueue[head];
+            head += 1;
+            let (x, y, r) = (x8 as i32, y8 as i32, r8 as usize);
+            if self.bvisit[bidx(x, y, r, t)] == stamp && self.bground[bidx(x, y, r, t)] < g {
+                continue; // reached again with more lock delay left
+            }
+            let on_ground = collide(board, piece, r, x, y + 1);
+            if on_ground {
+                let spin = match t { 2 => Spin::Full, 1 => Spin::Mini, _ => Spin::None };
+                self.record(board, piece, shapes, r, x, y, spin, if t > 0 { 0 } else { -1 }, out);
+                if g >= MAX_GROUND_OPS {
+                    continue;
+                }
+            }
+            let g_base = if on_ground { g + 1 } else { 0 };
+            let push = |s: &mut Self, nx: i32, ny: i32, nr: usize, nt: u8| {
+                let ng = if collide(board, piece, nr, nx, ny + 1) { g_base } else { 0 };
+                if !(-3..14).contains(&nx) || !(-3..44).contains(&ny) {
+                    return;
+                }
+                let i = bidx(nx, ny, nr, nt);
+                if s.bvisit[i] == stamp && s.bground[i] <= ng {
+                    return;
+                }
+                s.bvisit[i] = stamp;
+                s.bground[i] = ng;
+                s.bqueue.push((nx as i8, ny as i8, nr as u8, nt, ng));
+            };
+            if !collide(board, piece, r, x - 1, y) {
+                push(self, x - 1, y, r, t);
+            }
+            if !collide(board, piece, r, x + 1, y) {
+                push(self, x + 1, y, r, t);
+            }
+            if !on_ground {
+                push(self, x, y + 1, r, t);
+            }
+            for dir in [1, -1] {
+                let (nx, ny, nr, nt) = rotate(board, piece, x, y, r, dir);
+                push(self, nx, ny, nr, nt);
             }
         }
     }

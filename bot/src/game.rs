@@ -91,8 +91,9 @@ pub struct GarbageConfig {
     pub rows_min: usize,
     /// Chance each subsequent row moves its hole (0 = clean, 1 = full cheese).
     pub messiness: f64,
-    /// Each batch is clean (messiness 0) or cheese (messiness 1), with even odds.
-    pub mix: bool,
+    /// Chance a batch is cheese (every row a new hole) instead of clean ("mix" = 0.5).
+    /// With an aligned well (batch_move < 1) a cheese batch leaves the clean column alone.
+    pub cheese: f64,
     /// Chance a batch's first row moves from the previous batch's hole column (1 = every
     /// batch in a new column, as TETR.IO; lower keeps the garbage well aligned).
     pub batch_move: f64,
@@ -102,7 +103,7 @@ pub struct GarbageConfig {
 
 impl Default for GarbageConfig {
     fn default() -> Self {
-        GarbageConfig { every: 0, rows: 0, rows_min: 0, messiness: 0.0, mix: false, batch_move: 1.0, start_rows: 0 }
+        GarbageConfig { every: 0, rows: 0, rows_min: 0, messiness: 0.0, cheese: 0.0, batch_move: 1.0, start_rows: 0 }
     }
 }
 
@@ -126,6 +127,8 @@ pub struct Stats {
     pub garbage_in: u64,
     pub garbage_cleared: u64,
     pub max_height: i32,
+    /// `bot play-ext`: replies that matched no legal move (the bot's own pick was played).
+    pub ext_illegal: u64,
     pub nodes: u64,
     /// Wall-clock time of each search call, in microseconds.
     pub think_us: Vec<u32>,
@@ -276,6 +279,18 @@ pub struct GameConfig {
     /// The rules the game actually applies, when they differ from the rules the bot
     /// searches with (`--believe`). None = the bot knows the real rules.
     pub env_rules: Option<crate::rules::Rules>,
+    /// Write AtTenTris dataset records (one per position, every root placement with its
+    /// search scores) instead of viewer JSONL. Needs `SearchConfig::roots`.
+    pub dataset: bool,
+    /// Moves come from another process over stdin / stdout (`bot play-ext`); the searcher
+    /// only lists the legal moves (`SearchConfig::roots`).
+    pub external: bool,
+    /// `bot play-ext --shortlist`: another process names the first moves worth searching
+    /// (stdin: {"moves": [{"hold", "cells"}, ...]}), and this searcher picks among them.
+    pub shortlist: bool,
+    /// With `dataset`: also run a root-diverse search (keeping this many lines per first
+    /// move) so every legal move's record gets a search score. 0 = survivors only.
+    pub all_roots: usize,
 }
 
 pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
@@ -293,15 +308,15 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
     let mut garbage_hole = grng.below(W as u64) as i32;
     let mut garbage_left = 0u64; // garbage rows still on the board (approximate: counted by 'G' rows)
 
-    let inject = |board: &mut Board, colors: &mut Colors, n: usize, grng: &mut Rng, hole: &mut i32, messiness: f64| {
+    let inject = |board: &mut Board, colors: &mut Colors, n: usize, grng: &mut Rng, hole: &mut i32, messiness: f64, cheese: bool| {
         // A batch starts in a new column with chance `batch_move` (1 = always, as TETR.IO:
         // one attack = one clean chunk); `messiness` is the chance each further row moves.
         let mut holes = Vec::with_capacity(n);
         for i in 0..n {
             // With batch_move < 1 (an aligned well), a batch that moves goes to an adjacent
             // column -- inward at a wall; otherwise any other column, as before.
-            let aligned = cfg.garbage.batch_move < 1.0;
-            let moves = if i == 0 { !aligned || grng.chance(cfg.garbage.batch_move) } else { grng.chance(messiness) };
+            let aligned = cfg.garbage.batch_move < 1.0 && !cheese;
+            let moves = cheese || if i == 0 { !aligned || grng.chance(cfg.garbage.batch_move) } else { grng.chance(messiness) };
             if moves && i == 0 && aligned && *hole >= 0 && *hole < W {
                 *hole = if *hole == 0 {
                     1
@@ -343,7 +358,10 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         stats.garbage_in += n as u64;
     }
 
-    let shapes = crate::rules::Shapes::new();
+    let shapes = crate::rules::Shapes::for_rules(&env);
+    let mut diverse = (cfg.dataset && cfg.all_roots > 0).then(|| {
+        Searcher::new(crate::search::SearchConfig { root_keep: cfg.all_roots, ..searcher.cfg.clone() }, searcher.weights.clone(), searcher.rules)
+    });
     let mut expected: Option<(Piece, [(i32, i32); 4])> = None;
     let counts_at_start = crate::eval::template_counts();
     let mut followup_left = 0u8;
@@ -351,11 +369,23 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         if cfg.garbage.every > 0 && n > 0 && n % cfg.garbage.every == 0 {
             let g = &cfg.garbage;
             let n_rows = if g.rows_min > 0 && g.rows_min < g.rows { g.rows_min + grng.below((g.rows - g.rows_min + 1) as u64) as usize } else { g.rows };
-            let messiness = if g.mix { if grng.chance(0.5) { 0.0 } else { 1.0 } } else { g.messiness };
-            inject(&mut board, &mut colors, n_rows, &mut grng, &mut garbage_hole, messiness);
+            let cheese = g.cheese > 0.0 && grng.chance(g.cheese);
+            if cheese && g.batch_move < 1.0 {
+                // Cheese over an aligned well: its holes do not move the well's column.
+                let mut tmp = garbage_hole;
+                inject(&mut board, &mut colors, n_rows, &mut grng, &mut tmp, 1.0, true);
+            } else {
+                let messiness = if g.cheese > 0.0 { if cheese { 1.0 } else { 0.0 } } else { g.messiness };
+                inject(&mut board, &mut colors, n_rows, &mut grng, &mut garbage_hole, messiness, false);
+            }
             garbage_rows_total += n_rows as u64;
             garbage_left += n_rows as u64;
             stats.garbage_in += n_rows as u64;
+            // TetrisBattle checks the top visible row after garbage arrives, too.
+            if env.battle && board.rows[crate::rules::BUFFER as usize] != 0 {
+                stats.died = true;
+                break;
+            }
         }
         let spawned = bag.get(drawn);
         let queue: Vec<Piece> = (0..6).map(|i| bag.get(drawn + i)).collect();
@@ -371,15 +401,21 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
             .collect::<Vec<_>>()
             .join(",");
 
+        if cfg.shortlist {
+            searcher.root_allow = read_shortlist(n, &board, spawned, &queue[1..], hold, b2b);
+        }
         let nodes_before = searcher.nodes;
         let t0 = std::time::Instant::now();
-        let d = match searcher.search(&board, &queue, hold, b2b, &bag_next) {
+        let mut d = match searcher.search(&board, &queue, hold, b2b, &bag_next) {
             Some(d) => d,
             None => {
                 stats.died = true;
                 break;
             }
         };
+        if cfg.external {
+            external_move(&mut d, n, &board, spawned, &queue[1..], hold, b2b, &shapes, &mut stats);
+        }
         stats.think_us.push(t0.elapsed().as_micros().min(u32::MAX as u128) as u32);
         stats.nodes += searcher.nodes - nodes_before;
 
@@ -398,6 +434,16 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
             expected = Some((s.placement.piece, sorted_cells(&s.placement, &shapes)));
         }
         let plan_json = if cfg.record { plan_to_json(&board, &d.plan, b2b, searcher, &shapes) } else { String::new() };
+        if cfg.dataset {
+            match diverse.as_mut().and_then(|dv| dv.search(&board, &queue, spawn_hold, b2b, &bag_next)) {
+                Some(d2) => {
+                    let mut dd = d.clone();
+                    crate::search::merge_root_best(&mut dd, &d2);
+                    dataset_record(&mut out, cfg, n, &board, spawned, &queue[1..], spawn_hold, b2b, &dd, &env, &shapes);
+                }
+                None => dataset_record(&mut out, cfg, n, &board, spawned, &queue[1..], spawn_hold, b2b, &d, &env, &shapes),
+            }
+        }
 
         // Advance the queue exactly as Game does: the spawned piece is consumed; an
         // empty-hold swap consumes one more.
@@ -409,7 +455,7 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
             hold = Some(spawned);
         }
         let mut p = d.placement;
-        if cfg.env_rules.is_some() {
+        if cfg.env_rules.is_some() && !env.battle {
             // The bot chose this move believing its own rules; the game scores it by
             // the real ones. Re-detect the spin: only a rotation can make one, and
             // under the real rules a non-T immobile spot may not count.
@@ -522,6 +568,138 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         stats.tmpl_search[i] = counts[i] - counts_at_start[i];
     }
     (stats, out)
+}
+
+/// One AtTenTris training position. Rows are bitmasks, top to bottom (bit x = column x),
+/// as the replay boards; `cands` are the distinct legal first moves (same cells and hold
+/// = one move): [hold, piece, rot, spin 0/1/2, lines, attack, ply1, best | null,
+/// [x0, y0, ... x3, y3]]; `chosen` indexes the move the bot played.
+pub fn dataset_record(out: &mut String, cfg: &GameConfig, n: usize, board: &Board, spawned: Piece, previews: &[Piece],
+                  hold: Option<Piece>, b2b: i32, d: &crate::search::Decision, env: &crate::rules::Rules,
+                  shapes: &crate::rules::Shapes) {
+    use std::fmt::Write;
+    let mut keys: Vec<(bool, [(i32, i32); 4])> = Vec::new();
+    let mut cands: Vec<crate::search::RootScore> = Vec::new();
+    let mut chosen = 0usize;
+    for (i, r) in d.roots.iter().enumerate() {
+        let key = (r.step.use_hold, sorted_cells(&r.step.placement, shapes));
+        let k = match keys.iter().position(|q| *q == key) {
+            Some(k) => {
+                // a twin (another rotation / route to the same cells): keep the better scores
+                let c = &mut cands[k];
+                if r.ply1 > c.ply1 {
+                    let best = c.best;
+                    *c = *r;
+                    c.best = omax(best, r.best);
+                } else {
+                    c.best = omax(c.best, r.best);
+                }
+                k
+            }
+            None => {
+                keys.push(key);
+                cands.push(*r);
+                keys.len() - 1
+            }
+        };
+        if i == d.chosen_root {
+            chosen = k;
+        }
+    }
+    let letter = |p: Piece| p.letter().to_ascii_uppercase();
+    let _ = write!(out, "{{\"teacher\":\"{}\",\"seed\":{},\"n\":{},\"rows\":[{}],\"piece\":\"{}\",\"queue\":[{}],\"hold\":{},\"b2b\":{},\"cands\":[",
+        cfg.label, cfg.seed, n,
+        board.rows.iter().map(|r| r.to_string()).collect::<Vec<_>>().join(","),
+        letter(spawned),
+        previews.iter().take(5).map(|&p| format!("\"{}\"", letter(p))).collect::<Vec<_>>().join(","),
+        hold.map_or("null".to_string(), |p| format!("\"{}\"", letter(p))), b2b);
+    for (k, c) in cands.iter().enumerate() {
+        let p = &c.step.placement;
+        let o = crate::search::apply(board, p, b2b, env, shapes);
+        let spin = match p.spin { Spin::None => 0, Spin::Mini => 1, _ => 2 };
+        let cells = keys[k].1.iter().map(|(x, y)| format!("{},{}", x, y)).collect::<Vec<_>>().join(",");
+        let _ = write!(out, "{}[{},\"{}\",{},{},{},{},{:.3},{},[{}]]", if k > 0 { "," } else { "" },
+            c.step.use_hold as u8, letter(p.piece), p.rot, spin, o.lines, c.attack, c.ply1,
+            c.best.map_or("null".to_string(), |b| format!("{:.3}", b)), cells);
+    }
+    let _ = writeln!(out, "],\"chosen\":{}}}", chosen);
+}
+
+fn write_state(n: usize, board: &Board, spawned: Piece, previews: &[Piece], hold: Option<Piece>, b2b: i32) {
+    use std::io::Write;
+    let up = |p: Piece| p.letter().to_ascii_uppercase();
+    let mut o = std::io::stdout().lock();
+    let _ = writeln!(o, "{{\"n\":{},\"rows\":[{}],\"piece\":\"{}\",\"queue\":[{}],\"hold\":{},\"b2b\":{}}}", n,
+        board.rows.iter().map(|r| r.to_string()).collect::<Vec<_>>().join(","), up(spawned),
+        previews.iter().take(5).map(|&p| format!("\"{}\"", up(p))).collect::<Vec<_>>().join(","),
+        hold.map_or("null".to_string(), |p| format!("\"{}\"", up(p))), b2b);
+    let _ = o.flush();
+}
+
+fn parse_move(m: &serde_json::Value) -> (bool, [(i32, i32); 4]) {
+    let uh = m["hold"].as_i64().unwrap_or(0) != 0;
+    let c: Vec<i32> = m["cells"].as_array().map(|a| a.iter().map(|x| x.as_i64().unwrap_or(-99) as i32).collect()).unwrap_or_default();
+    let mut cells = [(-99, -99); 4];
+    for (k, p) in c.chunks(2).take(4).enumerate() {
+        if p.len() == 2 {
+            cells[k] = (p[0], p[1]);
+        }
+    }
+    cells.sort();
+    (uh, cells)
+}
+
+/// `bot play-ext --shortlist`: send the state, read the shortlist of first moves.
+fn read_shortlist(n: usize, board: &Board, spawned: Piece, previews: &[Piece], hold: Option<Piece>, b2b: i32) -> Vec<(bool, [(i32, i32); 4])> {
+    use std::io::BufRead;
+    write_state(n, board, spawned, previews, hold, b2b);
+    let mut line = String::new();
+    std::io::stdin().lock().read_line(&mut line).expect("read shortlist");
+    let v: serde_json::Value = serde_json::from_str(&line).expect("shortlist JSON");
+    v["moves"].as_array().map(|a| a.iter().map(parse_move).collect()).unwrap_or_default()
+}
+
+/// `bot play-ext`: send the state, read the move, and play it if it is one of the legal moves
+/// (several routes to the same cells: the highest-attack one).
+fn external_move(d: &mut crate::search::Decision, n: usize, board: &Board, spawned: Piece, previews: &[Piece], hold: Option<Piece>,
+                 b2b: i32, shapes: &crate::rules::Shapes, stats: &mut Stats) {
+    use std::io::{BufRead, Write};
+    let up = |p: Piece| p.letter().to_ascii_uppercase();
+    {
+        let mut o = std::io::stdout().lock();
+        let _ = writeln!(o, "{{\"n\":{},\"rows\":[{}],\"piece\":\"{}\",\"queue\":[{}],\"hold\":{},\"b2b\":{}}}", n,
+            board.rows.iter().map(|r| r.to_string()).collect::<Vec<_>>().join(","), up(spawned),
+            previews.iter().take(5).map(|&p| format!("\"{}\"", up(p))).collect::<Vec<_>>().join(","),
+            hold.map_or("null".to_string(), |p| format!("\"{}\"", up(p))), b2b);
+        let _ = o.flush();
+    }
+    let mut line = String::new();
+    std::io::stdin().lock().read_line(&mut line).expect("read move");
+    let v: serde_json::Value = serde_json::from_str(&line).expect("move JSON");
+    let uh = v["hold"].as_i64().unwrap_or(0) != 0;
+    let c: Vec<i32> = v["cells"].as_array().map(|a| a.iter().map(|x| x.as_i64().unwrap_or(-99) as i32).collect()).unwrap_or_default();
+    let mut want: Vec<(i32, i32)> = c.chunks(2).filter(|p| p.len() == 2).map(|p| (p[0], p[1])).collect();
+    want.sort();
+    let pick = d.roots.iter()
+        .filter(|r| r.step.use_hold == uh && sorted_cells(&r.step.placement, shapes).to_vec() == want)
+        .max_by(|a, b| a.attack.total_cmp(&b.attack))
+        .copied();
+    match pick {
+        Some(r) => {
+            d.use_hold = r.step.use_hold;
+            d.placement = r.step.placement;
+            d.plan = vec![r.step];
+        }
+        None => stats.ext_illegal += 1,
+    }
+}
+
+fn omax(a: Option<f32>, b: Option<f32>) -> Option<f32> {
+    match (a, b) {
+        (Some(x), Some(y)) => Some(x.max(y)),
+        (x, None) => x,
+        (None, y) => y,
+    }
 }
 
 fn sorted_cells(p: &crate::board::Placement, shapes: &crate::rules::Shapes) -> [(i32, i32); 4] {

@@ -1,0 +1,18 @@
+epoch 1: train loss 3.071 | val normal top1 0.522 top3 0.765 | val gate4 top1 0.511 top3 0.753 | argmax Qs top1 0.414 / 0.434, Q1 top1 0.079 / 0.090 | MAE Q1 22.04 Qs 6.96 | 159s
+epoch 2: train loss 2.514 | val normal top1 0.564 top3 0.801 | val gate4 top1 0.547 top3 0.793 | argmax Qs top1 0.470 / 0.470, Q1 top1 0.130 / 0.118 | MAE Q1 19.98 Qs 6.55 | 158s
+epoch 3: train loss 2.386 | val normal top1 0.590 top3 0.827 | val gate4 top1 0.569 top3 0.809 | argmax Qs top1 0.500 / 0.507, Q1 top1 0.136 / 0.122 | MAE Q1 18.54 Qs 6.37 | 158s
+epoch 4: train loss 2.310 | val normal top1 0.607 top3 0.841 | val gate4 top1 0.588 top3 0.822 | argmax Qs top1 0.532 / 0.532, Q1 top1 0.141 / 0.124 | MAE Q1 18.45 Qs 6.26 | 158s
+epoch 5: train loss 2.260 | val normal top1 0.615 top3 0.850 | val gate4 top1 0.600 top3 0.833 | argmax Qs top1 0.522 / 0.513, Q1 top1 0.136 / 0.121 | MAE Q1 18.31 Qs 6.12 | 159s
+epoch 6: train loss 2.223 | val normal top1 0.625 top3 0.853 | val gate4 top1 0.608 top3 0.836 | argmax Qs top1 0.528 / 0.535, Q1 top1 0.144 / 0.124 | MAE Q1 18.04 Qs 6.05 | 159s
+epoch 7: train loss 2.198 | val normal top1 0.629 top3 0.854 | val gate4 top1 0.611 top3 0.836 | argmax Qs top1 0.549 / 0.547, Q1 top1 0.135 / 0.118 | MAE Q1 17.95 Qs 6.03 | 165s
+epoch 8: train loss 2.184 | val normal top1 0.629 top3 0.857 | val gate4 top1 0.614 top3 0.838 | argmax Qs top1 0.544 / 0.546, Q1 top1 0.135 / 0.118 | MAE Q1 18.00 Qs 6.02 | 166s
+== garbage: none
+AtTenTris logit depth 1 style normal no garbage: APP 0.583 (APPfull 0.583), died 0/64, pieces 500 avg, TSD 1300, TST 15, quads 765, max height 20, illegal 0, 10.2 ms/move (p90 11.7) + search 10.7 ms, 25s
+AtTenTris logit depth 3 beam 8 style normal no garbage: APP 0.799 (APPfull 0.799), died 0/64, pieces 500 avg, TSD 1746, TST 13, quads 904, max height 19, illegal 0, 125.0 ms/move (p90 132.4) + search 125.6 ms, 259s
+AtTenTris logit shortlist 10 + V search depth 1 style normal no garbage: APP 1.219 (APPfull 1.219), died 0/64, pieces 500 avg, TSD 2703, TST 5, quads 866, max height 15, illegal 0, 7.4 ms/move (p90 8.2) + search 63.6 ms, 147s
+== garbage: 10,3-4,cheese0.2,0.2
+AtTenTris logit depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.664 (APPfull 0.231), died 62/64, pieces 174 avg, TSD 351, TST 4, quads 704, max height 21, illegal 0, 9.5 ms/move (p90 11.1) + search 10.0 ms, 13s
+AtTenTris logit depth 3 beam 8 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.817 (APPfull 0.430), died 52/64, pieces 263 avg, TSD 711, TST 5, quads 1280, max height 23, illegal 0, 119.9 ms/move (p90 132.2) + search 120.5 ms, 137s
+gate4 teacher: beam 128 picks the same move as beam 64 in 89.1% of 5000 validation positions
+normal teacher: beam 128 picks the same move as beam 64 in 89.5% of 5000 validation positions
+v4 done

@@ -1,0 +1,6 @@
+22480 positions: epoch 16: train loss 2.557 | val normal top1 0.427 top3 0.668 | val gate4 top1 0.484 top3 0.713 | argmax Qs top1 0.340 / 0.372, Q1 top1 0.046 / 0.047 | MAE Q1 23.70 Qs 9.30 | 10s
+22480 positions: epoch 16: train loss 2.606 | val normal top1 0.475 top3 0.730 | val gate4 top1 0.462 top3 0.700 | argmax Qs top1 0.322 / 0.360, Q1 top1 0.043 / 0.051 | MAE Q1 22.33 Qs 7.50 | 10s
+44960 positions: epoch 16: train loss 2.501 | val normal top1 0.501 top3 0.755 | val gate4 top1 0.499 top3 0.734 | argmax Qs top1 0.385 / 0.418, Q1 top1 0.057 / 0.067 | MAE Q1 21.40 Qs 7.16 | 18s
+44960 positions: epoch 16: train loss 2.501 | val normal top1 0.500 top3 0.754 | val gate4 top1 0.499 top3 0.737 | argmax Qs top1 0.384 / 0.418, Q1 top1 0.056 / 0.066 | MAE Q1 21.25 Qs 7.15 | 18s
+89920 positions: epoch 16: train loss 2.399 | val normal top1 0.525 top3 0.778 | val gate4 top1 0.521 top3 0.766 | argmax Qs top1 0.423 / 0.455, Q1 top1 0.079 / 0.094 | MAE Q1 21.43 Qs 6.82 | 39s
+89920 positions: epoch 16: train loss 2.400 | val normal top1 0.524 top3 0.772 | val gate4 top1 0.521 top3 0.760 | argmax Qs top1 0.421 / 0.457, Q1 top1 0.080 / 0.097 | MAE Q1 20.58 Qs 6.83 | 19s

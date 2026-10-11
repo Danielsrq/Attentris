@@ -17,10 +17,12 @@
 //!   --mode burst2           burst, but spin singles do not arm and the window is 2 placements
 //!   --mode gate             training rules: only chains opened by a spin double/triple score
 //!   --mode gate_b2b         gate, plus the B2B bonus on every spin clear of a paid chain
+//!   --mode battle           TetrisBattle's rules (friend's RL bot): its kicks, T-spins only, TETR.IO attack + combos
 //!   --wound-clears N        clears a wound line lasts (default 10)
 //!   --garbage E,R,M         inject R rows every E pieces, hole moves with prob M
 //!   --cheese N              start with N rows of messy garbage
 
+mod battle;
 mod board;
 mod cpu;
 mod eval;
@@ -80,6 +82,8 @@ fn search_config(a: &Args) -> SearchConfig {
         chance: !a.has("no-chance"),
         chance_top: a.get("chance-top", d.chance_top),
         death: d.death,
+        roots: false,
+        root_keep: 0,
     }
 }
 
@@ -96,11 +100,12 @@ fn rules_for(a: &Args, mode: Option<&str>) -> Rules {
         Some("burst2") => Rules::burst2(),
         Some("gate") => Rules::gate(),
         Some("gate_b2b") => Rules::gate_b2b(),
+        Some("battle") => Rules::battle(),
         Some("standard") => Rules { all_spin: false, ..Rules::default() },
         // Normal rules are the default, as in the Godot game.
         Some("normal") | None => Rules::normal(),
         Some("competitive") => Rules::default(),
-        Some(m) => panic!("unknown --mode {} (normal | burst | burst2 | gate | gate_b2b | standard | competitive | allspin | allspin_nw)", m),
+        Some(m) => panic!("unknown --mode {} (normal | burst | burst2 | gate | gate_b2b | battle | standard | competitive | allspin | allspin_nw)", m),
     };
     if a.has("no-allspin") {
         r.all_spin = false;
@@ -129,9 +134,11 @@ fn garbage(a: &Args) -> GarbageConfig {
             }
             None => g.rows = p.get(1).and_then(|x| x.parse().ok()).unwrap_or(1),
         }
-        // Messiness: a chance, or "mix" for clean and cheese batches with even odds.
+        // Messiness: a chance; "mix" (clean or cheese batches, even odds); or "cheeseP"
+        // (a batch is cheese with chance P, else clean).
         match p.get(2) {
-            Some(&"mix") => g.mix = true,
+            Some(&"mix") => g.cheese = 0.5,
+            Some(m) if m.starts_with("cheese") => g.cheese = m["cheese".len()..].parse().unwrap_or(0.5),
             m => g.messiness = m.and_then(|x| x.parse().ok()).unwrap_or(0.3),
         }
         // Optional 4th field: chance a batch moves from the previous batch's column.
@@ -404,6 +411,585 @@ fn cmd_plan(a: &Args) {
     println!("planned attack {}, nodes {}", total, s.nodes);
 }
 
+/// `bot structures`: the T-spin structures on each board, for AtTenTris's overlay tokens.
+/// One stdin line per board, replay format: {"board": [40 rows, top to bottom, '.' empty]}
+/// (other fields ignored). Reply per line: {"structures": [{"kind", "lines", "fill",
+/// "cells": [[x, y], ...]}]}, coordinates as in the input. Kinds, one per slot:
+///   tsd       flat slot (nub down)                     cells: the T
+///   fractal   flat slot with the same TSD two rows down cells: both T's
+///   imperial  vertical slot the T can turn 180 in      cells: T, turned T, second T
+///   stsd      vertical, the TSD opens at h (y+1)        cells: T + second T
+///   cspin     vertical, h filled, TSD opens at g (y+2)  cells: T + second T
+///   vertical  vertical slot with no second T (TST)      cells: the T
+fn cmd_structures() {
+    use std::io::{BufRead, Write};
+    let stdout = std::io::stdout();
+    let mut out = stdout.lock();
+    let mut slots = SlotScan::new();
+    let letter = |v: &serde_json::Value| v.as_str().and_then(|s| s.chars().next()).and_then(rules::Piece::from_letter);
+    for line in std::io::stdin().lock().lines() {
+        let Ok(line) = line else { break };
+        if line.trim().is_empty() {
+            continue;
+        }
+        let v: serde_json::Value = match serde_json::from_str(&line) {
+            Ok(v) => v,
+            Err(e) => {
+                let _ = writeln!(out, "{{\"error\":\"{}\"}}", e);
+                continue;
+            }
+        };
+        let mut b = board::Board::default();
+        for (y, row) in v["board"].as_array().map(|a| a.as_slice()).unwrap_or(&[]).iter().enumerate() {
+            if y as i32 >= rules::H {
+                break;
+            }
+            for (x, ch) in row.as_str().unwrap_or("").chars().enumerate() {
+                if ch != '.' && ch != ' ' {
+                    b.rows[y] |= 1 << x;
+                }
+            }
+        }
+        // with "piece" (and "queue", "hold"): also piece slots and setups (SlotScan)
+        let pieces = letter(&v["piece"]).map(|p| (p,
+            v["queue"].as_array().map(|a| a.iter().filter_map(letter).collect::<Vec<_>>()).unwrap_or_default(), letter(&v["hold"])));
+        let mut items: Vec<String> = Vec::new();
+        let t = structures_json(&b);
+        if !t.is_empty() {
+            items.push(t);
+        }
+        if v.get("slots").and_then(|x| x.as_bool()).unwrap_or(false) || pieces.is_some() {
+            slots.overhang_filter = v["setup_filter"].as_bool().unwrap_or(false);
+            items.extend(slots.json(&b, pieces));
+        }
+        let _ = writeln!(out, "{{\"structures\":[{}]}}", items.join(","));
+    }
+}
+
+/// AtTenTris piece-slot tokens (see `cmd_structures`). Covered slots: spin placements of
+/// S, Z, L, J and I that the move generator can actually reach (immobile spots under an
+/// overhang), with the rows they would complete and their "hang" -- the filled cells
+/// directly above the piece in its columns. Setups (when the pieces are known): a placement
+/// of the current or hold piece, clearing no rows, that creates a NEW spin slot of 2+ lines
+/// for a queued piece (T included, full spins only) -- an overhang one piece away.
+struct SlotScan {
+    mg: movegen::MoveGen,
+    shapes: rules::Shapes,
+    rules: Rules,
+    buf: Vec<board::Placement>,
+    /// Setups: only try placements that create an overhang (a cell of the piece directly
+    /// above an empty cell). A new spin slot needs a roof, so this skips the lookahead for
+    /// placements that sit flat on the surface; it can miss a setup that only adds a side
+    /// wall next to an existing roof.
+    pub overhang_filter: bool,
+}
+
+type Cells4 = [(i32, i32); 4];
+
+impl SlotScan {
+    fn new() -> SlotScan {
+        let rules = Rules::normal();
+        let mut mg = movegen::MoveGen::new();
+        mg.all_spin = true;
+        SlotScan { mg, shapes: rules::Shapes::for_rules(&rules), rules, buf: Vec::new(), overhang_filter: false }
+    }
+
+    fn lines_after(b: &board::Board, cells: &Cells4) -> u32 {
+        let mut rows: Vec<i32> = cells.iter().map(|c| c.1).collect();
+        rows.sort_unstable();
+        rows.dedup();
+        rows.iter().filter(|&&y| {
+            (0..rules::H).contains(&y) && {
+                let mut r = b.rows[y as usize];
+                for &(x, cy) in cells {
+                    if cy == y {
+                        r |= 1 << x;
+                    }
+                }
+                r.count_ones() == rules::W as u32
+            }
+        }).count() as u32
+    }
+
+    fn hang(b: &board::Board, cells: &Cells4) -> Vec<(i32, i32)> {
+        let mut out = Vec::new();
+        let mut cols: Vec<i32> = cells.iter().map(|c| c.0).collect();
+        cols.sort_unstable();
+        cols.dedup();
+        for x in cols {
+            let top = cells.iter().filter(|c| c.0 == x).map(|c| c.1).min().unwrap();
+            let mut y = top - 1;
+            while y >= 0 && (b.rows[y as usize] >> x) & 1 == 1 {
+                out.push((x, y));
+                y -= 1;
+            }
+        }
+        out
+    }
+
+    /// Reachable spin placements of `piece` (T: full spins only) with the lines they clear.
+    fn spin_slots(&mut self, b: &board::Board, piece: rules::Piece, min_lines: u32) -> Vec<(Cells4, u32)> {
+        let mut buf = std::mem::take(&mut self.buf);
+        self.mg.generate(b, piece, &self.shapes, &mut buf);
+        let mut out: Vec<(Cells4, u32)> = Vec::new();
+        for pl in &buf {
+            let ok = match pl.spin {
+                rules::Spin::None => false,
+                rules::Spin::Full => true,
+                _ => piece != rules::Piece::T,
+            };
+            if !ok {
+                continue;
+            }
+            let mut c = pl.abs_cells(&self.shapes);
+            c.sort();
+            let lines = Self::lines_after(b, &c);
+            if lines >= min_lines && !out.iter().any(|(oc, _)| *oc == c) {
+                out.push((c, lines));
+            }
+        }
+        self.buf = buf;
+        out
+    }
+
+    fn json(&mut self, b: &board::Board, pieces: Option<(rules::Piece, Vec<rules::Piece>, Option<rules::Piece>)>) -> Vec<String> {
+        use rules::Piece;
+        let cj = |cs: &[(i32, i32)]| cs.iter().map(|(x, y)| format!("[{},{}]", x, y)).collect::<Vec<_>>().join(",");
+        let lower = |p: Piece| p.letter().to_ascii_lowercase();
+        let mut items = Vec::new();
+        for piece in [Piece::S, Piece::Z, Piece::L, Piece::J, Piece::I] {
+            for (c, lines) in self.spin_slots(b, piece, 1) {
+                items.push(format!("{{\"kind\":\"slot_{}\",\"covered\":1,\"lines\":{},\"fill\":0,\"cells\":[{}],\"hang\":[{}]}}",
+                    lower(piece), lines, cj(&c), cj(&Self::hang(b, &c))));
+            }
+        }
+        let Some((cur, queue, hold)) = pieces else { return items };
+        // pieces that could use a slot later: the next two and the one in hold
+        let mut targets: Vec<Piece> = queue.iter().take(2).copied().chain(hold).filter(|&p| p != Piece::O).collect();
+        targets.sort_by_key(|&p| p as u8);
+        targets.dedup();
+        let before: Vec<(Piece, Vec<Cells4>)> = targets.iter().map(|&q| (q, self.spin_slots(b, q, 2).into_iter().map(|x| x.0).collect())).collect();
+        let placers: Vec<Piece> = std::iter::once(cur).chain(hold.or_else(|| queue.first().copied())).collect();
+        let mut setups: Vec<(u32, Piece, Piece, Cells4, Cells4)> = Vec::new();
+        for &pp in &placers {
+            let mut buf = std::mem::take(&mut self.buf);
+            self.mg.generate(b, pp, &self.shapes, &mut buf);
+            let placements = buf.clone();
+            self.buf = buf;
+            for pl in &placements {
+                let mut pc = pl.abs_cells(&self.shapes);
+                pc.sort();
+                if self.overhang_filter && !pc.iter().any(|&(x, y)| {
+                    y + 1 < rules::H && (b.rows[(y + 1) as usize] >> x) & 1 == 0 && !pc.contains(&(x, y + 1))
+                }) {
+                    continue;
+                }
+                let o = search::apply(b, pl, -1, &self.rules, &self.shapes);
+                if o.lock_out || o.lines > 0 {
+                    continue;
+                }
+                for (q, old) in &before {
+                    for (c, lines) in self.spin_slots(&o.board, *q, 2) {
+                        if !old.contains(&c) && !setups.iter().any(|s| s.4 == c && s.1 == *q) {
+                            setups.push((lines, *q, pp, pc, c));
+                        }
+                    }
+                }
+            }
+        }
+        setups.sort_by(|a, b| b.0.cmp(&a.0));
+        for (lines, q, pp, pc, c) in setups.into_iter().take(6) {
+            items.push(format!("{{\"kind\":\"setup_{}\",\"lines\":{},\"fill\":0,\"by\":\"{}\",\"cells\":[{}],\"slot\":[{}]}}",
+                lower(q), lines, pp.letter().to_ascii_uppercase(), cj(&pc), cj(&c)));
+        }
+        items
+    }
+}
+
+/// The T-spin structures on a board as a JSON array (see `cmd_structures`).
+fn structures_json(b: &board::Board) -> String {
+    let cells_json = |cs: &[(i32, i32)]| cs.iter().map(|(x, y)| format!("[{},{}]", x, y)).collect::<Vec<_>>().join(",");
+        let mut items = Vec::new();
+        for (s, vertical) in eval::all_tslots(b) {
+            let mut cells: Vec<(i32, i32)> = s.cells.to_vec();
+            let kind = if !vertical {
+                if let Some(sec) = s.second {
+                    cells.extend_from_slice(&sec);
+                    "fractal"
+                } else {
+                    "tsd"
+                }
+            } else if let Some(flip) = s.flip {
+                cells.extend_from_slice(&flip);
+                if let Some(sec) = s.flip_second {
+                    cells.extend_from_slice(&sec);
+                }
+                "imperial"
+            } else if let Some(sec) = s.second {
+                // the second T's nub: h (one under the stem bottom's row) or g (two under)
+                let stsd = sec[3].1 == s.cells[3].1;
+                cells.extend_from_slice(&sec);
+                if stsd { "stsd" } else { "cspin" }
+            } else {
+                "vertical"
+            };
+            cells.sort_unstable();
+            cells.dedup();
+            items.push(format!("{{\"kind\":\"{}\",\"lines\":{},\"fill\":{:.3},\"cells\":[{}]}}", kind, s.lines, s.fill, cells_json(&cells)));
+        }
+    items.join(",")
+}
+
+/// `bot label --weights W --label L --out FILE [--mode --threads --beam --depth]`: the teacher's
+/// full search on arbitrary states, written as dataset records (game::dataset_record) -- the
+/// labelling step of DAgger. stdin: one state per line, {"seed", "n", "rows": [40 bitmask
+/// rows], "piece", "queue": [previews], "hold", "b2b"}. The unseen bag is taken as all 7
+/// pieces for the chance ply. States with no legal move are skipped.
+fn cmd_label(a: &Args) {
+    use std::io::BufRead;
+    let r = rules(a);
+    let sc = SearchConfig { roots: true, ..search_config(a) };
+    let w = weights(a);
+    let label = a.str("label").unwrap_or("teacher").to_string();
+    let out_path = a.str("out").expect("--out FILE").to_string();
+    // --all-roots K: after the normal search (which picks the teacher's move), a second,
+    // root-diverse search keeps the best K lines of every first move, so every legal move
+    // gets a search score ("best" in the record), the bad ones included.
+    let all_roots = a.get("all-roots", 0usize);
+    let sc2 = SearchConfig { root_keep: all_roots, ..sc.clone() };
+    let lines: Vec<String> = std::io::stdin().lock().lines().filter_map(|l| l.ok()).filter(|l| !l.trim().is_empty()).collect();
+    let threads = a.get("threads", std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4)).max(1);
+    let done = std::sync::atomic::AtomicUsize::new(0);
+    let t0 = Instant::now();
+    let total = lines.len();
+    let parts: Vec<String> = std::thread::scope(|s| {
+        let hs: Vec<_> = (0..threads).map(|t| {
+            let (sc, sc2, w, label, lines, done) = (sc.clone(), sc2.clone(), w.clone(), label.clone(), &lines, &done);
+            s.spawn(move || {
+                let mut searcher = Searcher::new(sc, w.clone(), r);
+                let mut diverse = Searcher::new(sc2, w, r);
+                let shapes = rules::Shapes::for_rules(&r);
+                let letter = |v: &serde_json::Value| v.as_str().and_then(|s| s.chars().next()).and_then(rules::Piece::from_letter);
+                let mut out = String::new();
+                for line in lines.iter().skip(t).step_by(threads) {
+                    let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else { continue };
+                    let mut b = board::Board::default();
+                    for (y, n) in v["rows"].as_array().map(|a| a.as_slice()).unwrap_or(&[]).iter().enumerate().take(rules::H as usize) {
+                        b.rows[y] = n.as_u64().unwrap_or(0) as u16;
+                    }
+                    let Some(piece) = letter(&v["piece"]) else { continue };
+                    let mut queue = vec![piece];
+                    queue.extend(v["queue"].as_array().map(|a| a.iter().filter_map(letter).collect::<Vec<_>>()).unwrap_or_default());
+                    let hold = letter(&v["hold"]);
+                    let b2b = v["b2b"].as_i64().unwrap_or(-1) as i32;
+                    if let Some(mut d) = searcher.search(&b, &queue, hold, b2b, &rules::ALL_PIECES) {
+                        if all_roots > 0 {
+                            // same board, same move generation: the roots come in the same order
+                            if let Some(d2) = diverse.search(&b, &queue, hold, b2b, &rules::ALL_PIECES) {
+                                if d2.roots.len() == d.roots.len() {
+                                    for (r1, r2) in d.roots.iter_mut().zip(d2.roots.iter()) {
+                                        r1.best = match (r1.best, r2.best) {
+                                            (Some(x), Some(y)) => Some(x.max(y)),
+                                            (x, None) => x,
+                                            (None, y) => y,
+                                        };
+                                    }
+                                }
+                            }
+                        }
+                        let cfg = GameConfig { pieces: 0, seed: v["seed"].as_u64().unwrap_or(0), garbage: GarbageConfig::default(),
+                                               label: label.clone(), record: false, env_rules: None, dataset: true, external: false, shortlist: false, all_roots: 0 };
+                        game::dataset_record(&mut out, &cfg, v["n"].as_u64().unwrap_or(0) as usize, &b, piece, &queue[1..], hold, b2b, &d, &r, &shapes);
+                    }
+                    let k = done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+                    if k % 2000 == 0 {
+                        eprintln!("labelled {}/{} ({:.0}s)", k, total, t0.elapsed().as_secs_f64());
+                    }
+                }
+                out
+            })
+        }).collect();
+        hs.into_iter().map(|h| h.join().unwrap()).collect()
+    });
+    std::fs::write(&out_path, parts.concat()).expect("write --out");
+    eprintln!("labelled {} states -> {} ({:.0}s)", total, out_path, t0.elapsed().as_secs_f64());
+}
+
+/// `bot value --weights W [--mode]`: V of each state on stdin ({"rows": [40 bitmask rows, top
+/// to bottom], "b2b": n} per line). Reply per line: {"v": V, "f": [raw features],
+/// "c": [weight x feature, per feature]} in eval::NAMES order.
+fn cmd_value(a: &Args) {
+    use std::io::{BufRead, Write};
+    let r = rules(a);
+    let w = weights(a);
+    let stdout = std::io::stdout();
+    let mut out = stdout.lock();
+    for line in std::io::stdin().lock().lines() {
+        let Ok(line) = line else { break };
+        if line.trim().is_empty() {
+            continue;
+        }
+        let v: serde_json::Value = match serde_json::from_str(&line) {
+            Ok(v) => v,
+            Err(e) => {
+                let _ = writeln!(out, "{{\"error\":\"{}\"}}", e);
+                continue;
+            }
+        };
+        let mut b = board::Board::default();
+        for (y, n) in v["rows"].as_array().map(|a| a.as_slice()).unwrap_or(&[]).iter().enumerate().take(rules::H as usize) {
+            b.rows[y] = n.as_u64().unwrap_or(0) as u16;
+        }
+        let f = eval::features(&b, v["b2b"].as_i64().unwrap_or(-1) as i32, r.b2b);
+        let js = |xs: &[f32]| xs.iter().map(|x| format!("{:.4}", x)).collect::<Vec<_>>().join(",");
+        let c: Vec<f32> = (0..eval::NF).map(|i| w.w[i] * f[i]).collect();
+        let _ = writeln!(out, "{{\"v\":{:.4},\"f\":[{}],\"c\":[{}]}}", w.value(&f), js(&f), js(&c));
+    }
+}
+
+/// `bot expand [--mode]`: every legal move from a state, for AtTenTris's lookahead. One stdin
+/// line per state: {"rows": [40 bitmask rows, top to bottom], "piece": "T", "queue": [...],
+/// "hold": null | "S", "b2b": n}. Reply: {"structures": [...], "cands": [{"hold", "piece",
+/// "spin", "lines", "attack", "cells": [x0, y0, ...], "rows": [...], "b2b", "hold_after",
+/// "used" (queue pieces consumed: 1, or 2 for an empty-hold swap), "structures": [...]}]}.
+/// Moves to the same cells with the same hold choice are one move (the higher-attack one).
+fn cmd_expand(a: &Args) {
+    use std::io::{BufRead, Write};
+    let r = rules(a);
+    let shapes = rules::Shapes::for_rules(&r);
+    let mut mg = movegen::MoveGen::new();
+    mg.all_spin = r.all_spin;
+    mg.battle = r.battle;
+    let letter = |v: &serde_json::Value| v.as_str().and_then(|s| s.chars().next()).and_then(rules::Piece::from_letter);
+    let up = |p: rules::Piece| p.letter().to_ascii_uppercase();
+    let stdout = std::io::stdout();
+    let mut out = stdout.lock();
+    let mut buf = Vec::new();
+    let mut slots = SlotScan::new();
+    for line in std::io::stdin().lock().lines() {
+        let Ok(line) = line else { break };
+        if line.trim().is_empty() {
+            continue;
+        }
+        let v: serde_json::Value = match serde_json::from_str(&line) {
+            Ok(v) => v,
+            Err(e) => {
+                let _ = writeln!(out, "{{\"error\":\"{}\"}}", e);
+                continue;
+            }
+        };
+        let mut b = board::Board::default();
+        for (y, n) in v["rows"].as_array().map(|a| a.as_slice()).unwrap_or(&[]).iter().enumerate().take(rules::H as usize) {
+            b.rows[y] = n.as_u64().unwrap_or(0) as u16;
+        }
+        let b2b = v["b2b"].as_i64().unwrap_or(-1) as i32;
+        let cur = letter(&v["piece"]).expect("piece");
+        let queue: Vec<rules::Piece> = v["queue"].as_array().map(|a| a.iter().filter_map(letter).collect()).unwrap_or_default();
+        let hold = letter(&v["hold"]);
+        let mut choices = vec![(cur, false, hold, 1)];
+        match hold {
+            Some(h) if h != cur => choices.push((h, true, Some(cur), 1)),
+            None if !queue.is_empty() => choices.push((queue[0], true, Some(cur), 2)),
+            _ => {}
+        }
+        let mut keys: Vec<(bool, [(i32, i32); 4])> = Vec::new();
+        let mut attacks: Vec<i32> = Vec::new();
+        let mut items: Vec<String> = Vec::new();
+        for (p, uh, hold_after, used) in choices {
+            mg.generate(&b, p, &shapes, &mut buf);
+            for pl in &buf {
+                let o = search::apply(&b, pl, b2b, &r, &shapes);
+                if o.lock_out {
+                    continue;
+                }
+                let mut cells = pl.abs_cells(&shapes);
+                cells.sort();
+                let key = (uh, cells);
+                let slot = keys.iter().position(|k| *k == key);
+                if let Some(k) = slot {
+                    if o.attack <= attacks[k] {
+                        continue;
+                    }
+                }
+                let spin = match pl.spin { rules::Spin::None => 0, rules::Spin::Mini => 1, _ => 2 };
+                let js = format!("{{\"hold\":{},\"piece\":\"{}\",\"spin\":{},\"lines\":{},\"attack\":{},\"cells\":[{}],\"rows\":[{}],\"b2b\":{},\"hold_after\":{},\"used\":{},\"structures\":[{}]}}",
+                    uh as u8, up(p), spin, o.lines, o.attack,
+                    cells.iter().map(|(x, y)| format!("{},{}", x, y)).collect::<Vec<_>>().join(","),
+                    o.board.rows.iter().map(|r| r.to_string()).collect::<Vec<_>>().join(","), o.b2b,
+                    hold_after.map_or("null".to_string(), |h| format!("\"{}\"", up(h))), used, structures_json(&o.board));
+                match slot {
+                    Some(k) => {
+                        attacks[k] = o.attack;
+                        items[k] = js;
+                    }
+                    None => {
+                        keys.push(key);
+                        attacks.push(o.attack);
+                        items.push(js);
+                    }
+                }
+            }
+        }
+        // the root's structures as AtTenTris v5 tokenizes them: T structures + piece slots + setups
+        let mut st: Vec<String> = Vec::new();
+        let t = structures_json(&b);
+        if !t.is_empty() {
+            st.push(t);
+        }
+        if v["slots"].as_bool().unwrap_or(false) {
+            st.extend(slots.json(&b, Some((cur, queue.clone(), hold))));
+        }
+        let _ = writeln!(out, "{{\"structures\":[{}],\"cands\":[{}]}}", st.join(","), items.join(","));
+        let _ = out.flush();
+    }
+}
+
+/// `bot play-ext [--mode --garbage --pieces --seed]`: one game whose moves come from another
+/// process (AtTenTris). Each turn writes the state as a JSON line to stdout ({"n", "rows",
+/// "piece", "queue", "hold", "b2b"}) and reads the move from stdin ({"hold": 0|1, "cells":
+/// [x0, y0, ...]}); bag, garbage and scoring are the normal game's. Ends with a {"done": true,
+/// ...} line.
+fn cmd_play_ext(a: &Args) {
+    let r = rules(a);
+    // --shortlist: the other process names the first moves worth searching and this bot's
+    // full search (--weights, --beam, --depth) picks among them; otherwise it names the move.
+    let shortlist = a.has("shortlist");
+    let sc = if shortlist { search_config(a) } else { SearchConfig { depth: 1, chance: false, roots: true, ..search_config(a) } };
+    let mut s = Searcher::new(sc, weights(a), r);
+    // --replay FILE: also write the game as Godot replay records (label from --label, default "ext")
+    let replay = a.str("replay").map(|x| x.to_string());
+    let cfg = GameConfig { pieces: a.get("pieces", 500usize), seed: a.get("seed", 1u64), garbage: garbage(a),
+                           label: a.str("label").unwrap_or("ext").to_string(),
+                           record: replay.is_some(), env_rules: None, dataset: false, external: !shortlist, shortlist, all_roots: 0 };
+    let (st, rec) = game::play(&mut s, &cfg);
+    if let Some(path) = replay {
+        std::fs::write(&path, rec).expect("write --replay");
+    }
+    println!("{{\"done\":true,\"seed\":{},\"pieces\":{},\"attack\":{},\"app\":{:.4},\"died\":{},\"tsd\":{},\"tst\":{},\"quads\":{},\"max_height\":{},\"illegal\":{},\"search_ms\":{:.2},\"nodes_per_move\":{:.0}}}",
+        cfg.seed, st.pieces, st.attack, st.app(), st.died, st.tsd, st.tst, st.quads, st.max_height, st.ext_illegal,
+        st.think_us.iter().map(|&u| u as f64).sum::<f64>() / st.think_us.len().max(1) as f64 / 1000.0, st.nodes as f64 / st.pieces.max(1) as f64);
+}
+
+/// `bot dataset --weights W --label L --out DIR [--mode --garbage --games --pieces --seed
+/// --threads --beam --depth]`: AtTenTris training data. One file per game,
+/// DIR/L_s<seed>.jsonl (see game::dataset_record); finished games are skipped, so an
+/// interrupted run resumes where it stopped.
+fn cmd_dataset(a: &Args) {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let r = rules(a);
+    let sc = SearchConfig { roots: true, ..search_config(a) };
+    let w = weights(a);
+    let g = garbage(a);
+    let label = a.str("label").unwrap_or("teacher").to_string();
+    let dir = std::path::PathBuf::from(a.str("out").expect("--out DIR"));
+    std::fs::create_dir_all(&dir).expect("create --out");
+    let games = a.get("games", 10usize);
+    let pieces = a.get("pieces", 500usize);
+    let seed = a.get("seed", 1u64);
+    let threads = a.get("threads", std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4)).max(1);
+    // --all-roots K: every legal move gets a search score (see bot label --all-roots)
+    let all_roots = a.get("all-roots", 0usize);
+    let next = AtomicUsize::new(0);
+    let t0 = Instant::now();
+    std::thread::scope(|s| {
+        for _ in 0..threads.min(games) {
+            let (sc, w, g, label, dir, next) = (sc.clone(), w.clone(), g.clone(), label.clone(), dir.clone(), &next);
+            s.spawn(move || {
+                let mut searcher = Searcher::new(sc, w, r);
+                loop {
+                    let i = next.fetch_add(1, Ordering::Relaxed);
+                    if i >= games {
+                        break;
+                    }
+                    let sd = seed + i as u64;
+                    let path = dir.join(format!("{}_s{}.jsonl", label, sd));
+                    if path.exists() {
+                        continue;
+                    }
+                    let cfg = GameConfig { pieces, seed: sd, garbage: g.clone(), label: label.clone(), record: false, env_rules: None, dataset: true, external: false, shortlist: false, all_roots };
+                    let (st, js) = game::play(&mut searcher, &cfg);
+                    let part = path.with_extension("part");
+                    std::fs::write(&part, js).expect("write");
+                    std::fs::rename(&part, &path).expect("rename");
+                    println!("{} seed {}: {} pieces, APP {:.3}{}  ({:.0}s)", label, sd, st.pieces, st.app(),
+                        if st.died { ", died" } else { "" }, t0.elapsed().as_secs_f64());
+                }
+            });
+        }
+    });
+}
+
+/// `bot serve-battle --mode battle --weights W [--beam --depth]`: one decision per stdin line.
+///
+/// Renamed from `serve` in the merge: main had already taken that name for the Godot pilot's
+/// session server, which speaks a different protocol entirely (our board and queue, not
+/// TetrisBattle's grid). Git merged both functions and both match arms silently, since they
+/// were added in different places -- the duplicate only showed up as a compile error.
+/// Request (TetrisBattle coordinates: his grid rows top to bottom, `excess` extra rows):
+///   {"rows": [...], "excess": e, "piece": "T", "queue": ["I", ...], "hold": null | "S",
+///    "combo": c, "b2b": n}
+/// Reply: {"hold": bool, "piece": "T", "cells": [[x, y], ...], "t": 0|1|2, "nodes": n}
+/// or {"dead": true} when the piece cannot spawn. Our battle move generator reproduces
+/// his placement set exactly (bot battle-parity), so the cells are one of his options.
+fn cmd_serve_battle(a: &Args) {
+    use std::io::{BufRead, Write};
+    let r = rules(a);
+    let mut s = Searcher::new(search_config(a), weights(a), r);
+    let shapes = rules::Shapes::for_rules(&r);
+    let letter = |v: &serde_json::Value| v.as_str().and_then(|s| s.chars().next()).and_then(rules::Piece::from_letter);
+    let stdout = std::io::stdout();
+    for line in std::io::stdin().lock().lines() {
+        let Ok(line) = line else { break };
+        if line.trim().is_empty() {
+            continue;
+        }
+        let v: serde_json::Value = match serde_json::from_str(&line) {
+            Ok(v) => v,
+            Err(e) => {
+                let _ = writeln!(stdout.lock(), "{{\"error\":\"{}\"}}", e);
+                continue;
+            }
+        };
+        let excess = v["excess"].as_i64().unwrap_or(0) as i32;
+        let shift = rules::BUFFER - excess;
+        let mut b = board::Board { excess: excess.max(0) as u16, ..board::Board::default() };
+        for (y, row) in v["rows"].as_array().map(|a| a.as_slice()).unwrap_or(&[]).iter().enumerate() {
+            let ry = y as i32 + shift;
+            if ry < 0 {
+                continue;
+            }
+            for (x, ch) in row.as_str().unwrap_or("").chars().enumerate() {
+                if ch == 'X' {
+                    b.rows[ry as usize] |= 1 << x;
+                }
+            }
+        }
+        b.combo = v["combo"].as_i64().unwrap_or(-1).clamp(-1, 120) as i8;
+        let b2b = v["b2b"].as_i64().unwrap_or(-1) as i32;
+        let mut queue = vec![letter(&v["piece"]).expect("piece")];
+        queue.extend(v["queue"].as_array().map(|a| a.iter().filter_map(letter).collect::<Vec<_>>()).unwrap_or_default());
+        let hold = letter(&v["hold"]);
+        let nodes0 = s.nodes;
+        let reply = match s.search(&b, &queue, hold, b2b, &rules::ALL_PIECES) {
+            None => "{\"dead\":true}".to_string(),
+            Some(d) => {
+                let p = d.placement;
+                let cells = p.abs_cells(&shapes).iter().map(|&(x, y)| format!("[{},{}]", x, y - shift)).collect::<Vec<_>>().join(",");
+                let t = match p.spin {
+                    rules::Spin::Full => 2,
+                    rules::Spin::Mini => 1,
+                    rules::Spin::None => 0,
+                };
+                format!("{{\"hold\":{},\"piece\":\"{}\",\"cells\":[{}],\"t\":{},\"nodes\":{}}}",
+                    d.use_hold, p.piece.letter().to_ascii_uppercase(), cells, t, s.nodes - nodes0)
+            }
+        };
+        let mut out = stdout.lock();
+        let _ = writeln!(out, "{}", reply);
+        let _ = out.flush();
+    }
+}
+
 /// Plays `games` games (seeds seed..seed+games) across threads. Returns per-game stats
 /// and the concatenated JSONL when recording.
 /// `r` = the rules the bot searches with; `env` = the rules the game applies, if different.
@@ -419,7 +1005,7 @@ fn run_games(sc: &SearchConfig, w: &Weights, r: Rules, env: Option<Rules>, g: &G
                 let mut searcher = Searcher::new(sc, w, r);
                 let mut i = t;
                 while i < games {
-                    let cfg = GameConfig { pieces, seed: seed + i as u64, garbage: g.clone(), label: label.clone(), record, env_rules: env };
+                    let cfg = GameConfig { pieces, seed: seed + i as u64, garbage: g.clone(), label: label.clone(), record, env_rules: env, dataset: false, external: false, shortlist: false, all_roots: 0 };
                     let (st, js) = game::play(&mut searcher, &cfg);
                     out.push((i, st, js));
                     i += threads;
@@ -437,12 +1023,14 @@ fn run_games(sc: &SearchConfig, w: &Weights, r: Rules, env: Option<Rules>, g: &G
 
 fn summary_header() {
     println!(
-        "{:<22} {:>6} {:>5} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>5} {:>5} {:>4} {:>7}",
-        "config", "APP", "died", "pcs", "quad%", "TSD%", "TST%", "TSS%", "mini%", "spin%", "1-3%", "gbclr", "b2b", "rep%", "wnd", "ms/pc"
+        "{:<22} {:>6} {:>5} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6} {:>5} {:>5} {:>4} {:>7} {:>8}",
+        "config", "APP", "died", "pcs", "quad%", "TSD%", "TST%", "TSS%", "mini%", "spin%", "1-3%", "gbclr", "b2b", "rep%", "wnd", "ms/pc", "APPfull"
     );
 }
 
-fn summary_row(name: &str, st: &[Stats], secs: f64) {
+/// APP is attack per piece actually played; APPfull divides by the full budget (games x
+/// `pieces`), as training fitness does, so pieces a dead bot never played count as 0.
+fn summary_row(name: &str, st: &[Stats], secs: f64, pieces: usize) {
     let mut t = Stats::default();
     for s in st {
         t.add(s);
@@ -450,7 +1038,7 @@ fn summary_row(name: &str, st: &[Stats], secs: f64) {
     let died = st.iter().filter(|s| s.died).count();
     let per = |n: u64| 100.0 * n as f64 / t.pieces.max(1) as f64;
     println!(
-        "{:<22} {:>6.3} {:>2}/{:<2} {:>6.0} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6} {:>5} {:>5.2} {:>4} {:>7.2}",
+        "{:<22} {:>6.3} {:>2}/{:<2} {:>6.0} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6.2} {:>6} {:>5} {:>5.2} {:>4} {:>7.2} {:>8.3}",
         name,
         t.app(),
         died,
@@ -468,6 +1056,7 @@ fn summary_row(name: &str, st: &[Stats], secs: f64) {
         per(t.repeats),
         t.max_wounds,
         1000.0 * secs / t.pieces.max(1) as f64 * threads_used() as f64,
+        t.attack as f64 / (st.len() * pieces).max(1) as f64,
     );
 }
 
@@ -539,7 +1128,7 @@ fn cmd_play(a: &Args) {
     };
     let (st, js) = run_games(&sc, &weights(a), belief, env, &garbage(a), games, pieces, seed, threads_used(), &label, a.has("out"));
     summary_header();
-    summary_row(&label, &st, t0.elapsed().as_secs_f64());
+    summary_row(&label, &st, t0.elapsed().as_secs_f64(), pieces);
     let mut t: Vec<u32> = st.iter().flat_map(|s| s.think_us.iter().copied()).collect();
     if !t.is_empty() {
         t.sort_unstable();
@@ -624,7 +1213,7 @@ fn cmd_bench(a: &Args) {
         let t0 = Instant::now();
         let label = name.replace([' ', '(', ')'], "").replace('+', "_");
         let (st, js) = run_games(&sc, &w, r, None, &g, games, pieces, seed, threads_used(), &label, out.is_some());
-        summary_row(&name, &st, t0.elapsed().as_secs_f64());
+        summary_row(&name, &st, t0.elapsed().as_secs_f64(), pieces);
         // Keep only the first game per config: enough to watch side by side.
         let first = format!("{}_s{}", label, seed);
         all_js += &js.lines().filter(|l| l.contains(&format!("\"replay\":\"{}\"", first))).map(|l| format!("{}\n", l)).collect::<String>();
@@ -639,7 +1228,7 @@ fn cmd_bench(a: &Args) {
 fn main() {
     let argv: Vec<String> = std::env::args().skip(1).collect();
     if argv.is_empty() {
-        eprintln!("usage: bot play|bench|tune|parity|weights|plan|serve [options]  (see src/main.rs)");
+        eprintln!("usage: bot play|bench|tune|parity|weights|plan|serve|serve-battle [options]  (see src/main.rs)");
         std::process::exit(2);
     }
     let a = Args::parse(&argv[1..]);
@@ -706,6 +1295,19 @@ fn main() {
         "weights" =>print!("{}", weights(&a).to_text()),
         "serve" => cmd_serve(&a),
         "probe" => cmd_probe(&a),
+        "serve-battle" => cmd_serve_battle(&a),
+        "dataset" => cmd_dataset(&a),
+        "expand" => cmd_expand(&a),
+        "value" => cmd_value(&a),
+        "label" => cmd_label(&a),
+        "play-ext" => cmd_play_ext(&a),
+        "structures" => cmd_structures(),
+        "battle-parity" => {
+            if let Err(e) = battle::parity(a.str("data").expect("--data dump.jsonl")) {
+                eprintln!("{}", e);
+                std::process::exit(1);
+            }
+        }
         "plan" => cmd_plan(&a),
         other => {
             eprintln!("unknown command {}", other);

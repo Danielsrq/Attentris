@@ -79,6 +79,11 @@ pub struct Shapes {
 }
 
 impl Shapes {
+    /// The piece set of a rule set: SRS, or TetrisBattle's under battle rules.
+    pub fn for_rules(r: &Rules) -> Shapes {
+        if r.battle { crate::battle::shapes() } else { Shapes::new() }
+    }
+
     pub fn new() -> Shapes {
         let mut cells = [[[(0i8, 0i8); 4]; 4]; 7];
         for p in ALL_PIECES {
@@ -172,6 +177,17 @@ pub enum B2bMode {
     /// Power-up b2b_prime: +1 at each squared prime (4, 9, 25, 49, 121, 169, 289),
     /// capped at +7. Chains 1-3 earn nothing.
     Prime,
+    /// TETR.IO's own table (TetrisBattle's b2b_level): +1 for chain 1-2, +2 for 3-7,
+    /// +3 for 8-23, +4 for 24-66, +5 for 67-184, +6 for 185-503, +7 for 504-1369, +8 after.
+    Tetrio,
+}
+
+/// TETR.IO B2B levels: (largest chain at this level, level).
+pub const TETRIO_B2B: [(i32, i32); 8] = [(0, 0), (2, 1), (7, 2), (23, 3), (66, 4), (184, 5), (503, 6), (1369, 7)];
+
+/// TetrisBattle's b2b_level.
+pub fn tetrio_b2b_level(chain: i32) -> i32 {
+    TETRIO_B2B.iter().find(|&&(limit, _)| chain <= limit).map_or(8, |&(_, level)| level)
 }
 
 pub const FIBONACCI_STEPS: [i32; 7] = [1, 4, 9, 25, 64, 169, 441];
@@ -188,6 +204,7 @@ impl B2bMode {
             B2bMode::Squares => (chain as f64).sqrt().floor() as i32,
             B2bMode::Fibonacci => FIBONACCI_STEPS.iter().filter(|&&s| chain >= s).count() as i32,
             B2bMode::Prime => PRIME_STEPS.iter().filter(|&&s| chain >= s).count() as i32,
+            B2bMode::Tetrio => tetrio_b2b_level(chain),
         }
     }
     pub fn parse(s: &str) -> Option<B2bMode> {
@@ -196,6 +213,7 @@ impl B2bMode {
             "squares" | "sqrt" => Some(B2bMode::Squares),
             "fibonacci" | "fib" => Some(B2bMode::Fibonacci),
             "prime" => Some(B2bMode::Prime),
+            "tetrio" => Some(B2bMode::Tetrio),
             _ => None,
         }
     }
@@ -237,6 +255,10 @@ pub struct Rules {
     /// gate_b2b: each spin clear of a paid gate chain also earns the B2B bonus of the
     /// chain count it reached; B2B runs (and plain clears break it) as in normal rules.
     pub gate_b2b: bool,
+    /// TetrisBattle rules (a friend's RL bot's engine, external/tetrisbattle): its own
+    /// rotation and kicks (battle.rs), T-spins only, TETR.IO attack with combos, and
+    /// top-out when the top visible row is filled after a lock. See `battle_attack`.
+    pub battle: bool,
 }
 
 /// Gate chain state: (placements left in the window, spin clears in the chain, value
@@ -261,6 +283,7 @@ impl Default for Rules {
             burst_tss_arms: true,
             gate: false,
             gate_b2b: false,
+            battle: false,
         }
     }
 }
@@ -298,6 +321,44 @@ impl Rules {
 
     /// gate_b2b: the gate rules, plus the B2B bonus on every spin clear of a paid chain,
     /// so digging with plain clears (which break B2B) costs future chain value.
+    /// TetrisBattle's rules (see the `battle` field).
+    pub fn battle() -> Rules {
+        Rules { battle: true, all_spin: false, b2b: B2bMode::Tetrio, perfect_clear_bonus: 10, ..Rules::default() }
+    }
+
+    /// TetrisBattle's clear_outcome: TETR.IO (Tetra League) attack. `combo_after` is the
+    /// combo after this clear (0 = first clear of a streak), `b2b_after` the B2B count
+    /// after it. Minis count as difficult and earn the B2B level; the level is added
+    /// before the combo multiplier (1 + combo / 4), floored; a clear worth 0 sends
+    /// floor(ln(1 + 1.25 combo)).
+    pub fn battle_attack(&self, spin: Spin, lines: u32, combo_after: i32, b2b_after: i32, perfect: bool) -> i32 {
+        if lines == 0 {
+            return 0;
+        }
+        let base = match (spin, lines) {
+            (Spin::None, 1) => 0,
+            (Spin::None, 2) => 1,
+            (Spin::None, 3) => 2,
+            (Spin::Mini, 1) => 0,
+            (Spin::Mini, 2) => 1,
+            (_, 1) => 2,
+            (_, 2) => 4,
+            (_, 3) => 6,
+            (_, l) => l as i32, // quads (spin or not) fall back to the line count: 4
+        };
+        let difficult = lines == 4 || spin != Spin::None;
+        let level = if difficult { tetrio_b2b_level(b2b_after) } else { 0 };
+        let mut attack = if base + level == 0 {
+            (1.25 * combo_after as f64).ln_1p().floor() as i32
+        } else {
+            combo_after * (base + level) / 4 + base + level
+        };
+        if perfect {
+            attack += self.perfect_clear_bonus;
+        }
+        attack
+    }
+
     pub fn gate_b2b() -> Rules {
         Rules { gate_b2b: true, ..Rules::gate() }
     }

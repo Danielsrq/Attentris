@@ -1,0 +1,33 @@
+1022 T-spin positions with a T structure on the board
+
+model.pt
+  T structure                               16.0%
+  piece queue (current, hold, previews)     18.4%
+  wells                                      3.1%
+  play rows / bands                         38.9%
+  sky                                        6.0%
+  recesses + pits + rect12                  17.5%
+
+model_dagger1.pt
+  T structure                               15.3%
+  piece queue (current, hold, previews)     19.1%
+  wells                                      1.7%
+  play rows / bands                         39.5%
+  sky                                        8.2%
+  recesses + pits + rect12                  16.1%
+
+model_v3.pt
+  T structure                               14.8%
+  piece queue (current, hold, previews)     27.1%
+  wells                                      4.9%
+  play rows / bands                         28.4%
+  sky                                        3.2%
+  recesses + pits + rect12                  21.6%
+
+model_v4.pt
+  T structure                               18.1%
+  piece queue (current, hold, previews)     33.0%
+  wells                                      6.5%
+  play rows / bands                         29.7%
+  sky                                        2.5%
+  recesses + pits + rect12                  10.1%

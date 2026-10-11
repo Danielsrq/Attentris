@@ -1,0 +1,9 @@
+== garbage: none
+AtTenTris logit shortlist 99 + V search depth 1 style normal no garbage: APP 1.204 (APPfull 1.204), died 0/64, pieces 500 avg, TSD 2696, TST 4, quads 848, max height 16, illegal 0, 7.6 ms/move (p90 8.5) + search 138.4 ms, 300s
+AtTenTris logit shortlist 10 + V search depth 1 style normal no garbage: APP 1.190 (APPfull 1.190), died 0/64, pieces 500 avg, TSD 2673, TST 0, quads 865, max height 16, illegal 0, 7.3 ms/move (p90 8.0) + search 64.1 ms, 147s
+AtTenTris logit shortlist 5 + V search depth 1 style normal no garbage: APP 1.129 (APPfull 1.129), died 0/64, pieces 500 avg, TSD 2355, TST 2, quads 954, max height 17, illegal 0, 7.3 ms/move (p90 8.0) + search 62.7 ms, 144s
+== garbage: 10,3-4,cheese0.2,0.2
+AtTenTris logit shortlist 99 + V search depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 1.126 (APPfull 0.965), died 17/64, pieces 429 avg, TSD 1621, TST 8, quads 2456, max height 22, illegal 0, 7.0 ms/move (p90 7.8) + search 66.7 ms, 143s
+AtTenTris logit shortlist 10 + V search depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 1.074 (APPfull 0.944), died 15/64, pieces 440 avg, TSD 1533, TST 5, quads 2472, max height 21, illegal 0, 7.0 ms/move (p90 7.8) + search 60.1 ms, 133s
+AtTenTris logit shortlist 5 + V search depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.985 (APPfull 0.908), died 9/64, pieces 461 avg, TSD 1391, TST 2, quads 2541, max height 21, illegal 0, 7.0 ms/move (p90 7.8) + search 59.5 ms, 135s
+all done

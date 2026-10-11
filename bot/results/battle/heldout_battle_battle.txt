@@ -1,0 +1,2 @@
+battle                  1.229  0/20    500   4.27   8.13   0.00   3.09   1.37   0.00   0.25    0/0    87  0.00    0   74.12    1.229
+clears per 100 pieces -- spin singles 3.40, doubles 9.19, triples 0.00; plain 1/2/3/4: 0.14/0.07/0.04/4.27; attack per line 3.13

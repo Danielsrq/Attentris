@@ -1,0 +1,23 @@
+game  0: winner normal_txt his_rl app 0.350 pcs 20 KO  normal_txt app 0.737 pcs 19
+game  2: winner normal_txt his_rl app 0.609 pcs 23 KO  normal_txt app 0.864 pcs 22
+game  3: winner normal_txt normal_txt app 0.727 pcs 22  his_rl app 0.409 pcs 22 KO
+game  5: winner his_rl   normal_txt app 0.583 pcs 24 KO  his_rl app 0.783 pcs 23
+game  4: winner normal_txt his_rl app 0.656 pcs 32 KO  normal_txt app 1.097 pcs 31
+game  1: winner normal_txt normal_txt app 1.222 pcs 36  his_rl app 0.861 pcs 36 KO
+game  6: winner normal_txt his_rl app 0.571 pcs 35 KO  normal_txt app 0.471 pcs 34
+game  7: winner normal_txt normal_txt app 0.949 pcs 39  his_rl app 0.564 pcs 39 KO
+game 10: winner normal_txt his_rl app 0.333 pcs 12 KO  normal_txt app 1.182 pcs 11
+game 11: winner normal_txt normal_txt app 0.880 pcs 25  his_rl app 0.600 pcs 25 KO
+game  8: winner normal_txt his_rl app 0.680 pcs 25 KO  normal_txt app 0.958 pcs 24
+game  9: winner normal_txt normal_txt app 0.828 pcs 29  his_rl app 0.586 pcs 29 KO
+game 12: winner his_rl   his_rl app 0.833 pcs 24  normal_txt app 0.417 pcs 24 KO
+game 14: winner normal_txt his_rl app 0.391 pcs 23 KO  normal_txt app 0.545 pcs 22
+game 13: winner normal_txt normal_txt app 0.688 pcs 32  his_rl app 0.469 pcs 32 KO
+game 17: winner normal_txt normal_txt app 0.882 pcs 17  his_rl app 0.353 pcs 17 KO
+game 18: winner normal_txt his_rl app 0.562 pcs 16 KO  normal_txt app 1.067 pcs 15
+game 15: winner normal_txt normal_txt app 0.921 pcs 38  his_rl app 0.684 pcs 38 KO
+game 16: winner normal_txt his_rl app 0.750 pcs 36 KO  normal_txt app 1.000 pcs 35
+game 19: winner normal_txt normal_txt app 0.826 pcs 23  his_rl app 0.565 pcs 23 KO
+wins: {'normal_txt': 18, 'his_rl': 2}
+his_rl     APP 0.581  VS/piece 0.694  pieces 26  think 22.2 ms  PPS -  VS -  KOs 18  TSD 44  TST 0  quads 16  mismatches 0
+normal_txt APP 0.842  VS/piece 1.080  pieces 26  think 55.7 ms  PPS -  VS -  KOs 2  TSD 35  TST 0  quads 33  mismatches 0

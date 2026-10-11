@@ -1,0 +1,49 @@
+== CEM under battle rules with garbage 10,1-4,0, from normal.txt
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+frozen at 0: max_height wounds ready_repeat sz_single sz_double sz_triple lj_single lj_double lj_triple i_single i_double i_triple
+tuning (cem): 30 gens x 32 candidates x 8 games x 300 pieces, search beam 24 depth 4
+gen  1/30: best 0.810  elite mean 0.756  (incumbent 0.810)  spread 2.753  63s  eta 30m
+gen  2/30: best 0.833  elite mean 0.791  (incumbent 0.793)  spread 1.486  70s  eta 31m
+gen  3/30: best 0.857  elite mean 0.819  (incumbent 0.827)  spread 1.065  73s  eta 31m
+gen  4/30: best 0.857  elite mean 0.846  (incumbent 0.824)  spread 1.002  73s  eta 30m
+gen  5/30: best 0.842  elite mean 0.818  (incumbent 0.812)  spread 0.899  73s  eta 29m
+gen  6/30: best 0.838  elite mean 0.824  (incumbent 0.837)  spread 0.821  73s  eta 28m
+gen  7/30: best 0.877  elite mean 0.857  (incumbent 0.842)  spread 0.650  73s  eta 27m
+gen  8/30: best 0.838  elite mean 0.827  (incumbent 0.734)  spread 0.605  72s  eta 26m
+gen  9/30: best 0.863  elite mean 0.832  (incumbent 0.755)  spread 0.590  75s  eta 25m
+gen 10/30: best 0.866  elite mean 0.844  (incumbent 0.841)  spread 0.553  72s  eta 24m
+gen 11/30: best 0.876  elite mean 0.837  (incumbent 0.729)  spread 0.540  73s  eta 23m
+gen 12/30: best 0.860  elite mean 0.842  (incumbent 0.833)  spread 0.485  75s  eta 22m
+gen 13/30: best 0.881  elite mean 0.847  (incumbent 0.807)  spread 0.471  81s  eta 21m
+gen 14/30: best 0.855  elite mean 0.844  (incumbent 0.845)  spread 0.410  82s  eta 20m
+gen 15/30: best 0.892  elite mean 0.848  (incumbent 0.866)  spread 0.383  81s  eta 18m
+gen 16/30: best 0.864  elite mean 0.846  (incumbent 0.855)  spread 0.329  80s  eta 17m
+gen 17/30: best 0.835  elite mean 0.825  (incumbent 0.708)  spread 0.335  81s  eta 16m
+gen 18/30: best 0.835  elite mean 0.812  (incumbent 0.660)  spread 0.323  77s  eta 15m
+gen 19/30: best 0.860  elite mean 0.835  (incumbent 0.799)  spread 0.326  80s  eta 14m
+gen 20/30: best 0.860  elite mean 0.837  (incumbent 0.830)  spread 0.286  82s  eta 13m
+gen 21/30: best 0.876  elite mean 0.844  (incumbent 0.808)  spread 0.297  82s  eta 11m
+gen 22/30: best 0.861  elite mean 0.846  (incumbent 0.839)  spread 0.261  80s  eta 10m
+gen 23/30: best 0.866  elite mean 0.850  (incumbent 0.765)  spread 0.225  80s  eta 9m
+gen 24/30: best 0.852  elite mean 0.825  (incumbent 0.704)  spread 0.231  80s  eta 8m
+gen 25/30: best 0.850  elite mean 0.822  (incumbent 0.792)  spread 0.220  79s  eta 6m
+gen 26/30: best 0.873  elite mean 0.848  (incumbent 0.719)  spread 0.213  78s  eta 5m
+gen 27/30: best 0.880  elite mean 0.861  (incumbent 0.733)  spread 0.191  81s  eta 4m
+gen 28/30: best 0.867  elite mean 0.849  (incumbent 0.788)  spread 0.188  83s  eta 3m
+gen 29/30: best 0.840  elite mean 0.814  (incumbent 0.745)  spread 0.189  79s  eta 1m
+gen 30/30: best 0.882  elite mean 0.860  (incumbent 0.852)  spread 0.153  79s  eta 0m
+
+saved distribution mean to C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/bot/results/battle/battle.txt (best single candidate scored 0.892)
+-- battle, battle
+battle                  1.229  0/20    500   4.27   8.13   0.00   3.09   1.37   0.00   0.25    0/0    87  0.00    0   74.12    1.229
+clears per 100 pieces -- spin singles 3.40, doubles 9.19, triples 0.00; plain 1/2/3/4: 0.14/0.07/0.04/4.27; attack per line 3.13
+-- normal_txt, battle
+normal_txt              1.121  0/20    500   3.62   9.11   0.00   2.49   0.97   0.00   1.29    0/0    86  0.00    0   77.20    1.121
+clears per 100 pieces -- spin singles 2.72, doubles 9.85, triples 0.00; plain 1/2/3/4: 0.73/0.30/0.26/3.62; attack per line 2.87
+-- battle, battle_garbage
+battle                  1.145  2/20    474   8.72   6.27   0.00   2.36   1.58   0.00   5.54 2270/2336    49  0.00    0   73.85    1.086
+clears per 100 pieces -- spin singles 2.85, doubles 7.37, triples 0.00; plain 1/2/3/4: 3.28/1.61/0.65/8.72; attack per line 1.88
+-- normal_txt, battle_garbage
+normal_txt              1.010  2/20    472   7.15   7.26   0.00   1.83   0.90   0.00   8.83 2236/2325    29  0.00    0   76.92    0.954
+clears per 100 pieces -- spin singles 2.18, doubles 7.81, triples 0.00; plain 1/2/3/4: 4.78/2.77/1.27/7.15; attack per line 1.67
+all done

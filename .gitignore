@@ -9,3 +9,6 @@ target/
 
 # Session scratch, and the agent worktrees under it -- each is a full checkout.
 .claude/
+
+# Friend's RL bot (TetrisBattle), copied in for bot-vs-bot experiments; not ours to commit
+external/tetrisbattle/

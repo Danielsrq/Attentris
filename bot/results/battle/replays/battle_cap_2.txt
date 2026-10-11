@@ -1,0 +1,23 @@
+game  6: winner battle   cms-RL app 0.333 pcs 12 KO  battle app 1.818 pcs 11
+game  3: winner battle   battle app 1.071 pcs 14  cms-RL app 0.286 pcs 14 KO
+game  1: winner battle   battle app 0.550 pcs 20  cms-RL app 0.333 pcs 21 KO
+game  0: winner battle   cms-RL app 0.833 pcs 24 KO  battle app 1.087 pcs 23
+game  5: winner battle   battle app 1.192 pcs 26  cms-RL app 0.852 pcs 27 KO
+game  2: winner battle   cms-RL app 0.688 pcs 32 KO  battle app 0.871 pcs 31
+game  8: winner cms-RL   cms-RL app 1.043 pcs 23  battle app 0.833 pcs 24 KO
+game  4: winner battle   cms-RL app 1.053 pcs 38 KO  battle app 0.895 pcs 38
+game  7: winner battle   battle app 0.750 pcs 40  cms-RL app 0.683 pcs 41 KO
+game  9: winner battle   battle app 1.000 pcs 25  cms-RL app 0.640 pcs 25 KO
+game 10: winner battle   cms-RL app 0.591 pcs 22 KO  battle app 1.318 pcs 22
+game 11: winner battle   battle app 1.130 pcs 23  cms-RL app 0.833 pcs 24 KO
+game 13: winner battle   battle app 1.050 pcs 20  cms-RL app 0.190 pcs 21 KO
+game 15: winner battle   battle app 0.759 pcs 29  cms-RL app 0.621 pcs 29 KO
+game 16: winner battle   cms-RL app 0.686 pcs 35 KO  battle app 0.853 pcs 34
+game 14: winner battle   cms-RL app 0.658 pcs 38 KO  battle app 0.816 pcs 38
+game 12: winner battle   cms-RL app 0.591 pcs 44 KO  battle app 0.884 pcs 43
+game 17: winner battle   battle app 0.771 pcs 35  cms-RL app 0.714 pcs 35 KO
+game 18: winner battle   cms-RL app 0.718 pcs 39 KO  battle app 0.895 pcs 38
+game 19: winner battle   battle app 1.062 pcs 48  cms-RL app 0.958 pcs 48 KO
+wins: {'battle': 19, 'cms-RL': 1}
+battle     APP 0.980  VS/piece 1.269  pieces 29  think 55.5 ms  PPS 1.98  VS 251.5  KOs 1  TSD 36  TST 0  quads 44  mismatches 0
+cms-RL     APP 0.665  VS/piece 0.816  pieces 30  think 20.9 ms  PPS 1.98  VS 162.0  KOs 19  TSD 51  TST 0  quads 24  mismatches 0

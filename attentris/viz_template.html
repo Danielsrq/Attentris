@@ -1,0 +1,237 @@
+<title>AtTenTris Tokenizer</title>
+<style>
+:root {
+  --bg: #f4f3ee; --panel: #ffffff; --fg: #1d2127; --muted: #5c626b; --line: #d8d5ca;
+  --empty: #ebeae4; --filled: #3a3f47; --grid: #ffffff; --accent: #2c55c9; --accent-fg: #ffffff;
+  --sky: #e6ecf4; --well-a: #9fc4e6; --well-b: #78aad8; --play-a: #f2dcaa; --play-b: #e5c27c; --band: #cfc2e4;
+  --tsd: #c93a4f; --fractal: #d4701a; --imperial: #a63aaa; --stsd: #6a49d1; --cspin: #11807e;
+  --vertical: #3b8636; --rect12: #85750e; --pit: #2f7cbf; --move: #111418; --fit-s: #2e9b3a; --fit-z: #d6342f; --fit-t: #8a2fb0; --fit-l: #e07b00; --fit-j: #1f6fd1;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
+  --empty: #262a31; --filled: #c9ced6; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
+  --sky: #1f2732; --well-a: #2b4e70; --well-b: #3a6590; --play-a: #5a4a28; --play-b: #735d2e; --band: #4b3e66;
+  --tsd: #ff7486; --fractal: #ffa04a; --imperial: #e57ae9; --stsd: #a68dff; --cspin: #4dd0cd;
+  --vertical: #7fd078; --rect12: #d9c64e; --pit: #6fb4f2; --move: #f4f5f7; --fit-s: #63d06e; --fit-z: #ff6a63; --fit-t: #c27af0; --fit-l: #ffa53d; --fit-j: #6aa8ff; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
+  --empty: #262a31; --filled: #c9ced6; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
+  --sky: #1f2732; --well-a: #2b4e70; --well-b: #3a6590; --play-a: #5a4a28; --play-b: #735d2e; --band: #4b3e66;
+  --tsd: #ff7486; --fractal: #ffa04a; --imperial: #e57ae9; --stsd: #a68dff; --cspin: #4dd0cd;
+  --vertical: #7fd078; --rect12: #d9c64e; --pit: #6fb4f2; --move: #f4f5f7; --fit-s: #63d06e; --fit-z: #ff6a63; --fit-t: #c27af0; --fit-l: #ffa53d; --fit-j: #6aa8ff; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 14px/1.45 "IBM Plex Sans", system-ui, sans-serif; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
+h1 { font-size: 18px; margin: 0; letter-spacing: .01em; }
+h1 span { color: var(--muted); font-weight: 400; }
+.nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button, select { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--fg);
+  border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+select { max-width: min(420px, 100%); }
+.count { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 64px; text-align: center; }
+.meta { display: grid; gap: 4px; }
+.meta .label { font-weight: 600; font-size: 15px; }
+.meta .why { color: var(--muted); }
+.meta .stats { font-variant-numeric: tabular-nums; }
+.main { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .main { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .list { grid-column: 1 / -1; } }
+@media (max-width: 560px) { .main { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; display: grid; gap: 6px; justify-items: center; }
+figcaption { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+svg.board { width: 100%; max-width: 236px; height: auto; display: block; }
+figure { min-width: 0; width: 100%; }
+.list { display: grid; gap: 10px; min-width: 0; }
+.group h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 4px; font-weight: 600; }
+.tok { display: grid; grid-template-columns: 14px 86px minmax(0, 1fr); gap: 8px; align-items: baseline; padding: 3px 6px;
+  border-radius: 5px; cursor: default; }
+.tok:hover, .tok.on { background: var(--panel); outline: 1px solid var(--line); }
+.sw { width: 12px; height: 12px; border-radius: 3px; align-self: center; }
+.sw.ring { background: transparent !important; border: 2.5px solid; }
+.kind { font-weight: 600; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 13px; }
+.desc { color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pieces { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); border-radius: 5px; padding: 1px 7px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; }
+.chip b { font-weight: 700; }
+.note { color: var(--muted); font-size: 12.5px; max-width: 70ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; gap: 5px; align-items: center; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+
+<div class="wrap">
+  <header>
+    <h1>AtTenTris tokenizer <span>· v1 on bot and made-up boards</span></h1>
+    <div class="nav">
+      <button id="prev">← Prev</button>
+      <span class="count" id="count"></span>
+      <button id="next" class="primary">Next →</button>
+      <select id="jump" aria-label="Jump to position"></select>
+    </div>
+  </header>
+  <div class="meta">
+    <div class="label" id="label"></div>
+    <div class="why" id="why"></div>
+    <div class="stats" id="stats"></div>
+  </div>
+  <div class="main">
+    <figure><svg class="board" id="base" viewBox="-20 -6 226 418"></svg><figcaption>Base partition</figcaption></figure>
+    <figure><svg class="board" id="over" viewBox="-20 -6 226 418"></svg><figcaption>Overlays</figcaption></figure>
+    <div class="list" id="list"></div>
+  </div>
+  <div class="legend" id="legend"></div>
+  <p class="note">Base tokens tile the board exactly once: sky (rows above the highest filled cell), clean wells
+    (runs of one-hole rows sharing a column; length 1 = cheese), one token per play-area row, and bands where the
+    12-token budget merged the lowest rows. Filled cells are drawn as dark blocks framed in their token's colour.
+    Overlays may overlap anything; at most 8 are kept (T structures first, then 3×4/4×3 pits, then piece-shaped
+    recesses, then pits by area). A recess (dotted, in the piece's colour) is a resting place where an S, Z, T (nub down),
+    L or J (three on top / hook on top) touches the surface under every column with no gap, touches filled cells or the edge on at least 2 sides, and leaves the
+    surrounding columns no bumpier.
+    The dashed outline is the bot's actual placement. Hover a token to isolate it. Keys: ← →.</p>
+</div>
+
+<script>
+const DATA = __DATA__;
+const CS = 20, ROWS = 20, COLS = 10;
+const OVERLAY_VAR = { tsd: "--tsd", fractal: "--fractal", imperial: "--imperial", stsd: "--stsd", cspin: "--cspin",
+  vertical: "--vertical", rect12: "--rect12", pit1: "--pit", pit2: "--pit", pit3: "--pit", pit4: "--pit",
+  fit_s: "--fit-s", fit_z: "--fit-z", fit_t: "--fit-t", fit_l: "--fit-l", fit_j: "--fit-j" };
+const FIT_NOTE = { fit_s: "S", fit_z: "Z", fit_t: "T", fit_l: "L", fit_j: "J" };
+const OVERLAY_NOTE = { tsd: "TSD slot", fractal: "fractal (TSD over TSD)", imperial: "imperial cross", stsd: "STSD",
+  cspin: "C-spin (TST + TSD)", vertical: "vertical slot (TST)", rect12: "fillable by L+J+O / L+S+J / L+Z+J",
+  pit1: "well (negative space)", pit2: "2-wide pit", pit3: "3-wide pit", pit4: "4-wide pit" };
+let idx = 0, focus = null;
+
+const $ = id => document.getElementById(id);
+const key = (r, c) => r * COLS + c;
+const X = c => c * CS, Y = r => (ROWS - 1 - r) * CS;
+
+function baseColour(tok, i, kindIndex) {
+  if (tok.kind === "sky") return "var(--sky)";
+  if (tok.kind === "band") return "var(--band)";
+  if (tok.kind === "well") return kindIndex % 2 ? "var(--well-b)" : "var(--well-a)";
+  return kindIndex % 2 ? "var(--play-b)" : "var(--play-a)";
+}
+
+function outline(cells, inset) {
+  const set = new Set(cells.map(([r, c]) => key(r, c)));
+  let d = "";
+  for (const [r, c] of cells) {
+    const x0 = X(c) + inset, x1 = X(c) + CS - inset, y0 = Y(r) + inset, y1 = Y(r) + CS - inset;
+    if (!set.has(key(r + 1, c)) || r + 1 >= ROWS) d += `M${x0} ${y0}H${x1}`;
+    if (!set.has(key(r - 1, c)) || r - 1 < 0) d += `M${x0} ${y1}H${x1}`;
+    if (!set.has(key(r, c - 1)) || c - 1 < 0) d += `M${x0} ${y0}V${y1}`;
+    if (!set.has(key(r, c + 1)) || c + 1 >= COLS) d += `M${x1} ${y0}V${y1}`;
+  }
+  return d;
+}
+
+function axis() {
+  let s = "";
+  for (const r of [0, 4, 9, 14, 19])
+    s += `<text x="-6" y="${Y(r) + 14}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${r + 1}</text>`;
+  for (let c = 0; c < COLS; c++)
+    s += `<text x="${X(c) + 10}" y="${ROWS * CS + 11}" text-anchor="middle" font-size="9" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${c}</text>`;
+  return s;
+}
+
+function moveLayer(p) {
+  if (!p.chose) return "";
+  return `<path d="${outline(p.chose.cells, 1.5)}" stroke="var(--move)" stroke-width="2" stroke-dasharray="4 3" fill="none"/>`;
+}
+
+function render() {
+  const p = DATA.positions[idx];
+  const toks = p.tokens;
+  const base = toks.filter(t => t.base), over = toks.filter(t => DATA.kinds.overlay.includes(t.kind));
+  const pieces = toks.filter(t => !t.base && !DATA.kinds.overlay.includes(t.kind));
+  $("count").textContent = `${idx + 1} / ${DATA.positions.length}`;
+  $("jump").value = idx;
+  $("label").textContent = p.label;
+  $("why").textContent = "Why this one: " + p.why + (p.chose ? ` · bot played ${p.chose.type}${p.chose.spin && p.chose.spin !== "none" ? " (" + p.chose.spin + " spin)" : ""}` : "");
+  $("stats").textContent = `${toks.length} tokens = ${base.length} base + ${over.length} overlay + ${pieces.length} piece` +
+    (p.overlays_found > over.length ? ` · ${p.overlays_found} overlays found, ${DATA.p_max} kept` : "");
+
+  // colours for base tokens (alternate within each kind so neighbours differ)
+  const counters = {}, bcol = new Map();
+  base.forEach(t => { counters[t.kind] = (counters[t.kind] || 0); bcol.set(t, baseColour(t, 0, counters[t.kind]++)); });
+  const owner = new Map();
+  base.forEach(t => t.cells.forEach(([r, c]) => owner.set(key(r, c), t)));
+
+  // base board
+  let s = axis();
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const t = owner.get(key(r, c)), col = bcol.get(t);
+    const dim = focus && focus !== t ? ' opacity="0.25"' : "";
+    s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="${col}" stroke="var(--grid)" stroke-width="1"${dim}/>`;
+    if (p.board[r][c]) s += `<rect x="${X(c) + 3.5}" y="${Y(r) + 3.5}" width="${CS - 7}" height="${CS - 7}" rx="2" fill="var(--filled)"${dim}/>`;
+  }
+  base.forEach(t => { // token boundaries
+    const show = !focus || focus === t;
+    if (show && t.kind !== "sky") s += `<path d="${outline(t.cells, 0.5)}" stroke="var(--fg)" stroke-opacity="${focus === t ? 0.9 : 0.35}" stroke-width="${focus === t ? 2 : 1}" fill="none"/>`;
+  });
+  s += moveLayer(p);
+  $("base").innerHTML = s;
+
+  // overlay board
+  s = axis();
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="var(--empty)" stroke="var(--grid)" stroke-width="1"/>`;
+    if (p.board[r][c]) s += `<rect x="${X(c) + 3.5}" y="${Y(r) + 3.5}" width="${CS - 7}" height="${CS - 7}" rx="2" fill="var(--filled)" opacity="0.55"/>`;
+  }
+  over.forEach((t, i) => {
+    if (focus && focus !== t) return;
+    const v = `var(${OVERLAY_VAR[t.kind]})`, inset = focus ? 1.5 : 1.5 + (i % 4) * 1.6;
+    for (const [r, c] of t.cells) s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="${v}" opacity="${focus ? 0.4 : 0.16}"/>`;
+    const dash = t.kind.startsWith("fit_") ? ' stroke-dasharray="0.1 4.2" stroke-linecap="round" stroke-width="3"' : ' stroke-width="2.2" stroke-linecap="square"';
+    s += `<path d="${outline(t.cells, inset)}" stroke="${v}"${dash} fill="none"/>`;
+  });
+  s += moveLayer(p);
+  $("over").innerHTML = s;
+
+  // token list
+  const rows = (t) => t.box ? (t.box[0] === t.box[1] ? `row ${t.box[0] + 1}` : `rows ${t.box[0] + 1}–${t.box[1] + 1}`) : "";
+  const cols = (t) => t.box ? (t.box[2] === t.box[3] ? `col ${t.box[2]}` : `cols ${t.box[2]}–${t.box[3]}`) : "";
+  const descr = (t) => {
+    const e = t.extras;
+    switch (t.kind) {
+      case "sky": return `${rows(t)} · ${t.cells.length} cells · h = [${e.h.join(",")}]`;
+      case "well": return `${rows(t)} · ℓ ${e.length}${e.length === 1 ? " (cheese)" : ""} · hole col ${e.hole} · ${e.covered ? "covered" : "open"}`;
+      case "play": return `${rows(t)} · ${e.filled} filled · ${e.under} empty under the surface`;
+      case "band": {
+        const n = {}; e.merged.forEach(k => n[k] = (n[k] || 0) + 1);
+        return `${rows(t)} · merged ${Object.entries(n).map(([k, v]) => `${v} ${k}${v > 1 ? "s" : ""}`).join(" + ")} · ${e.filled} filled`;
+      }
+      default:
+        if (t.kind.startsWith("fit_")) return `${FIT_NOTE[t.kind]}-shaped recess · ${FIT_NOTE[t.kind]} ${e.orientation} · ${cols(t)} · ${e.contacts} side contacts${e.gain > 0 ? ` · bumpiness −${e.gain}` : ""}`;
+        if (t.kind.startsWith("pit")) return `${cols(t)} · depth ${e.depth} · ${e.area} cells · ${OVERLAY_NOTE[t.kind]}`;
+        if (t.kind === "rect12") return `${cols(t)}, ${rows(t)} · ${e.orientation} · ${OVERLAY_NOTE.rect12}`;
+        return `${OVERLAY_NOTE[t.kind]} · ${e.lines} line${e.lines === 1 ? "" : "s"} ready · fill ${e.fill.toFixed(2)} · ${t.cells.length} cells`;
+    }
+  };
+  const item = (t, sw, ring) => `<div class="tok${focus === t ? " on" : ""}" data-i="${toks.indexOf(t)}"><span class="sw${ring ? " ring" : ""}" style="${ring ? "border-color" : "background"}:${sw}"></span><span class="kind">${t.kind}</span><span class="desc">${descr(t)}</span></div>`;
+  let h = `<div class="group"><h2>Base tokens (${base.length})</h2>` + base.slice().reverse().map(t => item(t, bcol.get(t))).join("") + `</div>`;
+  h += `<div class="group"><h2>Overlays (${over.length})</h2>` + (over.length ? over.map(t => item(t, `var(${OVERLAY_VAR[t.kind]})`, true)).join("") : `<div class="desc">none</div>`) + `</div>`;
+  if (pieces.length) h += `<div class="group"><h2>Piece tokens (${pieces.length})</h2><div class="pieces">` +
+    pieces.map(t => `<span class="chip">${t.kind} <b>${t.extras.piece || "–"}</b></span>`).join("") + `</div></div>`;
+  $("list").innerHTML = h;
+  $("list").querySelectorAll(".tok").forEach(el => {
+    el.addEventListener("mouseenter", () => { focus = toks[+el.dataset.i]; render(); });
+    el.addEventListener("mouseleave", () => { focus = null; render(); });
+  });
+}
+
+function go(d) { idx = (idx + d + DATA.positions.length) % DATA.positions.length; focus = null; render(); }
+$("prev").onclick = () => go(-1);
+$("next").onclick = () => go(1);
+$("jump").innerHTML = DATA.positions.map((p, i) => `<option value="${i}">${i + 1}. ${p.label.replace(/^.*· /, "")} — ${p.why}</option>`).join("");
+$("jump").onchange = e => { idx = +e.target.value; focus = null; render(); };
+{ const m = /^#p(\d+)$/.exec(location.hash); if (m) idx = Math.min(+m[1], DATA.positions.length) - 1 || 0; }
+document.addEventListener("keydown", e => { if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); });
+$("legend").innerHTML = [["sky", "--sky"], ["well", "--well-a"], ["play row", "--play-a"], ["band", "--band"]]
+  .map(([n, v]) => `<span><span class="sw" style="background:var(${v})"></span>${n}</span>`).join("") +
+  ["tsd", "fractal", "imperial", "stsd", "cspin", "vertical", "rect12", "fit_s", "fit_z", "fit_t", "fit_l", "fit_j", "pit1"].map(k =>
+  `<span><span class="sw ring" style="border-color:var(${OVERLAY_VAR[k]})${k.startsWith("fit_") ? ";border-style:dotted" : ""}"></span>${k === "pit1" ? "pit1–4" : k}</span>`).join("") +
+  `<span><svg width="18" height="10"><path d="M1 5H17" stroke="var(--move)" stroke-width="2" stroke-dasharray="4 3"/></svg>bot's move</span>`;
+render();
+</script>

@@ -1,0 +1,269 @@
+<title>AtTenTris Attention</title>
+<style>
+:root {
+  --bg: #f4f3ee; --panel: #ffffff; --fg: #1d2127; --muted: #5c626b; --line: #d8d5ca;
+  --empty: #ebeae4; --filled: #3a3f47; --grid: #ffffff; --accent: #2c55c9; --accent-fg: #ffffff;
+  --heat: 214, 84, 20; --cool: 38, 104, 196; --move: #111418; --pick: #2c55c9; --hover: #0f8a6a; --bar: #e0763a;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
+  --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
+  --heat: 255, 140, 70; --cool: 110, 170, 255; --move: #f4f5f7; --pick: #7d9cff; --hover: #4fd1a8; --bar: #ff9a5c; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
+  --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
+  --heat: 255, 140, 70; --cool: 110, 170, 255; --move: #f4f5f7; --pick: #7d9cff; --hover: #4fd1a8; --bar: #ff9a5c; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 14px/1.45 "IBM Plex Sans", system-ui, sans-serif; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: grid; gap: 14px; }
+header { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
+h1 { font-size: 18px; margin: 0; } h1 span { color: var(--muted); font-weight: 400; }
+.nav, .cands { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button, select { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+button.primary, button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.count { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 64px; text-align: center; }
+.summary { display: flex; flex-wrap: wrap; gap: 8px 24px; font-variant-numeric: tabular-nums; }
+.summary b { font-size: 17px; }
+.summary span { color: var(--muted); }
+.k .note { color: var(--muted); font-weight: 400; }
+.meta .label { font-weight: 600; font-size: 15px; } .meta .sub { color: var(--muted); }
+.main { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 640px) { .main { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; display: grid; gap: 6px; justify-items: center; min-width: 0; }
+figcaption { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+svg.board { width: 100%; max-width: 260px; height: auto; display: block; }
+.list { display: grid; gap: 4px; min-width: 0; }
+.list h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 6px 0 4px; font-weight: 600; }
+.row { display: grid; grid-template-columns: 112px minmax(0, 1fr) 46px 50px 54px; gap: 8px; align-items: center; padding: 2px 6px; border-radius: 5px; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin: 0 2px 0 8px; }
+.hlabel { color: var(--muted); font-size: 12px; }
+.row.head { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; }
+.row .num { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; }
+.row .num.pos { color: var(--fg); } .row .num.neg { color: var(--muted); }
+.row:hover { background: var(--panel); outline: 1px solid var(--line); }
+.row .k { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 13px; font-weight: 600; }
+.row .bar { height: 10px; border-radius: 3px; background: var(--bar); min-width: 1px; }
+.row .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.toggle { display: flex; gap: 6px; flex-wrap: wrap; }
+.note { color: var(--muted); font-size: 12.5px; max-width: 75ch; }
+.left { display: grid; gap: 14px; justify-items: center; min-width: 0; }
+.queue { display: grid; grid-template-columns: repeat(4, auto); gap: 8px 10px; align-items: end; justify-content: center; }
+.qitem { display: grid; gap: 2px; justify-items: center; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.qitem b { color: var(--fg); font-weight: 600; }
+.qitem svg { width: 46px; height: 24px; }
+.qtitle { grid-column: 1 / -1; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; justify-self: start; }
+table.probs { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; width: 100%; max-width: 460px; }
+table.probs td { padding: 2px 6px; border-bottom: 1px solid var(--line); }
+table.probs td.p { text-align: right; width: 52px; }
+table.probs td.bar { width: 45%; }
+table.probs td.bar span { display: block; height: 9px; border-radius: 3px; background: var(--accent); opacity: .75; }
+table.probs tr.bot td:first-child { font-weight: 700; }
+table.probs tr.pick { cursor: pointer; }
+table.probs tr.pick:hover { background: var(--panel); }
+table.probs tr.on { background: var(--panel); outline: 1px solid var(--accent); }
+table.probs tr.rest td { color: var(--muted); font-style: italic; }
+.modelname { color: var(--muted); }
+.tablewrap { overflow-x: auto; max-width: 100%; flex-basis: 100%; }
+table.agree { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.agree th, table.agree td { padding: 3px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.agree th { color: var(--muted); font-weight: 600; font-size: 12px; }
+table.agree td:first-child { text-align: left; font-weight: 600; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+
+<div class="wrap">
+  <header>
+    <h1>AtTenTris attention <span>· where the model looks when it scores a placement</span></h1>
+    <div class="nav">
+      <button id="prev">← Prev</button><span class="count" id="count"></span><button id="next" class="primary">Next →</button>
+      <select id="jump" aria-label="Jump to position"></select>
+    </div>
+  </header>
+  <div class="summary" id="summary"></div>
+  <div class="meta"><div class="label" id="label"></div><div class="sub" id="sub"></div></div>
+  <div class="main">
+    <div class="left">
+      <figure><svg class="board" id="board" viewBox="-20 -6 226 418"></svg><figcaption id="cap">Attention of the bot's move</figcaption></figure>
+      <div class="queue" id="queue"></div>
+    </div>
+    <div class="list">
+      <h2>The model's move probabilities (click a row to show its attention)</h2>
+      <table class="probs" id="probs"></table>
+      <div class="toggle"><button id="dens" class="on">per-cell density</button><button id="mass">whole-token share</button></div>
+      <div class="toggle" id="heads"><span class="hlabel">heads:</span><button data-h="all" class="on">all (mean)</button><button data-h="0">1</button><button data-h="1">2</button><button data-h="2">3</button><button data-h="3">4</button></div>
+      <div class="toggle" id="src"><button data-s="attn" class="on">attention</button><button data-s="gattn">geometry only (FLAT-2D)</button><button data-s="cattn">content only (Q·K)</button><button data-s="geo">geometry bias, signed</button></div>
+      <div class="legend" id="signed" hidden>geometry bias relative to the average board token (softmax ignores a constant shift):<span class="sw" style="background:rgb(var(--cool))"></span>below average
+        <span class="sw" style="background:var(--empty);border:1px solid var(--line)"></span>0
+        <span class="sw" style="background:rgb(var(--heat))"></span>above average</div>
+      <h2>Attention over tokens (mean of 4 heads)</h2>
+      <div id="rows"></div>
+    </div>
+  </div>
+  <p class="note">The heat is the selected candidate's cross-attention over the board tokens, drawn through the token masks.
+    <b>Per-cell density</b> divides each token's share by its size, so a 4-cell T slot and the 100-cell sky compare fairly;
+    <b>whole-token share</b> paints every cell of a token with its full share. Overlapping overlays add up.
+    Dashed outline: the move the bot played. Solid blue: the candidate selected above. Hover a token row to outline it.
+    Attention shows where information was routed from, not proof of what decided the move.</p>
+  <p class="note"><b>Why it looked there.</b> Each attention score is the sum of two terms (shown per token, mean of the 4 heads, in logit units):
+    <b>geom.</b> is the FLAT-2D bias, a learned function of geometry only (how the move's 4 cells and box sit relative to the token's
+    mask and box: overlap and row/column offsets); <b>content</b> is Q·K/√d, what the token's vector says to the move's. The heat-map switch
+    shows the attention each term alone would give (softmax over the tokens of that term): <b>geometry only</b> is where a move would look
+    from position alone, <b>content only</b> is where it would look from meaning alone. A token high in the real attention but not in the
+    geometry-only map was chosen for its content. The geom. and content columns and the signed view are shown relative to
+    the mean over this move's board tokens (piece tokens, marked *, are shown raw): softmax ignores adding the same constant to every score, so only differences between
+    tokens carry meaning (hover a number for its raw value). <b>Heads:</b> "all" averages the 4 heads, but in two different
+    places: the signed view averages the biases, while the attention and the geometry-only / content-only maps average the
+    softmaxed shares, so when heads disagree the two can differ. Pick one head to see it on its own; the board, the token list
+    and the bars then all show that head.</p>
+</div>
+
+<script>
+const DATA = __DATA__;
+const CS = 20, ROWS = 20, COLS = 10;
+let idx = 0, sel = null, mode = "dens", hover = null, src = "attn", head = "all";
+// the selected candidate's values for the chosen head ("all" = the stored means over heads)
+const hv = (cand, key) => (head === "all" || !cand.H) ? cand[key] : cand.H[key][+head];
+const firstSel = p => (p.top[0].i === p.chosen.i ? "chosen" : "0");   // default: the model's own top move
+const $ = id => document.getElementById(id);
+const X = c => c * CS, Y = r => (ROWS - 1 - r) * CS;
+const rc = i => [Math.floor(i / 10), i % 10];
+
+function outline(cells, inset) {
+  const set = new Set(cells);
+  let d = "";
+  for (const i of cells) {
+    const [r, c] = rc(i);
+    const x0 = X(c) + inset, x1 = X(c) + CS - inset, y0 = Y(r) + inset, y1 = Y(r) + CS - inset;
+    if (r + 1 >= ROWS || !set.has(i + 10)) d += `M${x0} ${y0}H${x1}`;
+    if (r - 1 < 0 || !set.has(i - 10)) d += `M${x0} ${y1}H${x1}`;
+    if (c - 1 < 0 || !set.has(i - 1)) d += `M${x0} ${y0}V${y1}`;
+    if (c + 1 >= COLS || !set.has(i + 1)) d += `M${x1} ${y0}V${y1}`;
+  }
+  return d;
+}
+const SPIN = ["", " mini", " spin"];
+const colsOf = c => { if (!c.cells || !c.cells.length) return ""; const xs = c.cells.map(i => i % 10); const a = Math.min(...xs), b = Math.max(...xs); return a === b ? ` · col ${a}` : ` · cols ${a}–${b}`; };
+const candLabel = c => `${c.piece}${c.hold ? " (hold)" : ""}${SPIN[c.spin]}${c.lines ? `, clears ${c.lines}` : ""}${c.attack ? `, sends ${c.attack}` : ""}${colsOf(c)}`;
+
+function render() {
+  const p = DATA.positions[idx];
+  $("count").textContent = `${idx + 1} / ${DATA.positions.length}`;
+  $("label").textContent = `${p.why} · ${p.teacher} teacher · seed ${p.seed}, placement ${p.n}`;
+  $("sub").textContent = `Bot played ${candLabel(p.chosen)} — the model ranks it #${p.rank} of ${p.n_cand} (p = ${(p.chosen.p * 100).toFixed(0)}%).`;
+  $("jump").value = idx;
+  const cand = sel === "chosen" ? p.chosen : p.top[+sel];
+  $("cap").textContent = sel === "chosen" ? "Attention of the bot's move" : `Attention of model pick #${+sel + 1}`;
+  // the model's probabilities: top 8, then everything else
+  const selI = cand.i;
+  let pt = p.probs.map((c, k) => {
+    const pick = k < p.top.length;          // attention is available for the top 5
+    const cls = [c.i === p.chosen.i ? "bot" : "", pick ? "pick" : "", c.i === selI ? "on" : ""].join(" ");
+    return `<tr class="${cls}" data-k="${pick ? k : ""}"><td>#${k + 1}</td><td>${candLabel(c)}${c.i === p.chosen.i ? " — <b>bot's move</b>" : ""}</td>` +
+      `<td class="bar"><span style="width:${(100 * c.p / p.probs[0].p).toFixed(1)}%"></span></td><td class="p">${(100 * c.p).toFixed(1)}%</td></tr>`;
+  }).join("");
+  if (p.rest_n > 0) pt += `<tr class="rest"><td></td><td>the other ${p.rest_n} legal moves together</td><td class="bar"></td><td class="p">${(100 * p.rest).toFixed(1)}%</td></tr>`;
+  if (p.rank > p.probs.length) pt += `<tr class="bot pick ${sel === "chosen" ? "on" : ""}" data-k="chosen"><td>#${p.rank}</td><td>${candLabel(p.chosen)} — <b>bot's move</b></td><td class="bar"></td><td class="p">${(100 * p.chosen.p).toFixed(1)}%</td></tr>`;
+  $("probs").innerHTML = pt;
+  $("probs").querySelectorAll("tr.pick").forEach(tr => tr.onclick = () => {
+    const k = tr.dataset.k;
+    sel = k === "chosen" ? "chosen" : (p.top[+k].i === p.chosen.i ? "chosen" : k);
+    render();
+  });
+  // the piece queue, with each piece token's share of the selected move's attention
+  const PIECE_CELLS = { I: [[0,0],[1,0],[2,0],[3,0]], O: [[1,0],[2,0],[1,1],[2,1]], T: [[0,0],[1,0],[2,0],[1,1]],
+    S: [[0,0],[1,0],[1,1],[2,1]], Z: [[1,0],[2,0],[0,1],[1,1]], J: [[0,0],[1,0],[2,0],[0,1]], L: [[0,0],[1,0],[2,0],[2,1]] };
+  const qtok = (kind) => { const j = p.tokens.findIndex(t => t.kind === kind); return j < 0 ? null : [p.tokens[j], hv(cand, "attn")[j]]; };
+  const mini = (piece) => {
+    if (!piece) return `<svg viewBox="0 0 46 24"><text x="23" y="16" text-anchor="middle" font-size="11" fill="var(--muted)">empty</text></svg>`;
+    return `<svg viewBox="0 0 46 24">` + PIECE_CELLS[piece].map(([x, y]) =>
+      `<rect x="${3 + x * 10}" y="${13 - y * 10}" width="9" height="9" rx="1.5" fill="var(--fg)" opacity="0.75"/>`).join("") + `</svg>`;
+  };
+  const qcell = (kind, name) => {
+    const q = qtok(kind);
+    if (!q) return "";
+    return `<div class="qitem">${mini(q[0].piece)}<b>${name}${q[0].piece ? " " + q[0].piece : ""}</b><span>${(100 * q[1]).toFixed(1)}%</span></div>`;
+  };
+  $("queue").innerHTML = `<div class="qtitle">Pieces (attention share)</div>` + qcell("current", "current") + qcell("hold", "hold") +
+    [1, 2, 3, 4, 5].map(k => qcell("preview" + k, "next " + k)).join("");
+
+  // heat per cell
+  const heat = new Float64Array(200);
+  const signed = src === "geo" && cand.geo;
+  // attention is softmax(score) over tokens, so adding a constant to every score changes nothing:
+  // only differences matter. Show each token's geometry bias relative to the mean over all tokens.
+  // centred over the BOARD tokens only: piece tokens have no position, their bias is a learned constant
+  const onBoard = p.tokens.map(t => t.cells.length > 0);
+  const nb = Math.max(1, onBoard.filter(Boolean).length);
+  const G = cand.geo ? hv(cand, "geo") : null, C = cand.cont ? hv(cand, "cont") : null, AT = hv(cand, "attn");
+  const geoMean = G ? G.reduce((a, v, j) => a + (onBoard[j] ? v : 0), 0) / nb : 0;
+  const geoRel = G ? G.map((v, j) => onBoard[j] ? v - geoMean : null) : null;
+  $("signed").hidden = !signed;
+  const hsrc = signed ? geoRel : (cand[src] ? hv(cand, src) : AT);
+  const board = p.tokens.map((t, j) => [t, hsrc[j]]).filter(([t]) => t.cells.length);
+  const cover = new Float64Array(200);
+  if (signed) {            // the raw bias of each token on its cells (mean where tokens overlap)
+    for (const [t, v] of board) for (const i of t.cells) { heat[i] += v; cover[i] += 1; }
+    for (let i = 0; i < 200; i++) if (cover[i]) heat[i] /= cover[i];
+  } else {
+    for (const [t, a] of board) for (const i of t.cells) heat[i] += mode === "dens" ? a / t.cells.length : a;
+  }
+  const mx = signed ? (Math.max(...heat.map(Math.abs)) || 1) : (Math.max(...heat) || 1);
+
+  let s = "";
+  for (const r of [0, 4, 9, 14, 19]) s += `<text x="-6" y="${Y(r) + 14}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${r + 1}</text>`;
+  for (let i = 0; i < 200; i++) {
+    const [r, c] = rc(i);
+    s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="var(--empty)" stroke="var(--grid)" stroke-width="1"/>`;
+    if (signed && cover[i]) s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="rgb(var(${heat[i] >= 0 ? "--heat" : "--cool"}))" opacity="${(0.85 * Math.abs(heat[i]) / mx).toFixed(3)}"/>`;
+    else if (!signed && heat[i] > 0) s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="rgb(var(--heat))" opacity="${(0.08 + 0.85 * heat[i] / mx).toFixed(3)}"/>`;
+    if (p.board[i]) s += `<rect x="${X(c) + 4}" y="${Y(r) + 4}" width="${CS - 8}" height="${CS - 8}" rx="2" fill="var(--filled)" opacity="0.8"/>`;
+  }
+  if (hover) s += `<path d="${outline(hover.cells, 1)}" stroke="var(--hover)" stroke-width="2.5" fill="none"/>`;
+  s += `<path d="${outline(p.chosen.cells, 1.5)}" stroke="var(--move)" stroke-width="2" stroke-dasharray="4 3" fill="none"/>`;
+  s += `<path d="${outline(cand.cells, 3.5)}" stroke="var(--pick)" stroke-width="2.5" fill="none"/>`;
+  $("board").innerHTML = s;
+
+  const cMean = C ? C.reduce((a, v, j) => a + (onBoard[j] ? v : 0), 0) / nb : 0;
+  const rows = p.tokens.map((t, j) => ({ t, a: AT[j], g: geoRel ? geoRel[j] : null, graw: G ? G[j] : null,
+    c: C ? (onBoard[j] ? C[j] - cMean : null) : null, craw: C ? C[j] : null })).sort((a, b) => b.a - a.a);
+  const top = rows[0].a || 1;
+  const sg = (v, col, raw) => v === null ? (raw === null || raw === undefined ? "" : `<span class="num" title="piece token: no board position, shown raw">${raw >= 0 ? "+" : "−"}${Math.abs(raw).toFixed(2)}*</span>`) : `<span class="num" title="raw ${raw >= 0 ? "+" : "−"}${Math.abs(raw).toFixed(2)} (before subtracting the mean over tokens)"${col ? ` style="color:rgb(var(${v >= 0 ? "--heat" : "--cool"}))"` : ""}>${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}</span>`;
+  $("rows").innerHTML = `<div class="row head"><span class="k">token</span><span>attention</span><span class="v">share</span><span class="num" title="relative to the mean over tokens">geom. ±</span><span class="num" title="relative to the mean over tokens">content ±</span></div>` +
+    rows.map(({ t, a, g, graw, c, craw }, k) => `<div class="row" data-k="${k}"><span class="k">${t.kind}${t.piece ? " " + t.piece : ""}${t.note ? ` <span class="note">${t.note}</span>` : ""}</span>` +
+    `<span class="bar" style="width:${(100 * a / top).toFixed(1)}%"></span><span class="v">${(100 * a).toFixed(1)}%</span>${sg(g, true, graw)}${sg(c, false, craw)}</div>`).join("");
+  $("rows").querySelectorAll(".row[data-k]").forEach(el => {
+    el.onmouseenter = () => { const t = rows[+el.dataset.k].t; if (t.cells.length) { hover = t; render(); } };
+    el.onmouseleave = () => { if (hover) { hover = null; render(); } };
+  });
+}
+
+const S = DATA.summary;
+$("summary").innerHTML = `<div><b>${(S.top1 * 100).toFixed(1)}%</b> <span>top-1 agreement with the bot on ${S.positions.toLocaleString()} held-out positions</span></div>` +
+  `<div><b>${(S.pointing * 100).toFixed(0)}%</b> <span>of ${S.pointing_n} T-spins into a T structure: that structure is the most-attended token (random: ${(S.pointing_random * 100).toFixed(0)}%)</span></div>` +
+  `<div><span class="modelname">Model: ${DATA.model || (DATA.epochs + " training epochs")}</span></div>`;
+if (S.agreement) {
+  const pc = v => `${(v * 100).toFixed(1)}%`;
+  const cols = ["top1", "within 0.5", "within 1.0"];
+  let t = `<table class="agree"><tr><th></th>${["normal", "gate4"].map(n => `<th colspan="3">${n} teacher</th>`).join("")}</tr>` +
+    `<tr><th></th>${["normal", "gate4"].map(() => cols.map(c => `<th>${c === "top1" ? "same move" : "search score " + c}</th>`).join("")).join("")}</tr>`;
+  for (const who of ["model", "greedy V"])
+    t += `<tr><td>${who === "model" ? "AtTenTris (one pass)" : "our V, 1 ply"}</td>${["normal", "gate4"].map(n => cols.map(c => `<td>${pc(S.agreement[who][n][c])}</td>`).join("")).join("")}</tr>`;
+  $("summary").insertAdjacentHTML("beforeend", `<div class="tablewrap">${t}</table></div>`);
+}
+function go(d) { idx = (idx + d + DATA.positions.length) % DATA.positions.length; sel = firstSel(DATA.positions[idx]); hover = null; render(); }
+$("prev").onclick = () => go(-1); $("next").onclick = () => go(1);
+$("jump").innerHTML = DATA.positions.map((p, i) => `<option value="${i}">${i + 1}. ${p.why} · ${p.teacher} · seed ${p.seed} #${p.n}</option>`).join("");
+$("jump").onchange = e => { idx = +e.target.value; sel = firstSel(DATA.positions[idx]); hover = null; render(); };
+$("heads").querySelectorAll("button").forEach(b => b.onclick = () => {
+  head = b.dataset.h; $("heads").querySelectorAll("button").forEach(x => x.className = x === b ? "on" : ""); render();
+});
+$("src").querySelectorAll("button").forEach(b => b.onclick = () => {
+  src = b.dataset.s; $("src").querySelectorAll("button").forEach(x => x.className = x === b ? "on" : ""); render();
+});
+$("dens").onclick = () => { mode = "dens"; $("dens").className = "on"; $("mass").className = ""; render(); };
+$("mass").onclick = () => { mode = "mass"; $("mass").className = "on"; $("dens").className = ""; render(); };
+document.addEventListener("keydown", e => { if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); });
+{ const m = /^#p(\d+)$/.exec(location.hash); if (m) idx = Math.min(+m[1], DATA.positions.length) - 1 || 0; }
+sel = firstSel(DATA.positions[idx]);
+render();
+</script>

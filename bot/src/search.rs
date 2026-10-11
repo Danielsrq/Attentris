@@ -30,11 +30,17 @@ pub struct SearchConfig {
     pub chance_top: usize,
     /// Reward charged when a line dies (no legal placement / lock-out).
     pub death: f32,
+    /// Also report every root placement with its scores (`Decision::roots`), for datasets.
+    pub roots: bool,
+    /// Root-diverse pruning (labelling only): every ply keeps the best `root_keep` lines of
+    /// EVERY first move, plus the best beam/2 others, so each root move -- blunders too --
+    /// ends with a search score. 0 = the normal beam.
+    pub root_keep: usize,
 }
 
 impl Default for SearchConfig {
     fn default() -> Self {
-        SearchConfig { beam: 64, depth: 6, use_hold: true, chance: true, chance_top: 12, death: -1000.0 }
+        SearchConfig { beam: 64, depth: 6, use_hold: true, chance: true, chance_top: 12, death: -1000.0, roots: false, root_keep: 0 }
     }
 }
 
@@ -59,6 +65,36 @@ struct Node {
     /// The placements that led here from the root; path[0] is the move to play.
     path: [Step; MAX_PLAN],
     plen: u8,
+    /// Index of the root placement this line starts with.
+    root: u16,
+}
+
+/// Fill in `d`'s root search scores from a root-diverse search of the same position
+/// (`SearchConfig::root_keep`): same board, same move generation, so the roots line up.
+pub fn merge_root_best(d: &mut Decision, d2: &Decision) {
+    if d2.roots.len() != d.roots.len() {
+        return;
+    }
+    for (r1, r2) in d.roots.iter_mut().zip(d2.roots.iter()) {
+        r1.best = match (r1.best, r2.best) {
+            (Some(x), Some(y)) => Some(x.max(y)),
+            (x, None) => x,
+            (None, y) => y,
+        };
+    }
+}
+
+/// One legal first move and what the search thought of it (`SearchConfig::roots`).
+#[derive(Clone, Copy, Debug)]
+pub struct RootScore {
+    pub step: Step,
+    /// Attack the move itself sends.
+    pub attack: f32,
+    /// attack + V(board after the move): the 1-ply score.
+    pub ply1: f32,
+    /// Best line through this move that survived to the last ply (before the chance
+    /// ply), or None if the beam pruned every line through it.
+    pub best: Option<f32>,
 }
 
 #[derive(Clone, Debug)]
@@ -68,6 +104,9 @@ pub struct Decision {
     /// The whole best line, starting with this move. Later steps are what the bot
     /// expects to play if nothing new changes its mind.
     pub plan: Vec<Step>,
+    /// With `SearchConfig::roots`: every root placement, and which one was played.
+    pub roots: Vec<RootScore>,
+    pub chosen_root: usize,
 }
 
 pub struct Searcher {
@@ -78,6 +117,9 @@ pub struct Searcher {
     mg: MoveGen,
     buf: Vec<Placement>,
     pub nodes: u64,
+    /// When not empty, only these first moves (hold flag, sorted cells) are searched: a
+    /// shortlist from outside (AtTenTris's top-k, `bot play-ext --shortlist`).
+    pub root_allow: Vec<(bool, [(i32, i32); 4])>,
 }
 
 /// Outcome of one placement on a board.
@@ -113,7 +155,10 @@ pub fn apply(board: &Board, p: &Placement, b2b: i32, rules: &Rules, shapes: &Sha
     let (lines, cleared) = nb.place(cells, p.x as i32, p.y as i32);
     let nb2 = next_b2b(b2b, spin, lines);
     let perfect = lines > 0 && nb.is_empty();
-    let (attack, burst) = if rules.gate {
+    let (attack, burst) = if rules.battle {
+        nb.combo = if lines > 0 { board.combo.saturating_add(1) } else { -1 };
+        (rules.battle_attack(spin, lines, nb.combo as i32, nb2, perfect), false)
+    } else if rules.gate {
         let bonus = if rules.gate_b2b && nb2 >= 1 {
             let b = rules.b2b.bonus(nb2);
             rules.b2b_cap.map_or(b, |c| b.min(c))
@@ -145,14 +190,17 @@ pub fn apply(board: &Board, p: &Placement, b2b: i32, rules: &Rules, shapes: &Sha
         }
         nb.last_clear = t;
     }
-    Outcome { board: nb, lines, cleared, attack, b2b: nb2, lock_out: all_in_buffer && lines == 0, spin, repeat, healed, burst }
+    // TetrisBattle tops out when the top visible row holds anything after the lock.
+    let lock_out = if rules.battle { nb.rows[BUFFER as usize] != 0 } else { all_in_buffer && lines == 0 };
+    Outcome { board: nb, lines, cleared, attack, b2b: nb2, lock_out, spin, repeat, healed, burst }
 }
 
 impl Searcher {
     pub fn new(cfg: SearchConfig, weights: Weights, rules: Rules) -> Searcher {
         let mut mg = MoveGen::new();
         mg.all_spin = rules.all_spin;
-        Searcher { cfg, weights, rules, shapes: Shapes::new(), mg, buf: Vec::with_capacity(256), nodes: 0 }
+        mg.battle = rules.battle;
+        Searcher { cfg, weights, rules, shapes: Shapes::for_rules(&rules), mg, buf: Vec::with_capacity(256), nodes: 0, root_allow: Vec::new() }
     }
 
     fn value(&self, b: &Board, b2b: i32) -> f32 {
@@ -178,7 +226,7 @@ impl Searcher {
                 path[plen as usize] = Step { use_hold: used_hold, placement: *p };
                 plen += 1;
             }
-            out.push(Node { board: o.board, hold: new_hold, qi: next_qi, b2b: o.b2b, reward, score, dead: false, path, plen });
+            out.push(Node { board: o.board, hold: new_hold, qi: next_qi, b2b: o.b2b, reward, score, dead: false, path, plen, root: node.root });
         }
         self.buf = buf;
     }
@@ -233,16 +281,39 @@ impl Searcher {
     /// `queue` = [current, previews...]; `bag` = pieces the first unseen draw can be.
     pub fn search(&mut self, board: &Board, queue: &[Piece], hold: Option<Piece>, b2b: i32, bag: &[Piece]) -> Option<Decision> {
         let empty = Step { use_hold: false, placement: Placement { piece: Piece::I, rot: 0, x: 0, y: 0, spin: crate::rules::Spin::None, kick: -1 } };
-        let root = Node { board: *board, hold, qi: 0, b2b, reward: 0.0, score: 0.0, dead: false, path: [empty; MAX_PLAN], plen: 0 };
+        let root = Node { board: *board, hold, qi: 0, b2b, reward: 0.0, score: 0.0, dead: false, path: [empty; MAX_PLAN], plen: 0, root: 0 };
         let mut beam = Vec::new();
         self.expand(&root, queue, &mut beam);
+        if !self.root_allow.is_empty() {
+            let shapes = &self.shapes;
+            let allow = &self.root_allow;
+            let kept: Vec<Node> = beam.iter().copied().filter(|n| {
+                let mut c = n.path[0].placement.abs_cells(shapes);
+                c.sort();
+                !n.dead && allow.contains(&(n.path[0].use_hold, c))
+            }).collect();
+            if !kept.is_empty() {
+                beam = kept;
+            }
+        }
+        for (i, n) in beam.iter_mut().enumerate() {
+            n.root = i as u16;
+        }
+        let mut roots: Vec<RootScore> = if self.cfg.roots {
+            beam.iter()
+                .filter(|n| !n.dead)
+                .map(|n| RootScore { step: n.path[0], attack: n.reward, ply1: n.score, best: None })
+                .collect()
+        } else {
+            Vec::new()
+        };
         if beam.iter().all(|n| n.dead) {
             return None;
         }
         let plies = self.cfg.depth.max(1).min(queue.len());
         let mut seen: HashMap<u64, usize> = HashMap::new();
         for _ in 1..plies {
-            prune(&mut beam, self.cfg.beam, &mut seen);
+            self.prune_any(&mut beam, &mut seen);
             let mut next = Vec::with_capacity(beam.len() * 40);
             for node in &beam {
                 if node.dead || node.qi as usize >= queue.len() {
@@ -254,7 +325,16 @@ impl Searcher {
             }
             beam = next;
         }
-        prune(&mut beam, self.cfg.beam, &mut seen);
+        self.prune_any(&mut beam, &mut seen);
+        if self.cfg.roots {
+            for n in &beam {
+                if let Some(r) = roots.get_mut(n.root as usize) {
+                    if !n.dead && r.best.map_or(true, |b| n.score > b) {
+                        r.best = Some(n.score);
+                    }
+                }
+            }
+        }
 
         if self.cfg.chance && plies >= queue.len() {
             let k = self.cfg.chance_top.min(beam.len());
@@ -269,8 +349,60 @@ impl Searcher {
         }
         let best = &beam[0];
         let plan = best.path[..best.plen as usize].to_vec();
-        Some(Decision { use_hold: plan[0].use_hold, placement: plan[0].placement, plan })
+        let chosen_root = best.root as usize;
+        Some(Decision { use_hold: plan[0].use_hold, placement: plan[0].placement, plan, roots, chosen_root })
     }
+}
+
+impl Searcher {
+    fn prune_any(&self, beam: &mut Vec<Node>, seen: &mut HashMap<u64, usize>) {
+        if self.cfg.root_keep > 0 {
+            prune_diverse(beam, self.cfg.beam / 2, self.cfg.root_keep, seen);
+        } else {
+            prune(beam, self.cfg.beam, seen);
+        }
+    }
+}
+
+/// `SearchConfig::root_keep`: the best `keep` lines of every root move, then the best
+/// `extra` of the rest. Transpositions are only merged within a root, so two first moves
+/// that reach the same board each keep their line.
+fn prune_diverse(nodes: &mut Vec<Node>, extra: usize, keep: usize, seen: &mut HashMap<u64, usize>) {
+    nodes.sort_by(|a, b| b.score.total_cmp(&a.score));
+    seen.clear();
+    let key = |n: &Node| n.board.hash64()
+        ^ (n.hold.map_or(7u64, |p| p as u64) << 56)
+        ^ ((n.qi as u64) << 60)
+        ^ ((n.b2b.clamp(-1, 30) + 1) as u64).wrapping_mul(0x2545_F491_4F6C_DD1D)
+        ^ (n.root as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+    let mut per_root: HashMap<u16, usize> = HashMap::new();
+    let mut taken = vec![false; nodes.len()];
+    let mut out = Vec::new();
+    for (i, n) in nodes.iter().enumerate() {
+        let c = per_root.entry(n.root).or_insert(0);
+        if *c >= keep || seen.contains_key(&key(n)) {
+            continue;
+        }
+        seen.insert(key(n), out.len());
+        *c += 1;
+        taken[i] = true;
+        out.push(*n);
+    }
+    let mut added = 0;
+    for (i, n) in nodes.iter().enumerate() {
+        if added >= extra {
+            break;
+        }
+        if taken[i] || seen.contains_key(&key(n)) {
+            continue;
+        }
+        seen.insert(key(n), out.len());
+        added += 1;
+        out.push(*n);
+    }
+    // keep the beam sorted (the chance ply rescans the top of it)
+    out.sort_by(|a, b| b.score.total_cmp(&a.score));
+    *nodes = out;
 }
 
 /// Sort by score, drop transpositions (same board, hold, queue position and chain),

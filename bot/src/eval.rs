@@ -14,7 +14,7 @@
 use crate::board::{Board, FULL};
 use crate::rules::{clear_type, B2bMode, Piece, Shapes, Spin, H, W};
 
-pub const NAMES: [&str; 33] = [
+pub const NAMES: [&str; 34] = [
     "holes",       // empty cells with something above them
     "hole_rows",   // rows containing at least one hole
     "cover",       // filled cells above each column's topmost hole
@@ -62,6 +62,9 @@ pub const NAMES: [&str; 33] = [
     // height danger cashing the chain would remove. 0 without a structure; a positive
     // weight forgives part of a structure's height (the tuner picks how much).
     "danger_relief",
+    // TetrisBattle rules: the running combo (consecutive clearing placements), capped
+    // at 12. 0 in every other mode. Lets V value a combo past the search horizon.
+    "combo",
 ];
 pub const NF: usize = NAMES.len();
 
@@ -94,6 +97,7 @@ pub const SCALE: [f32; NF] = [
     1.0,   // t_followup: 0..1
     1.0,   // t_vertical: flag
     100.0, // danger_relief: same scale as danger
+    12.0,  // combo: capped at 12
 ];
 
 /// Features that carry no information in a mode, frozen at 0 by `tune --freeze` and in
@@ -176,6 +180,7 @@ impl Default for Weights {
                 0.0,   // t_followup
                 0.0,   // t_vertical
                 0.0,   // danger_relief
+                0.0,   // combo
             ],
         };
         for i in 0..NF {
@@ -318,10 +323,6 @@ pub fn scan_tslots(b: &Board, top: i32) -> TSlots {
 pub fn scan_rows(b: &Board, y_from: i32, y_to: i32) -> TSlots {
     let mut best: Option<TSlot> = None;
     let mut vertical: Option<TSlot> = None;
-    let y0 = y_from.max(1);
-    let pop = |y: i32| -> u32 { if (0..H).contains(&y) { b.rows[y as usize].count_ones() } else { 10 } };
-    // Walls, floor and ceiling count as filled.
-    let filled = |x: i32, y: i32| -> bool { b.blocked(x, y) };
     let consider = |slot: TSlot, best: &mut Option<TSlot>| {
         let better = match best {
             None => true,
@@ -331,6 +332,31 @@ pub fn scan_rows(b: &Board, y_from: i32, y_to: i32) -> TSlots {
             *best = Some(slot);
         }
     };
+    scan_rows_each(b, y_from, y_to, |slot, is_vertical| {
+        consider(slot, &mut best);
+        if is_vertical {
+            consider(slot, &mut vertical);
+        }
+    });
+    // The static prophecies, for the two slots a chain can start from only.
+    TSlots { best: best.map(|s| annotate(b, s)), vertical: vertical.map(|s| annotate(b, s)) }
+}
+
+/// Every T-spin slot on the board with its static prophecy, and whether it is vertical
+/// (for AtTenTris's structure overlays; the bot's V only needs `scan_tslots`).
+pub fn all_tslots(b: &Board) -> Vec<(TSlot, bool)> {
+    let mut out = Vec::new();
+    scan_rows_each(b, 1, H - 1, |slot, is_vertical| out.push((annotate(b, slot), is_vertical)));
+    out
+}
+
+/// The slot scan behind `scan_rows`: calls `hit(slot, is_vertical)` for every slot in
+/// rows y_from..y_to (prophecies not yet added).
+fn scan_rows_each(b: &Board, y_from: i32, y_to: i32, mut hit: impl FnMut(TSlot, bool)) {
+    let y0 = y_from.max(1);
+    let pop = |y: i32| -> u32 { if (0..H).contains(&y) { b.rows[y as usize].count_ones() } else { 10 } };
+    // Walls, floor and ceiling count as filled.
+    let filled = |x: i32, y: i32| -> bool { b.blocked(x, y) };
     for y in y0..y_to.min(H - 1) {
         let pm = padded(b, y - 1);
         let p0 = padded(b, y);
@@ -353,7 +379,7 @@ pub fn scan_rows(b: &Board, y_from: i32, y_to: i32) -> TSlots {
             let bb = pop(y + 1) + 1;
             let lines = (a == 10) as u32 + (bb == 10) as u32;
             let cells = [(x - 1, y), (x, y), (x + 1, y), (x, y + 1)];
-            consider(TSlot { lines, fill: (a + bb) as f32 / 20.0, cells, ..Default::default() }, &mut best);
+            hit(TSlot { lines, fill: (a + bb) as f32 / 20.0, cells, ..Default::default() }, false);
         }
         if y < 3 {
             continue;
@@ -389,13 +415,10 @@ pub fn scan_rows(b: &Board, y_from: i32, y_to: i32) -> TSlots {
                 let flip = (!filled(x - s, y) && filled(x - s, y - 1) && filled(x - s, y + 1))
                     .then_some([(x, y - 1), (x, y), (x - s, y), (x, y + 1)]);
                 let slot = TSlot { lines, fill: (a + bb + cc) as f32 / 30.0, cells, flip, ..Default::default() };
-                consider(slot, &mut best);
-                consider(slot, &mut vertical);
+                hit(slot, true);
             }
         }
     }
-    // The static prophecies, for the two slots a chain can start from only.
-    TSlots { best: best.map(|s| annotate(b, s)), vertical: vertical.map(|s| annotate(b, s)) }
 }
 
 /// Adds a slot's static prophecy (`TSlot::second`, `flip_second`).
@@ -847,6 +870,7 @@ pub fn features(b: &Board, b2b: i32, b2b_mode: B2bMode) -> [f32; NF] {
     // Height danger the chain would remove (hh: heights of the cashed board).
     let dc = (*hh.iter().max().unwrap() - 10).max(0) as f32;
     f[32] = (f[8] - dc * dc).max(0.0);
+    f[33] = (b.combo as i32 + 1).clamp(0, 12) as f32;
     for i in 0..NF {
         f[i] /= scale(i);
     }

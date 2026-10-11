@@ -1,0 +1,49 @@
+epoch 1: train loss 3.209 | val normal top1 0.484 top3 0.722 | val gate4 top1 0.474 top3 0.707 | argmax Qs top1 0.343 / 0.359, Q1 top1 0.074 / 0.058 | MAE Q1 20.41 Qs 7.55 | 1365s
+epoch 2: train loss 2.707 | val normal top1 0.511 top3 0.765 | val gate4 top1 0.494 top3 0.742 | argmax Qs top1 0.425 / 0.433, Q1 top1 0.047 / 0.029 | MAE Q1 20.53 Qs 6.98 | 754s
+epoch 3: train loss 2.566 | val normal top1 0.534 top3 0.777 | val gate4 top1 0.513 top3 0.760 | argmax Qs top1 0.427 / 0.440, Q1 top1 0.034 / 0.021 | MAE Q1 20.00 Qs 6.73 | 753s
+epoch 4: train loss 2.482 | val normal top1 0.550 top3 0.802 | val gate4 top1 0.540 top3 0.780 | argmax Qs top1 0.471 / 0.472, Q1 top1 0.029 / 0.018 | MAE Q1 20.19 Qs 6.55 | 754s
+epoch 5: train loss 2.420 | val normal top1 0.568 top3 0.812 | val gate4 top1 0.554 top3 0.797 | argmax Qs top1 0.483 / 0.475, Q1 top1 0.025 / 0.018 | MAE Q1 20.13 Qs 6.41 | 758s
+epoch 6: train loss 2.374 | val normal top1 0.582 top3 0.820 | val gate4 top1 0.566 top3 0.803 | argmax Qs top1 0.500 / 0.492, Q1 top1 0.022 / 0.018 | MAE Q1 20.13 Qs 6.33 | 767s
+epoch 7: train loss 2.344 | val normal top1 0.585 top3 0.830 | val gate4 top1 0.572 top3 0.809 | argmax Qs top1 0.499 / 0.495, Q1 top1 0.022 / 0.018 | MAE Q1 19.95 Qs 6.30 | 769s
+epoch 8: train loss 2.329 | val normal top1 0.590 top3 0.831 | val gate4 top1 0.574 top3 0.810 | argmax Qs top1 0.502 / 0.497, Q1 top1 0.023 / 0.019 | MAE Q1 19.92 Qs 6.28 | 769s
+tome: AtTenTris logit depth 1 style normal no garbage: APP 0.411 (APPfull 0.386), died 13/64, pieces 470 avg, TSD 729, TST 2, quads 562, max height 22, illegal 0, 38.7 ms/move (p90 43.9) + search 39.3 ms, 81s
+tome: AtTenTris logit depth 2 beam 4 style normal no garbage: APP 0.530 (APPfull 0.515), died 4/64, pieces 486 avg, TSD 957, TST 1, quads 745, max height 22, illegal 0, 248.6 ms/move (p90 277.2) + search 249.4 ms, 500s
+tome: AtTenTris logit depth 3 beam 8 style normal no garbage: APP 0.634 (APPfull 0.634), died 0/64, pieces 500 avg, TSD 1255, TST 5, quads 854, max height 20, illegal 0, 1252.3 ms/move (p90 1386.5) + search 1253.4 ms, 2519s
+tome latency: AtTenTris logit depth 1 style normal no garbage: APP 0.363 (APPfull 0.352), died 2/8, pieces 486 avg, TSD 83, TST 0, quads 55, max height 22, illegal 0, 13.4 ms/move (p90 15.0) + search 13.6 ms, 55s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.30     9%                     0.29     3%            L2:27% L3:32% L4:40%
+  sky                  2000      0.13     0%                     0.14     0%            L3:0% L4:99%
+  pit2                 1750      0.58    66%                     0.43    39%            L2:47% L3:30% L4:22%
+  well                 1685      0.31     7%                     0.27     1%            L2:0% L3:4% L4:94%
+  pit1                 1385      0.65    86%                     0.43    39%            L2:52% L3:24% L4:23%
+  fit_j open           1289      0.50    67%                     0.44    46%            L2:64% L3:22% L4:13%
+  fit_l open           1284      0.51    67%                     0.43    45%            L2:67% L3:19% L4:13%
+  tsd                  1150      0.53    65%                     0.44    45%            L2:31% L3:19% L4:49%
+  pit3                 1135      0.50    49%                     0.39    26%            L2:33% L3:30% L4:35%
+  fit_z open           1065      0.50    70%                     0.43    44%            L2:61% L3:22% L4:16%
+  fit_s open            993      0.51    67%                     0.43    44%            L2:61% L3:23% L4:14%
+  pit4                  740      0.42    27%                     0.35    13%            L2:20% L3:35% L4:45%
+  fit_j covered         690      0.51    70%                     0.42    41%            L2:57% L3:11% L4:30%
+  fit_l covered         628      0.50    67%                     0.42    42%            L2:54% L3:12% L4:33%
+  fit_t open            590      0.53    65%                     0.45    45%            L2:54% L3:28% L4:16%
+  fit_z covered         328      0.51    67%                     0.43    47%            L2:57% L3:11% L4:31%
+  fit_s covered         272      0.49    67%                     0.43    43%            L2:58% L3:16% L4:25%
+  setup_t               207      0.46    56%                     0.44    45%            L2:66% L3:18% L4:15%
+  fit_i covered         135      0.55    70%                     0.41    41%            L2:57% L3:8% L4:33%
+  fractal                98      0.43    36%                     0.33     5%            L2:12% L3:10% L4:77%
+  setup_j                84      0.47    50%                     0.43    49%            L2:67% L3:19% L4:13%
+  imperial               77      0.49    62%                     0.35     9%            L2:3% L3:12% L4:83%
+  setup_l                72      0.44    40%                     0.43    39%            L2:70% L3:11% L4:18%
+  setup_s                71      0.48    58%                     0.46    52%            L2:63% L3:16% L4:19%
+  setup_z                60      0.49    55%                     0.43    37%            L2:75% L3:16% L4:8%
+  setup_i                28      0.46    46%                     0.43    46%            L2:67% L3:25% L4:7%
+  rect12                 12      0.49    33%                     0.32     8%            L3:25% L4:75%
+  vertical               11      0.61   100%                     0.41    36%            L2:90% L4:9%
+  stsd                    8      0.41    12%                     0.32     0%            L2:12% L3:62% L4:25%
+  cspin                   4      0.42    50%                     0.32     0%            L2:25% L4:75%
+  band                    4      0.45    25%                     0.37     0%            L4:100%
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+48 positions -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/tome_viz.html
+tome post done
