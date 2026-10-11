@@ -1,0 +1,35 @@
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+dagger-ft, 80/20                    55/64      276   0.693    0.383   0.990    0.547 5253/6197
+dagger3-ft normal, 80/20            32/64      355   0.706    0.501   1.023    0.726 7186/7853
+dagger3-ft danger, 80/20            14/64      452   0.676    0.612   1.008    0.912 9613/10007
+dagger3-ft auto, 80/20              27/64      392   0.703    0.551   1.027    0.804 8115/8686
+dagger-ft, 50/50                    64/64      143   0.493    0.141   0.726    0.208 2129/3187
+dagger3-ft normal, 50/50            60/64      197   0.490    0.193   0.759    0.299 3384/4402
+dagger3-ft danger, 50/50            43/64      318   0.474    0.301   0.780    0.496 6220/7067
+dagger3-ft auto, 50/50              55/64      268   0.480    0.257   0.773    0.414 5025/5985
+== takeover of dagger3-ft auto deaths, g20
+summary: teacher survives / tries
+  v51_dagger3_ft takes over 10 before death 22/27
+  v51_dagger3_ft takes over 30 before death 27/27
+v51_dagger3_ft 33006        294  move 284 (10 before death)    DIED at piece 290
+v51_dagger3_ft 33010        220  move 210 (10 before death)    DIED at piece 220
+v51_dagger3_ft 33036        124  move 114 (10 before death)    DIED at piece 120
+v51_dagger3_ft 33039        290  move 280 (10 before death)    DIED at piece 290
+v51_dagger3_ft 33054        166  move 156 (10 before death)    DIED at piece 160
+== takeover of dagger3-ft auto deaths, g50
+summary: teacher survives / tries
+  v51_dagger3_ft takes over 10 before death 42/55
+  v51_dagger3_ft takes over 30 before death 55/55
+v51_dagger3_ft 33004        254  move 244 (10 before death)    DIED at piece 250
+v51_dagger3_ft 33008         80  move 70 (10 before death)     DIED at piece 80
+v51_dagger3_ft 33009        190  move 180 (10 before death)    DIED at piece 190
+v51_dagger3_ft 33013        340  move 330 (10 before death)    DIED at piece 350
+v51_dagger3_ft 33015        240  move 230 (10 before death)    DIED at piece 240
+v51_dagger3_ft 33026        180  move 170 (10 before death)    DIED at piece 180
+v51_dagger3_ft 33032        113  move 103 (10 before death)    DIED at piece 120
+v51_dagger3_ft 33039        170  move 160 (10 before death)    DIED at piece 171
+v51_dagger3_ft 33044        130  move 120 (10 before death)    DIED at piece 130
+v51_dagger3_ft 33047        120  move 110 (10 before death)    DIED at piece 120
+v51_dagger3_ft 33046        480  move 470 (10 before death)    DIED at piece 480
+v51_dagger3_ft 33052         90  move 80 (10 before death)     DIED at piece 90
+v51_dagger3_ft 33056        140  move 130 (10 before death)    DIED at piece 140

@@ -20,9 +20,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PYC = os.path.join(HERE, "..", "external", "tetrisbattle", ".venv", "Scripts", "python.exe")
 
 
-def run(model, seed, takeover, garbage="", teacher_weights=""):
+def run(model, seed, takeover, garbage="", teacher_weights="", style="normal"):
     cmd = [PYC, os.path.join(HERE, "play.py"), "--model", model, "--games", "1", "--jobs", "1", "--seed", str(seed),
-           "--depth", "1", "--takeover", str(takeover), "--out", os.devnull]
+           "--depth", "1", "--takeover", str(takeover), "--out", os.devnull, "--style", style]
     if garbage:
         cmd += ["--garbage", garbage]
     if teacher_weights:
@@ -47,6 +47,7 @@ def main():
     ap.add_argument("--teacher-weights", default="", help="the teacher's weights (default normal.txt)")
     ap.add_argument("--sample", type=int, default=0, help="only this many random deaths per model (0 = all)")
     ap.add_argument("--no-alone", action="store_true", help="skip the teacher-alone-from-move-0 runs")
+    ap.add_argument("--style", default="normal", help="the model's style input while it plays (normal / gate4 / danger / auto)")
     args = ap.parse_args()
     jobs = []
     rng = random.Random(0)
@@ -66,7 +67,7 @@ def main():
     print("%-14s %5s %10s  %-28s  %s" % ("model", "seed", "died at", "teacher takes over at", "result"), flush=True)
     res = []
     with cf.ThreadPoolExecutor(args.jobs) as ex:
-        futs = {ex.submit(run, j[1], j[2], j[4], args.garbage, args.teacher_weights): j for j in jobs}
+        futs = {ex.submit(run, j[1], j[2], j[4], args.garbage, args.teacher_weights, args.style): j for j in jobs}
         for f in cf.as_completed(futs):                     # each result as soon as it is known
             name, _, seed, dpieces, tk = futs[f]
             r = f.result()

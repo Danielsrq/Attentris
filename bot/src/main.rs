@@ -865,10 +865,10 @@ fn cmd_play_ext(a: &Args) {
     if let Some(path) = replay {
         std::fs::write(&path, rec).expect("write --replay");
     }
-    println!("{{\"done\":true,\"seed\":{},\"pieces\":{},\"attack\":{},\"app\":{:.4},\"died\":{},\"tsd\":{},\"tst\":{},\"quads\":{},\"max_height\":{},\"illegal\":{},\"search_ms\":{:.2},\"nodes_per_move\":{:.0},\"garbage\":{}}}",
+    println!("{{\"done\":true,\"seed\":{},\"pieces\":{},\"attack\":{},\"app\":{:.4},\"died\":{},\"tsd\":{},\"tst\":{},\"quads\":{},\"max_height\":{},\"illegal\":{},\"search_ms\":{:.2},\"nodes_per_move\":{:.0},\"garbage_in\":{},\"garbage_cleared\":{},\"garbage\":{}}}",
         cfg.seed, st.pieces, st.attack, st.app(), st.died, st.tsd, st.tst, st.quads, st.max_height, st.ext_illegal,
         st.think_us.iter().map(|&u| u as f64).sum::<f64>() / st.think_us.len().max(1) as f64 / 1000.0, st.nodes as f64 / st.pieces.max(1) as f64,
-        garbage_json(&st.garbage_log));
+        st.garbage_in, st.garbage_cleared, garbage_json(&st.garbage_log));
 }
 
 /// A game's garbage batches as JSON: [[piece, rows, cheese 0|1], ...].
