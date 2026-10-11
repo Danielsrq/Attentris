@@ -125,6 +125,8 @@ pub struct Stats {
     pub perfect: u64,
     pub max_b2b: i32,
     pub garbage_in: u64,
+    /// Every garbage batch this game: [piece number, rows, 1 if cheese else 0].
+    pub garbage_log: Vec<[u32; 3]>,
     pub garbage_cleared: u64,
     pub max_height: i32,
     /// `bot play-ext`: replies that matched no legal move (the bot's own pick was played).
@@ -379,6 +381,7 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
                 inject(&mut board, &mut colors, n_rows, &mut grng, &mut garbage_hole, messiness, false);
             }
             garbage_rows_total += n_rows as u64;
+            stats.garbage_log.push([n as u32, n_rows as u32, cheese as u32]);
             garbage_left += n_rows as u64;
             stats.garbage_in += n_rows as u64;
             // TetrisBattle checks the top visible row after garbage arrives, too.

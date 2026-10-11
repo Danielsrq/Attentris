@@ -1,0 +1,20 @@
+128 common seeds; garbage every 10 pieces, 3-4 rows, 20% of batches cheese
+
+== CEM-depth6: survived 98/128, pieces 439 avg, APP 1.129
+  within 10 pieces after cheese:  13 deaths /  10910 pieces alive (19.4% of the time) -> 1.19 per 1000; elsewhere  17 /  45252 -> 0.38 per 1000; hazard ratio 3.2
+  within 20 pieces after cheese:  18 deaths /  19450 pieces alive (34.6% of the time) -> 0.93 per 1000; elsewhere  12 /  36712 -> 0.33 per 1000; hazard ratio 2.8
+  within 30 pieces after cheese:  23 deaths /  26150 pieces alive (46.6% of the time) -> 0.88 per 1000; elsewhere   7 /  30012 -> 0.23 per 1000; hazard ratio 3.8
+  within 50 pieces after cheese:  30 deaths /  35122 pieces alive (62.5% of the time) -> 0.85 per 1000; elsewhere   0 /  21040 -> 0.00 per 1000; hazard ratio inf
+  pieces from the last cheese batch to the death: median 20, quartiles 0 / 30; 0 deaths with no cheese before
+  cheese rows in the first 150 pieces (terciles): 0-7 rows: 9/42 died; 7-11 rows: 8/42 died; 11-26 rows: 13/44 died
+
+== 5.1-dagger-ft (depth 1): survived 20/128, pieces 268 avg, APP 0.688
+  within 10 pieces after cheese:  47 deaths /   6589 pieces alive (19.2% of the time) -> 7.13 per 1000; elsewhere  61 /  27718 -> 2.20 per 1000; hazard ratio 3.2
+  within 20 pieces after cheese:  66 deaths /  11558 pieces alive (33.7% of the time) -> 5.71 per 1000; elsewhere  42 /  22749 -> 1.85 per 1000; hazard ratio 3.1
+  within 30 pieces after cheese:  79 deaths /  15417 pieces alive (44.9% of the time) -> 5.12 per 1000; elsewhere  29 /  18890 -> 1.54 per 1000; hazard ratio 3.3
+  within 50 pieces after cheese: 103 deaths /  20285 pieces alive (59.1% of the time) -> 5.08 per 1000; elsewhere   5 /  14022 -> 0.36 per 1000; hazard ratio 14.2
+  pieces from the last cheese batch to the death: median 20, quartiles 4 / 33; 0 deaths with no cheese before
+  cheese rows in the first 150 pieces (terciles): 0-7 rows: 35/42 died; 7-10 rows: 31/42 died; 10-20 rows: 42/44 died
+
+same seeds: both died 28, only CEM-depth6 2, only 5.1-dagger-ft (depth 1) 80, neither 18
+  where both died: 5.1-dagger-ft (depth 1) lasted -18 pieces on average vs CEM-depth6

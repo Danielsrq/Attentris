@@ -865,9 +865,15 @@ fn cmd_play_ext(a: &Args) {
     if let Some(path) = replay {
         std::fs::write(&path, rec).expect("write --replay");
     }
-    println!("{{\"done\":true,\"seed\":{},\"pieces\":{},\"attack\":{},\"app\":{:.4},\"died\":{},\"tsd\":{},\"tst\":{},\"quads\":{},\"max_height\":{},\"illegal\":{},\"search_ms\":{:.2},\"nodes_per_move\":{:.0}}}",
+    println!("{{\"done\":true,\"seed\":{},\"pieces\":{},\"attack\":{},\"app\":{:.4},\"died\":{},\"tsd\":{},\"tst\":{},\"quads\":{},\"max_height\":{},\"illegal\":{},\"search_ms\":{:.2},\"nodes_per_move\":{:.0},\"garbage\":{}}}",
         cfg.seed, st.pieces, st.attack, st.app(), st.died, st.tsd, st.tst, st.quads, st.max_height, st.ext_illegal,
-        st.think_us.iter().map(|&u| u as f64).sum::<f64>() / st.think_us.len().max(1) as f64 / 1000.0, st.nodes as f64 / st.pieces.max(1) as f64);
+        st.think_us.iter().map(|&u| u as f64).sum::<f64>() / st.think_us.len().max(1) as f64 / 1000.0, st.nodes as f64 / st.pieces.max(1) as f64,
+        garbage_json(&st.garbage_log));
+}
+
+/// A game's garbage batches as JSON: [[piece, rows, cheese 0|1], ...].
+fn garbage_json(log: &[[u32; 3]]) -> String {
+    format!("[{}]", log.iter().map(|g| format!("[{},{},{}]", g[0], g[1], g[2])).collect::<Vec<_>>().join(","))
 }
 
 /// `bot dataset --weights W --label L --out DIR [--mode --garbage --games --pieces --seed
@@ -1127,6 +1133,13 @@ fn cmd_play(a: &Args) {
         None => (real, None),
     };
     let (st, js) = run_games(&sc, &weights(a), belief, env, &garbage(a), games, pieces, seed, threads_used(), &label, a.has("out"));
+    // --game-log FILE: one JSON line per game (seed, pieces, attack, died, garbage batches)
+    if let Some(path) = a.str("game-log") {
+        let lines: String = st.iter().enumerate().map(|(i, s)| format!(
+            "{{\"seed\":{},\"pieces\":{},\"attack\":{},\"app\":{:.4},\"died\":{},\"max_height\":{},\"garbage\":{}}}\n",
+            seed + i as u64, s.pieces, s.attack, s.app(), s.died, s.max_height, garbage_json(&s.garbage_log))).collect();
+        std::fs::write(path, lines).expect("write --game-log");
+    }
     summary_header();
     summary_row(&label, &st, t0.elapsed().as_secs_f64(), pieces);
     let mut t: Vec<u32> = st.iter().flat_map(|s| s.think_us.iter().copied()).collect();
