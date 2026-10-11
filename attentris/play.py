@@ -189,7 +189,7 @@ def play_game(args, seed):
     pcores.pin(verbose=False)
     pl = Player(args.model, args.depth, args.beam, {"normal": 0, "gate4": 1}[args.style], args.mode, args.policy, args.propose)
     cmd = [BOT, "play-ext", "--mode", args.mode, "--pieces", str(args.pieces), "--seed", str(seed)]
-    if args.shortlist:
+    if args.shortlist or args.takeover >= 0:
         w = os.path.join(HERE, "..", "bot", "weights", "normal.txt") if args.style == "normal" else \
             os.path.join(HERE, "..", "bot", "results", "gate4", "gate4.txt")
         cmd += ["--shortlist", "--weights", w, "--threads", "1", "--any-cores"]
@@ -206,7 +206,15 @@ def play_game(args, seed):
             states.append({"seed": seed, "n": st["n"], "rows": st["rows"], "b2b": st["b2b"], "piece": st["piece"],
                            "queue": st["queue"], "hold": st["hold"], "style": args.style})
         t0 = time.perf_counter()
-        if args.shortlist:
+        if args.takeover >= 0:
+            # the model plays until move `takeover`, then the teacher's own search (every legal move offered)
+            if st["n"] < args.takeover:
+                c = pl.decide(st)
+                moves = [c] if c else []
+            else:
+                moves = pl.shortlist(st, 10000)
+            move = {"moves": [{"hold": c["hold"], "cells": c["cells"]} for c in moves]}
+        elif args.shortlist:
             moves = pl.shortlist(st, args.shortlist)
             move = {"moves": [{"hold": c["hold"], "cells": c["cells"]} for c in moves]}
         else:
@@ -238,6 +246,7 @@ def main():
     ap.add_argument("--style", default="normal", choices=("normal", "gate4"))
     ap.add_argument("--policy", default="logit", choices=("logit", "q1", "qs"), help="score moves by the policy or a value head")
     ap.add_argument("--propose", type=int, default=0, help="with a value head: choose only among the policy's top-k moves (0 = all)")
+    ap.add_argument("--takeover", type=int, default=-1, help="the model plays until this move, then the teacher's full search takes over (0 = teacher alone)")
     ap.add_argument("--shortlist", type=int, default=0, help="intuition + calculation: the policy's top-k moves, then the "
                     "teacher's full search (its handcrafted V) picks among them")
     ap.add_argument("--mode", default="normal")
