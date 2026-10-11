@@ -1,0 +1,25 @@
+DAgger round 2 -- data collection only (no training yet). 2026-10-11.
+
+Students at depth 1 on fresh seeds (30001+), 100 games per run:
+  v51_greedy        APP 0.590  died   0/100
+  v51_sampled       APP 0.386  died   4/100   (temperature 0.5)
+  v51_garbage       APP 0.648  died  94/100   (garbage 10,3-4,cheese0.2,0.2)
+  tome_v4_greedy    APP 0.572  died  14/100
+  tome_v4_sampled   APP 0.379  died  58/100
+  tome_v4_garbage   APP 0.622  died 100/100
+  total: 600 games, 214,593 states, 270 deaths
+
+Selection (dagger_select.py; a state can have several reasons):
+  danger (>= 15 rows or >= 10 holes)      50,372
+  holes rising (>= 4 in 10 moves)         26,574
+  unsure (entropy >= 3.0, top 10%)        23,163
+  within 60 moves before a death          15,855
+  random 10% of the rest                  12,980
+  duplicates dropped                         211
+  selected: 97,866 of 214,593 (45.6%)
+
+Labels: normal teacher, beam 128 (dataset: 64), depth 6, every legal move scored (--all-roots 1);
+26 min on 16 P-cores. 97,866 records, 49.7 legal moves each on average; 89,576 have a search score
+for every move (the rest have some moves without one, as in the 1.09M set).
+Output: data/raw_dagger2/selected_labelled.jsonl (283 MB, gitignored; same record format as raw_1m).
+Next (not done): pack, then fine-tune or retrain with a fixed mix (e.g. 70% original / 30% dagger2).
