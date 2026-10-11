@@ -1,0 +1,4 @@
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+no garbage                           0/16      500   1.220    1.220   1.220    1.220         -
+garbage 80/20 clean/cheese           6/16      392   1.109    0.870   1.433    1.125 2035/2191
+garbage 50/50 clean/cheese           9/16      322   0.800    0.515   1.111    0.716 1604/1792

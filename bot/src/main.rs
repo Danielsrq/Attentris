@@ -1136,8 +1136,9 @@ fn cmd_play(a: &Args) {
     // --game-log FILE: one JSON line per game (seed, pieces, attack, died, garbage batches)
     if let Some(path) = a.str("game-log") {
         let lines: String = st.iter().enumerate().map(|(i, s)| format!(
-            "{{\"seed\":{},\"pieces\":{},\"attack\":{},\"app\":{:.4},\"died\":{},\"max_height\":{},\"garbage\":{}}}\n",
-            seed + i as u64, s.pieces, s.attack, s.app(), s.died, s.max_height, garbage_json(&s.garbage_log))).collect();
+            "{{\"seed\":{},\"pieces\":{},\"attack\":{},\"app\":{:.4},\"died\":{},\"max_height\":{},\"garbage_in\":{},\"garbage_cleared\":{},\"garbage\":{}}}\n",
+            seed + i as u64, s.pieces, s.attack, s.app(), s.died, s.max_height, s.garbage_in, s.garbage_cleared,
+            garbage_json(&s.garbage_log))).collect();
         std::fs::write(path, lines).expect("write --game-log");
     }
     summary_header();
