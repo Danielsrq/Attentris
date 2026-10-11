@@ -163,7 +163,10 @@ def main():
     ap.add_argument("--init", default="", help="warm start: load these model weights, fresh optimizer and schedule")
     ap.add_argument("--limit", type=int, default=0, help="use a random N-position subset (smoke tests, learning curves)")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
-    ap.add_argument("--train", default="train.npz", help="training file(s) in DATA, comma-separated")
+    ap.add_argument("--train", default="train.npz",
+                    help="training file(s) in DATA, comma-separated; FILE@F uses F of that file per epoch (a fresh random "
+                         "draw each epoch; F > 1 repeats it), e.g. a 70/30 fine-tuning mix")
+    ap.add_argument("--val2", default="", help="a second validation file in DATA (e.g. the students' own positions)")
     ap.add_argument("--w-dense", type=float, default=0.0, help="weight of the dense 1-ply ranking term (v2: 0.5)")
     ap.add_argument("--tau-dense", type=float, default=2.0)
     ap.add_argument("--w-q", type=float, default=0.0, help="weight of both value-head regressions (v2: 1.0)")
@@ -179,18 +182,37 @@ def main():
         if prev != args.arch:
             raise SystemExit("%s holds a %s checkpoint; refusing to overwrite it with %s (pick another --out)" % (out, prev, args.arch))
 
-    parts = [load(os.path.join(args.data, f)) for f in args.train.split(",")]
+    specs = [(f.split("@")[0], float(f.split("@")[1]) if "@" in f else 1.0) for f in args.train.split(",")]
+    parts = [load(os.path.join(args.data, f)) for f, _ in specs]
     if args.tome_pretok:
-        for p, f in zip(parts, args.train.split(",")):
+        for p, (f, _) in zip(parts, specs):
             p["pretok"] = np.load(os.path.join(args.data, f.replace(".npz", ".pretok.npy")))
     tr = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
+    sizes = [len(p["chosen"]) for p in parts]
     va = load(os.path.join(args.data, "val.npz"))
+    va2 = load(os.path.join(args.data, args.val2)) if args.val2 else None
     if args.tome_pretok:
         va["pretok"] = np.load(os.path.join(args.data, "val.pretok.npy"))
     if args.limit:
         keep = np.sort(np.random.default_rng(123).choice(len(tr["chosen"]), size=min(args.limit, len(tr["chosen"])), replace=False))
         tr = {k: v[keep] for k, v in tr.items()}   # a random subset (files are in teacher order)
     n = len(tr["chosen"])
+    mixed = any(fr != 1.0 for _, fr in specs)
+    if mixed and args.limit:
+        raise SystemExit("--limit and FILE@F do not mix")
+    starts = np.cumsum([0] + sizes[:-1])
+    takes = [int(round(fr * sz)) for (_, fr), sz in zip(specs, sizes)]
+    m = sum(takes) if mixed else n                            # positions per epoch
+
+    def draw(rng):
+        """The epoch's positions in random order: every position once, or with FILE@F a fresh draw of
+        F of each file (whole repeats, then a random part without replacement)."""
+        if not mixed:
+            return rng.permutation(n)
+        idx = []
+        for s0, sz, k in zip(starts, sizes, takes):
+            idx += [s0 + np.arange(sz)] * (k // sz) + [s0 + rng.choice(sz, size=k % sz, replace=False)]
+        return rng.permutation(np.concatenate(idx))
     if args.arch == "tome":
         net = MT.AtTenTrisToMe(d=args.d, layers=args.layers, merge=[float(f) for f in args.merge.split(",")],
                                sky=args.tome_sky, pretok=args.tome_pretok, flat_bias=args.tome_flat,
@@ -199,7 +221,7 @@ def main():
         net = M.AtTenTris(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops).to(args.device)
     print("device", args.device, torch.cuda.get_device_name(0) if args.device == "cuda" else "", flush=True)
     opt = torch.optim.AdamW(net.parameters(), lr=args.lr, weight_decay=0.01)
-    steps = args.epochs * math.ceil(n / args.batch)
+    steps = args.epochs * math.ceil(m / args.batch)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=args.lr, total_steps=steps, pct_start=0.05)
     start, log = 0, []
     start_batch, perm0, tot0, cnt0 = 0, None, 0.0, 0
@@ -215,11 +237,13 @@ def main():
         if ck.get("batch") is not None:                       # a mid-epoch checkpoint
             start, start_batch, perm0, tot0, cnt0 = ck["epoch"], ck["batch"] + 1, ck["perm"], ck["tot"], ck["cnt"]
         print("resuming at epoch %d, batch %d" % (start + 1, start_batch), flush=True)
-    print("params %d, train %d positions, val %d, %d epochs x %d batches" % (
-        sum(p.numel() for p in net.parameters()), n, len(va["chosen"]), args.epochs, math.ceil(n / args.batch)), flush=True)
+    print("params %d, train %d positions (%d per epoch: %s), val %d%s, %d epochs x %d batches" % (
+        sum(p.numel() for p in net.parameters()), n, m, ", ".join("%s %d" % (f, k) for (f, _), k in zip(specs, takes)),
+        len(va["chosen"]), " + val2 %d" % len(va2["chosen"]) if va2 is not None else "", args.epochs,
+        math.ceil(m / args.batch)), flush=True)
     rng = np.random.default_rng(args.seed)
     for _ in range(start):
-        rng.permutation(n)                                    # the same batch order as an uninterrupted run
+        draw(rng)                                             # the same batch order as an uninterrupted run
     length = None
     if args.bucket and "pretok" in tr:
         length = (tr["pretok"] == -1).sum(1) + tr["pretok"].max(1).astype(np.int64) + 1     # single cells + sky + blocks
@@ -236,11 +260,11 @@ def main():
             return perm
         span = args.bucket * args.batch
         out = []
-        for s0 in range(0, n, span):
+        for s0 in range(0, len(perm), span):
             ch = perm[s0:s0 + span]
             out.append(ch[np.argsort(length[ch], kind="stable")])
         o = np.concatenate(out)
-        nb_ = math.ceil(n / args.batch)
+        nb_ = math.ceil(len(perm) / args.batch)
         bo = np.random.default_rng(int(perm[0])).permutation(nb_)
         return np.concatenate([o[b * args.batch:(b + 1) * args.batch] for b in bo])
 
@@ -251,12 +275,12 @@ def main():
 
     for ep in range(start, args.epochs):
         t0 = time.time()
-        perm = order_of(rng.permutation(n))
+        perm = order_of(draw(rng))
         tot, cnt = 0.0, 0
         first = 0
         if perm0 is not None and ep == start:
             perm, first, tot, cnt = perm0, start_batch, tot0, cnt0
-        nb = math.ceil(n / args.batch)
+        nb = math.ceil(len(perm) / args.batch)
         for bi in range(first, nb):
             idx = np.sort(perm[bi * args.batch:(bi + 1) * args.batch])
             opt.zero_grad()
@@ -278,6 +302,8 @@ def main():
                 save(out, ep, {"batch": bi, "perm": perm, "tot": tot, "cnt": cnt})
         ev = evaluate(net, va, 512, args, args.device)
         rec = {"epoch": ep + 1, "train_loss": tot / cnt, "val": ev, "secs": time.time() - t0}
+        if va2 is not None:
+            rec["val2"] = evaluate(net, va2, 512, args, args.device)
         log.append(rec)
         print("epoch %d: train loss %.3f | val normal top1 %.3f top3 %.3f | val gate4 top1 %.3f top3 %.3f | "
               "argmax Qs top1 %.3f / %.3f, Q1 top1 %.3f / %.3f | MAE Q1 %.2f Qs %.2f | %.0fs" % (
@@ -285,6 +311,10 @@ def main():
             ev["normal"]["qs_top1"], ev["gate4"]["qs_top1"], ev["normal"]["q1_top1"], ev["gate4"]["q1_top1"],
             (ev["normal"]["q1_mae"] + ev["gate4"]["q1_mae"]) / 2, (ev["normal"]["qs_mae"] + ev["gate4"]["qs_mae"]) / 2,
             time.time() - t0), flush=True)
+        if va2 is not None:
+            v2 = rec["val2"]["normal"]
+            print("epoch %d: val2 (%s, %d) top1 %.3f top3 %.3f loss %.3f | argmax Qs top1 %.3f | MAE Qs %.2f" % (
+                ep + 1, args.val2, v2["n"], v2["top1"], v2["top3"], v2["loss"], v2["qs_top1"], v2["qs_mae"]), flush=True)
         save(out, ep, {"batch": None})
         with open(out + ".log.json", "w") as f:
             json.dump(log, f, indent=1)
