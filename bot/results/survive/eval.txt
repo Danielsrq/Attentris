@@ -1,0 +1,7 @@
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+CEM-depth6 (normal.txt), no garbage   0/64      500   1.218    1.218   1.218    1.218         -
+CEM-survival-depth6, no garbage      0/64      500   1.134    1.134   1.134    1.134         -
+CEM-depth6, 80/20 clean/cheese      18/64      425   1.147    0.974   1.473    1.252 8879/9406
+CEM-survival-depth6, 80/20           0/64      500   1.049    1.049   1.391    1.391 10928/11029
+CEM-depth6, 50/50 clean/cheese      33/64      360   0.833    0.600   1.147    0.826 7233/8003
+CEM-survival-depth6, 50/50           0/64      500   0.816    0.816   1.156    1.156 10886/11035

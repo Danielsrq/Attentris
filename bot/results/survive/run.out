@@ -1,0 +1,44 @@
+== CEM-survival: CEM under normal rules with garbage 10,3-4,cheese0.5,0.2, fitness VS, from normal.txt
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+frozen at 0: max_height wounds ready_repeat sz_single sz_double sz_triple lj_single lj_double lj_triple i_single i_double i_triple
+tuning (cem): 30 gens x 32 candidates x 12 games x 500 pieces, search beam 24 depth 4, fitness VS (attack + garbage cleared) / full budget
+gen  1/30: best 0.886  elite mean 0.835  (incumbent 0.635)  spread 2.684  94s  eta 45m
+gen  2/30: best 0.936  elite mean 0.905  (incumbent 0.936)  spread 1.868  130s  eta 52m
+gen  3/30: best 0.987  elite mean 0.950  (incumbent 0.901)  spread 1.290  153s  eta 57m
+gen  4/30: best 0.973  elite mean 0.948  (incumbent 0.922)  spread 1.371  152s  eta 57m
+gen  5/30: best 0.992  elite mean 0.949  (incumbent 0.951)  spread 1.157  154s  eta 57m
+gen  6/30: best 0.947  elite mean 0.928  (incumbent 0.901)  spread 0.996  151s  eta 56m
+gen  7/30: best 1.005  elite mean 0.989  (incumbent 0.983)  spread 0.811  155s  eta 54m
+gen  8/30: best 0.970  elite mean 0.959  (incumbent 0.970)  spread 0.739  154s  eta 52m
+gen  9/30: best 0.987  elite mean 0.975  (incumbent 0.969)  spread 0.637  154s  eta 50m
+gen 10/30: best 0.999  elite mean 0.981  (incumbent 0.956)  spread 0.547  154s  eta 48m
+gen 11/30: best 1.014  elite mean 1.002  (incumbent 0.905)  spread 0.599  155s  eta 46m
+gen 12/30: best 0.979  elite mean 0.972  (incumbent 0.978)  spread 0.603  153s  eta 44m
+gen 13/30: best 0.996  elite mean 0.978  (incumbent 0.982)  spread 0.544  155s  eta 42m
+gen 14/30: best 0.967  elite mean 0.956  (incumbent 0.947)  spread 0.470  155s  eta 39m
+gen 15/30: best 1.003  elite mean 0.990  (incumbent 0.969)  spread 0.412  154s  eta 37m
+gen 16/30: best 0.993  elite mean 0.982  (incumbent 0.961)  spread 0.410  154s  eta 35m
+gen 17/30: best 0.984  elite mean 0.975  (incumbent 0.955)  spread 0.330  155s  eta 32m
+gen 18/30: best 1.006  elite mean 0.995  (incumbent 0.950)  spread 0.342  154s  eta 30m
+gen 19/30: best 0.979  elite mean 0.972  (incumbent 0.972)  spread 0.310  152s  eta 27m
+gen 20/30: best 0.980  elite mean 0.977  (incumbent 0.952)  spread 0.342  153s  eta 25m
+gen 21/30: best 0.990  elite mean 0.976  (incumbent 0.956)  spread 0.348  156s  eta 22m
+gen 22/30: best 0.964  elite mean 0.953  (incumbent 0.924)  spread 0.331  153s  eta 20m
+gen 23/30: best 1.002  elite mean 0.992  (incumbent 0.918)  spread 0.304  154s  eta 18m
+gen 24/30: best 1.013  elite mean 1.000  (incumbent 0.987)  spread 0.286  156s  eta 15m
+gen 25/30: best 1.006  elite mean 0.996  (incumbent 0.985)  spread 0.235  155s  eta 13m
+gen 26/30: best 1.026  elite mean 1.009  (incumbent 1.002)  spread 0.226  155s  eta 10m
+gen 27/30: best 1.011  elite mean 0.999  (incumbent 0.983)  spread 0.193  155s  eta 8m
+gen 28/30: best 1.032  elite mean 1.024  (incumbent 0.958)  spread 0.187  156s  eta 5m
+gen 29/30: best 0.989  elite mean 0.983  (incumbent 0.975)  spread 0.144  156s  eta 3m
+gen 30/30: best 1.013  elite mean 0.988  (incumbent 0.949)  spread 0.137  156s  eta 0m
+
+saved distribution mean to C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/bot/results/survive/survive.txt (best single candidate scored 1.032)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+CEM-depth6 (normal.txt), no garbage   0/64      500   1.218    1.218   1.218    1.218         -
+CEM-survival-depth6, no garbage      0/64      500   1.134    1.134   1.134    1.134         -
+CEM-depth6, 80/20 clean/cheese      18/64      425   1.147    0.974   1.473    1.252 8879/9406
+CEM-survival-depth6, 80/20           0/64      500   1.049    1.049   1.391    1.391 10928/11029
+CEM-depth6, 50/50 clean/cheese      33/64      360   0.833    0.600   1.147    0.826 7233/8003
+CEM-survival-depth6, 50/50           0/64      500   0.816    0.816   1.156    1.156 10886/11035
+all done
