@@ -189,10 +189,15 @@ def main():
     if args.tome_pretok:
         for p, (f, _) in zip(parts, specs):
             p["pretok"] = np.load(os.path.join(args.data, f.replace(".npz", ".pretok.npy")))
-    tr = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
     sizes = [len(p["chosen"]) for p in parts]
+    tr = {}
+    for k in list(parts[0]):          # one array at a time, each file's copy freed as it is merged (peak ~1x the data, not 2x)
+        tr[k] = np.concatenate([p.pop(k) for p in parts])
+    del parts
     va = load(os.path.join(args.data, "val.npz"))
     va2 = load(os.path.join(args.data, args.val2)) if args.val2 else None
+    if va2 is not None and args.tome_pretok:
+        va2["pretok"] = np.load(os.path.join(args.data, args.val2.replace(".npz", ".pretok.npy")))
     if args.tome_pretok:
         va["pretok"] = np.load(os.path.join(args.data, "val.pretok.npy"))
     if args.limit:
@@ -218,7 +223,7 @@ def main():
     if args.arch == "tome":
         net = MT.AtTenTrisToMe(d=args.d, layers=args.layers, merge=[float(f) for f in args.merge.split(",")],
                                sky=args.tome_sky, pretok=args.tome_pretok, flat_bias=args.tome_flat,
-                               streams=args.tome_streams).to(args.device)
+                               streams=args.tome_streams, n_teachers=args.n_teachers).to(args.device)
     else:
         net = M.AtTenTris(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops,
                           n_teachers=args.n_teachers).to(args.device)

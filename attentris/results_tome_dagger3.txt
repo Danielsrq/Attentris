@@ -1,0 +1,32 @@
+== ToMe v4 + danger style, mix: existing files at 0.1851 each per epoch, Mon Oct 12 00:04:37 MPST 2026
+epoch 1: train loss 2.459 | val normal top1 0.613 top3 0.853 | val gate4 top1 0.597 top3 0.833 | | 175s
+epoch 1: val2 (val_danger.npz, 8812) top1 0.436 top3 0.695 loss 2.841 | argmax Qs top1 0.398 | MAE Qs 8.87
+epoch 2: train loss 2.396 | val normal top1 0.614 top3 0.854 | val gate4 top1 0.596 top3 0.834 | | 152s
+epoch 2: val2 (val_danger.npz, 8812) top1 0.440 top3 0.703 loss 2.789 | argmax Qs top1 0.412 | MAE Qs 8.48
+epoch 3: train loss 2.382 | val normal top1 0.618 top3 0.859 | val gate4 top1 0.602 top3 0.834 | | 157s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.441 top3 0.704 loss 2.782 | argmax Qs top1 0.410 | MAE Qs 8.43
+tome_v4 normal none: APP 0.582 (APPfull 0.558), died 6/64, pieces 480 avg, TSD 1292, TST 18, quads 604, max height 22, illegal 0, 32.6 ms/move (p90 40.0) + search 33.1 ms, 72s
+tome_v4_dagger3_ft normal none: APP 0.619 (APPfull 0.619), died 0/64, pieces 500 avg, TSD 1387, TST 10, quads 776, max height 20, illegal 0, 28.8 ms/move (p90 36.6) + search 29.4 ms, 64s
+tome_v4_dagger3_ft danger none: APP 0.551 (APPfull 0.551), died 0/64, pieces 500 avg, TSD 1341, TST 17, quads 912, max height 15, illegal 0, 25.0 ms/move (p90 31.2) + search 25.5 ms, 55s
+tome_v4_dagger3_ft auto none: APP 0.617 (APPfull 0.617), died 0/64, pieces 500 avg, TSD 1337, TST 13, quads 836, max height 17, illegal 0, 28.1 ms/move (p90 35.3) + search 28.9 ms, 62s, danger style on 13.2% of moves (height >= 12
+tome_v4 normal g20: APP 0.664 (APPfull 0.178), died 63/64, pieces 134 avg, TSD 275, TST 1, quads 530, max height 23, illegal 0, 30.1 ms/move (p90 39.0) + search 30.6 ms, 22s
+tome_v4_dagger3_ft normal g20: APP 0.669 (APPfull 0.286), died 57/64, pieces 214 avg, TSD 423, TST 2, quads 871, max height 22, illegal 0, 30.4 ms/move (p90 38.6) + search 30.9 ms, 31s
+tome_v4_dagger3_ft danger g20: APP 0.642 (APPfull 0.533), died 26/64, pieces 415 avg, TSD 781, TST 0, quads 1775, max height 22, illegal 0, 27.4 ms/move (p90 34.7) + search 27.9 ms, 54s
+tome_v4_dagger3_ft auto g20: APP 0.640 (APPfull 0.402), died 47/64, pieces 314 avg, TSD 583, TST 3, quads 1266, max height 22, illegal 0, 29.1 ms/move (p90 36.6) + search 29.8 ms, 43s, danger style on 55.0% of moves (height >= 12
+tome_v4 normal g50: APP 0.481 (APPfull 0.079), died 64/64, pieces 82 avg, TSD 159, TST 0, quads 184, max height 23, illegal 0, 35.1 ms/move (p90 46.3) + search 35.7 ms, 16s
+tome_v4_dagger3_ft normal g50: APP 0.467 (APPfull 0.106), died 64/64, pieces 114 avg, TSD 195, TST 0, quads 255, max height 22, illegal 0, 34.3 ms/move (p90 44.9) + search 34.9 ms, 20s
+tome_v4_dagger3_ft danger g50: APP 0.438 (APPfull 0.173), died 63/64, pieces 197 avg, TSD 291, TST 2, quads 447, max height 22, illegal 0, 31.6 ms/move (p90 41.5) + search 32.1 ms, 32s
+tome_v4_dagger3_ft auto g50: APP 0.441 (APPfull 0.162), died 63/64, pieces 184 avg, TSD 263, TST 1, quads 406, max height 22, illegal 0, 32.2 ms/move (p90 41.5) + search 33.0 ms, 30s, danger style on 71.5% of moves (height >= 12 
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+tome_v4_normal_none                  6/64      480   0.582    0.558   0.582    0.558         -
+tome_v4_dagger3_ft_normal_none       0/64      500   0.619    0.619   0.619    0.619         -
+tome_v4_dagger3_ft_danger_none       0/64      500   0.551    0.551   0.551    0.551         -
+tome_v4_dagger3_ft_auto_none         0/64      500   0.617    0.617   0.617    0.617         -
+tome_v4_normal_g20                  63/64      134   0.664    0.178   0.904    0.242 2061/2995
+tome_v4_dagger3_ft_normal_g20       57/64      214   0.669    0.286   0.948    0.406 3822/4775
+tome_v4_dagger3_ft_danger_g20       26/64      415   0.642    0.533   0.968    0.804 8662/9207
+tome_v4_dagger3_ft_auto_g20         47/64      314   0.640    0.402   0.945    0.594 6136/7002
+tome_v4_normal_g50                  64/64       82   0.481    0.079   0.640    0.105  836/1820
+tome_v4_dagger3_ft_normal_g50       64/64      114   0.467    0.106   0.669    0.152 1469/2530
+tome_v4_dagger3_ft_danger_g50       63/64      197   0.438    0.173   0.703    0.277 3342/4402
+tome_v4_dagger3_ft_auto_g50         63/64      184   0.441    0.162   0.699    0.257 3032/4101
