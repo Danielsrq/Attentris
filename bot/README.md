@@ -14,6 +14,14 @@ cargo build --release
 cargo test --release
 ```
 
+All Godot-viewer replays live in `data/bot/`, whatever produced them -- the AtTenTris model
+runs are there as `attentris_*.jsonl`. The viewer has no file browser: it opens exactly the
+path given, and its dropdown selects a run WITHIN that file, so a replay anywhere else is
+simply invisible.
+
+`bot/results/battle/` is not that. Those are match logs (`game`, `players`, `winner`,
+`moves`) for the bot-vs-bot harness, not placement records, and the viewer cannot open them.
+
 View a replay (one run per game in the dropdown):
 
 ```
