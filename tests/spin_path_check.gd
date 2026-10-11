@@ -34,7 +34,12 @@ func _init() -> void:
 		var want := {}
 		for c in r["place"]["cells"]:
 			want[Vector2i(int(c[0]), int(c[1]))] = true
-		var found := _bfs(b, def, want)
+		# PathFinder, not a private copy: this check is what certifies the BFS the pilot
+		# flies the board with, so it has to be the same code.
+		var found: Array = []
+		var reached := PathFinder.find(b, def, want, rules, found)
+		if reached == null or reached.spin == SpinDetect.Kind.NONE:
+			found = []
 		checked += 1
 		if found.is_empty():
 			bad += 1
@@ -60,61 +65,6 @@ func _board(r: Dictionary) -> Board:
 		b.wound_left[int(wd["row"])] = int(wd["left"])
 		b.wound_hole[int(wd["row"])] = int(wd.get("hole", 0))
 	return b
-
-func _cells_at(def: PieceDef, rot: int, pos: Vector2i) -> Dictionary:
-	var out := {}
-	for c in def.rotations[rot]:
-		out[pos + c] = true
-	return out
-
-## BFS over (pos, rot). Returns the action list ending in the spin rotation, or [].
-func _bfs(b: Board, def: PieceDef, want: Dictionary) -> Array:
-	var spawn := Vector2i((b.width - def.box) / 2, b.buffer_height - def.first_filled_row)
-	if not b.can_place(def.rotations[0], spawn):
-		return []
-	var start := [spawn, 0]
-	var parent := {start: null}
-	var queue: Array = [start]
-	var moves := {"left": Vector2i(-1, 0), "right": Vector2i(1, 0), "down": Vector2i(0, 1)}
-	var turns := {"cw": 1, "ccw": 3, "180": 2}
-	while not queue.is_empty():
-		var s: Array = queue.pop_front()
-		var pos: Vector2i = s[0]
-		var rot: int = s[1]
-		for name in moves:
-			var np: Vector2i = pos + moves[name]
-			var ns := [np, rot]
-			if b.can_place(def.rotations[rot], np) and not parent.has(ns):
-				parent[ns] = [s, name]
-				queue.append(ns)
-		for name in turns:
-			var to: int = (rot + turns[name]) % 4
-			var kicks := KickTables.get_kicks(def.kick_class, rot, to)
-			for i in kicks.size():
-				var np: Vector2i = pos + kicks[i]
-				if not b.can_place(def.rotations[to], np):
-					continue
-				var ns := [np, to]
-				# A spin: grounded right after this rotation, on the recorded cells.
-				if not b.can_place(def.rotations[to], np + Vector2i(0, 1)) and _cells_at(def, to, np) == want:
-					var p := ActivePiece.new()
-					p.def = def
-					p.rot = to
-					p.pos = np
-					p.last_action_was_rotation = true
-					p.last_kick_index = i
-					if SpinDetect.detect(b, p, rules) != SpinDetect.Kind.NONE:
-						var actions: Array = ["%s (kick %d)" % [name, i]]
-						var cur = s
-						while parent[cur] != null:
-							actions.push_front(parent[cur][1])
-							cur = parent[cur][0]
-						return actions
-				if not parent.has(ns):
-					parent[ns] = [s, name]
-					queue.append(ns)
-				break
-	return []
 
 ## Plays the path through a real Game and reports what lock_piece says.
 func _demo(r: Dictionary, b: Board, def: PieceDef, actions: Array) -> void:

@@ -59,6 +59,28 @@ var top_out_reason: String = ""
 ## Debug affordance: with gravity off, soft drop still works, which makes it easy to
 ## walk a piece into a slot and verify kicks by hand.
 var gravity_enabled: bool = true
+## Scales PASSIVE gravity only, so a slowdown costs tempo rather than the piece. Soft drop
+## is deliberately unscaled -- it is player intent, and nobody is holding it while building.
+##
+## Has no writer since the auto-battler replaced the tower defence, which needs no input and
+## so has no focus switch. Kept because a general slowdown is obviously useful later.
+##
+## A field on Game rather than a value on RuleSet, because `rules` is a shared preset that
+## _handle_meta_keys replaces wholesale when the handling toggle fires; a scale stored
+## there would be silently reset by F2. Keeping `gravity_enabled` separate also preserves
+## F3's meaning as "off" rather than "slow".
+##
+## Note this does NOT slow the lock timer: a piece already resting on the stack still
+## locks on rules.lock_delay_sec. That is the real cost of looking away.
+var gravity_scale: float = 1.0
+## False freezes everything that advances ON ITS OWN -- gravity, the lock timer and the
+## entry delay. Input still works; there just is none while the other board has focus.
+##
+## Scaling gravity alone is NOT enough to pause Tetris, which is the trap here: a piece
+## already resting on the stack is governed by lock_delay_sec, not gravity, so it would
+## still lock itself 0.5s after you looked away. The thing the player experiences as
+## "Tetris kept going" is almost always that lock, not the fall.
+var advancing: bool = true
 
 var seed_value: int = 0
 var last_spin: int = SpinDetect.Kind.NONE
@@ -133,6 +155,8 @@ func tick(input: InputState) -> Array:
 		return events
 
 	if _are_left > 0.0:
+		if not advancing:
+			return events
 		_are_left -= MS_PER_TICK
 		if _are_left > 0.0:
 			return events
@@ -284,8 +308,8 @@ func _handle_gravity(input: InputState) -> void:
 	var step := 0.0
 	if input.soft_drop:
 		step = g * rules.sdf
-	elif gravity_enabled:
-		step = g
+	elif gravity_enabled and advancing:
+		step = g * gravity_scale
 	if step <= 0.0:
 		return
 	_grav_accum += step
@@ -301,6 +325,8 @@ func _handle_lock(events: Array) -> void:
 	if board.can_place(active.cells(), active.pos + Vector2i(0, 1)):
 		active.lock_timer = 0.0
 		return
+	if not advancing:
+		return          # held, not reset: the piece resumes where its timer left off
 	active.lock_timer += 1.0 / TICKS_PER_SECOND
 	if active.lock_timer >= rules.lock_delay_sec:
 		lock_piece(events)
@@ -456,6 +482,55 @@ func _scan_structures(events: Array) -> void:
 				"payout": pay,
 			}))
 	_structure_claims = seen
+
+# ------------------------------------------------------------------------------
+# Incoming garbage
+# ------------------------------------------------------------------------------
+
+## Garbage arriving from outside the Tetris board -- today, a red fighter that reached the
+## left edge of the battler lane.
+##
+## This exists because Board.push_garbage cannot kill you. It raises the stack and
+## silently discards whatever it shifts past row 0; its own doc calls that "a top-out in
+## real play", but nothing detected it, because until now nothing in core/ pushed garbage
+## at all. Detection belongs here rather than on Board, because `topped_out`,
+## `top_out_reason` and the event stream all live on Game.
+##
+## Two distinct deaths, named separately so the HUD can say which happened:
+##   garbage_bury       the stack already reaches the top of the buffer, so this push
+##                      would destroy real cells. Checked BEFORE pushing, and the board
+##                      is left untouched -- a half-applied push is not a state anything
+##                      downstream should have to reason about.
+##   garbage_block_out  the rows underneath the active piece moved up into it and it has
+##                      nowhere to go.
+func receive_garbage(holes: Array, events: Array) -> void:
+	var n := holes.size()
+	if n <= 0 or topped_out:
+		return
+
+	for y in n:
+		if not board.row_is_empty(y):
+			_top_out("garbage_bury", events)
+			return
+
+	board.push_garbage(holes)
+	events.append(GameEvent.new(GameEvent.Type.GARBAGE_RECEIVED, {
+		"rows": n, "holes": holes.duplicate(),
+	}))
+
+	# The active piece rides up with the stack rather than being left embedded in it,
+	# which is what both the guideline and TETR.IO do. It only needs lifting as far as the
+	# garbage pushed, so the search is bounded by n.
+	if active != null and not board.can_place(active.cells(), active.pos):
+		var lifted := false
+		for up in range(1, n + 1):
+			var p := active.pos - Vector2i(0, up)
+			if board.can_place(active.cells(), p):
+				active.pos = p
+				lifted = true
+				break
+		if not lifted:
+			_top_out("garbage_block_out", events)
 
 # ------------------------------------------------------------------------------
 # Spawning

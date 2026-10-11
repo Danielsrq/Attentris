@@ -95,6 +95,7 @@ fn rules(a: &Args) -> Rules {
 fn rules_for(a: &Args, mode: Option<&str>) -> Rules {
     let mut r = match mode {
         Some("allspin") => Rules::allspin(),
+        Some("allspin_nw") => Rules::allspin_nw(),
         Some("burst") => Rules::burst(),
         Some("burst2") => Rules::burst2(),
         Some("gate") => Rules::gate(),
@@ -104,7 +105,7 @@ fn rules_for(a: &Args, mode: Option<&str>) -> Rules {
         // Normal rules are the default, as in the Godot game.
         Some("normal") | None => Rules::normal(),
         Some("competitive") => Rules::default(),
-        Some(m) => panic!("unknown --mode {} (normal | burst | burst2 | gate | gate_b2b | battle | standard | competitive | allspin)", m),
+        Some(m) => panic!("unknown --mode {} (normal | burst | burst2 | gate | gate_b2b | battle | standard | competitive | allspin | allspin_nw)", m),
     };
     if a.has("no-allspin") {
         r.all_spin = false;
@@ -218,26 +219,172 @@ fn cmd_probe(a: &Args) {
 /// `bot plan --board ROWS --queue LJTSZO [--hold T] --weights W [--mode M] [--beam N]`
 /// The line the search would play from a given position: each step's piece, clear and
 /// attack, the board after it, and V of the final board. ROWS as in `probe`.
-fn cmd_plan(a: &Args) {
-    let rows: Vec<&str> = a.str("board").expect("--board").split('/').collect();
+/// Reads the live state the Godot pilot sends: the board, the queue, hold, and the B2B
+/// chain, plus wounds -- which `--board` cannot express and which matter under all-spin
+/// rules, where `RuleSet.allspin()` turns `repeat_penalty` on and the Godot board really
+/// does grow unclearable rows. Both engines already represent a wound the same way (a
+/// per-row countdown plus the hole it will leave), so it crosses the wire unchanged.
+fn state_from_json(src: &str) -> Result<(board::Board, Vec<rules::Piece>, Option<rules::Piece>, i32), String> {
+    let v: serde_json::Value = serde_json::from_str(src).map_err(|e| format!("state is not JSON: {e}"))?;
     let mut b = board::Board::default();
+    let rows = v["board"].as_array().ok_or("state.board must be an array of row strings")?;
+    // Bottom-aligned, as --board is: the caller may send only the occupied tail.
     let base = rules::H as usize - rows.len();
-    for (i, r) in rows.iter().enumerate() {
-        for (x, ch) in r.chars().enumerate() {
-            if ch == 'X' || ch == '#' {
+    for (i, row) in rows.iter().enumerate() {
+        for (x, ch) in row.as_str().unwrap_or("").chars().enumerate() {
+            if ch != '.' && ch != ' ' {
                 b.rows[base + i] |= 1 << x;
             }
         }
     }
-    let piece = |c: char| rules::Piece::from_letter(c).unwrap_or_else(|| panic!("bad piece {}", c));
-    let queue: Vec<rules::Piece> = a.str("queue").expect("--queue").chars().map(piece).collect();
-    let hold = a.str("hold").and_then(|h| h.chars().next()).map(piece);
+    for (i, w) in v["wound_left"].as_array().unwrap_or(&vec![]).iter().enumerate() {
+        let left = w.as_u64().unwrap_or(0) as u8;
+        if left > 0 && base + i < rules::H as usize {
+            b.wound_left[base + i] = left;
+            b.wounds += 1;
+            b.wound_hole[base + i] = v["wound_hole"][i].as_u64().unwrap_or(0) as u8;
+            b.last_wound_hole = b.wound_hole[base + i];
+        }
+    }
+    // The gate chain, which lives on the BOARD here (search.rs reads burst_armed / gate_len /
+    // gate_pending straight off it) and in Game.gate_state there, in the same order:
+    // placements left, spin clears in the chain, the opener's value held.
+    //
+    // Omitting it is not a small loss. Under gate rules r.attack comes ONLY from a completed
+    // chain, so a bot that always believes the gate is shut never values the second clear of
+    // one and never completes any -- which is exactly how the gate4 weights scored 2.6 APP in
+    // `bot play` and a flat 0.000 piloting Godot.
+    if let Some(g) = v["gate"].as_array() {
+        let at = |i: usize| g.get(i).and_then(|x| x.as_u64()).unwrap_or(0) as u8;
+        b.burst_armed = at(0);
+        b.gate_len = at(1);
+        b.gate_pending = at(2);
+    }
+    let letter = |c: char| rules::Piece::from_letter(c).ok_or(format!("bad piece '{c}'"));
+    let mut queue = Vec::new();
+    for c in v["queue"].as_str().unwrap_or("").chars() {
+        queue.push(letter(c)?);
+    }
+    let hold = match v["hold"].as_str().and_then(|h| h.chars().next()) {
+        Some(c) => Some(letter(c)?),
+        None => None,
+    };
+    let chain = v["b2b"].as_i64().unwrap_or(-1) as i32;
+    Ok((b, queue, hold, chain))
+}
+
+/// One decision per line of stdin, one JSON reply per line of stdout, until EOF.
+///
+/// This is the mode the Godot pilot runs in, so the bot is a part of the game rather than a
+/// process spawned and thrown away per piece. Spawning cost 95ms of the 112ms round trip and
+/// capped piloting at roughly 8 pieces per second; holding the process open removes all of it
+/// and leaves only the ~15ms search.
+///
+/// The weights and the search config are read ONCE here, not per request, which is the other
+/// reason this is cheaper than repeated `plan` calls.
+///
+/// Errors are replies, never panics: the caller reads stdout, so a panic would put the reason
+/// on stderr where it is discarded and tell the caller only that the pipe closed.
+fn cmd_serve(a: &Args) {
+    use std::io::{BufRead as _, Write as _};
     let r = rules(a);
     let mut sc = search_config(a);
     sc.chance = false;
     let mut s = Searcher::new(sc, weights(a), r);
     let shapes = rules::Shapes::new();
-    let d = s.search(&b, &queue, hold, -1, &rules::ALL_PIECES).expect("no move");
+    // Announced, so the caller can tell the process came up and loaded its weights before it
+    // sends anything -- otherwise a bad --weights path looks like a hang on the first request.
+    println!("{{\"ready\":true,\"mode\":\"{}\"}}", a.str("mode").unwrap_or("standard"));
+    let _ = std::io::stdout().flush();
+    let stdin = std::io::stdin();
+    for line in stdin.lock().lines() {
+        let line = match line {
+            Ok(l) => l,
+            Err(_) => break,
+        };
+        let t = line.trim();
+        if t.is_empty() {
+            continue;
+        }
+        if t == "quit" {
+            break;
+        }
+        match state_from_json(t) {
+            Err(e) => println!("{{\"error\":{}}}", serde_json::to_string(&e).unwrap()),
+            Ok((b, queue, hold, chain)) => {
+                let before = s.nodes;
+                match s.search(&b, &queue, hold, chain, &rules::ALL_PIECES) {
+                    None => println!("{{\"error\":\"no legal move\"}}"),
+                    Some(d) => {
+                        let plan = game::plan_to_json(&b, &d.plan, chain, &s, &shapes);
+                        // Nodes for THIS search: the counter accumulates across a session.
+                        println!(
+                            "{{\"use_hold\":{},\"nodes\":{},\"plan\":{}}}",
+                            d.use_hold,
+                            s.nodes.saturating_sub(before),
+                            plan
+                        );
+                    }
+                }
+            }
+        }
+        let _ = std::io::stdout().flush();
+    }
+}
+
+fn cmd_plan(a: &Args) {
+    let piece = |c: char| rules::Piece::from_letter(c).unwrap_or_else(|| panic!("bad piece {}", c));
+    // --state-file, not --state: the state is JSON, and a quoted JSON blob on a Windows
+    // command line gets mangled before this process ever sees it. A file has no quoting.
+    let from_file = a.str("state-file").map(|p| {
+        std::fs::read_to_string(p).unwrap_or_else(|e| format!("{{\"err\":\"cannot read {p}: {e}\"}}"))
+    });
+    let state_src = from_file.as_deref().or_else(|| a.str("state"));
+    let (b, queue, hold, chain) = match state_src {
+        Some(src) => match state_from_json(src) {
+            Ok(v) => v,
+            Err(e) => {
+                // Reported as JSON on stdout, not as a panic. The caller is another process
+                // that reads stdout; a panic puts the reason on stderr where it is discarded,
+                // and all it learns is "exit 101".
+                println!("{{\"error\":{}}}", serde_json::to_string(&e).unwrap());
+                return;
+            }
+        },
+        None => {
+            let rows: Vec<&str> = a.str("board").expect("--board or --state").split('/').collect();
+            let mut b = board::Board::default();
+            let base = rules::H as usize - rows.len();
+            for (i, r) in rows.iter().enumerate() {
+                for (x, ch) in r.chars().enumerate() {
+                    if ch == 'X' || ch == '#' {
+                        b.rows[base + i] |= 1 << x;
+                    }
+                }
+            }
+            let queue: Vec<rules::Piece> =
+                a.str("queue").expect("--queue").chars().map(piece).collect();
+            let hold = a.str("hold").and_then(|h| h.chars().next()).map(piece);
+            let chain: i32 = a.str("chain").and_then(|c| c.parse().ok()).unwrap_or(-1);
+            (b, queue, hold, chain)
+        }
+    };
+    let r = rules(a);
+    let mut sc = search_config(a);
+    sc.chance = false;
+    let mut s = Searcher::new(sc, weights(a), r);
+    let shapes = rules::Shapes::new();
+    let d = s.search(&b, &queue, hold, chain, &rules::ALL_PIECES).expect("no move");
+
+    // Machine-readable mode for the Godot pilot: one JSON line, in the schema the replay
+    // viewer already parses, so there is no second wire format to keep in step. The plan's
+    // cells are what the pilot acts on -- it re-derives rotation and kick with Godot's own
+    // kick tables rather than trusting this process's coordinate conventions.
+    if a.str("json").is_some() {
+        let plan = game::plan_to_json(&b, &d.plan, chain, &s, &shapes);
+        println!("{{\"use_hold\":{},\"nodes\":{},\"plan\":{}}}", d.use_hold, s.nodes, plan);
+        return;
+    }
     let show = |b: &board::Board| {
         let top = (0..rules::H as usize).find(|&y| b.rows[y] != 0).unwrap_or(rules::H as usize).min(rules::H as usize - 1);
         for y in top.saturating_sub(1)..rules::H as usize {
@@ -245,9 +392,11 @@ fn cmd_plan(a: &Args) {
         }
     };
     let mut cur = b;
-    let mut chain = -1;
+    // The chain the caller gave us, not a fresh board's -1: V and every attack below depend
+    // on whether a B2B is already live.
+    let mut chain = chain;
     let mut total = 0;
-    println!("start (V {:.3})", s.weights.value(&eval::features(&cur, -1, r.b2b)));
+    println!("start (V {:.3})", s.weights.value(&eval::features(&cur, chain, r.b2b)));
     show(&cur);
     for (k, st) in d.plan.iter().enumerate() {
         let o = search::apply(&cur, &st.placement, chain, &r, &shapes);
@@ -770,14 +919,19 @@ fn cmd_dataset(a: &Args) {
     });
 }
 
-/// `bot serve --mode battle --weights W [--beam --depth]`: one decision per stdin line.
+/// `bot serve-battle --mode battle --weights W [--beam --depth]`: one decision per stdin line.
+///
+/// Renamed from `serve` in the merge: main had already taken that name for the Godot pilot's
+/// session server, which speaks a different protocol entirely (our board and queue, not
+/// TetrisBattle's grid). Git merged both functions and both match arms silently, since they
+/// were added in different places -- the duplicate only showed up as a compile error.
 /// Request (TetrisBattle coordinates: his grid rows top to bottom, `excess` extra rows):
 ///   {"rows": [...], "excess": e, "piece": "T", "queue": ["I", ...], "hold": null | "S",
 ///    "combo": c, "b2b": n}
 /// Reply: {"hold": bool, "piece": "T", "cells": [[x, y], ...], "t": 0|1|2, "nodes": n}
 /// or {"dead": true} when the piece cannot spawn. Our battle move generator reproduces
 /// his placement set exactly (bot battle-parity), so the cells are one of his options.
-fn cmd_serve(a: &Args) {
+fn cmd_serve_battle(a: &Args) {
     use std::io::{BufRead, Write};
     let r = rules(a);
     let mut s = Searcher::new(search_config(a), weights(a), r);
@@ -1074,7 +1228,7 @@ fn cmd_bench(a: &Args) {
 fn main() {
     let argv: Vec<String> = std::env::args().skip(1).collect();
     if argv.is_empty() {
-        eprintln!("usage: bot play|bench|tune|parity|weights [options]  (see src/main.rs)");
+        eprintln!("usage: bot play|bench|tune|parity|weights|plan|serve|serve-battle [options]  (see src/main.rs)");
         std::process::exit(2);
     }
     let a = Args::parse(&argv[1..]);
@@ -1139,8 +1293,9 @@ fn main() {
             }
         }
         "weights" =>print!("{}", weights(&a).to_text()),
-        "probe" => cmd_probe(&a),
         "serve" => cmd_serve(&a),
+        "probe" => cmd_probe(&a),
+        "serve-battle" => cmd_serve_battle(&a),
         "dataset" => cmd_dataset(&a),
         "expand" => cmd_expand(&a),
         "value" => cmd_value(&a),

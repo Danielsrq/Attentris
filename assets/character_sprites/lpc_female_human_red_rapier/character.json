@@ -1,0 +1,539 @@
+{
+  "version": 2,
+  "bodyType": "female",
+  "selections": {
+    "body": {
+      "itemId": "body",
+      "subId": null,
+      "variant": "",
+      "recolor": "light",
+      "name": "Body Color (light)"
+    },
+    "head": {
+      "itemId": "heads_human_female",
+      "subId": null,
+      "variant": "",
+      "recolor": "light",
+      "name": "Human Female (light)"
+    },
+    "expression": {
+      "itemId": "face_neutral",
+      "subId": null,
+      "variant": "",
+      "recolor": "light",
+      "name": "Neutral (light)"
+    },
+    "hair": {
+      "itemId": "hair_bunches",
+      "subId": null,
+      "variant": "",
+      "recolor": "orange",
+      "name": "Bunches (orange)"
+    },
+    "hat": {
+      "itemId": "hat_formal_tiara",
+      "subId": null,
+      "variant": "tiara_gold",
+      "recolor": "",
+      "name": "Tiara (tiara_gold)"
+    },
+    "armour": {
+      "itemId": "torso_armour_leather",
+      "subId": null,
+      "variant": "",
+      "recolor": "red",
+      "name": "Leather (red)"
+    },
+    "apron": {
+      "itemId": "torso_aprons_apron_half",
+      "subId": null,
+      "variant": "pink",
+      "recolor": "",
+      "name": "Apron half (pink)"
+    },
+    "weapon": {
+      "itemId": "weapon_sword_rapier",
+      "subId": null,
+      "variant": "rapier",
+      "recolor": "",
+      "name": "Rapier (rapier)"
+    }
+  },
+  "selectedAnimation": "walk",
+  "showTransparencyGrid": true,
+  "applyTransparencyMask": false,
+  "matchBodyColorEnabled": true,
+  "compactDisplay": false,
+  "enabledLicenses": {
+    "CC0": true,
+    "CC-BY-SA": true,
+    "CC-BY": true,
+    "OGA-BY": true,
+    "GPL": true
+  },
+  "enabledAnimations": {
+    "spellcast": false,
+    "thrust": false,
+    "walk": false,
+    "slash": false,
+    "shoot": false,
+    "hurt": false,
+    "climb": false,
+    "idle": false,
+    "jump": false,
+    "sit": false,
+    "emote": false,
+    "run": false,
+    "watering": false,
+    "combat": false,
+    "1h_slash": false,
+    "1h_backslash": false,
+    "1h_halfslash": false
+  },
+  "url": "https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/#sex=female&body=Body_Color_light&head=Human_Female_light&expression=Neutral_light&hair=Bunches_orange&hat=Tiara_tiara_gold&armour=Leather_red&apron=Apron_half_pink&weapon=Rapier_rapier",
+  "layers": [
+    {
+      "itemId": "hair_bunches",
+      "name": "Bunches (orange)",
+      "variant": "",
+      "recolors": {
+        "hair": "orange"
+      },
+      "zPos": 9,
+      "layerNum": 2,
+      "yPos": 0,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "hair/bunches/adult/bg/spellcast.png"
+      },
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle",
+        "backslash",
+        "halfslash"
+      ]
+    },
+    {
+      "itemId": "weapon_sword_rapier",
+      "name": "Rapier (rapier)",
+      "variant": "rapier",
+      "recolors": null,
+      "zPos": 9,
+      "layerNum": 2,
+      "yPos": 512,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "weapon/sword/rapier/universal_behind/walk/rapier.png"
+      },
+      "supportedAnimations": [
+        "walk",
+        "hurt"
+      ]
+    },
+    {
+      "itemId": "body",
+      "name": "Body Color (light)",
+      "variant": "",
+      "recolors": {
+        "body": "light"
+      },
+      "zPos": 10,
+      "layerNum": 1,
+      "yPos": 0,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "body/bodies/female/spellcast.png"
+      },
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle",
+        "backslash",
+        "halfslash"
+      ]
+    },
+    {
+      "itemId": "torso_aprons_apron_half",
+      "name": "Apron half (pink)",
+      "variant": "pink",
+      "recolors": null,
+      "zPos": 40,
+      "layerNum": 1,
+      "yPos": 0,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "torso/aprons/apron_half/female/spellcast/pink.png"
+      },
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt"
+      ]
+    },
+    {
+      "itemId": "torso_armour_leather",
+      "name": "Leather (red)",
+      "variant": "",
+      "recolors": {
+        "armour": "red"
+      },
+      "zPos": 60,
+      "layerNum": 1,
+      "yPos": 0,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "torso/armour/leather/female/spellcast.png"
+      },
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run"
+      ]
+    },
+    {
+      "itemId": "heads_human_female",
+      "name": "Human Female (light)",
+      "variant": "",
+      "recolors": {
+        "head": "light"
+      },
+      "zPos": 100,
+      "layerNum": 1,
+      "yPos": 0,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "head/heads/human/female/spellcast.png"
+      },
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle",
+        "backslash",
+        "halfslash"
+      ]
+    },
+    {
+      "itemId": "face_neutral",
+      "name": "Neutral (light)",
+      "variant": "",
+      "recolors": {
+        "expression": "light"
+      },
+      "zPos": 101,
+      "layerNum": 1,
+      "yPos": 0,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "head/faces/female/neutral/spellcast.png"
+      },
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle",
+        "backslash",
+        "halfslash"
+      ]
+    },
+    {
+      "itemId": "hair_bunches",
+      "name": "Bunches (orange)",
+      "variant": "",
+      "recolors": {
+        "hair": "orange"
+      },
+      "zPos": 120,
+      "layerNum": 1,
+      "yPos": 0,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "hair/bunches/adult/fg/spellcast.png"
+      },
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle",
+        "backslash",
+        "halfslash"
+      ]
+    },
+    {
+      "itemId": "hat_formal_tiara",
+      "name": "Tiara (tiara_gold)",
+      "variant": "tiara_gold",
+      "recolors": null,
+      "zPos": 130,
+      "layerNum": 1,
+      "yPos": 0,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "hat/formal/tiara/adult/spellcast/tiara_gold.png"
+      },
+      "supportedAnimations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle",
+        "backslash",
+        "halfslash"
+      ]
+    },
+    {
+      "itemId": "weapon_sword_rapier",
+      "name": "Rapier (rapier)",
+      "variant": "rapier",
+      "recolors": null,
+      "zPos": 140,
+      "layerNum": 1,
+      "yPos": 512,
+      "needsRecolor": false,
+      "source": {
+        "kind": "catalog",
+        "spritePath": "weapon/sword/rapier/walk/rapier.png"
+      },
+      "supportedAnimations": [
+        "walk",
+        "hurt"
+      ]
+    }
+  ],
+  "credits": [
+    {
+      "fileName": "body/bodies/female/walk.png",
+      "file": "body/bodies/female",
+      "notes": "see details at https://opengameart.org/content/lpc-character-bases",
+      "authors": [
+        "Benjamin K. Smith (BenCreating)",
+        "bluecarrot16",
+        "TheraHedwig",
+        "Evert",
+        "MuffinElZangano",
+        "Durrani",
+        "Pierre Vigier (pvigier)",
+        "ElizaWy",
+        "Matthew Krohn (makrohn)",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licenses": [
+        "OGA-BY 3.0",
+        "CC-BY-SA 3.0",
+        "GPL 3.0"
+      ],
+      "urls": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-ladies",
+        "https://opengameart.org/content/lpc-7-womens-shirts",
+        "https://opengameart.org/content/lpc-jump-expanded",
+        "https://opengameart.org/content/lpc-be-seated",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://gitlab.com/vagabondgame/lpc-characters",
+        "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
+        "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle"
+      ]
+    },
+    {
+      "fileName": "head/heads/human/female/walk.png",
+      "file": "head/heads/human/female",
+      "notes": "original head by Redshrike, tweaks by BenCreating, modular version by bluecarrot16",
+      "authors": [
+        "bluecarrot16",
+        "Benjamin K. Smith (BenCreating)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licenses": [
+        "OGA-BY 3.0",
+        "CC-BY-SA 3.0",
+        "GPL 3.0"
+      ],
+      "urls": [
+        "https://opengameart.org/content/",
+        "https://opengameart.org/content/lpc-character-bases"
+      ]
+    },
+    {
+      "fileName": "head/faces/female/neutral/walk.png",
+      "file": "head/faces",
+      "notes": "Original by Redshrike, Expressions by ElizaWy, mapped to all frames by JaidynReiman",
+      "authors": [
+        "JaidynReiman",
+        "ElizaWy",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licenses": [
+        "OGA-BY 3.0"
+      ],
+      "urls": [
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Head",
+        "https://opengameart.org/content/ulpc-expanded-expressions"
+      ]
+    },
+    {
+      "fileName": "hair/bunches/adult/fg/walk.png",
+      "file": "hair/bunches",
+      "notes": "",
+      "authors": [
+        "JaidynReiman",
+        "Barbara Riviera",
+        "Manuel Riecke (MrBeast)"
+      ],
+      "licenses": [
+        "CC-BY-SA 3.0",
+        "GPL 3.0"
+      ],
+      "urls": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/concept-art-for-lpc-entry",
+        "https://opengameart.org/content/lpc-expanded-hair"
+      ]
+    },
+    {
+      "fileName": "hat/formal/tiara/adult/walk/tiara_gold.png",
+      "file": "hat/formal/tiara",
+      "notes": "",
+      "authors": [
+        "Luke Mehl"
+      ],
+      "licenses": [
+        "CC-BY-SA 3.0",
+        "GPL 3.0"
+      ],
+      "urls": [
+        "https://opengameart.org/content/female-mage-clothing-set",
+        "https://opengameart.org/content/lpc-expanded-hats-facial-helmets"
+      ]
+    },
+    {
+      "fileName": "torso/armour/leather/female/walk.png",
+      "file": "torso/armour/leather",
+      "notes": "adapted to v3 bases by bluecarrot16, reduced colors and climb/emote/jump by JaidynReiman",
+      "authors": [
+        "Johannes Sjölund (wulax)",
+        "bluecarrot16",
+        "JaidynReiman"
+      ],
+      "licenses": [
+        "OGA-BY 3.0",
+        "CC-BY-SA 3.0",
+        "GPL 3.0"
+      ],
+      "urls": [
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-expanded-armor"
+      ]
+    },
+    {
+      "fileName": "torso/aprons/apron_half/female/walk/pink.png",
+      "file": "torso/aprons/apron_half",
+      "notes": "original apron by ElizaWy, extended to all animation frames and edited for v3 bases by bluecarrot16",
+      "authors": [
+        "ElizaWy",
+        "bluecarrot16"
+      ],
+      "licenses": [
+        "OGA-BY 3.0",
+        "GPL 3.0"
+      ],
+      "urls": [
+        "http://opengameart.org/content/lpc-clothing-updates"
+      ]
+    },
+    {
+      "fileName": "weapon/sword/rapier/walk/rapier.png",
+      "file": "weapon/sword/rapier",
+      "notes": "",
+      "authors": [
+        "Johannes Sjölund (wulax)",
+        "bluecarrot16"
+      ],
+      "licenses": [
+        "OGA-BY 3.0",
+        "CC-BY-SA 3.0"
+      ],
+      "urls": [
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-extended-weapon-animations"
+      ]
+    }
+  ]
+}

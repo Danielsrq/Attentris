@@ -21,6 +21,7 @@ enum Type {
 	LEVEL_UP,        ## data: level
 	HOLD_USED,       ## data: held, swapped_in
 	TOP_OUT,         ## data: reason
+	GARBAGE_RECEIVED,## data: rows, holes -- garbage pushed in from outside the board
 	WOUND_ADDED,     ## data: row, left, count -- a repeat clear wounded a row (all-spin)
 	WOUND_HEALED,    ## data: healed, count -- wound lines that came back into play
 }

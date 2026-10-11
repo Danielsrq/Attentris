@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://dpqoiu0nsd03j"]
+
+[ext_resource type="Script" uid="uid://ck55md7gws5d1" path="res://battler/unit.gd" id="1_unit"]
+
+[node name="Unit" type="Node2D"]
+script = ExtResource("1_unit")
+
+[node name="Sprite" type="AnimatedSprite2D" parent="."]
+texture_filter = 1
+
+[node name="Hitbox" type="Area2D" parent="."]
+monitoring = false
+monitorable = false
+
+[node name="Shape" type="CollisionShape2D" parent="Hitbox"]
+disabled = true

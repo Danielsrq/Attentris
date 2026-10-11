@@ -429,6 +429,16 @@ impl Rules {
     pub fn allspin() -> Rules {
         Rules { all_spin: true, promote_minis: true, repeat_penalty: true, ..Rules::default() }
     }
+
+    /// All-spin scoring without the repeat penalty: every spin is still Full and still pays
+    /// like a T-spin, but repeating a clear type no longer inserts an unclearable wound line.
+    ///
+    /// Wounds come from `repeat_penalty`, not from all-spin, so dropping them does NOT mean
+    /// falling back to normal rules -- under those, non-T spins are Minis that send nothing,
+    /// which costs an all-spin bot nine tenths of its output.
+    pub fn allspin_nw() -> Rules {
+        Rules { repeat_penalty: false, ..Rules::allspin() }
+    }
 }
 
 /// Clear type for the repeat penalty: piece + lines + spin. All non-spin clears of the

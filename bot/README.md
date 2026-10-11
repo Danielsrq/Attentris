@@ -62,6 +62,85 @@ godot --headless --path .. -s res://tests/bot_replay_check.gd -- --replay=res://
 godot --headless --path .. -s res://tests/allspin_parity.gd -- --replay=<allspin jsonl without garbage>
 ```
 
+## Piloting the Godot board
+
+`bot plan` answers one decision for a running game, so the bot can fly the board live instead
+of only producing replays. Live is necessary rather than nicer: the right-hand battler pushes
+garbage back into the Tetris board from its own runtime RNG, so a recording desyncs the moment
+a red breaches.
+
+```
+./target/release/bot serve --mode allspin --weights weights/allspin_slots.txt
+            # {"ready":true,..} then one JSON reply per line of state on stdin
+./target/release/bot plan  --json --mode allspin --weights weights/allspin_slots.txt                           --state-file <path>     # the same answer, one shot, for debugging
+godot --headless --path .. --script res://tools/pilot_bench.gd -- --pieces 400 --seed 101
+```
+
+`serve` is what the game runs: the process is held open for the session, so the weights are
+parsed once and a decision costs only its search. Spawning per decision was 95ms of a 112ms
+round trip against a ~15ms search, which capped piloting at roughly 8 pieces per second.
+Measured end to end through Godot, 200 piloted pieces: **12.6s including engine startup**, so
+about 53ms a piece against 112ms+ before.
+
+* The state holds `{board, queue, hold, b2b, wound_left, wound_hole, gate}`. Everything in
+  it is reward state the board alone cannot carry, and each omission is silent: a missing
+  `b2b` costs chain value, missing `wound_*` makes the bot plan into unclearable rows, and a
+  missing `gate` cost the gate4 weights their ENTIRE output -- 2.6 APP in `bot play` against a
+  flat 0.000 piloting Godot, because under gate rules `r.attack` comes only from a completed
+  chain and a bot that believes the gate is shut never completes one.
+* `--state-file` is the one-shot form of the same thing. A **file**, not a
+  `--state` argument: the state is JSON, and a quoted JSON blob in a Windows process argument
+  is mangled before this binary sees it. Both forms are accepted; the file is what Godot uses.
+* `wound_*` travel because `--board` cannot express an unclearable row, and under all-spin
+  rules they are real -- `RuleSet.allspin()` turns `repeat_penalty` on.
+* Output is the replay schema's `plan`, so there is no second wire format. Godot acts on each
+  step's **cells** and re-derives rotation and kick with its own tables
+  (`solver/path_finder.gd`), so neither side trusts the other's coordinate conventions.
+  Certified by `tests/spin_path_check.gd`: 2068 recorded spin placements, 0 not reproducible.
+* Bad input is reported as `{"error": ...}` on stdout and the loop continues, never as a
+  panic. A panic puts
+  the reason on stderr, where a parent process reading stdout learns only "exit 101".
+
+Measured in-game against this binary's own numbers, 400 pieces of all-spin:
+
+| | APP | deaths |
+|---|---|---|
+| `bot play` | 2.582 | 0/8 |
+| piloting Godot | 2.550 | 0 |
+
+`BotPilot.PRESETS` is weight sets, and each one carries the rules it was tuned against as its
+`--mode`. The mode is a property of the WEIGHTS, not of the running game: `allspin_slots.txt`
+searches under all-spin even when the Godot game is scoring normal rules, because a reward
+model the weights were fitted against is not separable from them.
+
+Syncing the mode to the game's rules instead was tried and is fatal -- all-spin weights under
+a normal-rules reward topped out every run of a three-seed, 500-piece test at around piece
+300, against no deaths and 2.59 APP with a coherent mode. `pilot.set_belief()` overrides it
+deliberately, in either direction, and says so on screen.
+
+The weight sets, 250 piloted pieces each, on the rules each one was tuned against:
+
+| bot | rules | APP in Godot | note |
+|---|---|---|---|
+| `allspin-slots` | allspin | 2.32 | strongest; all-spin pays for every spin |
+| `allspin` | allspin | 2.30 | the earlier set, no spin-slot features |
+| `normal` | normal | 0.97 | 5 quads; non-T spins are Minis |
+| `standard` | guideline | 0.77 | 8 quads -- a quad-well bot, a different game |
+| `gate4` | gate_b2b | 0.56 | tuned with garbage; gate pays only for chains |
+
+`gate4` against 0.612 in `bot play` is the pairing working; it read 0.000 until `gate` was
+added to the state.
+
+`--mode allspin_nw` is all-spin scoring with `repeat_penalty` off: every spin still Full and
+still paying like a T-spin, but a repeated clear type no longer inserts a wound line. Worth a
+mode of its own because the obvious alternative is wrong -- wounds come from the repeat
+penalty, not from all-spin, so dropping to `--mode normal` to lose them also makes every non-T
+spin a Mini that sends nothing. Measured through Godot on one seed: **0.24 APP against 2.19**,
+a ninefold collapse, because an all-spin bot's output is almost entirely non-T spin singles.
+
+Within 2%, which is what says the rules pairing and the B2B chain are crossing the wire
+intact. A large gap is the symptom to watch for; it has no other.
+
 ## Normal-rules weights
 
 `weights/normal.txt`: tuned under normal rules with fibonacci B2B (CEM, 20 generations

@@ -10,9 +10,10 @@ enum GravityMode { LEVEL_CURVE, FIXED }
 @export var das_ms: float = 100.0
 ## Auto Repeat Rate: ms between repeats once DAS has charged. 0 = instant slide to wall.
 @export var arr_ms: float = 0.0
-## Soft Drop Factor: multiplier on gravity while soft drop is held. Because it multiplies
-## GRAVITY rather than setting a rate, soft drop speeds up with the level: past roughly
-## level 6 it exceeds a cell per tick on its own, whatever this is set to.
+## Soft Drop Factor: multiplier on gravity while soft drop is held. It multiplies GRAVITY
+## rather than setting a rate, so it is only stable because gravity itself is now fixed --
+## under the level curve it used to scale with a rising number, and past roughly level 6 it
+## exceeded a cell per tick on its own whatever this was set to.
 @export var sdf: float = 20.0
 ## DAS Cut Delay: DAS charge trimmed back to this after a rotation, in ms. 0 = off.
 @export var dcd_ms: float = 0.0
@@ -26,7 +27,17 @@ enum GravityMode { LEVEL_CURVE, FIXED }
 @export var max_move_resets: int = 15
 
 @export_group("Gravity")
-@export var gravity_mode: GravityMode = GravityMode.LEVEL_CURVE
+## FIXED by default: gravity does not accelerate with the level.
+##
+## The level still exists and still rises -- it feeds scoring and the LEVEL_UP event -- but it
+## no longer sets the fall rate. This game's difficulty comes from the garbage the minigame
+## sends, which is a pressure the player can read and answer; a rising fall rate is a second,
+## invisible clock on top of it, and the two together make a run end for reasons the player
+## cannot attribute.
+##
+## guideline() overrides this back to LEVEL_CURVE, because modelling official behaviour is
+## the entire point of that preset.
+@export var gravity_mode: GravityMode = GravityMode.FIXED
 @export var fixed_gravity_cells_per_sec: float = 1.0
 @export var lines_per_level: int = 10
 
@@ -84,10 +95,14 @@ enum GravityMode { LEVEL_CURVE, FIXED }
 ## Modern competitive feel: instant wall slides, fast soft drop, all-spin on.
 static func competitive() -> RuleSet:
 	var r := RuleSet.new()
-	# 60, not the guideline's 20. sdf multiplies gravity, so at level 1 this is one cell
-	# per tick -- the field in 20 ticks instead of a full second, which is what soft drop
-	# is for when you are placing by hand. Stated explicitly rather than left to the
-	# export default so the deviation from guideline() is visible here.
+	# 60, not the guideline's 20. sdf multiplies gravity, so against the fixed 1.0 cells per
+	# second this is one cell per tick -- the field in 20 ticks instead of a full second,
+	# which is what soft drop is for when you are placing by hand. Stated explicitly rather
+	# than left to the export default so the deviation from guideline() is visible here.
+	#
+	# With FIXED gravity this rate no longer drifts with the level, which it used to: soft
+	# drop multiplied a rising number, so past about level 6 it exceeded a cell per tick on
+	# its own whatever this was set to.
 	r.sdf = 60.0
 	return r
 
@@ -108,6 +123,19 @@ static func allspin() -> RuleSet:
 	r.all_spin = true
 	r.allspin_full = true
 	r.repeat_penalty = true
+	return r
+
+## All-spin scoring without the repeat penalty: every spin is still Full and still pays like
+## a T-spin, but repeating a clear type no longer inserts an unclearable wound line.
+##
+## Worth having as its own preset because the wounds are the only part of all-spin anyone
+## wants separately, and the obvious alternative is wrong: wounds come from `repeat_penalty`,
+## not from all-spin, so dropping to normal() to lose them also makes every non-T spin a Mini
+## that sends nothing -- measured at 0.24 APP against 2.19 for an all-spin-tuned bot.
+static func allspin_no_wounds() -> RuleSet:
+	var r := RuleSet.allspin()
+	r.preset_name = "allspin_nw"
+	r.repeat_penalty = false
 	return r
 
 ## Burst: normal rules, a T-spin triple worth 10, and back-to-back PLACEMENTS of
@@ -205,6 +233,9 @@ static func guideline() -> RuleSet:
 	r.sdf = 20.0
 	r.all_spin = false
 	r.allow_180 = false
+	# The only preset that keeps the level curve. Everything else runs at a fixed rate; see
+	# gravity_mode.
+	r.gravity_mode = GravityMode.LEVEL_CURVE
 	return r
 
 ## Guideline level curve: seconds per row = (0.8 - (level-1) * 0.007) ^ (level-1).

@@ -1,6 +1,6 @@
 """How slow would his value net be inside our beam search?
 
-1. Plays a few pieces with our bot (`bot serve --mode battle`) and records how many nodes
+1. Plays a few pieces with our bot (`bot serve-battle --mode battle`) and records how many nodes
    (afterstates evaluated) its full search uses per piece.
 2. Times his ValueNet (best.pt) on batches of real afterstate features of various sizes,
    single-threaded and with all torch threads.
@@ -25,7 +25,7 @@ from TetrisBattle.ai.search import enumerate_placements
 
 
 def our_nodes(exe, weights, pieces, extra):
-    p = subprocess.Popen([exe, "serve", "--mode", "battle", "--weights", weights, "--threads", "1"] + extra,
+    p = subprocess.Popen([exe, "serve-battle", "--mode", "battle", "--weights", weights, "--threads", "1"] + extra,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
     s = SimPlayer(0)
     nodes, secs = [], []

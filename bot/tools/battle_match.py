@@ -1,5 +1,5 @@
 """Bot vs bot in TetrisBattle's headless simulator: his RL bot (best.pt) against ours
-(`bot serve --mode battle`, whose move generator reproduces his placement set exactly).
+(`bot serve-battle --mode battle`, whose move generator reproduces his placement set exactly).
 
 Both players get the same piece sequence and the same garbage-hole sequence. Attacks
 cancel incoming garbage first; what is left lands at the receiver's next lock, as in his
@@ -84,7 +84,7 @@ class HisBot:
 class OurBot:
     def __init__(self, exe, weights, extra, name):
         self.name = name
-        self.p = subprocess.Popen([exe, "serve", "--mode", "battle", "--weights", weights, "--any-cores", "--threads", "1"] + extra,
+        self.p = subprocess.Popen([exe, "serve-battle", "--mode", "battle", "--weights", weights, "--any-cores", "--threads", "1"] + extra,
                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
         self.mismatch = 0
 
@@ -215,7 +215,7 @@ def main():
     ap.add_argument("--exe", default=os.path.join("..", "..", "bot", "target", "release", "bot.exe"))
     ap.add_argument("--weights", required=True)
     ap.add_argument("--name", default="ours")
-    ap.add_argument("--bot-args", default="", help="extra args for bot serve, e.g. '--depth 1'")
+    ap.add_argument("--bot-args", default="", help="extra args for bot serve-battle, e.g. '--depth 1'")
     ap.add_argument("--games", type=int, default=20)
     ap.add_argument("--pieces", type=int, default=500, help="per player")
     ap.add_argument("--speed", default="turn")

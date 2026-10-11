@@ -96,7 +96,7 @@ index 30b663c..94dc996 100644
    }
  }
 diff --git a/src/replay/parser.js b/src/replay/parser.js
-index b7f3b67..b073668 100644
+index b7f3b67..30c4c08 100644
 --- a/src/replay/parser.js
 +++ b/src/replay/parser.js
 @@ -57,15 +57,15 @@ function stream(value, path) {
@@ -118,26 +118,29 @@ index b7f3b67..b073668 100644
          if('size' in d && d.size!==1)fail('UNSUPPORTED_SCHEMA',p,'Only unit-size garbage interactions supported');
        }
      }
-@@ -84,7 +84,7 @@ export function parseReplay(text) {
+@@ -84,7 +84,9 @@ export function parseReplay(text) {
    try { data = JSON.parse(text); } catch { fail('MALFORMED_JSON','$','Invalid JSON'); }
    object(data,'$');
    if (data.version !== 1) fail('UNSUPPORTED_VERSION','$.version','Expected container v1');
 -  if (!['40l','league'].includes(data.gamemode)) fail('UNSUPPORTED_MODE','$.gamemode',String(data.gamemode));
-+  if (!['40l','league','zenith'].includes(data.gamemode)) fail('UNSUPPORTED_MODE','$.gamemode',String(data.gamemode));
++  // zenithex is Zenith Expert: same engine, same option set (zenith_expert is already a
++  // known profile key), different leaderboard. Only the mode string differed.
++  if (!['40l','league','zenith','zenithex'].includes(data.gamemode)) fail('UNSUPPORTED_MODE','$.gamemode',String(data.gamemode));
    object(data.replay,'$.replay');
    const multi = data.gamemode === 'league';
    if (multi && (!Array.isArray(data.replay.rounds) || !data.replay.rounds.length)) fail('MALFORMED','$.replay.rounds','Expected rounds');
 diff --git a/src/replay/profile.js b/src/replay/profile.js
-index 2188735..265e942 100644
+index 2188735..905d62b 100644
 --- a/src/replay/profile.js
 +++ b/src/replay/profile.js
-@@ -62,16 +62,31 @@ export function projectAnchor(data, {preSpawn=false, solo=false} = {}) {
+@@ -62,16 +62,32 @@ export function projectAnchor(data, {preSpawn=false, solo=false} = {}) {
  /** v19 compatibility behavior for observed v15 solo and v19 1v1 variants. */
  export function prepareReplay(player) {
    const stream=player.stream, raw=orderedEvents(player), end=raw.find(e=>e.type==='end');
 -  const mode=player.gamemode==='league'?'tl':player.gamemode==='40l'?'40l':null;
 -  if(!mode || mode==='tl' && stream.options.version!==19 || mode==='40l' && stream.options.version!==15)fail('gamemode/version','Unsupported profile combination');
-+  const isZenith=player.gamemode==='zenith';
++  // Both Zenith leaderboards: Quick Play and Expert share one engine and one option set.
++  const isZenith=player.gamemode==='zenith'||player.gamemode==='zenithex';
 +  // Zenith is pseudo-versus: hasgarbage, attack, B2B and cancellation are all the
 +  // TL machinery, and its options declare hasgarbage:true exactly as league does.
 +  // Mapping it to the solo 40l profile starved it of placement resolution.
@@ -166,7 +169,7 @@ index 2188735..265e942 100644
      if(key==='objective_type' && value==='none'){rules.objective_type=null;continue;}
      if(['objective_count','objective_time'].includes(key) && value===0)continue;
      if(key==='levels' && value===false)continue;
-@@ -121,16 +136,38 @@ export function prepareReplay(player) {
+@@ -121,16 +137,38 @@ export function prepareReplay(player) {
        const d=e.data;
        if(seen.has(d.id)){events.push({...position,type:'metadata',kind:'duplicate-ige',ige:d});continue;}seen.add(d.id);
        if(d.type==='target'){

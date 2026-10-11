@@ -29,8 +29,12 @@ var layout: ViewLayout
 
 var reader := InputReader.new(CONTROL_PROFILE)
 var input_state := InputState.new()
+
+var battler_rules: BattlerRules
+
 ## Rule presets the handling toggle cycles through; "normal" is the default.
-const RULE_PRESETS := ["normal", "burst", "burst2", "gate", "gate_b2b", "competitive", "guideline", "allspin"]
+const RULE_PRESETS := ["normal", "burst", "burst2", "gate", "gate_b2b", "competitive",
+	"guideline", "allspin", "allspin_nw"]
 var rules_preset := 0
 
 func _preset_rules() -> RuleSet:
@@ -38,17 +42,13 @@ func _preset_rules() -> RuleSet:
 		"normal": return RuleSet.normal()
 		"guideline": return RuleSet.guideline()
 		"allspin": return RuleSet.allspin()
+		"allspin_nw": return RuleSet.allspin_no_wounds()
 		"burst": return RuleSet.burst()
 		"burst2": return RuleSet.burst2()
 		"gate": return RuleSet.gate_rules()
 		"gate_b2b": return RuleSet.gate_b2b_rules()
 		_: return RuleSet.competitive()
 
-## Right-pane page. GAMEPLAY is the default because the economy is the thing that needs
-## watching now; the mechanics readout moved to being a page of the same pane rather
-## than an overlay competing for it. TAB cycles, F1 blanks and restores.
-var pane_tab: int = PaneTab.GAMEPLAY
-var _pane_last: int = PaneTab.GAMEPLAY
 
 ## Assist mode. Search depth is tied to the number of steps shown, because a plan
 ## can only be as long as the search was deep.
@@ -58,6 +58,13 @@ var ghost_slot := GhostSlot.new()
 const GHOST_COLUMNS := 1
 
 var solver: BeamSolver
+## The Rust bot in bot/. The brain for both hints and autoplay whenever it is built.
+##
+## There is no toggle between it and BeamSolver, because there is no reason to choose the
+## worse one: the Godot solver is the quad-oriented hint search and cannot reach tucks or
+## kicked spins, so it cannot see most of the all-spin play the minigame's economy pays for.
+## It stays as the FALLBACK, so a clone with no Rust toolchain still has hints and autoplay.
+var pilot: BotPilot
 var hints_enabled := false
 ## Lookahead depth for the hint solver. Fixed: it was on F7/F8 and never touched,
 ## and a knob nobody turns is just a way for the two paths to drift apart.
@@ -118,6 +125,7 @@ var _auto_staged := false
 @onready var overlay: Node2D = $DebugOverlay
 @onready var hints: Node2D = $HintView
 @onready var audio: AudioBus = $Audio
+@onready var battler: Node2D = $Battler
 
 func _ready() -> void:
 	if not Engine.is_editor_hint():
@@ -135,18 +143,25 @@ func _new_game(seed_v: int = -1) -> void:
 	board.ghost_width = GHOST_COLUMNS
 	board.ghost.resize(GHOST_COLUMNS * board.total_height)
 	ghost_slot.update(board)
-	layout = ViewLayout.new(board, get_viewport_rect().size, CELL)
+	layout = ViewLayout.new(board, _layout_viewport(), CELL)
 
 	solver = BeamSolver.new(BoardEvaluator.new(EvalWeights.lookahead()))
 	solver.beam_width = HINT_BEAM
 	solver.depth = hint_steps
+	# Created ONCE and kept across restarts. Rebuilding it here would leak a backend process
+	# per new game, which is exactly the orphan this lifecycle exists to avoid.
+	if pilot == null:
+		pilot = BotPilot.new()
+	pilot.piece_set = piece_set
+
+	battler_rules = BattlerRules.testing()
 
 	board_view.setup(game, layout)
 	board_view.drop_flashes()      # or a restart inherits the last run's outlines
+	battler.setup(battler_rules, layout, seed_v)
 	hints.setup(game, layout)
 	hud.setup(game, layout)
 	overlay.setup(game, layout, self)
-	_set_pane_tab(pane_tab)        # setup() resets the HUD, so re-assert the page
 	hints.enabled = hints_enabled
 	auto_pieces = 0
 	auto_quads = 0
@@ -155,6 +170,7 @@ func _new_game(seed_v: int = -1) -> void:
 	_auto_staged = false
 	_auto_accum = 0.0
 	_dispatch(game.start())
+	_refresh_brain_label()
 
 	if Engine.is_editor_hint() and preview_in_editor:
 		_build_preview()
@@ -243,12 +259,42 @@ func _physics_process(_delta: float) -> void:
 	else:
 		reader.to_input_state(input_state)
 		_dispatch(game.tick(input_state))
+	# Drained after the Tetris tick, so a fighter spawned by a clear above is on the field
+	# this frame. A poll rather than a signal, matching the rest of main's wiring.
+	var breached: int = battler.take_breaches()
+	if breached > 0:
+		var ev: Array = []
+		# The other half of the coupling: a fighter reaching your edge makes Tetris harder,
+		# and receive_garbage decides whether it also kills. Its GameEvents go out through
+		# _dispatch rather than into an array being iterated.
+		game.receive_garbage(battler.take_holes(breached * battler_rules.rows_per_breach), ev)
+		_dispatch(ev)
 	if _needs_resolve:
 		_resolve_hints()
 	_redraw_views()
 
+## The size to lay out for.
+##
+## In the editor `get_viewport_rect()` is the EDITOR's 2D viewport, not the game window, so
+## an @tool preview would be arranged for whatever size that pane happens to be. Using the
+## project's configured window size instead makes the preview the game's layout, which is
+## the only thing a preview is for.
+##
+## HEADLESS needs the same fallback, and for a sharper reason: with no window at all,
+## get_viewport_rect() reports a square 1280x1280 against a (0,0) window. That is not a
+## harmless wrong number -- it moved the lane 280px down the screen, and because nothing
+## headless ever calls _draw, every boot check passed while the layout was wrong. A boot
+## check that cannot see the layout is worth having see the real one.
+func _layout_viewport() -> Vector2:
+	if Engine.is_editor_hint() or DisplayServer.get_name() == "headless":
+		return Vector2(
+			float(ProjectSettings.get_setting("display/window/size/viewport_width", 1280)),
+			float(ProjectSettings.get_setting("display/window/size/viewport_height", 720)))
+	return get_viewport_rect().size
+
 func _redraw_views() -> void:
 	board_view.queue_redraw()
+	battler.queue_redraw()
 	hints.queue_redraw()
 	hud.queue_redraw()
 	overlay.queue_redraw()
@@ -264,16 +310,67 @@ func _resolve_hints() -> void:
 		hints.set_plan([])
 		last_solve_ms = 0.0
 		return
-	solver.depth = AUTOPLAY_DEPTH if autoplay else hint_steps
+	var brain := _brain()
+	brain.depth = AUTOPLAY_DEPTH if autoplay else hint_steps
+	# Gate state travels with the request: under gate rules it is the whole reward signal, and
+	# the board cannot carry it.
+	if brain == pilot:
+		# The bot's belief is NOT synced to the game's rules. It belongs to the weight set --
+		# see BotPilot.believe. Only the gate chain travels, because that is live game state
+		# the board cannot carry rather than a rule.
+		pilot.gate_state = game.gate_state.duplicate()
 	if threaded_solve and not Engine.is_editor_hint():
 		_request_threaded_solve()
 		return
 	var queue: Array = [game.active.def]
 	queue.append_array(game.next_queue)
 	var t0 := Time.get_ticks_usec()
-	var plan := solver.solve(game.board, queue, game.hold_def, Callable(), game.b2b)
+	var plan: Array = brain.solve(game.board, queue, game.hold_def, Callable(), game.b2b)
 	last_solve_ms = float(Time.get_ticks_usec() - t0) / 1000.0
 	hints.set_plan(plan)
+
+## Whichever search is flying the board. Duck-typed on solve() and depth, so the worker and
+## the synchronous path do not care which one they got.
+##
+## The Rust bot when it is built, BeamSolver otherwise. Falling back rather than stalling is
+## the point: an unbuilt binary is a missing `cargo build --release`, not a reason to lose
+## hints and autoplay. The overlay always names which one is flying, since there is no longer
+## a toggle whose position would tell you.
+func _brain() -> Object:
+	if pilot != null and pilot.available():
+		return pilot
+	return solver
+
+## Whether the Rust bot is the brain right now.
+func piloted() -> bool:
+	return pilot != null and pilot.available()
+
+## Empty when the pairing is fine, otherwise what is wrong with it.
+##
+## The bot searches under the rules it is TOLD to use, so piloting with a mismatched preset
+## means it plans for value the game will not pay -- quietly, and the only symptom is that it
+## plays worse than its benchmarks. Reported rather than corrected: which of the two is wrong
+## is the user's call, not this function's.
+func pilot_status() -> String:
+	if pilot == null or not pilot.available():
+		return "bot not built -- cargo build --release in bot/, using BeamSolver"
+	# The only structural fault left is a rules preset the bot has no mode for at all.
+	var preset: String = RULE_PRESETS[rules_preset]
+	if not BotPilot.MODE_FOR_RULES.has(preset):
+		return "no bot mode for '%s' rules" % preset
+	# Flagged against the preset's DECLARED belief, not its provenance. A preset may ship with
+	# a deliberate mismatch -- gate4 searches normal rewards with gate-tuned weights, which is
+	# the whole reason it plays like an ambitious human -- and that is not an experiment. What
+	# is worth reporting is a runtime override, because a wrongly-believing bot keeps playing
+	# well while being paid for a different game, and all-spin weights believing normal rules
+	# topped out every run of a three-seed, 500-piece test.
+	var declared: String = BotPilot.declared_belief(pilot.preset())
+	if pilot.believe != declared:
+		return "EXPERIMENT: '%s' believing '%s' rules" % [
+			pilot.preset()["name"], pilot.believe]
+	if pilot.unreachable > 0:
+		return "%d placements Godot could not reach" % pilot.unreachable
+	return ""
 
 ## Hand the worker a board it alone owns. Anything shared would race, because the
 ## game keeps locking pieces while the solve runs.
@@ -289,7 +386,7 @@ func _request_threaded_solve() -> void:
 	_solve_thread.start(_solve_worker.bind(snapshot, queue, game.hold_def, game.b2b))
 
 func _solve_worker(board: Board, queue: Array, hold: PieceDef, b2b: int) -> void:
-	var plan := solver.solve(board, queue, hold, Callable(), b2b)
+	var plan: Array = _brain().solve(board, queue, hold, Callable(), b2b)
 	_solve_mutex.lock()
 	_pending_plan = plan
 	_plan_ready = true
@@ -317,20 +414,24 @@ func _collect_solve() -> void:
 	hints.set_plan(plan)
 
 func _exit_tree() -> void:
+	# The thread first: it may be mid-solve, which means mid-request to the backend, and
+	# killing the backend out from under a blocking read would hang the join.
 	if _solve_thread != null:
 		_solve_thread.wait_to_finish()
 		_solve_thread = null
+	# Then bury the backend. It is a child process, so without this it outlives the window and
+	# leaves a `bot serve` running with nobody to talk to.
+	if pilot != null:
+		pilot.shutdown()
 
 func _handle_meta_keys() -> void:
 	if reader.pressed("restart"):
 		_new_game()
 		return
-	if reader.pressed("cycle_pane"):
-		_set_pane_tab(PaneTab.next(pane_tab))
 	if reader.pressed("toggle_debug"):
-		# F1 keeps its old meaning -- blank the pane and bring it back -- which is now
-		# just a shortcut to OFF and back to whichever page was up.
-		_set_pane_tab(_pane_last if pane_tab == PaneTab.OFF else PaneTab.OFF)
+		# A plain show/hide: the readout draws over the right pane.
+		overlay.visible_overlay = not overlay.visible_overlay
+		overlay.queue_redraw()
 	if reader.pressed("toggle_grid"):
 		board_view.show_grid = not board_view.show_grid
 	if reader.pressed("cycle_profile"):
@@ -361,23 +462,52 @@ func _handle_meta_keys() -> void:
 		# slot and check a kick by hand.
 		game.gravity_enabled = not game.gravity_enabled
 	if reader.pressed("toggle_handling"):
-		rules_preset = (rules_preset + 1) % RULE_PRESETS.size()
-		# Swap the ruleset in place so the run in progress is preserved.
-		var keep_gravity := game.gravity_enabled
-		game.rules = _preset_rules()
-		rules = game.rules
-		game.gravity_enabled = keep_gravity
+		_use_rules((rules_preset + 1) % RULE_PRESETS.size())
+	if reader.pressed("cycle_bot"):
+		_cycle_bot()
 
-## Single point of truth for the pane: the overlay is one PAGE of it, so its visibility
-## is derived here rather than toggled independently.
-func _set_pane_tab(tab: int) -> void:
-	if tab != PaneTab.OFF:
-		_pane_last = tab
-	pane_tab = tab
-	hud.pane_tab = tab
-	overlay.visible_overlay = tab == PaneTab.DEBUG
-	hud.queue_redraw()
-	overlay.queue_redraw()
+## Swaps the ruleset in place, so the run in progress is preserved.
+func _use_rules(index: int) -> void:
+	rules_preset = posmod(index, RULE_PRESETS.size())
+	var keep_gravity := game.gravity_enabled
+	game.rules = _preset_rules()
+	rules = game.rules
+	game.gravity_enabled = keep_gravity
+	_refresh_brain_label()
+
+## Names what is feeding the lane, in the battler pane itself.
+##
+## Not in the debug readout alone: that starts hidden, so B gave no feedback and the bots were
+## indistinguishable. Recomputed on change rather than per frame -- it is a string concat, and
+## nothing here changes without one of these calls.
+func _refresh_brain_label() -> void:
+	if battler == null:
+		return
+	if not piloted():
+		battler.brain_label = "beam solver (bot not built)"
+	elif pilot.believe == RULE_PRESETS[rules_preset]:
+		battler.brain_label = "%s  /  %s" % [pilot.preset()["name"], pilot.believe]
+	else:
+		# Spelled out whenever belief and environment differ, which is the normal case now.
+		battler.brain_label = "%s  believes %s  /  game %s" % [
+			pilot.preset()["name"], pilot.believe, RULE_PRESETS[rules_preset]]
+	battler.queue_redraw()
+
+## Next WEIGHT SET, and a jump to the rules it was tuned against.
+##
+## Two separate axes, which is the point: B changes what the bot values, F2 changes what the
+## game pays for, and the bot's belief always follows F2. The jump here is a convenience --
+## landing on the rules a weight set was tuned for is the useful default -- not a constraint,
+## so F2 afterwards is free and stays coherent.
+func _cycle_bot() -> void:
+	if pilot == null:
+		return
+	# Changes the bot only. The game's rules are a separate axis and are deliberately left
+	# alone: an all-spin bot believing all-spin while the environment scores normal rules is
+	# the intended setup, not something to be tidied away.
+	pilot.next_preset()
+	_refresh_brain_label()
+	_needs_resolve = true
 
 func _dispatch(events: Array) -> void:
 	# This is the seam the right-hand minigame will hook into: it consumes the same
@@ -402,6 +532,11 @@ func _dispatch(events: Array) -> void:
 			var r: ClearResult = e.data["result"]
 			hud.log_economy(game.pieces_placed, r.describe().to_upper(),
 				{r.resource_group(): r.resource_amount()})
+		if e.type == GameEvent.Type.LINES_CLEARED and battler != null:
+			# A quad or any spin sends a fighter; singles and doubles send nothing, so the
+			# minigame pays out for exactly the clears worth learning.
+			if BattlerRules.spawns_unit(e.data["result"]):
+				battler.spawn_teal()
 		if e.type == GameEvent.Type.STRUCTURE_BUILT:
 			board_view.flash_structure(e.data["rect"])
 			hud.on_structure(e.data["payout"])

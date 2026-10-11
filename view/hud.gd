@@ -29,13 +29,14 @@ var _age: float = 0.0
 var _struct: Dictionary = {}
 var _struct_age: float = 999.0
 
-## Which page the right pane shows. Driven by main; see view/pane_tab.gd.
-var pane_tab: int = PaneTab.GAMEPLAY
 ## The economy log: what each paying placement earned, newest last. This is the answer
 ## to "are structures actually firing?" -- the bank totals say a number went up, the log
 ## says which placement did it.
 var _econ: Array = []
 const ECON_MAX := 14
+## How many payouts the one-line log shows. The band is 44px tall, so this is width-bound
+## rather than a choice about how much history is interesting.
+const ECON_SHOWN := 4
 
 func setup(g: Game, l: ViewLayout) -> void:
 	game = g
@@ -82,7 +83,7 @@ func _draw() -> void:
 	_draw_hold()
 	_draw_next()
 	_draw_stats()
-	_draw_right_pane()
+	_draw_economy()
 	if game.topped_out:
 		_draw_top_out()
 
@@ -175,26 +176,6 @@ func _draw_last_placement(y: float) -> void:
 		draw_string(_font, Vector2(x, y), " ".join(tags), HORIZONTAL_ALIGNMENT_LEFT, -1, 11,
 			Color(TEXT_DIM, a))
 
-func _draw_right_pane() -> void:
-	var r := layout.right_pane
-	if r.size.x <= 0.0 or pane_tab == PaneTab.OFF:
-		return
-	draw_rect(r, Color(0.09, 0.09, 0.12))
-	draw_rect(r, Color(1, 1, 1, 0.10), false, 2.0)
-	_draw_tabs(r)
-	if pane_tab == PaneTab.DEBUG:
-		return          # DebugOverlay draws the page itself, on top of this frame
-	_draw_resources(r)
-	_draw_econ(r)
-	# Sits low in the pane so the debug overlay, which shares this space, does not
-	# cover it. Centred across the pane's full width, not from its midpoint.
-	var x := r.position.x
-	draw_string(_font, Vector2(x, r.end.y - 52), "MINIGAME PANE",
-		HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 18, TEXT_DIM)
-	draw_string(_font, Vector2(x, r.end.y - 28),
-		"fed by the LINES_CLEARED event stream",
-		HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 13, Color(0.40, 0.42, 0.50))
-
 func _draw_top_out() -> void:
 	var r := Rect2(layout.field_origin, layout.field_size)
 	draw_rect(r, Color(0, 0, 0, 0.66))
@@ -210,93 +191,89 @@ func _panel(r: Rect2, title: String) -> void:
 	draw_string(_font, r.position + Vector2(layout.pad, 15), title,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, TEXT_DIM)
 
-## The resource bank: one row per shape group, coloured by the piece that names it.
+## Resource bank and the last few payouts, as one band under the whole screen.
 ##
-## The split matters more than the total, which is why the structures share is printed
-## alongside rather than folded in. O is the case to watch: the clear economy can pay it
-## at most 2 at a time, so a healthy O count means the player is building rectangles.
-func _draw_resources(pane: Rect2) -> void:
-	var x := pane.position.x + 14.0
-	var y := pane.position.y + PaneTab.STRIP_H + 22.0
-	draw_string(_font, Vector2(x, y), "RESOURCES", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, TEXT_DIM)
-	y += 10.0
-	var sw := 12.0
+## This used to be a tall column in the right pane, until the minigame was given the pane.
+## Laid out horizontally instead: the bank is
+## five chips on the top line, the recent payouts a single line beneath. Both get smaller,
+## and that is the right trade -- the bank is a number you glance at, and the log only has
+## to answer "did that just pay?".
+func _draw_economy() -> void:
+	var r := layout.economy_strip
+	if r.size.x <= 0.0 or r.size.y <= 0.0:
+		return
+	draw_rect(r, Color(0.09, 0.09, 0.12))
+	draw_rect(r, Color(1, 1, 1, 0.10), false, 1.0)
+
+	var top := r.position.y + 16.0
+	var bottom := r.position.y + 34.0
+	var x := r.position.x + 12.0
+	draw_string(_font, Vector2(x, top), "BANK", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, TEXT_DIM)
+	x += 44.0
+
+	# One chip per group: swatch, name, count, and the structures share when there is one.
+	# GARBAGE is skipped -- nothing pays into it yet; a dug-garbage economy would.
+	const CHIP := 108.0
+	var sw := 11.0
 	for g in ShapeGroups.all():
 		if g == ShapeGroups.GARBAGE:
-			continue          # nothing pays into it yet; a dug-garbage economy would
-		y += 22.0
+			continue
 		var icon := ShapeGroups.icon_of(g)
 		var col: Color = game.piece_set.get_def(icon).color if icon != &"" else TEXT_DIM
-		draw_rect(Rect2(Vector2(x, y - sw + 2.0), Vector2(sw, sw)), col)
-		draw_string(_font, Vector2(x + sw + 8.0, y), String(g),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 15, TEXT)
-		draw_string(_font, Vector2(x + sw + 8.0, y), str(game.resources.amount(g)),
-			HORIZONTAL_ALIGNMENT_RIGHT, 92.0, 15, TEXT)
+		draw_rect(Rect2(Vector2(x, top - sw), Vector2(sw, sw)), col)
+		draw_string(_font, Vector2(x + sw + 5.0, top), String(g),
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, TEXT)
+		draw_string(_font, Vector2(x + sw + 5.0, top), str(game.resources.amount(g)),
+			HORIZONTAL_ALIGNMENT_RIGHT, 58.0, 13, TEXT)
 		var built := game.resources.earned(Resources.STRUCTURES, g)
 		if built > 0:
-			draw_string(_font, Vector2(x + sw + 108.0, y), "+%d built" % built,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 13, TEXT_DIM)
+			draw_string(_font, Vector2(x + sw + 68.0, top), "+%d" % built,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, TEXT_DIM)
+		x += CHIP
 
+	# A completed structure stays named for a moment, at the right-hand end where there is
+	# room, because the chip counts alone cannot say which rectangle paid.
 	if _struct_age < FLASH_SEC + FADE_SEC and not _struct.is_empty():
 		var a := 1.0 if _struct_age < FLASH_SEC else RESTING_ALPHA
-		var parts: Array = []
-		for g in ShapeGroups.all():
-			if _struct.has(g):
-				parts.append("%s+%d" % [String(g), int(_struct[g])])
-		draw_string(_font, Vector2(x, y + 30.0), "STRUCTURE  %s" % " ".join(parts),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(ACCENT.r, ACCENT.g, ACCENT.b, a))
+		draw_string(_font, Vector2(r.position.x, top), "STRUCTURE %s" % _pay_text(_struct),
+			HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - 12.0, 13,
+			Color(ACCENT.r, ACCENT.g, ACCENT.b, a))
 
-## The tab strip. Drawn on every page, including the debug one, so the way back is
-## always on screen -- an overlay you cannot find the exit from is how F1 used to feel.
-func _draw_tabs(pane: Rect2) -> void:
-	var x := pane.position.x + 12.0
-	var y := pane.position.y + 8.0
-	for t in PaneTab.pages():
-		var tab: int = t
-		var label := PaneTab.name_of(tab)
-		var w := _font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 20.0
-		var box := Rect2(Vector2(x, y), Vector2(w, 20.0))
-		var on: bool = tab == pane_tab
-		if on:
-			draw_rect(box, Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.18))
-			draw_rect(box, Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.65), false, 1.0)
-		else:
-			draw_rect(box, Color(1, 1, 1, 0.06), false, 1.0)
-		draw_string(_font, Vector2(x + 10.0, y + 15.0), label,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ACCENT if on else TEXT_DIM)
-		x += w + 6.0
-	draw_string(_font, Vector2(pane.end.x - 12.0 - 60.0, y + 15.0), "TAB",
-		HORIZONTAL_ALIGNMENT_RIGHT, 60.0, 13, TEXT_DIM)
+	_draw_earned(r, bottom)
 
-## The economy log: one line per placement that paid, newest last.
+## The recent payouts, newest first, on one line.
 ##
 ## Totals alone cannot answer "did that structure register?" -- the number moves whether
-## the clear or the rectangle caused it. Naming the placement and the payout side by side
-## does, and lines up a clear with a structure the same piece completed.
-func _draw_econ(pane: Rect2) -> void:
-	var x := pane.position.x + 14.0
-	var y := pane.position.y + PaneTab.STRIP_H + 22.0 + 6 * 22.0 + 60.0
-	draw_string(_font, Vector2(x, y), "EARNED", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, TEXT_DIM)
+## the clear or the rectangle caused it. Naming the placement and the payout together can,
+## and lines a clear up with a structure the same piece completed.
+func _draw_earned(r: Rect2, y: float) -> void:
+	var x := r.position.x + 12.0
+	draw_string(_font, Vector2(x, y), "EARNED", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, TEXT_DIM)
+	x += 44.0
 	if _econ.is_empty():
-		draw_string(_font, Vector2(x, y + 22.0), "nothing yet -- clear a line or tile a 4x3",
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, TEXT_DIM)
+		draw_string(_font, Vector2(x, y), "nothing yet -- clear a line or tile a 4x3",
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.40, 0.42, 0.50))
 		return
-	for i in _econ.size():
+	# Newest first and bright, older dimmed, so the eye lands on what just happened.
+	var shown := 0
+	for i in range(_econ.size() - 1, -1, -1):
+		if shown >= ECON_SHOWN or x > r.end.x - 160.0:
+			break
 		var row: Dictionary = _econ[i]
-		y += 20.0
-		# Newest at full brightness, older fading, so the eye lands on what just happened.
-		var a: float = 1.0 if i == _econ.size() - 1 else 0.45
-		draw_string(_font, Vector2(x, y + 22.0), "#%d" % int(row["n"]),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(TEXT_DIM.r, TEXT_DIM.g, TEXT_DIM.b, a))
+		var a: float = 1.0 if shown == 0 else 0.45
 		var is_struct: bool = String(row["what"]) == "STRUCTURE"
 		var col := ACCENT if is_struct else TEXT
-		draw_string(_font, Vector2(x + 46.0, y + 22.0), String(row["what"]),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(col.r, col.g, col.b, a))
-		var pay: Dictionary = row["pay"]
-		var parts: Array = []
-		for g in ShapeGroups.all():
-			if pay.has(g):
-				parts.append("%s+%d" % [String(g), int(pay[g])])
-		draw_string(_font, Vector2(x + 46.0, y + 22.0), " ".join(parts),
-			HORIZONTAL_ALIGNMENT_RIGHT, pane.size.x - 60.0, 13,
+		var text := "#%d %s %s" % [int(row["n"]), String(row["what"]), _pay_text(row["pay"])]
+		draw_string(_font, Vector2(x, y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12,
 			Color(col.r, col.g, col.b, a))
+		x += _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 18.0
+		shown += 1
+
+## "LJ+2 O+1" for a { group -> amount } payout, in ShapeGroups order so it reads the same
+## way every time.
+func _pay_text(pay: Dictionary) -> String:
+	var parts: Array = []
+	for g in ShapeGroups.all():
+		if pay.has(g):
+			parts.append("%s+%d" % [String(g), int(pay[g])])
+	return " ".join(parts)

@@ -237,7 +237,12 @@ const out = [], rows = [];
 let broken = 0;
 for (const path of process.argv.slice(3)) {
   const file = path.split(/[\/]/).pop().replace(/\.ttr$/, '');
-  const m = /^(.+?)_+(nomod|allspin|volatile)_+([0-9a-f]+)$/.exec(file) || [];
+  // {user}_{mods}__{id}. The mods token is generic rather than a closed list: Zenith mods
+  // combine, and a run can be allspin+volatile+expert. Underscores are the field
+  // separator, so tools/fetch_replays.py joins multiple mods with '-' and strips the
+  // underscore out of names like allspin_reversed -> allspinrev. Verified against all
+  // existing files: every one parses to the same (user, mods, id) as the old closed list.
+  const m = /^(.+?)_+([a-z0-9]+(?:-[a-z0-9]+)*)_+([0-9a-f]+)$/.exec(file) || [];
   let tl;
   try { tl = prepareReplay(parseReplay(readFileSync(path, 'utf8')).rounds[0].players[0]); }
   catch (err) { rows.push({file, error: (err.code || err.name) + ': ' + err.message}); continue; }

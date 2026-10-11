@@ -8,7 +8,7 @@
 
 [node name="Replay" type="Node2D" unique_id=356273986]
 script = ExtResource("1_replay")
-dataset_path = "res://data/bot/garbage.jsonl"
+dataset_path = "res://data/bot/gate4_garbage.jsonl"
 
 [node name="BoardView" type="Node2D" parent="." unique_id=1313805946]
 script = ExtResource("2_boardview")

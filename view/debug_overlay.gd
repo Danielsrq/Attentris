@@ -11,7 +11,10 @@ extends Node2D
 var game: Game
 var layout: ViewLayout
 var main: Node
-var visible_overlay: bool = true
+## Starts OFF. This readout draws over the right pane, which is where the battler's lane now
+## is, so defaulting it on means the game opens with debug text across the minigame. F1 brings
+## it back -- and note that the autoplay rate slider lives in here, so it comes back with it.
+var visible_overlay: bool = false
 
 const TEXT := Color(0.75, 0.95, 0.80)
 const LABEL := Color(0.45, 0.55, 0.50)
@@ -68,8 +71,9 @@ func _draw() -> void:
 	var x := layout.right_pane.position.x + 16.0
 	if layout.right_pane.size.x <= 0.0:
 		x = layout.field_origin.x + layout.field_size.x + 16.0
-	# Below the tab strip the HUD draws at the top of the pane: this is one of its pages.
-	var top := layout.right_pane.position.y + PaneTab.STRIP_H + 14.0
+	# Draws OVER the right pane rather than beside it, which is why it is on a plain F1
+	# toggle. Offset from the pane's own top now that there is no strip above it.
+	var top := layout.right_pane.position.y + 14.0
 	_draw_state_column(x, top)
 	_draw_readout_column(x + COLUMN_GAP, top)
 
@@ -89,6 +93,15 @@ func _draw_state_column(x: float, y: float) -> void:
 		p.move_resets if p != null else 0], x, y)
 	y = _row("gravity", "%s  %.4f c/tick" % [
 		"on" if game.gravity_enabled else "OFF", game.current_gravity()], x, y)
+	if main != null and main.pilot != null:
+		# Always shown, and highlighted when something is wrong. With no toggle left to read,
+		# this row is the only thing that says which brain is flying -- and a mispaired bot
+		# has no symptom of its own beyond playing worse than its own benchmarks.
+		var trouble: String = main.pilot_status()
+		var bot: Dictionary = main.pilot.preset()
+		y = _row("brain", "rust %s / %s  %d nodes" % [
+				bot["name"], main.pilot.mode, main.pilot.last_nodes]
+			if trouble == "" else trouble, x, y, trouble != "")
 	y = _row("das / arr", "%.0f / %.0f ms left" % [game.das_remaining(), game.arr_remaining()], x, y)
 	y = _row("b2b / combo", "%d / %d" % [game.b2b, game.combo], x, y)
 	y = _row("seed", str(game.seed_value), x, y)
@@ -125,7 +138,7 @@ func _draw_readout_column(x: float, y: float) -> void:
 		y = _draw_autoplay(x, y)
 	if main != null and main.has_method("hint_status"):
 		var h: Dictionary = main.hint_status()
-		y = _heading("ASSIST  (F6)", x, y)
+		y = _heading("ASSIST  (H)", x, y)
 		y = _row("hints", "ON" if h["enabled"] else "off", x, y, h["enabled"])
 		if h["enabled"]:
 			y = _row("plan", "%d of %d shown" % [h["shown"], h["plan_len"]], x, y)
@@ -146,7 +159,7 @@ func _draw_readout_column(x: float, y: float) -> void:
 
 func _draw_autoplay(x: float, y: float) -> float:
 	var a: Dictionary = main.autoplay_status()
-	y = _heading("AUTOPLAY  (F9)", x, y)
+	y = _heading("AUTOPLAY  (P)", x, y)
 	y = _row("state", "PLAYING" if a["on"] else "off", x, y, a["on"])
 
 	# Rate slider. Logarithmic, so 0.25 pps and 40 pps both get usable resolution.
@@ -163,7 +176,7 @@ func _draw_autoplay(x: float, y: float) -> float:
 	draw_string(_font, Vector2(x + w + 12.0, y + 12.0), rate,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, HILITE)
 	y += 26.0
-	y = _line("drag, or F10 / F11", x, y, LABEL)
+	y = _line("drag, or [ / ]", x, y, LABEL)
 
 	y += 4.0
 	y = _row("pieces", "%d" % a["pieces"], x, y)
