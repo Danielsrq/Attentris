@@ -35,9 +35,11 @@ def run(net, d, idx):
         logit, att = net(b, return_attn=True)
     qk, bias = net.cross.att.kept                                        # (B, H, NC, NT)
     pad = (b["tok_kind"] < 0)[:, None, None, :]
-    alone = lambda t: t.masked_fill(pad, float("-inf")).softmax(-1).mean(1).numpy()
+    alone_h = lambda t: t.masked_fill(pad, float("-inf")).softmax(-1)    # (B, H, NC, NT)
+    ga, ca = alone_h(bias), alone_h(qk)
+    per_head = {"attn": att["cross"].numpy(), "geo": bias.numpy(), "cont": qk.numpy(), "gattn": ga.numpy(), "cattn": ca.numpy()}
     return (logit.softmax(-1).numpy(), att["cross"].mean(1).numpy(),    # (B, NC), (B, NC, NT)
-            bias.mean(1).numpy(), qk.mean(1).numpy(), alone(bias), alone(qk))
+            bias.mean(1).numpy(), qk.mean(1).numpy(), ga.mean(1).numpy(), ca.mean(1).numpy(), per_head)
 
 
 def main():
@@ -170,7 +172,9 @@ def main():
             show += groups[g]
     pos = []
     for i in show:
-        prob, cross, geo, cont, gal, cal = [t_[0] for t_ in run(net, d, np.array([i]))]
+        r_ = run(net, d, np.array([i]))
+        prob, cross, geo, cont, gal, cal = [t_[0] for t_ in r_[:6]]
+        ph = {k_: v_[0] for k_, v_ in r_[6].items()}                     # (H, NC, NT) each
         nc = int(d["n_cand"][i])
         ch = int(d["chosen"][i])
         order = np.argsort(-prob[:nc])
@@ -199,7 +203,10 @@ def main():
                     "geo": [round(float(geo[c, j]), 3) for j, kd in enumerate(kinds) if kd >= 0],
                     "cont": [round(float(cont[c, j]), 3) for j, kd in enumerate(kinds) if kd >= 0],
                     "gattn": [float(gal[c, j]) for j, kd in enumerate(kinds) if kd >= 0],
-                    "cattn": [float(cal[c, j]) for j, kd in enumerate(kinds) if kd >= 0]}
+                    "cattn": [float(cal[c, j]) for j, kd in enumerate(kinds) if kd >= 0],
+                    # per head (rows = heads), for the viewer's head selector
+                    "H": {k_: [[round(float(v_[h_, c, j]), 4) for j, kd in enumerate(kinds) if kd >= 0] for h_ in range(v_.shape[0])]
+                          for k_, v_ in ph.items()}}
         why = why_new[i] if i in why_new else "T-spin into a T structure" if i in tspin_rows else ("bot filled a piece-shaped recess" if i in fits else "random position")
         pos.append({"why": why, "teacher": ["normal", "gate4"][d["teacher"][i]], "seed": int(d["seed"][i]), "n": int(d["n"][i]),
                     "board": d["cells"][i].tolist(), "tokens": toks, "chosen": cand(ch),
