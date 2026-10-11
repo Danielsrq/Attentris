@@ -33,7 +33,10 @@ figcaption { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; 
 svg.board { width: 100%; max-width: 260px; height: auto; display: block; }
 .list { display: grid; gap: 4px; min-width: 0; }
 .list h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 6px 0 4px; font-weight: 600; }
-.row { display: grid; grid-template-columns: 92px minmax(0, 1fr) 52px; gap: 10px; align-items: center; padding: 2px 6px; border-radius: 5px; }
+.row { display: grid; grid-template-columns: 112px minmax(0, 1fr) 46px 50px 54px; gap: 8px; align-items: center; padding: 2px 6px; border-radius: 5px; }
+.row.head { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; }
+.row .num { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; }
+.row .num.pos { color: var(--fg); } .row .num.neg { color: var(--muted); }
 .row:hover { background: var(--panel); outline: 1px solid var(--line); }
 .row .k { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 13px; font-weight: 600; }
 .row .bar { height: 10px; border-radius: 3px; background: var(--bar); min-width: 1px; }
@@ -84,6 +87,7 @@ table.agree td:first-child { text-align: left; font-weight: 600; }
       <h2>The model's move probabilities (click a row to show its attention)</h2>
       <table class="probs" id="probs"></table>
       <div class="toggle"><button id="dens" class="on">per-cell density</button><button id="mass">whole-token share</button></div>
+      <div class="toggle" id="src"><button data-s="attn" class="on">attention</button><button data-s="gattn">geometry only (FLAT-2D)</button><button data-s="cattn">content only (Q·K)</button></div>
       <h2>Attention over tokens (mean of 4 heads)</h2>
       <div id="rows"></div>
     </div>
@@ -93,12 +97,18 @@ table.agree td:first-child { text-align: left; font-weight: 600; }
     <b>whole-token share</b> paints every cell of a token with its full share. Overlapping overlays add up.
     Dashed outline: the move the bot played. Solid blue: the candidate selected above. Hover a token row to outline it.
     Attention shows where information was routed from, not proof of what decided the move.</p>
+  <p class="note"><b>Why it looked there.</b> Each attention score is the sum of two terms (shown per token, mean of the 4 heads, in logit units):
+    <b>geom.</b> is the FLAT-2D bias, a learned function of geometry only (how the move's 4 cells and box sit relative to the token's
+    mask and box: overlap and row/column offsets); <b>content</b> is Q·K/√d, what the token's vector says to the move's. The heat-map switch
+    shows the attention each term alone would give (softmax over the tokens of that term): <b>geometry only</b> is where a move would look
+    from position alone, <b>content only</b> is where it would look from meaning alone. A token high in the real attention but not in the
+    geometry-only map was chosen for its content.</p>
 </div>
 
 <script>
 const DATA = __DATA__;
 const CS = 20, ROWS = 20, COLS = 10;
-let idx = 0, sel = null, mode = "dens", hover = null;
+let idx = 0, sel = null, mode = "dens", hover = null, src = "attn";
 const firstSel = p => (p.top[0].i === p.chosen.i ? "chosen" : "0");   // default: the model's own top move
 const $ = id => document.getElementById(id);
 const X = c => c * CS, Y = r => (ROWS - 1 - r) * CS;
@@ -164,7 +174,8 @@ function render() {
 
   // heat per cell
   const heat = new Float64Array(200);
-  const board = p.tokens.map((t, j) => [t, cand.attn[j]]).filter(([t]) => t.cells.length);
+  const hsrc = cand[src] || cand.attn;
+  const board = p.tokens.map((t, j) => [t, hsrc[j]]).filter(([t]) => t.cells.length);
   for (const [t, a] of board) for (const i of t.cells) heat[i] += mode === "dens" ? a / t.cells.length : a;
   const mx = Math.max(...heat) || 1;
 
@@ -181,11 +192,13 @@ function render() {
   s += `<path d="${outline(cand.cells, 3.5)}" stroke="var(--pick)" stroke-width="2.5" fill="none"/>`;
   $("board").innerHTML = s;
 
-  const rows = p.tokens.map((t, j) => ({ t, a: cand.attn[j] })).sort((a, b) => b.a - a.a);
+  const rows = p.tokens.map((t, j) => ({ t, a: cand.attn[j], g: cand.geo ? cand.geo[j] : null, c: cand.cont ? cand.cont[j] : null })).sort((a, b) => b.a - a.a);
   const top = rows[0].a || 1;
-  $("rows").innerHTML = rows.map(({ t, a }, k) => `<div class="row" data-k="${k}"><span class="k">${t.kind}${t.piece ? " " + t.piece : ""}${t.note ? ` <span class="note">${t.note}</span>` : ""}</span>` +
-    `<span class="bar" style="width:${(100 * a / top).toFixed(1)}%"></span><span class="v">${(100 * a).toFixed(1)}%</span></div>`).join("");
-  $("rows").querySelectorAll(".row").forEach(el => {
+  const sg = v => v === null ? "" : `<span class="num ${v >= 0 ? "pos" : "neg"}">${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}</span>`;
+  $("rows").innerHTML = `<div class="row head"><span class="k">token</span><span>attention</span><span class="v">share</span><span class="num">geom.</span><span class="num">content</span></div>` +
+    rows.map(({ t, a, g, c }, k) => `<div class="row" data-k="${k}"><span class="k">${t.kind}${t.piece ? " " + t.piece : ""}${t.note ? ` <span class="note">${t.note}</span>` : ""}</span>` +
+    `<span class="bar" style="width:${(100 * a / top).toFixed(1)}%"></span><span class="v">${(100 * a).toFixed(1)}%</span>${sg(g)}${sg(c)}</div>`).join("");
+  $("rows").querySelectorAll(".row[data-k]").forEach(el => {
     el.onmouseenter = () => { const t = rows[+el.dataset.k].t; if (t.cells.length) { hover = t; render(); } };
     el.onmouseleave = () => { if (hover) { hover = null; render(); } };
   });
@@ -208,6 +221,9 @@ function go(d) { idx = (idx + d + DATA.positions.length) % DATA.positions.length
 $("prev").onclick = () => go(-1); $("next").onclick = () => go(1);
 $("jump").innerHTML = DATA.positions.map((p, i) => `<option value="${i}">${i + 1}. ${p.why} · ${p.teacher} · seed ${p.seed} #${p.n}</option>`).join("");
 $("jump").onchange = e => { idx = +e.target.value; sel = firstSel(DATA.positions[idx]); hover = null; render(); };
+$("src").querySelectorAll("button").forEach(b => b.onclick = () => {
+  src = b.dataset.s; $("src").querySelectorAll("button").forEach(x => x.className = x === b ? "on" : ""); render();
+});
 $("dens").onclick = () => { mode = "dens"; $("dens").className = "on"; $("mass").className = ""; render(); };
 $("mass").onclick = () => { mode = "mass"; $("mass").className = "on"; $("dens").className = ""; render(); };
 document.addEventListener("keydown", e => { if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); });

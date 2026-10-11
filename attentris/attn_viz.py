@@ -26,9 +26,18 @@ T_ID = T.PIECES.index("T")
 
 
 def run(net, d, idx):
+    """Move probabilities and the cross-attention (mean of heads); plus, per move and token, the
+    two terms of the attention score -- FLAT-2D geometry bias and content Q.K/sqrt(d), each the
+    mean over heads -- and what attention each term alone would give (softmax of that term)."""
+    net.cross.att.keep = True
+    b = TR.batch_of(d, idx)
     with torch.no_grad():
-        logit, att = net(TR.batch_of(d, idx), return_attn=True)
-    return logit.softmax(-1).numpy(), att["cross"].mean(1).numpy()       # (B, NC), (B, NC, NT)
+        logit, att = net(b, return_attn=True)
+    qk, bias = net.cross.att.kept                                        # (B, H, NC, NT)
+    pad = (b["tok_kind"] < 0)[:, None, None, :]
+    alone = lambda t: t.masked_fill(pad, float("-inf")).softmax(-1).mean(1).numpy()
+    return (logit.softmax(-1).numpy(), att["cross"].mean(1).numpy(),    # (B, NC), (B, NC, NT)
+            bias.mean(1).numpy(), qk.mean(1).numpy(), alone(bias), alone(qk))
 
 
 def main():
@@ -61,7 +70,7 @@ def main():
     per_t = {0: 0, 1: 0}
     for s in range(0, n, 512):
         idx = np.arange(s, min(n, s + 512))
-        prob, cross = run(net, d, idx)
+        prob, cross = run(net, d, idx)[:2]
         ch = d["chosen"][idx]
         top1 += int((prob.argmax(-1) == ch).sum())
         nc = d["n_cand"][idx]
@@ -161,8 +170,7 @@ def main():
             show += groups[g]
     pos = []
     for i in show:
-        prob, cross = run(net, d, np.array([i]))
-        prob, cross = prob[0], cross[0]
+        prob, cross, geo, cont, gal, cal = [t_[0] for t_ in run(net, d, np.array([i]))]
         nc = int(d["n_cand"][i])
         ch = int(d["chosen"][i])
         order = np.argsort(-prob[:nc])
@@ -187,7 +195,11 @@ def main():
             m = d["cand_meta"][i, c]
             return {"i": int(c), "cells": [int(x) for x in d["cand_cells"][i, c] if x >= 0], "piece": T.PIECES[m[0]],
                     "hold": int(m[1]), "spin": int(m[2]), "lines": int(m[3]), "attack": int(m[4]),
-                    "p": float(prob[c]), "attn": [float(cross[c, j]) for j, kd in enumerate(kinds) if kd >= 0]}
+                    "p": float(prob[c]), "attn": [float(cross[c, j]) for j, kd in enumerate(kinds) if kd >= 0],
+                    "geo": [round(float(geo[c, j]), 3) for j, kd in enumerate(kinds) if kd >= 0],
+                    "cont": [round(float(cont[c, j]), 3) for j, kd in enumerate(kinds) if kd >= 0],
+                    "gattn": [float(gal[c, j]) for j, kd in enumerate(kinds) if kd >= 0],
+                    "cattn": [float(cal[c, j]) for j, kd in enumerate(kinds) if kd >= 0]}
         why = why_new[i] if i in why_new else "T-spin into a T structure" if i in tspin_rows else ("bot filled a piece-shaped recess" if i in fits else "random position")
         pos.append({"why": why, "teacher": ["normal", "gate4"][d["teacher"][i]], "seed": int(d["seed"][i]), "n": int(d["n"][i]),
                     "board": d["cells"][i].tolist(), "tokens": toks, "chosen": cand(ch),

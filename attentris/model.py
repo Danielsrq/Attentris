@@ -87,7 +87,10 @@ class Attention(nn.Module):
         q = self.q(xq).view(B, Nq, self.h, self.dh).transpose(1, 2)
         k = self.k(xk).view(B, Nk, self.h, self.dh).transpose(1, 2)
         v = self.v(xk).view(B, Nk, self.h, self.dh).transpose(1, 2)
-        s = q @ k.transpose(-1, -2) / math.sqrt(self.dh) + bias
+        qk = q @ k.transpose(-1, -2) / math.sqrt(self.dh)        # content term
+        s = qk + bias                                            # + FLAT-2D geometry term
+        if getattr(self, "keep", False):                         # analysis only (attn_viz): keep both terms
+            self.kept = (qk.detach(), (bias + torch.zeros_like(qk)).detach())
         s = s.masked_fill(key_pad[:, None, None, :], float("-inf"))
         a = s.softmax(-1)                                        # (B, H, Nq, Nk)
         out = (a @ v).transpose(1, 2).reshape(B, Nq, d)
