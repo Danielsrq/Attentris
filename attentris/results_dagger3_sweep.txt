@@ -1,0 +1,46 @@
+== v51_dagger3_ft_A (lr 3e-4, 6 epochs)
+epoch 1: train loss 2.443 | val normal top1 0.621 top3 0.849 | val gate4 top1 0.601 top3 0.835 | | 57s
+epoch 1: val2 (val_danger.npz, 8812) top1 0.453 top3 0.715 loss 2.744 | argmax Qs top1 0.416 | MAE Qs 8.42
+epoch 2: train loss 2.395 | val normal top1 0.618 top3 0.851 | val gate4 top1 0.603 top3 0.835 | | 55s
+epoch 2: val2 (val_danger.npz, 8812) top1 0.450 top3 0.720 loss 2.715 | argmax Qs top1 0.423 | MAE Qs 8.13
+epoch 3: train loss 2.381 | val normal top1 0.621 top3 0.845 | val gate4 top1 0.604 top3 0.839 | | 58s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.456 top3 0.723 loss 2.703 | argmax Qs top1 0.427 | MAE Qs 8.08
+epoch 4: train loss 2.370 | val normal top1 0.621 top3 0.849 | val gate4 top1 0.606 top3 0.840 | | 54s
+epoch 4: val2 (val_danger.npz, 8812) top1 0.456 top3 0.723 loss 2.691 | argmax Qs top1 0.425 | MAE Qs 8.03
+epoch 5: train loss 2.361 | val normal top1 0.622 top3 0.850 | val gate4 top1 0.608 top3 0.839 | | 51s
+epoch 5: val2 (val_danger.npz, 8812) top1 0.458 top3 0.726 loss 2.687 | argmax Qs top1 0.430 | MAE Qs 8.02
+epoch 6: train loss 2.358 | val normal top1 0.624 top3 0.850 | val gate4 top1 0.607 top3 0.840 | | 53s
+epoch 6: val2 (val_danger.npz, 8812) top1 0.459 top3 0.725 loss 2.686 | argmax Qs top1 0.428 | MAE Qs 8.01
+== v51_dagger3_ft_B (lr 6e-4, 3 epochs)
+epoch 1: train loss 2.438 | val normal top1 0.615 top3 0.846 | val gate4 top1 0.602 top3 0.834 | | 57s
+epoch 1: val2 (val_danger.npz, 8812) top1 0.456 top3 0.715 loss 2.740 | argmax Qs top1 0.423 | MAE Qs 8.33
+epoch 2: train loss 2.393 | val normal top1 0.617 top3 0.849 | val gate4 top1 0.606 top3 0.833 | | 49s
+epoch 2: val2 (val_danger.npz, 8812) top1 0.454 top3 0.723 loss 2.700 | argmax Qs top1 0.426 | MAE Qs 8.07
+epoch 3: train loss 2.367 | val normal top1 0.619 top3 0.849 | val gate4 top1 0.606 top3 0.836 | | 50s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.458 top3 0.724 loss 2.689 | argmax Qs top1 0.426 | MAE Qs 8.03
+== v51_dagger3_ft_C (lr 6e-4, 6 epochs)
+epoch 1: train loss 2.443 | val normal top1 0.617 top3 0.845 | val gate4 top1 0.602 top3 0.831 | | 53s
+epoch 1: val2 (val_danger.npz, 8812) top1 0.452 top3 0.718 loss 2.743 | argmax Qs top1 0.427 | MAE Qs 8.32
+epoch 2: train loss 2.406 | val normal top1 0.611 top3 0.846 | val gate4 top1 0.603 top3 0.832 | | 49s
+epoch 2: val2 (val_danger.npz, 8812) top1 0.450 top3 0.716 loss 2.738 | argmax Qs top1 0.426 | MAE Qs 8.28
+epoch 3: train loss 2.387 | val normal top1 0.620 top3 0.846 | val gate4 top1 0.599 top3 0.836 | | 48s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.458 top3 0.721 loss 2.701 | argmax Qs top1 0.419 | MAE Qs 8.05
+epoch 4: train loss 2.369 | val normal top1 0.621 top3 0.845 | val gate4 top1 0.606 top3 0.834 | | 56s
+epoch 4: val2 (val_danger.npz, 8812) top1 0.455 top3 0.723 loss 2.686 | argmax Qs top1 0.424 | MAE Qs 7.98
+epoch 5: train loss 2.355 | val normal top1 0.622 top3 0.850 | val gate4 top1 0.604 top3 0.838 | | 50s
+epoch 5: val2 (val_danger.npz, 8812) top1 0.462 top3 0.725 loss 2.674 | argmax Qs top1 0.435 | MAE Qs 7.95
+epoch 6: train loss 2.347 | val normal top1 0.624 top3 0.851 | val gate4 top1 0.606 top3 0.838 | | 46s
+epoch 6: val2 (val_danger.npz, 8812) top1 0.460 top3 0.726 loss 2.673 | argmax Qs top1 0.431 | MAE Qs 7.94
+v51_dagger3_ft_A normal, no garbage: AtTenTris logit depth 1 style normal no garbage: APP 0.633 (APPfull 0.633), died 0/256, pieces 500 avg, TSD 5714, TST 60, quads 3696, max height 16, i
+v51_dagger3_ft_B normal, no garbage: AtTenTris logit depth 1 style normal no garbage: APP 0.629 (APPfull 0.629), died 0/256, pieces 500 avg, TSD 5661, TST 42, quads 3665, max height 16, i
+v51_dagger3_ft_C normal, no garbage: AtTenTris logit depth 1 style normal no garbage: APP 0.641 (APPfull 0.641), died 0/256, pieces 500 avg, TSD 5755, TST 59, quads 3686, max height 16, i
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+dagger3-ft(3e-4x3)_80/20            14/64      452   0.676    0.612   1.008    0.912 9613/10007
+A(3e-4x6)_80/20                     18/64      430   0.675    0.581   1.005    0.864 9063/9501
+B(6e-4x3)_80/20                     13/64      452   0.681    0.616   1.015    0.918 9658/9994
+C(6e-4x6)_80/20                     14/64      450   0.671    0.604   1.004    0.903 9577/9961
+dagger3-ft(3e-4x3)_50/50            43/64      318   0.474    0.301   0.780    0.496 6220/7067
+A(3e-4x6)_50/50                     47/64      308   0.480    0.296   0.784    0.484 5999/6860
+B(6e-4x3)_50/50                     51/64      290   0.475    0.276   0.776    0.450 5571/6487
+C(6e-4x6)_50/50                     36/64      341   0.478    0.326   0.788    0.538 6777/7558
