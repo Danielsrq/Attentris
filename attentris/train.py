@@ -147,6 +147,8 @@ def main():
     ap.add_argument("--d", type=int, default=64)
     ap.add_argument("--layers", type=int, default=4)
     ap.add_argument("--out", default=None, help="checkpoint (default DATA/model.pt; DATA/model_tome.pt for --arch tome)")
+    ap.add_argument("--cross-layers", type=int, default=1, help="attentris: independent cross-attention blocks (v5.2-untied: 2)")
+    ap.add_argument("--cross-loops", type=int, default=1, help="attentris: apply the cross block this many times, same weights (v5.2-loop: 2)")
     ap.add_argument("--arch", default="attentris", choices=("attentris", "tome"), help="tome = AtTenTris-ToMe (model_tome.py)")
     ap.add_argument("--merge", default="0,0.45,0.45,0.45", help="tome: fraction of cell tokens merged after attention, per layer")
     ap.add_argument("--tome-sky", action="store_true", help="tome: the sky starts as one token per column (model_tome sky=True)")
@@ -194,7 +196,7 @@ def main():
                                sky=args.tome_sky, pretok=args.tome_pretok, flat_bias=args.tome_flat,
                                streams=args.tome_streams).to(args.device)
     else:
-        net = M.AtTenTris(d=args.d, layers=args.layers).to(args.device)
+        net = M.AtTenTris(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops).to(args.device)
     print("device", args.device, torch.cuda.get_device_name(0) if args.device == "cuda" else "", flush=True)
     opt = torch.optim.AdamW(net.parameters(), lr=args.lr, weight_decay=0.01)
     steps = args.epochs * math.ceil(n / args.batch)

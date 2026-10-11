@@ -85,7 +85,8 @@ class Player:
                                         pretok=ck["args"].get("tome_pretok", False), flat_bias=ck["args"].get("tome_flat", False),
                                         streams=ck["args"].get("tome_streams", 1))
         else:
-            self.net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0])
+            self.net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0],
+                          cross_layers=ck["args"].get("cross_layers", 1), cross_loops=ck["args"].get("cross_loops", 1))
         missing = self.net.load_state_dict(ck["model"], strict=False).missing_keys
         if policy != "logit" and any(k.startswith(policy + ".") for k in missing):
             raise SystemExit("%s has no %s head (a v1 checkpoint?)" % (model_path, policy))

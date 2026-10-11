@@ -118,7 +118,7 @@ class Block(nn.Module):
 
 
 class AtTenTris(nn.Module):
-    def __init__(self, d=64, heads=4, layers=4, n_extra=12, n_teachers=2, n_kinds=N_KINDS):
+    def __init__(self, d=64, heads=4, layers=4, n_extra=12, n_teachers=2, n_kinds=N_KINDS, cross_layers=1, cross_loops=1):
         super().__init__()
         self.d = d
         self.val = nn.Embedding(2, d)
@@ -138,6 +138,12 @@ class AtTenTris(nn.Module):
         self.style = nn.Embedding(n_teachers, d)
         self.c_bias = Bias(heads)
         self.cross = Block(d, heads)
+        # v5.2: more cross-attention passes. cross_loops = K applies the same block (and bias) K times
+        # (weight-tied, "looped"); cross_layers = K uses K independent blocks, each with its own bias.
+        assert cross_layers == 1 or cross_loops == 1
+        self.cross_loops = cross_loops
+        self.cross_extra = nn.ModuleList(Block(d, heads) for _ in range(cross_layers - 1))
+        self.c_bias_extra = nn.ModuleList(Bias(heads) for _ in range(cross_layers - 1))
         self.c_norm = nn.LayerNorm(d)
         self.head = nn.Linear(d, 1)
         # value heads on the same candidate vector (v2): the teacher's 1-ply score of every
@@ -196,9 +202,13 @@ class AtTenTris(nn.Module):
         cmask = torch.zeros(B, cc.shape[1], 200, device=cells.device)
         cmask.scatter_(2, idx, onb.float())
         cfeats, cboth = pair_features(cbox, box, cmask, maskf)
-        y, ca = self.cross(y, self.c_bias(cfeats, cboth), pad, ctx=hb, ctx_norm=self.c_norm)
+        passes = [(self.cross, self.c_bias)] * self.cross_loops + list(zip(self.cross_extra, self.c_bias_extra))
+        cross_all = []
+        for blk, cb in passes:
+            y, ca = blk(y, cb(cfeats, cboth), pad, ctx=hb, ctx_norm=self.c_norm)
+            cross_all.append(ca)
         logit = self.head(y).squeeze(-1).masked_fill(cpad, float("-inf"))    # (B, NC)
         out = {"logit": logit, "q1": self.q1(y).squeeze(-1), "qs": self.qs(y).squeeze(-1)} if heads else logit
         if return_attn:
-            return out, {"self": attn, "cross": ca, "pool": w}
+            return out, {"self": attn, "cross": ca, "cross_all": cross_all, "pool": w}
         return out
