@@ -1,0 +1,4 @@
+== ToMe v4, merge 0,0.17,0.25,0.25 (trained with 0,0.17,0.17,0.17), Sun Oct 11 17:42:02 MPST 2026
+AtTenTris logit merge 0,0.17,0.25,0.25 depth 1 style normal no garbage: APP 0.506 (APPfull 0.485), died 9/64, pieces 479 avg, TSD 1085, TST 23, quads 539, max height 23, illegal 0, 34.4 ms/move (p90 45.4) + search 35.0 ms, 74s
+AtTenTris logit merge 0,0.17,0.25,0.25 depth 2 beam 4 style normal no garbage: APP 0.656 (APPfull 0.638), died 4/64, pieces 487 avg, TSD 1341, TST 23, quads 690, max height 22, illegal 0, 196.6 ms/move (p90 272.4) + search 197.3 ms, 403s
+tome m25 done

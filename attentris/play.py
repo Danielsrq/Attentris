@@ -72,7 +72,7 @@ def arrays(states, teacher, version=T.TOK_VERSION):
 
 
 class Player:
-    def __init__(self, model_path, depth, beam, teacher, mode, policy="logit", propose=0, temp=0.0, seed=0):
+    def __init__(self, model_path, depth, beam, teacher, mode, policy="logit", propose=0, temp=0.0, seed=0, merge=""):
         import torch
         import model as M
         torch.set_num_threads(1)
@@ -81,7 +81,7 @@ class Player:
         if tome:      # AtTenTris-ToMe: reads only the cells, the piece tokens and the candidates
             import model_tome as MT
             self.net = MT.AtTenTrisToMe(d=ck["args"]["d"], layers=ck["args"]["layers"],
-                                        merge=[float(f) for f in ck["args"]["merge"].split(",")], sky=ck["args"].get("tome_sky", False),
+                                        merge=[float(f) for f in (merge or ck["args"]["merge"]).split(",")], sky=ck["args"].get("tome_sky", False),
                                         pretok=ck["args"].get("tome_pretok", False), flat_bias=ck["args"].get("tome_flat", False),
                                         streams=ck["args"].get("tome_streams", 1))
         else:
@@ -196,7 +196,7 @@ class Player:
 def play_game(args, seed):
     pcores.pin(verbose=False)
     pl = Player(args.model, args.depth, args.beam, {"normal": 0, "gate4": 1}[args.style], args.mode, args.policy, args.propose,
-                temp=args.temp, seed=seed)
+                temp=args.temp, seed=seed, merge=args.merge)
     cmd = [BOT, "play-ext", "--mode", args.mode, "--pieces", str(args.pieces), "--seed", str(seed)]
     if args.shortlist or args.takeover >= 0:
         w = os.path.join(HERE, "..", "bot", "weights", "normal.txt") if args.style == "normal" else \
@@ -206,6 +206,8 @@ def play_game(args, seed):
         cmd += ["--garbage", args.garbage]
     if args.replay:   # Godot replay of the game (bot play-ext --replay)
         name = os.path.basename(args.model).replace("model_", "").replace(".pt", "") + "_d%d" % args.depth
+        if args.merge:      # ToMe at another merge schedule than it was trained with: say so in the replay's name
+            name += "_merge" + "-".join(f.split(".")[-1] if "." in f else f for f in args.merge.split(","))
         os.makedirs(args.replay, exist_ok=True)
         cmd += ["--replay", os.path.join(args.replay, "%s_s%d.jsonl" % (name, seed)), "--label", name]
     game = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=open(os.path.join(args.bot_log, "game_s%d.err" % seed), "w") if args.bot_log else subprocess.DEVNULL, text=True, bufsize=1)
@@ -272,6 +274,8 @@ def main():
     ap.add_argument("--jobs", type=int, default=0, help="parallel games (0 = P-core logical processors)")
     ap.add_argument("--out", default="")
     ap.add_argument("--bot-log", default="", help="directory for each game's bot stderr (debugging)")
+    ap.add_argument("--merge", default="", help="ToMe: play with this merge schedule (per layer, e.g. 0,0.17,0.25,0.25) "
+                                                "instead of the one it was trained with; no retraining")
     ap.add_argument("--dump", default="", help="write every state reached (seed, n, rows, b2b) to this JSONL")
     args = ap.parse_args()
     n_p = pcores.pin() or 8
@@ -282,9 +286,9 @@ def main():
     pieces = sum(r["pieces"] for r in res)
     attack = sum(r["attack"] for r in res)
     full = attack / (args.games * args.pieces)
-    line = ("AtTenTris %s%s%s depth %d%s style %s %s: APP %.3f (APPfull %.3f), died %d/%d, pieces %.0f avg, TSD %d, TST %d, quads %d, "
+    line = ("AtTenTris %s%s%s%s depth %d%s style %s %s: APP %.3f (APPfull %.3f), died %d/%d, pieces %.0f avg, TSD %d, TST %d, quads %d, "
             "max height %d, illegal %d, %.1f ms/move (p90 %.1f) + search %.1f ms, %.0fs") % (
-        args.policy, (" top%d" % args.propose) if args.propose else "", (" shortlist %d + V search" % args.shortlist) if args.shortlist else "", args.depth, "" if args.depth <= 1 else " beam %d" % args.beam, args.style, ("garbage " + args.garbage) if args.garbage else "no garbage",
+        args.policy, (" merge " + args.merge) if args.merge else "", (" top%d" % args.propose) if args.propose else "", (" shortlist %d + V search" % args.shortlist) if args.shortlist else "", args.depth, "" if args.depth <= 1 else " beam %d" % args.beam, args.style, ("garbage " + args.garbage) if args.garbage else "no garbage",
         attack / max(1, pieces), full, sum(r["died"] for r in res), args.games, pieces / args.games,
         sum(r["tsd"] for r in res), sum(r["tst"] for r in res), sum(r["quads"] for r in res),
         max(r["max_height"] for r in res), sum(r["illegal"] for r in res),

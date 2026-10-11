@@ -49,6 +49,8 @@ table.probs tr.on { background: var(--panel); outline: 1px solid var(--accent); 
 .row .k { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px; }
 .row .barw { height: 10px; border-radius: 3px; background: var(--bar); min-width: 1px; }
 .row .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.toggle .lab { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+.tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--accent); color: var(--accent); margin-left: 6px; }
 .note { color: var(--muted); font-size: 12.5px; max-width: 78ch; }
 .stats { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
 </style>
@@ -63,6 +65,7 @@ table.probs tr.on { background: var(--panel); outline: 1px solid var(--accent); 
     </div>
   </header>
   <div class="summary" id="summary"></div>
+  <div class="toggle" id="scheds" aria-label="Merge schedule"></div>
   <div class="meta"><div class="label" id="label"></div><div class="sub" id="sub"></div></div>
   <div class="main">
     <figure>
@@ -78,8 +81,11 @@ table.probs tr.on { background: var(--panel); outline: 1px solid var(--accent); 
       <div id="rows"></div>
     </div>
   </div>
-  <p class="note">No rule tokenizer: the board enters as 200 cell tokens plus 7 piece tokens. After attention in layers 2, 3 and 4, the most similar
-    4-adjacent blobs merge (45% of the cell tokens each time), so every blob is a connected region; candidates then cross-attend to the final blobs.
+  <p class="note">No rule tokenizer: the board enters as one sky token, solid blocks and single cells, plus 7 piece tokens. After attention in
+    each layer, the most similar 4-adjacent blobs merge (the <b>merge schedule</b>: the share of board tokens merged after layers 1–4), so every blob is
+    a connected region; candidates then cross-attend to the final blobs. The model was trained with one schedule; the others are the same weights
+    merging harder at inference (no retraining). Positions tagged <b>game at merge …</b> come from games played at that schedule, labelled afterwards
+    by the teacher.
     <b>Layer views</b> colour each blob (darker = filled cells, lighter = empty cells) with its outline. <b>Attention</b> paints the selected move's
     cross-attention through the final blobs, divided by blob size so a big sky blob and a 3-cell gap compare fairly. Dashed outline: the teacher's move;
     blue: the selected move (the model's top pick by default). Hover a row of the token list to outline that blob in pink. Keys: ← →.</p>
@@ -89,7 +95,7 @@ table.probs tr.on { background: var(--panel); outline: 1px solid var(--accent); 
 const DATA = __DATA__;
 const CS = 20, ROWS = 20, COLS = 10;
 const P = DATA.positions;
-let idx = 0, view = null, sel = 0, hoverJ = null;   // hoverJ: final token highlighted from the list
+let idx = 0, view = null, sel = 0, hoverJ = null, si = P.length ? P[0].home : 0;   // si: merge schedule shown   // hoverJ: final token highlighted from the list
 const $ = id => document.getElementById(id);
 const X = c => c * CS, Y = r => (ROWS - 1 - r) * CS;
 const SPIN = ["", " mini", " spin"];
@@ -122,14 +128,19 @@ function blobColour(n, filled) {
   return `hsl(${h.toFixed(0)} 55% ${filled ? css("--blob-l-filled") : css("--blob-l-empty")})`;
 }
 
+const schedName = k => DATA.schedules[k].split(",").map(f => f.replace(/^0\./, ".")).join(" · ") + (DATA.schedules[k] === DATA.trained ? " (trained)" : "");
 function render() {
-  const p = P[idx];
+  const p = Object.assign({}, P[idx], P[idx].sched[si]);
+  $("scheds").innerHTML = DATA.schedules.length < 2 ? "" : `<span class="lab">Merge schedule</span>` + DATA.schedules.map((sc, k) =>
+    `<button data-s="${k}" class="${k === si ? "on" : ""}">${schedName(k)}${k === P[idx].home && P[idx].why.startsWith("game") ? " · played" : ""}</button>`).join("");
+  $("scheds").querySelectorAll("button").forEach(b => b.onclick = () => { si = +b.dataset.s; sel = 0; hoverJ = null; render(); });
   const multi = (DATA.streams || 1) > 1;
   const views = p.layers.map((L, i) => ({ key: "L" + i, name: `after layer ${L.layer}${multi ? " · stream " + (L.stream + 1) : ""}` })).concat([{ key: "attn", name: "attention" }]);
   if (!view || !views.some(v => v.key === view)) view = "L" + (p.layers.length - (multi ? DATA.streams : 1));   // default: the final blobs (stream 1)
   $("count").textContent = `${idx + 1} / ${P.length}`;
   $("jump").value = idx;
-  $("label").textContent = `${p.why} · ${p.teacher} teacher · seed ${p.seed}, placement ${p.n}`;
+  $("label").innerHTML = `${p.why} · ${p.teacher} teacher · seed ${p.seed}, placement ${p.n}` +
+    (DATA.schedules.length > 1 ? `<span class="tag">shown at merge ${schedName(si)}</span>` : "");
   $("sub").textContent = `Teacher played ${candLabel(p.chosen)}: the model ranks it #${p.rank} of ${p.n_cand} (p = ${(100 * p.chosen.p).toFixed(0)}%).`;
   $("views").innerHTML = views.map(v => `<button data-v="${v.key}" class="${v.key === view ? "on" : ""}">${v.name}</button>`).join("");
   $("views").querySelectorAll("button").forEach(b => b.onclick = () => { view = b.dataset.v; render(); });
@@ -197,7 +208,7 @@ function render() {
   }).join("");
 }
 
-function go(dlt) { idx = (idx + dlt + P.length) % P.length; sel = 0; hoverJ = null; render(); }
+function go(dlt) { idx = (idx + dlt + P.length) % P.length; sel = 0; hoverJ = null; si = P[idx].home; render(); }
 document.getElementById("rows").addEventListener("mouseover", e => {
   const el = e.target.closest(".row"); const j = el ? +el.dataset.j : null;
   if (j !== hoverJ) { hoverJ = j; render(); }
@@ -206,10 +217,12 @@ document.getElementById("rows").addEventListener("mouseleave", () => { if (hover
 $("prev").onclick = () => go(-1);
 $("next").onclick = () => go(1);
 $("jump").innerHTML = P.map((p, i) => `<option value="${i}">${i + 1}. ${p.why} · ${p.teacher} · seed ${p.seed} #${p.n}</option>`).join("");
-$("jump").onchange = e => { idx = +e.target.value; sel = 0; render(); };
+$("jump").onchange = e => { idx = +e.target.value; sel = 0; hoverJ = null; si = P[idx].home; render(); };
 document.addEventListener("keydown", e => { if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); });
 const v = DATA.val || {};
 $("summary").innerHTML = `<div><b>${DATA.model}</b></div>` +
-  (v.normal !== undefined ? `<div><b>${(100 * v.normal).toFixed(1)}% / ${(100 * v.gate4).toFixed(1)}%</b> <span>top-1 agreement with the normal / gate4 teacher (10,000 held-out positions)</span></div>` : "");
+  ((DATA.val_sched || []).length ? DATA.val_sched.map((w, k) => `<div><b>${(100 * w.normal).toFixed(1)}% / ${(100 * w.gate4).toFixed(1)}%</b> <span>top-1, normal / gate4 teacher, at merge ${schedName(k)}</span></div>`).join("")
+   : v.normal !== undefined ? `<div><b>${(100 * v.normal).toFixed(1)}% / ${(100 * v.gate4).toFixed(1)}%</b> <span>top-1 agreement with the normal / gate4 teacher (10,000 held-out positions)</span></div>` : "") +
+  ((DATA.play || []).map(t => `<div><b>${t.value}</b> <span>${t.label}</span></div>`).join(""));
 render();
 </script>
