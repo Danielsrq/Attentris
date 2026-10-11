@@ -226,7 +226,11 @@ def play_game(args, seed):
             break
         if auto:      # the danger style on trouble boards, normal otherwise (decided per move)
             b = T.board_from_replay(P.rows_to_strings(st["rows"]))
-            hot = int(T.heights(b).max()) >= args.auto_height or T.holes_of(b) >= args.auto_holes
+            mh, nh = int(T.heights(b).max()), T.holes_of(b)
+            hot = mh >= args.auto_height or nh >= args.auto_holes
+            if not hot and pl.teacher == STYLES["danger"] and args.auto_exit_height >= 0:
+                # hysteresis: once in danger, stay until the board is this clean
+                hot = mh >= args.auto_exit_height or nh > args.auto_exit_holes
             pl.teacher = STYLES["danger"] if hot else STYLES["normal"]
             danger_moves += hot
         if args.dump:
@@ -282,6 +286,9 @@ def main():
     ap.add_argument("--temp", type=float, default=0.0, help="depth 1: sample moves from the policy at this temperature (0 = argmax)")
     ap.add_argument("--auto-height", type=int, default=12, help="--style auto: the danger style when the stack is at least this high")
     ap.add_argument("--auto-holes", type=int, default=6, help="--style auto: ... or has at least this many holes")
+    ap.add_argument("--auto-exit-height", type=int, default=-1, help="--style auto, hysteresis: once in danger, back to normal only "
+                    "when the stack is below this (and holes <= --auto-exit-holes); -1 = no hysteresis")
+    ap.add_argument("--auto-exit-holes", type=int, default=0)
     ap.add_argument("--takeover", type=int, default=-1, help="the model plays until this move, then the teacher's full search takes over (0 = teacher alone)")
     ap.add_argument("--teacher-weights", default="", help="--shortlist / --takeover: the teacher's weights (default normal.txt, gate4.txt for --style gate4)")
     ap.add_argument("--shortlist", type=int, default=0, help="intuition + calculation: the policy's top-k moves, then the "

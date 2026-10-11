@@ -1,0 +1,69 @@
+r10 none: APP 0.616 (APPfull 0.616), died 0/256, pieces 500 avg, TSD 5615, TST 60, quads 3692, max height 15, illegal 0, 13.2 ms/move (p90 15.5) + search 13.9 ms, 115s, danger style on 20.3% of moves (height >= 10 or holes >= 4)
+r10 g20: APP 0.694 (APPfull 0.610), died 16/64, pieces 440 avg, TSD 877, TST 4, quads 2006, max height 20, illegal 0, 12.1 ms/move (p90 14.5) + search 12.8 ms, 28s, danger style on 64.6% of moves (height >= 10 or holes >= 4)
+r10 g50: APP 0.474 (APPfull 0.286), died 48/64, pieces 302 avg, TSD 466, TST 1, quads 775, max height 21, illegal 0, 12.1 ms/move (p90 14.4) + search 12.8 ms, 20s, danger style on 83.4% of moves (height >= 10 or holes >= 4)
+r8 none: APP 0.605 (APPfull 0.605), died 0/256, pieces 500 avg, TSD 5635, TST 51, quads 3753, max height 15, illegal 0, 13.4 ms/move (p90 15.7) + search 14.0 ms, 117s, danger style on 39.5% of moves (height >= 8 or holes >= 3)
+r8 g20: APP 0.687 (APPfull 0.638), died 10/64, pieces 465 avg, TSD 966, TST 5, quads 2086, max height 21, illegal 0, 12.4 ms/move (p90 14.7) + search 13.0 ms, 29s, danger style on 79.0% of moves (height >= 8 or holes >= 3)
+r8 g50: APP 0.467 (APPfull 0.272), died 50/64, pieces 291 avg, TSD 441, TST 4, quads 739, max height 22, illegal 0, 12.2 ms/move (p90 14.6) + search 12.9 ms, 20s, danger style on 89.3% of moves (height >= 8 or holes >= 3)
+r8s none: APP 0.601 (APPfull 0.601), died 0/256, pieces 500 avg, TSD 5618, TST 49, quads 3702, max height 15, illegal 0, 14.1 ms/move (p90 16.8) + search 14.8 ms, 123s, danger style on 59.6% of moves (height >= 8 or holes >= 3)
+r8s g20: APP 0.671 (APPfull 0.617), died 13/64, pieces 460 avg, TSD 915, TST 5, quads 2051, max height 23, illegal 0, 13.7 ms/move (p90 16.9) + search 14.5 ms, 32s, danger style on 90.9% of moves (height >= 8 or holes >= 3)
+r8s g50: APP 0.469 (APPfull 0.275), died 49/64, pieces 293 avg, TSD 435, TST 5, quads 754, max height 22, illegal 0, 13.4 ms/move (p90 16.8) + search 14.2 ms, 22s, danger style on 94.6% of moves (height >= 8 or holes >= 3)
+r12 none: APP 0.629 (APPfull 0.629), died 0/256, pieces 500 avg, TSD 5756, TST 55, quads 3657, max height 16, illegal 0, 13.7 ms/move (p90 16.2) + search 14.3 ms, 120s, danger style on 8.2% of moves (height >= 12 or holes >= 6)
+r12 g20: APP 0.703 (APPfull 0.551), died 27/64, pieces 392 avg, TSD 841, TST 3, quads 1784, max height 23, illegal 0, 12.5 ms/move (p90 15.1) + search 13.2 ms, 26s, danger style on 45.8% of moves (height >= 12 or holes >= 6)
+r12 g50: APP 0.480 (APPfull 0.257), died 55/64, pieces 268 avg, TSD 447, TST 0, quads 658, max height 21, illegal 0, 12.1 ms/move (p90 14.4) + search 12.8 ms, 19s, danger style on 68.9% of moves (height >= 12 or holes >= 6)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+auto_r12_none                        0/256      500   0.629    0.629   0.629    0.629         -
+auto_r12_g20                        27/64      392   0.703    0.551   1.027    0.804 8115/8686
+auto_r12_g50                        55/64      268   0.480    0.257   0.773    0.414 5025/5985
+auto_r10_none                        0/256      500   0.616    0.616   0.616    0.616         -
+auto_r10_g20                        16/64      440   0.694    0.610   1.026    0.902 9336/9735
+auto_r10_g50                        48/64      302   0.474    0.286   0.775    0.468 5825/6721
+auto_r8_none                         0/256      500   0.605    0.605   0.605    0.605         -
+auto_r8_g20                         10/64      465   0.687    0.638   1.020    0.948 9899/10262
+auto_r8_g50                         50/64      291   0.467    0.272   0.766    0.446 5559/6476
+auto_r8s_none                        0/256      500   0.601    0.601   0.601    0.601         -
+auto_r8s_g20                        13/64      460   0.671    0.617   1.003    0.923 9780/10160
+auto_r8s_g50                        49/64      293   0.469    0.275   0.768    0.450 5605/6506
+h10 none: 
+h10 g20: APP 0.695 (APPfull 0.618), died 16/64, pieces 445 avg, TSD 891, TST 3, quads 2028, max height 22, illegal 0, 16.9 ms/move (p90 28.5) + search 18.4 ms, 46s, danger style on 57.3% of moves (height >= 10 or holes >= 6)
+h10 g50: APP 0.474 (APPfull 0.234), died 58/64, pieces 246 avg, TSD 402, TST 4, quads 580, max height 22, illegal 0, 17.0 ms/move (p90 28.0) + search 18.4 ms, 31s, danger style on 75.5% of moves (height >= 10 or holes >= 6)
+h8 none: APP 0.622 (APPfull 0.622), died 0/64, pieces 500 avg, TSD 1434, TST 9, quads 958, max height 14, illegal 0, 18.8 ms/move (p90 30.9) + search 20.3 ms, 58s, danger style on 34.4% of moves (height >= 8 or holes >= 6)
+h8 g20: APP 0.700 (APPfull 0.604), died 18/64, pieces 431 avg, TSD 922, TST 2, quads 1925, max height 23, illegal 0, 17.1 ms/move (p90 28.8) + search 18.5 ms, 46s, danger style on 72.2% of moves (height >= 8 or holes >= 6)
+h8 g50: APP 0.480 (APPfull 0.255), died 55/64, pieces 266 avg, TSD 445, TST 1, quads 657, max height 22, illegal 0, 16.2 ms/move (p90 25.7) + search 17.5 ms, 32s, danger style on 84.3% of moves (height >= 8 or holes >= 6)
+h8s none: APP 0.605 (APPfull 0.605), died 0/64, pieces 500 avg, TSD 1435, TST 20, quads 914, max height 14, illegal 0, 19.2 ms/move (p90 32.9) + search 20.8 ms, 55s, danger style on 52.4% of moves (height >= 8 or holes >= 6)
+h8s g20: APP 0.675 (APPfull 0.596), died 18/64, pieces 442 avg, TSD 854, TST 6, quads 1992, max height 21, illegal 0, 12.5 ms/move (p90 15.0) + search 13.2 ms, 29s, danger style on 88.2% of moves (height >= 8 or holes >= 6)
+h8s g50: APP 0.469 (APPfull 0.301), died 44/64, pieces 321 avg, TSD 486, TST 5, quads 811, max height 21, illegal 0, 12.4 ms/move (p90 14.8) + search 13.1 ms, 21s, danger style on 93.0% of moves (height >= 8 or holes >= 6)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+auto_r12_none                        0/256      500   0.629    0.629   0.629    0.629         -
+auto_r12_g20                        27/64      392   0.703    0.551   1.027    0.804 8115/8686
+auto_r12_g50                        55/64      268   0.480    0.257   0.773    0.414 5025/5985
+auto_r10_none                        0/256      500   0.616    0.616   0.616    0.616         -
+auto_r10_g20                        16/64      440   0.694    0.610   1.026    0.902 9336/9735
+auto_r10_g50                        48/64      302   0.474    0.286   0.775    0.468 5825/6721
+auto_r8_none                         0/256      500   0.605    0.605   0.605    0.605         -
+auto_r8_g20                         10/64      465   0.687    0.638   1.020    0.948 9899/10262
+auto_r8_g50                         50/64      291   0.467    0.272   0.766    0.446 5559/6476
+auto_r8s_none                        0/256      500   0.601    0.601   0.601    0.601         -
+auto_r8s_g20                        13/64      460   0.671    0.617   1.003    0.923 9780/10160
+auto_r8s_g50                        49/64      293   0.469    0.275   0.768    0.450 5605/6506
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+auto_r12_none                        0/256      500   0.629    0.629   0.629    0.629         -
+auto_r12_g20                        27/64      392   0.703    0.551   1.027    0.804 8115/8686
+auto_r12_g50                        55/64      268   0.480    0.257   0.773    0.414 5025/5985
+auto_r10_none                        0/256      500   0.616    0.616   0.616    0.616         -
+auto_r10_g20                        16/64      440   0.694    0.610   1.026    0.902 9336/9735
+auto_r10_g50                        48/64      302   0.474    0.286   0.775    0.468 5825/6721
+auto_r8_none                         0/256      500   0.605    0.605   0.605    0.605         -
+auto_r8_g20                         10/64      465   0.687    0.638   1.020    0.948 9899/10262
+auto_r8_g50                         50/64      291   0.467    0.272   0.766    0.446 5559/6476
+auto_r8s_none                        0/256      500   0.601    0.601   0.601    0.601         -
+auto_r8s_g20                        13/64      460   0.671    0.617   1.003    0.923 9780/10160
+auto_r8s_g50                        49/64      293   0.469    0.275   0.768    0.450 5605/6506
+auto_h10_none                        0/64      500   0.621    0.621   0.621    0.621         -
+auto_h10_g20                        16/64      445   0.695    0.618   1.025    0.912 9398/9853
+auto_h10_g50                        58/64      246   0.474    0.234   0.758    0.374 4488/5509
+auto_h8_none                         0/64      500   0.622    0.622   0.622    0.622         -
+auto_h8_g20                         18/64      431   0.700    0.604   1.030    0.888 9088/9547
+auto_h8_g50                         55/64      266   0.480    0.255   0.771    0.409 4954/5933
+auto_h8s_none                        0/64      500   0.605    0.605   0.605    0.605         -
+auto_h8s_g20                        18/64      442   0.675    0.596   1.005    0.887 9321/9794
+auto_h8s_g50                        44/64      321   0.469    0.301   0.775    0.497 6291/7123
