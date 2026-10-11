@@ -148,7 +148,7 @@ class Player:
             if q is None:
                 if self.temp > 0:                     # sample (DAgger collection: more varied student games)
                     t = np.exp((lp - lp.max()) / self.temp)
-                    return root["cands"][int(self.rng.choice(n, p=t / t.sum()))]
+                    return root["cands"][int(self.rng.choice(len(t), p=t / t.sum()))]   # the scored moves (<= NC)
                 return root["cands"][int(np.argmax(lp))]
             ids = self.allowed(logp[0], n)
             return root["cands"][int(ids[np.argmax(q[0][ids])])]

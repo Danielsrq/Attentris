@@ -2,7 +2,7 @@
 # DAgger round 2, DATA COLLECTION ONLY (no training): the students play, informative states are
 # selected, the teacher labels them.
 #   1. play: v5.1 and ToMe v4 at depth 1 on fresh seeds (30001+, not the test seeds 5001+ or the
-#      dataset seeds), 100 games each of: greedy, sampled (temperature 1: more varied games), and
+#      dataset seeds), 100 games each of: greedy, sampled (temperature 0.5: more varied games; 1.0 was too random, 0.15 APP), and
 #      with garbage (10,3-4,cheese0.2,0.2: the high-stack boards where the models die); every state
 #      dumped with the student's move entropy
 #   2. select (dagger_select.py): states near deaths, danger boards, teacher-value drops, unsure
@@ -26,7 +26,7 @@ for m in v51 tome_v4; do
         rm -f "$D/$tag.games" "$D/$tag.jsonl"
         case $kind in
             greedy)  extra="--seed 30001" ;;
-            sampled) extra="--seed 31001 --temp 1.0" ;;
+            sampled) extra="--seed 31001 --temp 0.5" ;;
             garbage) extra="--seed 32001 --garbage 10,3-4,cheese0.2,0.2" ;;
         esac
         echo "$tag: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --games 100 --depth 1 $extra --out "$D/$tag.games" --dump "$D/$tag.jsonl" | grep "^AtTenTris")"
