@@ -1,0 +1,3 @@
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+CEM-depth6, 100% cheese              7/16      364   0.531    0.386   0.842    0.612 1810/1993
+CEM-survival-depth6, 100% cheese     0/16      500   0.547    0.547   0.885    0.885 2704/2742
