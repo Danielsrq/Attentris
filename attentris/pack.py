@@ -37,7 +37,7 @@ NT = T.K_BOARD + T.P_MAX + 7
 NC = 96
 NE = 12
 PIECE_ID = {p: i for i, p in enumerate(T.PIECES)}
-TEACHERS = ("normal", "gate4")
+TEACHERS = ("normal", "gate4", "danger")   # danger: CEM-survival on the students' trouble positions (DAgger 3)
 KIND_ID = {k: i for i, k in enumerate(T.KINDS)}
 FIT_ORIENT = ("flat", "upright", "nub down", "three on top", "hook on top")
 

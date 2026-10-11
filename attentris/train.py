@@ -30,6 +30,7 @@ import tokenizer as T
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 assert len(T.KINDS) <= M.N_KINDS
+TEACH = ("normal", "gate4", "danger")      # pack.TEACHERS
 
 
 def load(path):
@@ -101,7 +102,7 @@ def evaluate(net, d, batch, args, device="cpu"):
     net.eval()
     n = len(d["chosen"])
     keys = ("n", "top1", "top3", "loss", "q1_top1", "qs_top1", "q1_err", "q1_cnt", "qs_err", "qs_cnt")
-    stats = {t: dict.fromkeys(keys, 0.0) for t in (0, 1)}
+    stats = {t: dict.fromkeys(keys, 0.0) for t in range(len(TEACH))}
     with torch.no_grad():
         for s in range(0, n, batch):
             idx = np.arange(s, min(n, s + batch))
@@ -118,7 +119,7 @@ def evaluate(net, d, batch, args, device="cpu"):
             bm = real & ~torch.isnan(best)
             es = ((out["qs"] * M.Q_SCALE - best).abs() * bm).nan_to_num(0.0)
             teach = d["teacher"][idx]
-            for t in (0, 1):
+            for t in range(len(TEACH)):
                 m = torch.from_numpy(teach == t).to(device)
                 st = stats[t]
                 st["n"] += int(m.sum()); st["top1"] += int(t1[m].sum()); st["top3"] += int(t3[m].sum())
@@ -127,7 +128,7 @@ def evaluate(net, d, batch, args, device="cpu"):
                 st["qs_err"] += float(es[m].sum()); st["qs_cnt"] += int(bm[m].sum())
     net.train()
     res = {}
-    for t, name in ((0, "normal"), (1, "gate4")):
+    for t, name in enumerate(TEACH):
         st = stats[t]
         p = max(1, st["n"])
         res[name] = {"top1": st["top1"] / p, "top3": st["top3"] / p, "loss": st["loss"] / p, "n": st["n"],
@@ -160,6 +161,7 @@ def main():
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--save-every", type=int, default=300, help="mid-epoch checkpoint every N batches (0 = epoch ends only)")
     ap.add_argument("--seed", type=int, default=0, help="weight init and batch order")
+    ap.add_argument("--n-teachers", type=int, default=2, help="style rows (3: + danger); a smaller --init checkpoint grows, new rows copied from normal")
     ap.add_argument("--init", default="", help="warm start: load these model weights, fresh optimizer and schedule")
     ap.add_argument("--limit", type=int, default=0, help="use a random N-position subset (smoke tests, learning curves)")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -218,7 +220,8 @@ def main():
                                sky=args.tome_sky, pretok=args.tome_pretok, flat_bias=args.tome_flat,
                                streams=args.tome_streams).to(args.device)
     else:
-        net = M.AtTenTris(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops).to(args.device)
+        net = M.AtTenTris(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops,
+                          n_teachers=args.n_teachers).to(args.device)
     print("device", args.device, torch.cuda.get_device_name(0) if args.device == "cuda" else "", flush=True)
     opt = torch.optim.AdamW(net.parameters(), lr=args.lr, weight_decay=0.01)
     steps = args.epochs * math.ceil(m / args.batch)
@@ -227,6 +230,10 @@ def main():
     start_batch, perm0, tot0, cnt0 = 0, None, 0.0, 0
     if args.init:
         ck0 = torch.load(args.init, map_location=args.device, weights_only=False)
+        sw = ck0["model"].get("style.weight")
+        if sw is not None and sw.shape[0] < args.n_teachers:   # a new style: starts as a copy of normal's
+            ck0["model"]["style.weight"] = torch.cat([sw, sw[:1].repeat(args.n_teachers - sw.shape[0], 1)])
+            print("style table grown %d -> %d rows (new rows = normal)" % (sw.shape[0], args.n_teachers), flush=True)
         net.load_state_dict(ck0["model"])
         print("warm start from %s (%d epochs)" % (args.init, len(ck0.get("log", []))), flush=True)
     if args.resume and os.path.exists(out):
@@ -312,7 +319,7 @@ def main():
             (ev["normal"]["q1_mae"] + ev["gate4"]["q1_mae"]) / 2, (ev["normal"]["qs_mae"] + ev["gate4"]["qs_mae"]) / 2,
             time.time() - t0), flush=True)
         if va2 is not None:
-            v2 = rec["val2"]["normal"]
+            v2 = max(rec["val2"].values(), key=lambda v: v["n"])     # the teacher the val2 set is labelled by
             print("epoch %d: val2 (%s, %d) top1 %.3f top3 %.3f loss %.3f | argmax Qs top1 %.3f | MAE Qs %.2f" % (
                 ep + 1, args.val2, v2["n"], v2["top1"], v2["top3"], v2["loss"], v2["qs_top1"], v2["qs_mae"]), flush=True)
         save(out, ep, {"batch": None})

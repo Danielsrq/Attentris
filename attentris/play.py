@@ -29,6 +29,7 @@ import tokenizer as T
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BOT = os.path.join(HERE, "..", "bot", "target", "release", "bot.exe")
+STYLES = {t: i for i, t in enumerate(P.TEACHERS)}     # the style input: normal 0, gate4 1, danger 2
 
 
 def readjson(proc):
@@ -86,7 +87,9 @@ class Player:
                                         streams=ck["args"].get("tome_streams", 1))
         else:
             self.net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0],
-                          cross_layers=ck["args"].get("cross_layers", 1), cross_loops=ck["args"].get("cross_loops", 1))
+                          cross_layers=ck["args"].get("cross_layers", 1), cross_loops=ck["args"].get("cross_loops", 1),
+                          n_teachers=ck["model"]["style.weight"].shape[0])
+            self.n_styles = ck["model"]["style.weight"].shape[0]
         missing = self.net.load_state_dict(ck["model"], strict=False).missing_keys
         if policy != "logit" and any(k.startswith(policy + ".") for k in missing):
             raise SystemExit("%s has no %s head (a v1 checkpoint?)" % (model_path, policy))
@@ -195,11 +198,14 @@ class Player:
 
 def play_game(args, seed):
     pcores.pin(verbose=False)
-    pl = Player(args.model, args.depth, args.beam, {"normal": 0, "gate4": 1}[args.style], args.mode, args.policy, args.propose,
+    auto = args.style == "auto"
+    pl = Player(args.model, args.depth, args.beam, STYLES["normal" if auto else args.style], args.mode, args.policy, args.propose,
                 temp=args.temp, seed=seed, merge=args.merge)
     cmd = [BOT, "play-ext", "--mode", args.mode, "--pieces", str(args.pieces), "--seed", str(seed)]
+    if auto and getattr(pl, "n_styles", 2) < 3:
+        raise SystemExit("--style auto needs a model with a danger style (3 style rows)")
     if args.shortlist or args.takeover >= 0:
-        w = args.teacher_weights or (os.path.join(HERE, "..", "bot", "weights", "normal.txt") if args.style == "normal" else
+        w = args.teacher_weights or (os.path.join(HERE, "..", "bot", "weights", "normal.txt") if args.style != "gate4" else
                                      os.path.join(HERE, "..", "bot", "results", "gate4", "gate4.txt"))
         cmd += ["--shortlist", "--weights", w, "--threads", "1", "--any-cores"]
     if args.garbage:
@@ -213,10 +219,16 @@ def play_game(args, seed):
     game = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=open(os.path.join(args.bot_log, "game_s%d.err" % seed), "w") if args.bot_log else subprocess.DEVNULL, text=True, bufsize=1)
     times = []
     states = []
+    danger_moves = 0
     while True:
         st = readjson(game)
         if st.get("done"):
             break
+        if auto:      # the danger style on trouble boards, normal otherwise (decided per move)
+            b = T.board_from_replay(P.rows_to_strings(st["rows"]))
+            hot = int(T.heights(b).max()) >= args.auto_height or T.holes_of(b) >= args.auto_holes
+            pl.teacher = STYLES["danger"] if hot else STYLES["normal"]
+            danger_moves += hot
         if args.dump:
             states.append({"seed": seed, "n": st["n"], "rows": st["rows"], "b2b": st["b2b"], "piece": st["piece"],
                            "queue": st["queue"], "hold": st["hold"], "style": args.style})
@@ -243,6 +255,7 @@ def play_game(args, seed):
         game.stdin.flush()
     game.wait()
     pl.close()
+    st["danger_moves"] = danger_moves
     st["ms_per_move"] = 1000 * float(np.mean(times)) if times else 0.0
     st["ms_p90"] = 1000 * float(np.percentile(times, 90)) if times else 0.0
     st["states"] = states
@@ -261,11 +274,14 @@ def main():
     ap.add_argument("--seed", type=int, default=5001)
     ap.add_argument("--depth", type=int, default=1)
     ap.add_argument("--beam", type=int, default=8)
-    ap.add_argument("--style", default="normal", choices=("normal", "gate4"))
+    ap.add_argument("--style", default="normal", choices=("normal", "gate4", "danger", "auto"),
+                    help="the style input; auto = danger on trouble boards (--auto-height / --auto-holes), normal otherwise")
     ap.add_argument("--policy", default="logit", choices=("logit", "q1", "qs"), help="score moves by the policy or a value head")
     ap.add_argument("--propose", type=int, default=0, help="with a value head: choose only among the policy's top-k moves (0 = all)")
     ap.add_argument("--replay", default="", help="directory: write each game as a Godot replay (JSONL, the viewer's format)")
     ap.add_argument("--temp", type=float, default=0.0, help="depth 1: sample moves from the policy at this temperature (0 = argmax)")
+    ap.add_argument("--auto-height", type=int, default=12, help="--style auto: the danger style when the stack is at least this high")
+    ap.add_argument("--auto-holes", type=int, default=6, help="--style auto: ... or has at least this many holes")
     ap.add_argument("--takeover", type=int, default=-1, help="the model plays until this move, then the teacher's full search takes over (0 = teacher alone)")
     ap.add_argument("--teacher-weights", default="", help="--shortlist / --takeover: the teacher's weights (default normal.txt, gate4.txt for --style gate4)")
     ap.add_argument("--shortlist", type=int, default=0, help="intuition + calculation: the policy's top-k moves, then the "
@@ -295,6 +311,9 @@ def main():
         max(r["max_height"] for r in res), sum(r["illegal"] for r in res),
         float(np.mean([r["ms_per_move"] for r in res])), float(np.mean([r["ms_p90"] for r in res])),
         float(np.mean([r.get("search_ms", 0.0) for r in res])), time.time() - t0)
+    if args.style == "auto":
+        line += ", danger style on %.1f%% of moves (height >= %d or holes >= %d)" % (
+            100 * sum(r["danger_moves"] for r in res) / max(1, pieces), args.auto_height, args.auto_holes)
     print(line, flush=True)
     if args.dump:
         with open(args.dump, "w") as f:

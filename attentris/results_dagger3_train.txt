@@ -1,0 +1,21 @@
+== dagger3 training Sun Oct 11 22:10:56 MPST 2026
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+scoring val_danger.npz as style normal
+model_v51_dagger_ft.pt on val_danger.npz (normal, 8812): top1 0.434 top3 0.694 loss 3.505 | argmax Qs top1 0.388 | MAE Qs 16.23
+danger mix: existing files at 0.1712 each per epoch
+== v51_dagger3_ft
+epoch 3: train loss 2.373 | val normal top1 0.622 top3 0.850 | val gate4 top1 0.605 top3 0.838 | argmax Qs top1 0.541 / 0.550, Q1 top1 0.272 / 0.277 | MAE Q1 16.56 Qs 6.06 | 46s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.458 top3 0.722 loss 2.703 | argmax Qs top1 0.424 | MAE Qs 8.11
+dagger-ft style normal: AtTenTris logit depth 1 style normal no garbage: APP 0.640 (APPfull 0.640), died 0/256, pieces 500 avg, TSD 5823, TST 55, quads 3538, max height 17, illegal 0, 13.7 ms/move (p90 16.1) + search 14.1 ms, 118s
+dagger3-ft style normal: AtTenTris logit depth 1 style normal no garbage: APP 0.631 (APPfull 0.631), died 0/256, pieces 500 avg, TSD 5816, TST 71, quads 3566, max height 16, illegal 0, 14.3 ms/move (p90 17.1) + search 14.8 ms, 123s
+dagger3-ft style danger: AtTenTris logit depth 1 style danger no garbage: APP 0.569 (APPfull 0.569), died 0/256, pieces 500 avg, TSD 5466, TST 62, quads 3598, max height 14, illegal 0, 14.0 ms/move (p90 16.5) + search 14.4 ms, 121s
+dagger3-ft style auto: AtTenTris logit depth 1 style auto no garbage: APP 0.629 (APPfull 0.629), died 0/256, pieces 500 avg, TSD 5756, TST 55, quads 3657, max height 16, illegal 0, 13.8 ms/move (p90 16.4) + search 14.5 ms, 121s, danger style on 8.2% of moves (height >= 12 or holes >= 6)
+dagger-ft style normal: AtTenTris logit depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.693 (APPfull 0.383), died 55/64, pieces 276 avg, TSD 575, TST 1, quads 1205, max height 23, illegal 0, 12.5 ms/move (p90 15.0) + search 13.0 ms, 20s
+dagger3-ft style normal: AtTenTris logit depth 1 style normal garbage 10,3-4,cheese0.2,0.2: APP 0.706 (APPfull 0.501), died 32/64, pieces 355 avg, TSD 744, TST 7, quads 1590, max height 21, illegal 0, 12.3 ms/move (p90 14.7) + search 12.8 ms, 23s
+dagger3-ft style danger: AtTenTris logit depth 1 style danger garbage 10,3-4,cheese0.2,0.2: APP 0.676 (APPfull 0.612), died 14/64, pieces 452 avg, TSD 975, TST 3, quads 2008, max height 22, illegal 0, 12.8 ms/move (p90 15.4) + search 13.2 ms, 29s
+dagger3-ft style auto: AtTenTris logit depth 1 style auto garbage 10,3-4,cheese0.2,0.2: APP 0.703 (APPfull 0.551), died 27/64, pieces 392 avg, TSD 841, TST 3, quads 1784, max height 23, illegal 0, 12.6 ms/move (p90 15.2) + search 13.3 ms, 26s, danger style on 45.8% of moves (height >= 12 or holes >= 6)
+dagger-ft style normal: AtTenTris logit depth 1 style normal garbage 10,3-4,cheese0.5,0.2: APP 0.493 (APPfull 0.141), died 64/64, pieces 143 avg, TSD 262, TST 1, quads 357, max height 22, illegal 0, 12.4 ms/move (p90 14.9) + search 12.8 ms, 12s
+dagger3-ft style normal: AtTenTris logit depth 1 style normal garbage 10,3-4,cheese0.5,0.2: APP 0.490 (APPfull 0.193), died 60/64, pieces 197 avg, TSD 321, TST 1, quads 511, max height 23, illegal 0, 12.7 ms/move (p90 15.4) + search 13.1 ms, 15s
+dagger3-ft style danger: AtTenTris logit depth 1 style danger garbage 10,3-4,cheese0.5,0.2: APP 0.474 (APPfull 0.301), died 43/64, pieces 318 avg, TSD 514, TST 3, quads 796, max height 21, illegal 0, 12.3 ms/move (p90 14.6) + search 12.7 ms, 21s
+dagger3-ft style auto: AtTenTris logit depth 1 style auto garbage 10,3-4,cheese0.5,0.2: APP 0.480 (APPfull 0.257), died 55/64, pieces 268 avg, TSD 447, TST 0, quads 658, max height 21, illegal 0, 12.3 ms/move (p90 14.7) + search 12.9 ms, 19s, danger style on 68.9% of moves (height >= 12 or holes >= 6)
+dagger3 train done Sun Oct 11 22:24:40 MPST 2026
