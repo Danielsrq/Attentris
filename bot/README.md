@@ -14,8 +14,10 @@ cargo build --release
 cargo test --release
 ```
 
-All Godot-viewer replays live in `data/bot/`, whatever produced them -- the AtTenTris model
-runs are there as `attentris_*.jsonl`. The viewer has no file browser: it opens exactly the
+All Godot-viewer replays live in `data/bot/`, whatever produced them. The AtTenTris model runs
+are the single combined `attentris_v51_tome_v4_d1.jsonl`: ten games (v5.1, ToMe v4, and the two
+DAgger round 2 models, at depth 1 with two garbage runs), picked from the viewer's own run
+dropdown. The per-game files were byte-identical slices of it and were dropped. The viewer has no file browser: it opens exactly the
 path given, and its dropdown selects a run WITHIN that file, so a replay anywhere else is
 simply invisible.
 
