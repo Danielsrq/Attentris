@@ -120,6 +120,8 @@ def main():
     ap.add_argument("--games-merge", default="", help="the merge schedule those games were played at (their label)")
     ap.add_argument("--games-notes", default="", help="JSON '<seed>_<n>' -> note for the game positions (sample_states.py)")
     ap.add_argument("--play", default="", help="JSON list of {value, label} play-test results for the page summary")
+    ap.add_argument("--overrides", default="", help="inference-time merge overrides to render, ';'-separated LAYER:FRACTION "
+                    "specs ('none' = as trained), e.g. 'none;6:0.30' (model_tome frac_override)")
     ap.add_argument("--val-eval", action="store_true", help="score the held-out set under each schedule (top-1)")
     args = ap.parse_args()
     pcores.pin()
@@ -128,6 +130,13 @@ def main():
     a = ck["args"]
     trained = a["merge"]
     scheds = args.merges.split(";") if args.merges else [trained]
+    # variants: (merge schedule, override spec, name shown in the page)
+    if args.overrides:
+        variants = [(trained, "" if o == "none" else o, "as trained" if o == "none" else
+                     "+ " + ", ".join("layer %s merges %d%%" % (k, round(100 * float(v))) for k, v in (p.split(":") for p in o.split(","))))
+                    for o in args.overrides.split(";")]
+    else:
+        variants = [(sc, "", None) for sc in scheds]
     net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in trained.split(",")], sky=a.get("tome_sky", False),
                           pretok=a.get("tome_pretok", False), flat_bias=a.get("tome_flat", False),
                           streams=a.get("tome_streams", 1), budget=MT.budget_of(a.get("tome_budget", "")))
@@ -152,36 +161,40 @@ def main():
         gsrc = [{"why": "game at merge " + (args.games_merge or trained) + (
                      " · " + notes["%d_%d" % (g["seed"][i], g["n"][i])] if "%d_%d" % (g["seed"][i], g["n"][i]) in notes else ""), "teacher": ["normal", "gate4"][g["teacher"][i]],
                  "seed": int(g["seed"][i]), "n": int(g["n"][i]), "tokens": piece_tokens(g, i)} for i in range(len(g["chosen"]))]
-        home = scheds.index(args.games_merge) if args.games_merge in scheds else 0
+        home = [v[0] for v in variants].index(args.games_merge) if args.games_merge in [v[0] for v in variants] else 0
         sets.append((g, np.arange(len(g["chosen"])), gsrc, home))
 
     pos, vals = [], []
-    for sc in scheds:
-        net.merge = tuple(float(f) for f in sc.split(","))
+    def use(v):
+        net.merge = tuple(float(f) for f in v[0].split(","))
+        net.frac_override = MT.override_of(v[1])
+    for v in variants:
+        use(v)
         if args.val_eval:
             vals.append(val_top1(net, d))
-            print("merge %s: val top1 normal %.3f gate4 %.3f" % (sc, vals[-1]["normal"], vals[-1]["gate4"]), flush=True)
+            print("%s: val top1 normal %.3f gate4 %.3f" % (v[2] or v[0], vals[-1]["normal"], vals[-1]["gate4"]), flush=True)
     for dd, ii, ss, home in sets:
         per = []
-        for sc in scheds:
-            net.merge = tuple(float(f) for f in sc.split(","))
+        for v in variants:
+            use(v)
             per.append(render(net, dd, ii, ss))
         for k, (q, i) in enumerate(zip(ss, ii)):
             pk = [t_ for t_ in q["tokens"] if t_["kind"] in SLOTS]
             pos.append({"why": q["why"], "teacher": q["teacher"], "seed": q["seed"], "n": q["n"], "home": home,
                         "board": dd["cells"][i].tolist(), "pieces": {t_["kind"]: t_["piece"] for t_ in pk},
-                        "n_cand": int(dd["n_cand"][i]), "sched": [per[si][k] for si in range(len(scheds))]})
+                        "n_cand": int(dd["n_cand"][i]), "sched": [per[si][k] for si in range(len(variants))]})
     log = ck["log"]
     label = args.label or "AtTenTris-ToMe · 200 cells + 7 pieces · adjacency-constrained merging · %d epochs" % len(log)
     last_val = log[-1]["val"] if log else {}
-    data = json.dumps({"model": label, "streams": getattr(net, "streams", 1), "trained": trained, "schedules": scheds,
+    data = json.dumps({"model": label, "streams": getattr(net, "streams", 1), "trained": trained, "schedules": [v[0] for v in variants],
+                       "sched_names": [v[2] for v in variants] if args.overrides else None,
                        "val": {k: v["top1"] for k, v in last_val.items()}, "val_sched": vals,
                        "play": json.load(open(args.play)) if args.play else [],
                        "positions": pos}, separators=(",", ":"))
     tpl = open(os.path.join(HERE, "tome_viz_template.html"), encoding="utf-8").read()
     with open(args.out, "w", encoding="utf-8") as f:
         f.write(tpl.replace("__DATA__", data))
-    print("%d positions x %d schedules -> %s" % (len(pos), len(scheds), args.out))
+    print("%d positions x %d variants -> %s" % (len(pos), len(variants), args.out))
 
 
 if __name__ == "__main__":

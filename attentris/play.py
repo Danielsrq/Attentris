@@ -73,7 +73,7 @@ def arrays(states, teacher, version=T.TOK_VERSION):
 
 
 class Player:
-    def __init__(self, model_path, depth, beam, teacher, mode, policy="logit", propose=0, temp=0.0, seed=0, merge=""):
+    def __init__(self, model_path, depth, beam, teacher, mode, policy="logit", propose=0, temp=0.0, seed=0, merge="", merge_override=""):
         import torch
         import model as M
         torch.set_num_threads(1)
@@ -86,6 +86,7 @@ class Player:
                                         pretok=ck["args"].get("tome_pretok", False), flat_bias=ck["args"].get("tome_flat", False),
                                         streams=ck["args"].get("tome_streams", 1), n_teachers=ck["model"]["style.weight"].shape[0],
                                         budget=MT.budget_of(ck["args"].get("tome_budget", "")))
+            self.net.frac_override = MT.override_of(merge_override)
             self.n_styles = ck["model"]["style.weight"].shape[0]
         else:
             self.net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0],
@@ -206,7 +207,7 @@ def play_game(args, seed):
     pcores.pin(verbose=False)
     auto = args.style == "auto"
     pl = Player(args.model, args.depth, args.beam, STYLES["normal" if auto else args.style], args.mode, args.policy, args.propose,
-                temp=args.temp, seed=seed, merge=args.merge)
+                temp=args.temp, seed=seed, merge=args.merge, merge_override=args.merge_override)
     cmd = [BOT, "play-ext", "--mode", args.mode, "--pieces", str(args.pieces), "--seed", str(seed)]
     if auto and getattr(pl, "n_styles", 2) < 3:
         raise SystemExit("--style auto needs a model with a danger style (3 style rows)")
@@ -304,6 +305,8 @@ def main():
     ap.add_argument("--jobs", type=int, default=0, help="parallel games (0 = P-core logical processors)")
     ap.add_argument("--out", default="")
     ap.add_argument("--bot-log", default="", help="directory for each game's bot stderr (debugging)")
+    ap.add_argument("--merge-override", default="", help="ToMe: at inference, LAYER:FRACTION[,...] -- that layer merges this share "
+                    "of its tokens instead of its schedule / budget step (e.g. 6:0.30)")
     ap.add_argument("--merge", default="", help="ToMe: play with this merge schedule (per layer, e.g. 0,0.17,0.25,0.25) "
                                                 "instead of the one it was trained with; no retraining")
     ap.add_argument("--dump", default="", help="write every state reached (seed, n, rows, b2b) to this JSONL")

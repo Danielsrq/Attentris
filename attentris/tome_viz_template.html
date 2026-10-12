@@ -128,7 +128,7 @@ function blobColour(n, filled) {
   return `hsl(${h.toFixed(0)} 55% ${filled ? css("--blob-l-filled") : css("--blob-l-empty")})`;
 }
 
-const schedName = k => DATA.schedules[k].split(",").map(f => f.replace(/^0\./, ".")).join(" · ") + (DATA.schedules[k] === DATA.trained ? " (trained)" : "");
+const schedName = k => DATA.sched_names ? DATA.sched_names[k] : DATA.schedules[k].split(",").map(f => f.replace(/^0\./, ".")).join(" · ") + (DATA.schedules[k] === DATA.trained ? " (trained)" : "");
 function render() {
   const p = Object.assign({}, P[idx], P[idx].sched[si]);
   $("scheds").innerHTML = DATA.schedules.length < 2 ? "" : `<span class="lab">Merge schedule</span>` + DATA.schedules.map((sc, k) =>

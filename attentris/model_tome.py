@@ -118,6 +118,11 @@ def adjacency(mask):
     return adj & ~torch.eye(N, dtype=torch.bool, device=mask.device)
 
 
+def override_of(s):
+    """--merge-override "6:0.30,5:0.2" -> {6: 0.3, 5: 0.2} (empty -> {})."""
+    return {int(k): float(v) for k, v in (p.split(":") for p in s.split(",") if p)} if s else {}
+
+
 def budget_of(s):
     """--tome-budget BASE,AT,SLOPE,FIRST (a checkpoint's args) -> the `budget` dict (None if empty)."""
     if not s:
@@ -136,6 +141,9 @@ class AtTenTrisToMe(nn.Module):
         # tokens, the rest reach T in equal-ratio steps at the last merging layer; no merging if
         # n0 <= T. E.g. {"base": 20, "at": 36, "slope": 0.25, "first": 0.10}.
         self.budget = budget
+        # inference-time override (analysis): {layer (1-based): fraction} -- that layer merges this share
+        # of each stream's board tokens instead of its scheduled / budgeted step. Not saved, not trained.
+        self.frac_override = {}
         assert streams <= heads
         self.streams, self.heads = streams, heads
         if streams > 1:
@@ -322,7 +330,7 @@ class AtTenTrisToMe(nn.Module):
         stream = torch.zeros(B, x.shape[1], dtype=torch.long, device=dev)
         attn, trace = [], []
         plan, step, n_steps = None, 0, sum(1 for f in self.merge if f > 0)
-        for blk, frac in zip(self.blocks, self.merge):
+        for li, (blk, frac) in enumerate(zip(self.blocks, self.merge)):
             adj = adjacency(mask)
             if self.flat_bias:
                 bias = self.bias(*M.pair_features(box, box, mask, mask))
@@ -346,12 +354,15 @@ class AtTenTrisToMe(nn.Module):
                     alive, x, size, mask, box, is_cell, par0, stream, keys = self._compact(alive, x, size, mask, box, is_cell, par0, stream, keys)
                     adj = adjacency(mask)
                 r_plan = None
-                if self.budget is not None:
+                if self.budget is not None or (li + 1) in self.frac_override:
                     cand = alive & is_cell
                     cnt = torch.stack([(cand & (stream == s_)).sum(1) for s_ in range(self.streams)], 1).float()   # (B, S)
-                    if plan is None:
-                        plan = self.budget_plan(cnt, n_steps)                      # (B, S, n_steps) planned counts
-                    r_plan = (cnt - plan[..., step]).clamp(min=0).floor().long()
+                    if (li + 1) in self.frac_override:
+                        r_plan = (cnt * self.frac_override[li + 1]).floor().long()
+                    else:
+                        if plan is None:
+                            plan = self.budget_plan(cnt, n_steps)                  # (B, S, n_steps) planned counts
+                        r_plan = (cnt - plan[..., step]).clamp(min=0).floor().long()
                 x, size, mask, box, alive, is_cell, par0, stream = self._merge(
                     x, size, mask, box, alive, is_cell, keys, frac, not merged_yet, adj, par0, stream, self.streams, self.heads, r_plan)
                 step += 1

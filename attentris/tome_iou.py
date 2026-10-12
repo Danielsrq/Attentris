@@ -48,6 +48,7 @@ def main():
     ap.add_argument("--model", default=os.path.join(HERE, "data", "model_tome.pt"))
     ap.add_argument("--data", default=os.path.join(HERE, "data", "v51", "val.npz"))
     ap.add_argument("--n", type=int, default=2000)
+    ap.add_argument("--merge-override", default="", help="LAYER:FRACTION at inference (model_tome frac_override)")
     ap.add_argument("--device", default="cpu", help="cpu by default: never share the GPU with a training run")
     args = ap.parse_args()
     pcores.pin()
@@ -58,6 +59,7 @@ def main():
                           streams=a.get("tome_streams", 1), budget=MT.budget_of(a.get("tome_budget", "")))
     net.load_state_dict(ck["model"])
     net.to(args.device).eval()
+    net.frac_override = MT.override_of(args.merge_override)
     d = TR.load(args.data)
     if a.get("tome_pretok"):
         d["pretok"] = np.load(args.data.replace(".npz", ".pretok.npy"))
