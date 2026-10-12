@@ -22,3 +22,4 @@ takeover, v51_dagger3_ft 80/20:
 takeover, v51_nosetup_dagger3_ft 80/20:
   v51_nosetup_dagger3_ft takes over 10 before death 7/8
   v51_nosetup_dagger3_ft takes over 30 before death 8/8
+takeover check (8 sampled 80/20 deaths per student; CEM-survival takes over 30 / 10 moves before the death): v51_dagger3_ft 8/8, 5/8; v51_nosetup_dagger3_ft 8/8, 7/8; tome_v4_dagger3_ft 8/8, 7/8; tome_v41_dagger3_ft 8/8, 5/8
