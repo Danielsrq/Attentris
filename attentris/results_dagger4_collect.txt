@@ -2,3 +2,23 @@ v51_dagger3_ft g20: APP 0.662 (APPfull 0.578), died 28/100, pieces 437 avg, TSD 
 v51_dagger3_ft g50: APP 0.466 (APPfull 0.266), died 78/100, pieces 286 avg, TSD 720, TST 0, quads 1090, max height 23, illegal 0, 13.4 ms/move (p90 20.4) + sear
 tome_v4_dagger3_ft g20: APP 0.641 (APPfull 0.498), died 48/100, pieces 388 avg, TSD 1143, TST 7, quads 2557, max height 23, illegal 0, 29.7 ms/move (p90 42.6) + sea
 tome_v4_dagger3_ft g50: APP 0.447 (APPfull 0.200), died 93/100, pieces 224 avg, TSD 559, TST 3, quads 784, max height 22, illegal 0, 34.4 ms/move (p90 48.0) + searc
+tome_v41_dagger3_ft g20: APP 0.668 (APPfull 0.522), died 42/100, pieces 391 avg, TSD 1295, TST 10, quads 2597, max height 22, illegal 0, 43.9 ms/move (p90 57.5) + se
+tome_v41_dagger3_ft g50: APP 0.442 (APPfull 0.194), died 93/100, pieces 220 avg, TSD 535, TST 5, quads 728, max height 22, illegal 0, 48.7 ms/move (p90 62.2) + searc
+v51_nosetup_dagger3_ft g20: APP 0.654 (APPfull 0.552), died 29/100, pieces 422 avg, TSD 1296, TST 2, quads 2824, max height 22, illegal 0, 10.7 ms/move (p90 11.9) + sea
+v51_nosetup_dagger3_ft g50: APP 0.460 (APPfull 0.269), died 76/100, pieces 293 avg, TSD 703, TST 0, quads 1071, max height 22, illegal 0, 10.4 ms/move (p90 11.6) + sear
+800 games, 266046 states, 487 deaths
+selected 96968 of 266046 states (36.4%) -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/data/dagger4/selected.jsonl
+reasons (a state can have several): danger 46768, holes_up 33869, death 29133, unsure 18467, duplicate (dropped) 656
+labelled: 96968 positions -> /c/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/data/dagger4/labelled.jsonl
+takeover, tome_v41_dagger3_ft 80/20:
+  tome_v41_dagger3_ft takes over 10 before death 5/8
+  tome_v41_dagger3_ft takes over 30 before death 8/8
+takeover, tome_v4_dagger3_ft 80/20:
+  tome_v4_dagger3_ft takes over 10 before death 7/8
+  tome_v4_dagger3_ft takes over 30 before death 8/8
+takeover, v51_dagger3_ft 80/20:
+  v51_dagger3_ft takes over 10 before death 5/8
+  v51_dagger3_ft takes over 30 before death 8/8
+takeover, v51_nosetup_dagger3_ft 80/20:
+  v51_nosetup_dagger3_ft takes over 10 before death 7/8
+  v51_nosetup_dagger3_ft takes over 30 before death 8/8
