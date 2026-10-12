@@ -82,7 +82,7 @@ table.probs tr.on { background: var(--panel); outline: 1px solid var(--accent); 
     </div>
   </div>
   <p class="note">No rule tokenizer: the board enters as one sky token, solid blocks and single cells, plus 7 piece tokens. After attention in
-    each layer, the most similar 4-adjacent blobs merge (the <b>merge schedule</b>: the share of board tokens merged after layers 1–4), so every blob is
+    each layer, the most similar 4-adjacent blobs merge (how many by the <b>merge schedule</b>: a fixed share per layer, or — ToMe v4.1 — a per-position budget of 20 + (start − 36)/4 blobs per stream, reached after a gentle 10% first merge), so every blob is
     a connected region; candidates then cross-attend to the final blobs. The model was trained with one schedule; the others are the same weights
     merging harder at inference (no retraining). Positions tagged <b>game at merge …</b> come from games played at that schedule, labelled afterwards
     by the teacher.
