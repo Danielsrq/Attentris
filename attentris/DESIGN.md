@@ -273,6 +273,15 @@ Caveats and controls (these decide whether criterion 1 means anything):
 - **Records:** board, piece, queue, hold, the chosen placement, the full legal placement set, and the T structures. The replay format already has everything except the legal placement set.
 - **Soft targets:** the beam search keeps each node's first move. A root's score is its best surviving descendant (or its 1-ply score if pruned at ply 1). A softmax over those scores gives a listwise target that carries more information than one-hot imitation.
 - **Coverage:** STSD, C-spin and rect12 are rare (tens of boards per 2,500). Oversample boards where they appear, and add positions seeded from the STSD build-ups we drew earlier, so the "what does it consider for an STSD" question has data behind it.
+- **Style tags:** each position carries the tag of the teacher that labelled it (`normal` = normal.txt, `gate4` = gate4.txt, `danger` = CEM-survival, `bot/results/survive/survive.txt`); the tag is a model input, chosen at play time (`play.py --style normal|gate4|danger|auto`).
+- **The danger data is a mix, by choice (2026-10-12):** DAgger rounds 3-4 select the students' trouble positions (near deaths, danger boards, rising holes) but also "student unsure" positions on any board, and all of them get the danger tag. Board state of the selected positions (hot = stack >= 12 or >= 6 holes, the `--style auto` rule; calm = stack < 8 and < 3 holes):
+
+  | | hot | in between | calm |
+  |---|---|---|---|
+  | round 3 (95,007; `danger.npz`) | 78.6% | 16.2% | 5.2% |
+  | round 4 (96,968; `data/dagger4/labelled.jsonl`) | 72.3% | 20.9% | 6.8% (mostly "unsure") |
+
+  Kept as a mix: the calm part teaches the danger style how CEM-survival plays once it has dug out (always-danger mode plays those boards). In a 70/30 fine-tune the danger style's hot-board share is about 30% x 0.75 = ~22-24% of each epoch. Alternative if needed: route by the auto rule (hot -> CEM-survival / `danger`, else -> normal.txt / `normal`), ~27k relabels per round.
 
 ## Implementation plan
 
