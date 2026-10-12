@@ -139,7 +139,7 @@ def main():
         variants = [(sc, "", None) for sc in scheds]
     net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in trained.split(",")], sky=a.get("tome_sky", False),
                           pretok=a.get("tome_pretok", False), flat_bias=a.get("tome_flat", False),
-                          streams=a.get("tome_streams", 1), budget=MT.budget_of(a.get("tome_budget", "")))
+                          streams=a.get("tome_streams", 1), budget=MT.budget_of(a.get("tome_budget", "")), split=a.get("tome_split", "token"))
     net.load_state_dict(ck["model"])
     net.eval()
     d = load_packed(args.data, a.get("tome_pretok"))

@@ -50,11 +50,42 @@ import tokenizer as T
 PIECE_FIRST = T.KINDS.index("current")       # current, hold, preview1..5 are contiguous in KINDS
 N_PIECE_TOK = 7
 N_GROUPS = 17                                   # sky + up to 16 blocks (pretok.py caps at 24; data max 12)
-# analysis only (tome_orient.py): MERGE_HOOK(dict) sees every merge's sets, similarities and choices;
-# SPLIT_MODE picks the A/B split after the first merge: "token" (as trained: alternate in token order,
-# which is row-major), "col" (alternate in column-major order of the blobs' lowest-left corner), "random"
+# A/B split after the first merge (the model's `split`, train.py --tome-split):
+#   "token" (models up to v4.1): alternate in token order. Token order is row-major, so side-by-side
+#           neighbours always cross the split and stacked ones only ~half the time (tome_orient.py):
+#           merging is biased sideways;
+#   "hash"  : each blob's side is a hashed bit of (board, merge step, stream, its first cell): any two
+#           adjacent blobs cross with probability 1/2 whatever their direction; deterministic and the same
+#           for a position in any batch (hash_side);
+#   analysis only: "col" (alternate in column-major order of the blobs' lowest-left corner), "random".
+# SPLIT_MODE (analysis) overrides every model's own split when set; MERGE_HOOK(dict) sees every merge's
+# sets, similarities and choices.
 MERGE_HOOK = None
-SPLIT_MODE = "token"
+SPLIT_MODE = None
+
+
+_W = torch.randint(1, 1 << 20, (200,), generator=torch.Generator().manual_seed(20261013))   # board -> position key
+
+
+def _mix(x):
+    """A 31-bit integer hash (multiply / xor-shift), elementwise on an int64 tensor."""
+    m = (1 << 31) - 1
+    x = ((x & m) * 1103515245 + 12345) & m
+    x = x ^ (x >> 16)
+    x = (x * 1664525 + 1013904223) & m
+    x = x ^ (x >> 13)
+    x = (x * 22695477 + 1) & m
+    return x ^ (x >> 16)
+
+
+def hash_side(cells, anchor, step, stream):
+    """The "hash" split: A/B side (0/1) of each token from (board, merge step, stream, the token's first
+    cell). A fixed table of bits per cell is not enough: the cells in play cluster in a few rows, where a
+    fixed table is off 50% by up to ~7 points in one direction (test_tome_split.py); keying on the board
+    makes every position's split a fresh draw, still deterministic and the same in any batch."""
+    key = (cells.long().reshape(cells.shape[0], -1) * _W.to(cells.device)).sum(-1) & ((1 << 24) - 1)     # (B,)
+    x = _mix(key[:, None] * 64 + step * 4 + stream)
+    return (_mix(x * 256 + anchor) >> 11) & 1
 
 
 class Attn(nn.Module):
@@ -138,8 +169,10 @@ def budget_of(s):
 
 class AtTenTrisToMe(nn.Module):
     def __init__(self, d=64, heads=4, layers=4, merge=(0.0, 0.45, 0.45, 0.45), n_teachers=2, sky=False,
-                 pretok=False, flat_bias=False, streams=1, budget=None):
+                 pretok=False, flat_bias=False, streams=1, budget=None, split="token"):
         super().__init__()
+        assert split in ("token", "hash")
+        self.split = split
         # budget (dict or None): a per-position merge plan instead of fixed fractions. The layers with
         # merge > 0 merge; at the first, each position's board-token count n0 sets a budget
         # T = base + max(0, (n0 - at) * slope) blobs per stream; the first step merges `first` of the
@@ -195,21 +228,25 @@ class AtTenTrisToMe(nn.Module):
         return torch.stack(out, -1).round()
 
     @staticmethod
-    def _merge(x, size, mask, box, alive, is_cell, keys, frac, first, adj, par0, stream=None, n_streams=1, heads=4, r_plan=None):
+    def _merge(x, size, mask, box, alive, is_cell, keys, frac, first, adj, par0, stream=None, n_streams=1, heads=4, r_plan=None,
+               split="token", step=0, cells=None):
         B, N, d = x.shape
         dev = x.device
+        split = SPLIT_MODE or split
         if stream is None:
             stream = torch.zeros(B, N, dtype=torch.long, device=dev)
         cand = alive & is_cell
         if first:
             par = par0                                           # checkerboard for cells (sky columns: by column)
-        elif SPLIT_MODE == "token":
+        elif split == "hash":
+            par = hash_side(cells, mask.argmax(-1), step, stream)
+        elif split == "token":
             par = torch.zeros_like(stream)
             for st in range(n_streams):                          # alternate within each stream
                 cs = cand & (stream == st)
                 par = torch.where(stream == st, (torch.cumsum(cs.long(), 1) - 1) % 2, par)
         else:
-            if SPLIT_MODE == "col":
+            if split == "col":
                 key = (box[..., 2] * 100 + box[..., 0]).float() + torch.arange(N, device=dev) / (10.0 * N)
             else:
                 key = torch.rand(B, N, device=dev)
@@ -383,7 +420,8 @@ class AtTenTrisToMe(nn.Module):
                             plan = self.budget_plan(cnt, n_steps)                  # (B, S, n_steps) planned counts
                         r_plan = (cnt - plan[..., step]).clamp(min=0).floor().long()
                 x, size, mask, box, alive, is_cell, par0, stream = self._merge(
-                    x, size, mask, box, alive, is_cell, keys, frac, not merged_yet, adj, par0, stream, self.streams, self.heads, r_plan)
+                    x, size, mask, box, alive, is_cell, keys, frac, not merged_yet, adj, par0, stream, self.streams, self.heads, r_plan,
+                    self.split, step, cells)
                 step += 1
                 merged_yet = True
             x = x + blk.ff(blk.n2(x))

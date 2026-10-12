@@ -13,8 +13,9 @@
    T-spin single ("|-") using the stem; best IoU of each stream's blobs with the T shape and with the
    |- shape.
 
---split token|col|random re-runs with the A/B split after the first merge in token order (as trained:
-row-major), column-major order or random (model_tome.SPLIT_MODE), with policy top-1 on the same
+--split own|token|hash|col|random re-runs with the A/B split after the first merge as the model was
+trained, in token order (row-major, <= v4.1), by a fixed random bit per (step, stream, first cell), in
+column-major order or random (model_tome.SPLIT_MODE), with policy top-1 on the same
 positions so the cost of the off-distribution split is visible.
 
     attentris/.venv/Scripts/python attentris/tome_orient.py --model attentris/data/model_tome_v41.pt --split token,col,random
@@ -135,7 +136,7 @@ def position_code(K):
 
 
 def run(net, d, idx, device, split):
-    MT.SPLIT_MODE = split
+    MT.SPLIT_MODE = None if split == "own" else split
     st = Stats()
     coh = collections.defaultdict(lambda: np.zeros(4))     # (kind, H/V) -> edges, same s0, same s1, same either
     tsd = collections.defaultdict(lambda: np.zeros(6))     # alt? -> n, stem joined s0, s1, either, whole T one blob (either), n with T piece
@@ -265,7 +266,7 @@ def main():
     ap.add_argument("--model", default=os.path.join(HERE, "data", "model_tome_v41.pt"))
     ap.add_argument("--data", default=os.path.join(HERE, "data", "v51", "val.npz"))
     ap.add_argument("--n", type=int, default=2000)
-    ap.add_argument("--split", default="token,col,random")
+    ap.add_argument("--split", default="own,col,random", help="own = the model's own split (token for <= v4.1); token / hash / col / random override it")
     ap.add_argument("--out", default=os.path.join(HERE, "results_tome_orient.txt"))
     ap.add_argument("--device", default="cpu", help="cpu by default: never share the GPU with a training run")
     args = ap.parse_args()
@@ -274,7 +275,7 @@ def main():
     a = ck["args"]
     net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in a["merge"].split(",")], sky=a.get("tome_sky", False),
                           pretok=a.get("tome_pretok", False), flat_bias=a.get("tome_flat", False),
-                          streams=a.get("tome_streams", 1), budget=MT.budget_of(a.get("tome_budget", "")))
+                          streams=a.get("tome_streams", 1), budget=MT.budget_of(a.get("tome_budget", "")), split=a.get("tome_split", "token"))
     net.load_state_dict(ck["model"])
     net.to(args.device).eval()
     d = TR.load(args.data)
