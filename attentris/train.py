@@ -336,10 +336,11 @@ def main():
                     ep + 1, bi, nb, tot / cnt, el, el / (bi - first + 1) * (nb - bi - 1)), flush=True)
             if args.save_every and bi % args.save_every == args.save_every - 1 and bi < nb - 1:
                 save(out, ep, {"batch": bi, "perm": perm, "tot": tot, "cnt": cnt})
-        ev = evaluate(net, va, 512, args, args.device)
+        eb = max(64, 512 // args.micro)       # validation in micro-batches too (sums per position: same numbers)
+        ev = evaluate(net, va, eb, args, args.device)
         rec = {"epoch": ep + 1, "train_loss": tot / cnt, "val": ev, "secs": time.time() - t0}
         if va2 is not None:
-            rec["val2"] = evaluate(net, va2, 512, args, args.device)
+            rec["val2"] = evaluate(net, va2, eb, args, args.device)
         log.append(rec)
         print("epoch %d: train loss %.3f | val normal top1 %.3f top3 %.3f | val gate4 top1 %.3f top3 %.3f | "
               "argmax Qs top1 %.3f / %.3f, Q1 top1 %.3f / %.3f | MAE Q1 %.2f Qs %.2f | %.0fs" % (
