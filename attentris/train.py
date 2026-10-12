@@ -168,6 +168,7 @@ def main():
     ap.add_argument("--init", default="", help="warm start: load these model weights, fresh optimizer and schedule")
     ap.add_argument("--limit", type=int, default=0, help="use a random N-position subset (smoke tests, learning curves)")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    ap.add_argument("--gpu-mem-frac", type=float, default=0.9, help="cap on the GPU memory this run may use (0 = no cap)")
     ap.add_argument("--train", default="train.npz",
                     help="training file(s) in DATA, comma-separated; FILE@F uses F of that file per epoch (a fresh random "
                          "draw each epoch; F > 1 repeats it), e.g. a 70/30 fine-tuning mix")
@@ -180,6 +181,11 @@ def main():
     args = ap.parse_args()
     n_p = pcores.pin()
     torch.set_num_threads(args.threads or n_p or 8)
+    if args.device == "cuda" and args.gpu_mem_frac > 0:
+        # cap the caching allocator: on Windows (WDDM) the driver otherwise lets allocations past the
+        # card's memory spill silently into system RAM (a 6-layer ToMe grew to 17 GB of RAM); with a cap
+        # PyTorch frees its cache and retries first, and a real shortage is a clear OOM error
+        torch.cuda.set_per_process_memory_fraction(args.gpu_mem_frac)
     torch.manual_seed(args.seed)
     out = args.out or os.path.join(args.data, "model_tome.pt" if args.arch == "tome" else "model.pt")
     if os.path.exists(out) and not args.resume:

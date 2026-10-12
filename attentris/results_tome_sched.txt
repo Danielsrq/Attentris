@@ -38,3 +38,171 @@ tome_sA d1: APP 0.393 (APPfull 0.316), died 26/64, pieces 403 avg, TSD 648, TST 
 tome_sA d2: APP 0.491 (APPfull 0.450), died 13/64, pieces 458 avg, TSD 871, TST 7, quads 524, max height 23, illegal 0, 203.8 ms/move (p90 280.4) + search 204.5 ms, 401s
 tome_sA g20: APP 0.545 (APPfull 0.118), died 63/64, pieces 108 avg, TSD 151, TST 1, quads 352, max height 23, illegal 0, 30.4 ms/move (p90 39.5) + search 31.0 ms, 21s
 tome_sA g50: APP 0.396 (APPfull 0.062), died 64/64, pieces 78 avg, TSD 93, TST 0, quads 156, max height 22, illegal 0, 33.5 ms/move (p90 43.1) + search 34.0 ms, 17s
+== tome_sA: 4 layers, merge 0,0.17,0.17,0.17 fixed fractions
+epoch 4: train loss 2.320 | val normal top1 0.600 top3 0.839 | val gate4 top1 0.582 top3 0.813 | | 529s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.24     2%                     0.24     0%            L2:72% L3:9% L4:17%
+  sky                  2000      1.00   100%                     1.00   100%            L2:100%
+  pit2                 1750      0.52    59%                     0.45    46%            L2:43% L3:27% L4:29%
+  well                 1685      0.48    40%                     0.50    42%            L2:90% L3:0% L4:8%
+  pit1                 1385      0.72    85%                     0.46    51%            L2:34% L3:30% L4:35%
+  fit_j open           1289      0.46    68%                     0.43    57%            L2:61% L3:22% L4:15%
+  fit_l open           1284      0.46    67%                     0.42    53%            L2:61% L3:19% L4:18%
+  tsd                  1150      0.49    74%                     0.47    69%            L2:68% L3:12% L4:19%
+  pit3                 1135      0.42    32%                     0.37    24%            L2:37% L3:27% L4:34%
+  fit_z open           1065      0.46    73%                     0.44    62%            L2:60% L3:22% L4:16%
+  fit_s open            993      0.45    69%                     0.44    59%            L2:59% L3:23% L4:17%
+  pit4                  740      0.33    14%                     0.30     9%            L2:31% L3:30% L4:37%
+  fit_j covered         690      0.46    70%                     0.45    64%            L2:75% L3:16% L4:7%
+  fit_l covered         628      0.46    72%                     0.45    65%            L2:76% L3:11% L4:11%
+  fit_t open            590      0.45    62%                     0.44    58%            L2:70% L3:16% L4:13%
+  fit_z covered         328      0.45    68%                     0.45    61%            L2:70% L3:23% L4:6%
+  fit_s covered         272      0.45    70%                     0.46    64%            L2:74% L3:18% L4:7%
+  setup_t               207      0.43    62%                     0.41    52%            L2:69% L3:22% L4:8%
+  fit_i covered         135      0.48    76%                     0.47    70%            L2:81% L3:7% L4:11%
+  fractal                98      0.32     4%                     0.30     1%            L2:42% L3:20% L4:36%
+  setup_j                84      0.43    61%                     0.46    67%            L2:71% L3:20% L4:8%
+  imperial               77      0.41    30%                     0.30     0%            L2:19% L3:14% L4:66%
+  setup_l                72      0.44    68%                     0.43    57%            L2:61% L3:25% L4:13%
+  setup_s                71      0.48    76%                     0.46    69%            L2:59% L3:22% L4:18%
+  setup_z                60      0.45    68%                     0.43    57%            L2:65% L3:21% L4:13%
+  setup_i                28      0.42    54%                     0.39    50%            L2:71% L3:17% L4:10%
+  rect12                 12      0.25     0%                     0.33     8%            L2:33% L3:16% L4:50%
+  vertical               11      0.52   100%                     0.48    82%            L2:18% L3:63% L4:18%
+  stsd                    8      0.41    25%                     0.35    12%            L3:37% L4:62%
+  cspin                   4      0.28     0%                     0.28     0%            L2:25% L3:50% L4:25%
+  band                    4      0.25     0%                     0.26     0%            L2:75% L4:25%
+== tome_sA: 4 layers, merge 0,0.17,0.17,0.17 fixed fractions
+epoch 4: train loss 2.320 | val normal top1 0.600 top3 0.839 | val gate4 top1 0.582 top3 0.813 | | 529s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.24     2%                     0.24     0%            L2:72% L3:9% L4:17%
+  sky                  2000      1.00   100%                     1.00   100%            L2:100%
+  pit2                 1750      0.52    59%                     0.45    46%            L2:43% L3:27% L4:29%
+  well                 1685      0.48    40%                     0.50    42%            L2:90% L3:0% L4:8%
+  pit1                 1385      0.72    85%                     0.46    51%            L2:34% L3:30% L4:35%
+  fit_j open           1289      0.46    68%                     0.43    57%            L2:61% L3:22% L4:15%
+  fit_l open           1284      0.46    67%                     0.42    53%            L2:61% L3:19% L4:18%
+  tsd                  1150      0.49    74%                     0.47    69%            L2:68% L3:12% L4:19%
+  pit3                 1135      0.42    32%                     0.37    24%            L2:37% L3:27% L4:34%
+  fit_z open           1065      0.46    73%                     0.44    62%            L2:60% L3:22% L4:16%
+  fit_s open            993      0.45    69%                     0.44    59%            L2:59% L3:23% L4:17%
+  pit4                  740      0.33    14%                     0.30     9%            L2:31% L3:30% L4:37%
+  fit_j covered         690      0.46    70%                     0.45    64%            L2:75% L3:16% L4:7%
+  fit_l covered         628      0.46    72%                     0.45    65%            L2:76% L3:11% L4:11%
+  fit_t open            590      0.45    62%                     0.44    58%            L2:70% L3:16% L4:13%
+  fit_z covered         328      0.45    68%                     0.45    61%            L2:70% L3:23% L4:6%
+  fit_s covered         272      0.45    70%                     0.46    64%            L2:74% L3:18% L4:7%
+  setup_t               207      0.43    62%                     0.41    52%            L2:69% L3:22% L4:8%
+  fit_i covered         135      0.48    76%                     0.47    70%            L2:81% L3:7% L4:11%
+  fractal                98      0.32     4%                     0.30     1%            L2:42% L3:20% L4:36%
+  setup_j                84      0.43    61%                     0.46    67%            L2:71% L3:20% L4:8%
+  imperial               77      0.41    30%                     0.30     0%            L2:19% L3:14% L4:66%
+  setup_l                72      0.44    68%                     0.43    57%            L2:61% L3:25% L4:13%
+  setup_s                71      0.48    76%                     0.46    69%            L2:59% L3:22% L4:18%
+  setup_z                60      0.45    68%                     0.43    57%            L2:65% L3:21% L4:13%
+  setup_i                28      0.42    54%                     0.39    50%            L2:71% L3:17% L4:10%
+  rect12                 12      0.25     0%                     0.33     8%            L2:33% L3:16% L4:50%
+  vertical               11      0.52   100%                     0.48    82%            L2:18% L3:63% L4:18%
+  stsd                    8      0.41    25%                     0.35    12%            L3:37% L4:62%
+  cspin                   4      0.28     0%                     0.28     0%            L2:25% L3:50% L4:25%
+  band                    4      0.25     0%                     0.26     0%            L2:75% L4:25%
+== tome_sB: 6 layers, merge 0,1,1,1,1,1 --tome-budget 20,36,0.25,0.10
+epoch 4: train loss 2.318 | val normal top1 0.590 top3 0.837 | val gate4 top1 0.587 top3 0.814 | | 1126s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.28     6%                     0.25     1%            L2:27% L3:19% L4:9% L5:13% L6:29%
+  sky                  2000      1.00   100%                     1.00   100%            L2:100%
+  pit2                 1750      0.54    58%                     0.44    45%            L2:36% L3:16% L4:9% L5:19% L6:17%
+  well                 1685      0.47    39%                     0.51    44%            L2:95% L3:1% L4:1% L5:1% L6:1%
+  pit1                 1385      0.60    71%                     0.44    48%            L2:39% L3:3% L4:19% L5:21% L6:15%
+  fit_j open           1289      0.47    69%                     0.42    52%            L2:45% L3:20% L4:10% L5:11% L6:12%
+  fit_l open           1284      0.48    70%                     0.41    51%            L2:43% L3:22% L4:11% L5:11% L6:10%
+  tsd                  1150      0.58    89%                     0.49    69%            L2:22% L3:20% L4:8% L5:17% L6:31%
+  pit3                 1135      0.44    35%                     0.36    22%            L2:24% L3:11% L4:12% L5:21% L6:29%
+  fit_z open           1065      0.48    78%                     0.42    54%            L2:40% L3:21% L4:11% L5:13% L6:11%
+  fit_s open            993      0.47    77%                     0.43    54%            L2:43% L3:22% L4:10% L5:14% L6:8%
+  pit4                  740      0.36    17%                     0.30    11%            L2:19% L3:8% L4:10% L5:21% L6:39%
+  fit_j covered         690      0.52    86%                     0.47    66%            L2:36% L3:18% L4:11% L5:15% L6:17%
+  fit_l covered         628      0.53    86%                     0.47    66%            L2:29% L3:13% L4:15% L5:17% L6:24%
+  fit_t open            590      0.50    71%                     0.42    52%            L2:40% L3:20% L4:6% L5:12% L6:19%
+  fit_z covered         328      0.50    83%                     0.46    66%            L2:32% L3:21% L4:14% L5:12% L6:18%
+  fit_s covered         272      0.50    86%                     0.47    67%            L2:37% L3:20% L4:10% L5:14% L6:16%
+  setup_t               207      0.44    67%                     0.42    57%            L2:39% L3:25% L4:16% L5:14% L6:5%
+  fit_i covered         135      0.52    83%                     0.44    56%            L2:27% L3:23% L4:18% L5:16% L6:14%
+  fractal                98      0.41    29%                     0.31     4%            L2:3% L3:10% L4:8% L5:22% L6:56%
+  setup_j                84      0.47    68%                     0.45    57%            L2:39% L3:22% L4:16% L5:5% L6:15%
+  imperial               77      0.46    49%                     0.34     8%            L3:11% L4:11% L5:32% L6:44%
+  setup_l                72      0.45    67%                     0.47    65%            L2:37% L3:23% L4:12% L5:6% L6:19%
+  setup_s                71      0.48    70%                     0.42    54%            L2:42% L3:18% L4:9% L5:14% L6:15%
+  setup_z                60      0.50    82%                     0.45    60%            L2:40% L3:21% L4:18% L5:10% L6:10%
+  setup_i                28      0.44    64%                     0.36    39%            L2:50% L3:25% L4:10% L5:10% L6:3%
+  rect12                 12      0.41    33%                     0.33     8%            L4:33% L5:16% L6:50%
+  vertical               11      0.75   100%                     0.60    91%            L4:36% L5:45% L6:18%
+  stsd                    8      0.43    38%                     0.28     0%            L2:12% L3:12% L5:25% L6:50%
+  cspin                   4      0.34     0%                     0.24     0%            L2:25% L4:25% L5:25% L6:25%
+  band                    4      0.30     0%                     0.29     0%            L2:50% L5:25% L6:25%
+tome_sB d1: APP 0.398 (APPfull 0.357), died 18/64, pieces 448 avg, TSD 657, TST 7, quads 530, max height 22, illegal 0, 43.9 ms/move (p90 56.6) + search 44.5 ms, 89s
+tome_sB d2: APP 0.526 (APPfull 0.516), died 3/64, pieces 491 avg, TSD 999, TST 14, quads 786, max height 23, illegal 0, 250.2 ms/move (p90 340.3) + search 250.9 ms, 519s
+tome_sB g20: APP 0.480 (APPfull 0.101), died 63/64, pieces 105 avg, TSD 127, TST 4, quads 314, max height 23, illegal 0, 40.2 ms/move (p90 52.1) + search 40.8 ms, 23s
+tome_sB g50: APP 0.385 (APPfull 0.058), died 64/64, pieces 75 avg, TSD 89, TST 4, quads 153, max height 22, illegal 0, 43.5 ms/move (p90 56.1) + search 44.1 ms, 18s
+== tome_sC: 4 layers, merge 0,1,1,1 --tome-budget 20,36,0.25,0.10
+epoch 4: train loss 2.330 | val normal top1 0.592 top3 0.837 | val gate4 top1 0.580 top3 0.814 | | 520s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.25     5%                     0.25     1%            L2:31% L3:28% L4:39%
+  sky                  2000      1.00   100%                     1.00   100%            L2:100%
+  pit2                 1750      0.61    73%                     0.45    44%            L2:19% L3:46% L4:34%
+  well                 1685      0.47    40%                     0.50    43%            L2:91% L3:1% L4:7%
+  pit1                 1385      0.74    89%                     0.45    49%            L2:30% L3:40% L4:29%
+  fit_j open           1289      0.49    70%                     0.42    52%            L2:41% L3:33% L4:25%
+  fit_l open           1284      0.49    69%                     0.41    52%            L2:42% L3:30% L4:26%
+  tsd                  1150      0.48    70%                     0.48    68%            L2:36% L3:41% L4:21%
+  pit3                 1135      0.47    42%                     0.36    22%            L2:19% L3:34% L4:45%
+  fit_z open           1065      0.48    76%                     0.43    56%            L2:38% L3:40% L4:20%
+  fit_s open            993      0.49    77%                     0.43    56%            L2:34% L3:39% L4:26%
+  pit4                  740      0.38    19%                     0.30    10%            L2:12% L3:35% L4:51%
+  fit_j covered         690      0.49    78%                     0.46    66%            L2:30% L3:53% L4:16%
+  fit_l covered         628      0.50    80%                     0.47    66%            L2:26% L3:59% L4:13%
+  fit_t open            590      0.46    58%                     0.43    55%            L2:41% L3:30% L4:27%
+  fit_z covered         328      0.50    79%                     0.47    66%            L2:23% L3:61% L4:15%
+  fit_s covered         272      0.48    71%                     0.47    65%            L2:25% L3:63% L4:11%
+  setup_t               207      0.44    68%                     0.41    51%            L2:51% L3:34% L4:14%
+  fit_i covered         135      0.54    73%                     0.46    60%            L2:20% L3:56% L4:23%
+  fractal                98      0.39    27%                     0.33     4%            L2:8% L3:50% L4:41%
+  setup_j                84      0.46    63%                     0.44    57%            L2:28% L3:55% L4:15%
+  imperial               77      0.50    71%                     0.32     3%            L2:3% L3:20% L4:75%
+  setup_l                72      0.47    64%                     0.44    60%            L2:34% L3:36% L4:29%
+  setup_s                71      0.43    59%                     0.41    51%            L2:43% L3:36% L4:19%
+  setup_z                60      0.44    60%                     0.50    72%            L2:40% L3:33% L4:26%
+  setup_i                28      0.39    50%                     0.36    39%            L2:60% L3:35% L4:3%
+  rect12                 12      0.41    25%                     0.34     8%            L3:50% L4:50%
+  vertical               11      0.73   100%                     0.51    73%            L3:9% L4:90%
+  stsd                    8      0.42    50%                     0.30     0%            L2:12% L3:25% L4:62%
+  cspin                   4      0.35     0%                     0.31     0%            L2:25% L3:25% L4:50%
+  band                    4      0.27     0%                     0.31     0%            L2:50% L4:50%
+tome_sC d1: APP 0.417 (APPfull 0.343), died 26/64, pieces 411 avg, TSD 612, TST 3, quads 458, max height 23, illegal 0, 33.7 ms/move (p90 43.5) + search 34.2 ms, 63s
+tome_sC d2: APP 0.518 (APPfull 0.459), died 16/64, pieces 443 avg, TSD 845, TST 10, quads 584, max height 23, illegal 0, 192.1 ms/move (p90 258.9) + search 192.8 ms, 363s
+tome_sC g20: APP 0.510 (APPfull 0.099), died 64/64, pieces 97 avg, TSD 118, TST 0, quads 307, max height 22, illegal 0, 31.9 ms/move (p90 40.3) + search 32.4 ms, 17s
+tome_sC g50: APP 0.404 (APPfull 0.059), died 64/64, pieces 73 avg, TSD 84, TST 0, quads 150, max height 23, illegal 0, 33.8 ms/move (p90 43.6) + search 34.3 ms, 14s
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+tome_sA_d1                          26/64      403   0.393    0.316   0.393    0.316         -
+tome_sA_d2                          13/64      458   0.491    0.450   0.491    0.450         -
+tome_sA_g20                         63/64      108   0.545    0.118   0.751    0.162 1426/2387
+tome_sA_g50                         64/64       78   0.396    0.062   0.541    0.084  722/1712
+tome_sB_d1                          18/64      448   0.398    0.357   0.398    0.357         -
+tome_sB_d2                           3/64      491   0.526    0.516   0.526    0.516         -
+tome_sB_g20                         63/64      105   0.480    0.101   0.683    0.144 1367/2321
+tome_sB_g50                         64/64       75   0.385    0.058   0.523    0.078  657/1667
+tome_sC_d1                          26/64      411   0.417    0.343   0.417    0.343         -
+tome_sC_d2                          16/64      443   0.518    0.459   0.518    0.459         -
+tome_sC_g20                         64/64       97   0.510    0.099   0.706    0.137 1219/2144
+tome_sC_g50                         64/64       73   0.404    0.059   0.541    0.079  637/1596
+tome_v4_d1                           6/64      480   0.582    0.558   0.582    0.558         -
+tome_v4_g20                         63/64      134   0.664    0.178   0.904    0.242 2061/2995
+tome_v4_g50                         64/64       82   0.481    0.079   0.640    0.105  836/1820
