@@ -50,6 +50,11 @@ import tokenizer as T
 PIECE_FIRST = T.KINDS.index("current")       # current, hold, preview1..5 are contiguous in KINDS
 N_PIECE_TOK = 7
 N_GROUPS = 17                                   # sky + up to 16 blocks (pretok.py caps at 24; data max 12)
+# analysis only (tome_orient.py): MERGE_HOOK(dict) sees every merge's sets, similarities and choices;
+# SPLIT_MODE picks the A/B split after the first merge: "token" (as trained: alternate in token order,
+# which is row-major), "col" (alternate in column-major order of the blobs' lowest-left corner), "random"
+MERGE_HOOK = None
+SPLIT_MODE = "token"
 
 
 class Attn(nn.Module):
@@ -198,11 +203,22 @@ class AtTenTrisToMe(nn.Module):
         cand = alive & is_cell
         if first:
             par = par0                                           # checkerboard for cells (sky columns: by column)
-        else:
+        elif SPLIT_MODE == "token":
             par = torch.zeros_like(stream)
             for st in range(n_streams):                          # alternate within each stream
                 cs = cand & (stream == st)
                 par = torch.where(stream == st, (torch.cumsum(cs.long(), 1) - 1) % 2, par)
+        else:
+            if SPLIT_MODE == "col":
+                key = (box[..., 2] * 100 + box[..., 0]).float() + torch.arange(N, device=dev) / (10.0 * N)
+            else:
+                key = torch.rand(B, N, device=dev)
+            par = torch.zeros_like(stream)
+            for st in range(n_streams):
+                cs = cand & (stream == st)
+                order = key.masked_fill(~cs, float("inf")).argsort(-1)
+                rank = torch.empty_like(order).scatter_(1, order, torch.arange(N, device=dev).expand(B, N))
+                par = torch.where(cs, rank % 2, par)
         A = cand & (par == 0)
         Bs = cand & (par == 1)
         if n_streams > 1:
@@ -214,6 +230,7 @@ class AtTenTrisToMe(nn.Module):
             kn = F.normalize(keys, dim=-1)
             S = kn @ kn.transpose(1, 2)
         valid = A[:, :, None] & Bs[:, None, :] & adj & (stream[:, :, None] == stream[:, None, :])
+        S0 = S
         S = S.masked_fill(~valid, float("-inf"))
         score, dst = S.max(-1)                                   # (B, N): best adjacent B per A token
         ok = torch.isfinite(score)
@@ -225,6 +242,8 @@ class AtTenTrisToMe(nn.Module):
             order = sc.argsort(-1, descending=True)
             rank = torch.empty_like(order).scatter_(1, order, torch.arange(N, device=dev).expand(B, N))
             sel = sel | (ok & ins & (rank < r[:, None]))
+        if MERGE_HOOK is not None:
+            MERGE_HOOK(dict(A=A, Bs=Bs, S=S0, dst=dst, sel=sel, mask=mask, size=size, cand=cand, stream=stream, first=first, keys=keys))
         self_w = size * sel
         xs = x * size[..., None]
         add = torch.zeros_like(xs).scatter_add(1, dst[..., None].expand(-1, -1, d), xs * sel[..., None])
