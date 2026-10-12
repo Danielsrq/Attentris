@@ -1,0 +1,43 @@
+    Finished `release` profile [optimized] target(s) in 42.30s
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+frozen at 0: max_height wounds ready_repeat sz_single sz_double sz_triple lj_single lj_double lj_triple i_single i_double i_triple
+tuning (cem): 30 gens x 32 candidates x 24 games x 1000 pieces, search beam 1 depth 1, fitness lines cleared / full budget (classic)
+gen  1/30: best 0.397  elite mean 0.394  (incumbent 0.393)  spread 2.743  7s  eta 4m
+gen  2/30: best 0.396  elite mean 0.396  (incumbent 0.396)  spread 2.300  9s  eta 4m
+gen  3/30: best 0.397  elite mean 0.397  (incumbent 0.396)  spread 1.439  9s  eta 4m
+gen  4/30: best 0.397  elite mean 0.397  (incumbent 0.395)  spread 1.375  9s  eta 4m
+gen  5/30: best 0.397  elite mean 0.397  (incumbent 0.397)  spread 1.376  9s  eta 4m
+gen  6/30: best 0.398  elite mean 0.397  (incumbent 0.397)  spread 1.020  9s  eta 3m
+gen  7/30: best 0.398  elite mean 0.397  (incumbent 0.397)  spread 0.970  9s  eta 3m
+gen  8/30: best 0.398  elite mean 0.398  (incumbent 0.397)  spread 0.990  9s  eta 3m
+gen  9/30: best 0.398  elite mean 0.398  (incumbent 0.398)  spread 0.760  9s  eta 3m
+gen 10/30: best 0.398  elite mean 0.398  (incumbent 0.397)  spread 0.704  9s  eta 3m
+gen 11/30: best 0.398  elite mean 0.398  (incumbent 0.398)  spread 0.725  9s  eta 3m
+gen 12/30: best 0.398  elite mean 0.398  (incumbent 0.397)  spread 0.702  9s  eta 3m
+gen 13/30: best 0.399  elite mean 0.398  (incumbent 0.398)  spread 0.631  9s  eta 2m
+gen 14/30: best 0.399  elite mean 0.398  (incumbent 0.398)  spread 0.595  9s  eta 2m
+gen 15/30: best 0.399  elite mean 0.398  (incumbent 0.398)  spread 0.518  8s  eta 2m
+gen 16/30: best 0.399  elite mean 0.399  (incumbent 0.398)  spread 0.514  8s  eta 2m
+gen 17/30: best 0.399  elite mean 0.398  (incumbent 0.398)  spread 0.505  8s  eta 2m
+gen 18/30: best 0.399  elite mean 0.399  (incumbent 0.398)  spread 0.536  8s  eta 2m
+gen 19/30: best 0.399  elite mean 0.399  (incumbent 0.398)  spread 0.564  8s  eta 2m
+gen 20/30: best 0.399  elite mean 0.399  (incumbent 0.398)  spread 0.547  8s  eta 1m
+gen 21/30: best 0.399  elite mean 0.399  (incumbent 0.398)  spread 0.474  8s  eta 1m
+gen 22/30: best 0.399  elite mean 0.399  (incumbent 0.399)  spread 0.419  9s  eta 1m
+gen 23/30: best 0.399  elite mean 0.399  (incumbent 0.399)  spread 0.354  8s  eta 1m
+gen 24/30: best 0.399  elite mean 0.399  (incumbent 0.398)  spread 0.382  8s  eta 1m
+gen 25/30: best 0.399  elite mean 0.399  (incumbent 0.399)  spread 0.309  8s  eta 1m
+gen 26/30: best 0.399  elite mean 0.399  (incumbent 0.399)  spread 0.270  8s  eta 1m
+gen 27/30: best 0.399  elite mean 0.399  (incumbent 0.399)  spread 0.232  8s  eta 0m
+gen 28/30: best 0.399  elite mean 0.399  (incumbent 0.398)  spread 0.250  8s  eta 0m
+gen 29/30: best 0.399  elite mean 0.399  (incumbent 0.399)  spread 0.221  8s  eta 0m
+gen 30/30: best 0.399  elite mean 0.399  (incumbent 0.399)  spread 0.192  8s  eta 0m
+
+saved distribution mean to C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/bot/results/cem_d1/d1_classic.txt (best single candidate scored 0.399)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+d1_classic_none500                   0/64      500   0.117    0.117   0.117    0.117         -
+d1_classic_cheese20                 61/64      168   0.284    0.095   0.543    0.182 2780/3730
+d1_classic_cheese50                 64/64      120   0.184    0.044   0.394    0.094 1603/2668
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+d1_classic_none2000                  0/64     2000   0.114    0.114   0.114    0.114         -
+classic done

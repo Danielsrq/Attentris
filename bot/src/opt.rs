@@ -34,6 +34,9 @@ pub struct Fitness {
     /// --fitness vs: TETR.IO's versus score without PPS, (attack + garbage cleared) per piece of
     /// the full budget, so digging garbage out counts; default (app): attack only.
     pub vs: bool,
+    /// --fitness lines: lines cleared per piece of the full budget (classic Tetris: survival and
+    /// line clears only, attack ignored).
+    pub lines: bool,
 }
 
 impl Fitness {
@@ -68,7 +71,8 @@ impl Fitness {
                         all_roots: 0,
                     };
                     let st = game::play(&mut searcher, &cfg).0;
-                    attack[ci].fetch_add(st.attack + if self.vs { st.garbage_cleared as i64 } else { 0 }, Ordering::Relaxed);
+                    let score = if self.lines { st.lines as i64 } else { st.attack + if self.vs { st.garbage_cleared as i64 } else { 0 } };
+                    attack[ci].fetch_add(score, Ordering::Relaxed);
                     on_job(done.fetch_add(1, Ordering::Relaxed) + 1, total);
                 });
             }
@@ -85,10 +89,11 @@ fn fitness_from_args(a: &Args, default_games: usize) -> Fitness {
         games: a.get("games", default_games),
         pieces: a.get("pieces", 300),
         vs: match a.str("fitness") {
-            None | Some("app") => false,
+            None | Some("app") | Some("lines") => false,
             Some("vs") => true,
-            Some(x) => panic!("--fitness {}: expected app | vs", x),
+            Some(x) => panic!("--fitness {}: expected app | vs | lines", x),
         },
+        lines: a.str("fitness") == Some("lines"),
     }
 }
 
@@ -411,7 +416,7 @@ pub fn cmd_tune(a: &Args) {
         let _ = std::fs::write(&dist_path, "gen,kind,values (normalised units; cov is row-major n x n)\n");
     }
     println!("tuning ({}): {} gens x {} candidates x {} games x {} pieces, search beam {} depth {}, fitness {}{}", algo, gens, pop, f.games, f.pieces,
-        f.sc.beam, f.sc.depth, if f.vs { "VS (attack + garbage cleared) / full budget" } else { "APP over the full budget" },
+        f.sc.beam, f.sc.depth, if f.lines { "lines cleared / full budget (classic)" } else if f.vs { "VS (attack + garbage cleared) / full budget" } else { "APP over the full budget" },
         if eval::RAW_FEATURES.load(Ordering::Relaxed) { "  [raw features]" } else { "" });
 
     let session = Instant::now();

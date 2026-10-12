@@ -1,0 +1,6 @@
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+d1_classic_none500                   0/64      500   0.117    0.117   0.117    0.117         -
+d1_classic_cheese20                 61/64      168   0.284    0.095   0.543    0.182 2780/3730
+d1_classic_cheese50                 64/64      120   0.184    0.044   0.394    0.094 1603/2668
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+d1_classic_none2000                  0/64     2000   0.114    0.114   0.114    0.114         -
