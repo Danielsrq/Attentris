@@ -1,0 +1,29 @@
+== v51_nosetup
+epoch 8: train loss 2.192 | val normal top1 0.615 top3 0.848 | val gate4 top1 0.614 top3 0.842 | | 179s
+== v51_nosetup_dagger_ft
+epoch 3: train loss 2.384 | val normal top1 0.620 top3 0.850 | val gate4 top1 0.606 top3 0.840 | | 46s
+epoch 3: val2 (val_dagger2.npz, 9737) top1 0.402 top3 0.663 loss 2.850 | argmax Qs top1 0.360 | MAE Qs 7.25
+== v51_nosetup_dagger3_ft
+epoch 3: train loss 2.386 | val normal top1 0.615 top3 0.851 | val gate4 top1 0.605 top3 0.841 | | 44s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.456 top3 0.718 loss 2.717 | argmax Qs top1 0.429 | MAE Qs 8.17
+v51_nosetup normal none: APP 0.543 (APPfull 0.536), died 7/256, pieces 493 avg, TSD 4861, TST 27, quads 2891, max height 21, illegal 0, 11.1 ms/move (p90 12.3) + search 11.6 ms, 97s
+v51 normal none: APP 0.587 (APPfull 0.586), died 1/256, pieces 500 avg, TSD 5364, TST 66, quads 3187, max height 23, illegal 0, 13.5 ms/move (p90 15.7) + search 13.9 ms, 116s
+v51_nosetup_dagger3_ft normal none: APP 0.597 (APPfull 0.597), died 0/256, pieces 500 avg, TSD 5461, TST 24, quads 3420, max height 16, illegal 0, 11.2 ms/move (p90 12.4) + search 11.7 ms, 98s
+v51_nosetup_dagger3_ft normal g20: APP 0.693 (APPfull 0.459), died 41/64, pieces 331 avg, TSD 683, TST 1, quads 1473, max height 23, illegal 0, 10.8 ms/move (p90 12.2) + search 11.2 ms, 19s
+v51_nosetup_dagger3_ft normal g50: APP 0.482 (APPfull 0.168), died 64/64, pieces 174 avg, TSD 306, TST 1, quads 421, max height 22, illegal 0, 11.1 ms/move (p90 12.6) + search 11.6 ms, 13s
+v51_nosetup_dagger3_ft danger g20: APP 0.681 (APPfull 0.616), died 16/64, pieces 452 avg, TSD 931, TST 2, quads 2016, max height 21, illegal 0, 10.9 ms/move (p90 12.5) + search 11.4 ms, 25s
+v51_nosetup_dagger3_ft danger g50: APP 0.461 (APPfull 0.263), died 54/64, pieces 285 avg, TSD 455, TST 0, quads 692, max height 22, illegal 0, 10.4 ms/move (p90 11.6) + search 10.8 ms, 17s
+v51_dagger3_ft normal none: APP 0.631 (APPfull 0.631), died 0/256, pieces 500 avg, TSD 5816, TST 71, quads 3566, max height 16, illegal 0, 13.9 ms/move (p90 16.3) + search 14.4 ms, 120s
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_normal_none                      1/256      500   0.587    0.586   0.587    0.586         -
+v51_nosetup_normal_none              7/256      493   0.543    0.536   0.543    0.536         -
+v51_dagger3_ft_normal_none           0/256      500   0.631    0.631   0.631    0.631         -
+v51_nosetup_dagger3_ft_normal_none   0/256      500   0.597    0.597   0.597    0.597         -
+v51_dagger3_ft_normal_g20           32/64      355   0.706    0.501   1.023    0.726 7186/7853
+v51_dagger3_ft_normal_g50           60/64      197   0.490    0.193   0.759    0.299 3384/4402
+v51_dagger3_ft_danger_g20           14/64      452   0.676    0.612   1.008    0.912 9613/10007
+v51_dagger3_ft_danger_g50           43/64      318   0.474    0.301   0.780    0.496 6220/7067
+v51_nosetup_dagger3_ft_normal_g20   41/64      331   0.693    0.459   1.005    0.666 6615/7375
+v51_nosetup_dagger3_ft_normal_g50   64/64      174   0.482    0.168   0.740    0.258 2876/3896
+v51_nosetup_dagger3_ft_danger_g20   16/64      452   0.681    0.616   1.014    0.916 9606/9995
+v51_nosetup_dagger3_ft_danger_g50   54/64      285   0.461    0.263   0.756    0.430 5371/6355
