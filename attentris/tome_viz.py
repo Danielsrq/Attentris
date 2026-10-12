@@ -121,7 +121,8 @@ def main():
     ap.add_argument("--games-notes", default="", help="JSON '<seed>_<n>' -> note for the game positions (sample_states.py)")
     ap.add_argument("--play", default="", help="JSON list of {value, label} play-test results for the page summary")
     ap.add_argument("--overrides", default="", help="inference-time merge overrides to render, ';'-separated LAYER:FRACTION "
-                    "specs ('none' = as trained), e.g. 'none;6:0.30' (model_tome frac_override)")
+                    "specs ('none' = as trained; 'split=hash' renders with the direction-blind A/B split), e.g. "
+                    "'none;6:0.30;split=hash' (model_tome frac_override / split)")
     ap.add_argument("--val-eval", action="store_true", help="score the held-out set under each schedule (top-1)")
     args = ap.parse_args()
     pcores.pin()
@@ -131,12 +132,18 @@ def main():
     trained = a["merge"]
     scheds = args.merges.split(";") if args.merges else [trained]
     # variants: (merge schedule, override spec, name shown in the page)
+    own_split = a.get("tome_split", "token")
     if args.overrides:
-        variants = [(trained, "" if o == "none" else o, "as trained" if o == "none" else
-                     "+ " + ", ".join("layer %s merges %d%%" % (k, round(100 * float(v))) for k, v in (p.split(":") for p in o.split(","))))
-                    for o in args.overrides.split(";")]
+        variants = []
+        for o in args.overrides.split(";"):
+            items = [] if o == "none" else o.split(",")
+            sp = [t_.split("=", 1)[1] for t_ in items if t_.startswith("split=")]
+            fr = [t_ for t_ in items if not t_.startswith("split=")]
+            name = [("hash split at inference (bug-fixed; not retrained)" if sp[0] == "hash" else sp[0] + " split")] if sp else []
+            name += ["layer %s merges %d%%" % (k, round(100 * float(v))) for k, v in (q.split(":") for q in fr)]
+            variants.append((trained, ",".join(fr), "as trained" if not name else "+ " + ", ".join(name), sp[0] if sp else own_split))
     else:
-        variants = [(sc, "", None) for sc in scheds]
+        variants = [(sc, "", None, own_split) for sc in scheds]
     net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in trained.split(",")], sky=a.get("tome_sky", False),
                           pretok=a.get("tome_pretok", False), flat_bias=a.get("tome_flat", False),
                           streams=a.get("tome_streams", 1), budget=MT.budget_of(a.get("tome_budget", "")), split=a.get("tome_split", "token"))
@@ -168,6 +175,7 @@ def main():
     def use(v):
         net.merge = tuple(float(f) for f in v[0].split(","))
         net.frac_override = MT.override_of(v[1])
+        net.split = v[3]
     for v in variants:
         use(v)
         if args.val_eval:
