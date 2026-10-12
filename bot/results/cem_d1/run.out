@@ -1,0 +1,86 @@
+== CEM at depth 1, APP, no garbage Mon Oct 12 21:02:41 MPST 2026
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+frozen at 0: max_height wounds ready_repeat sz_single sz_double sz_triple lj_single lj_double lj_triple i_single i_double i_triple
+tuning (cem): 30 gens x 32 candidates x 24 games x 500 pieces, search beam 1 depth 1, fitness APP over the full budget
+gen  1/30: best 0.304  elite mean 0.279  (incumbent 0.304)  spread 2.491  4s  eta 2m
+gen  2/30: best 0.322  elite mean 0.290  (incumbent 0.280)  spread 1.938  4s  eta 2m
+gen  3/30: best 0.339  elite mean 0.322  (incumbent 0.324)  spread 1.267  5s  eta 2m
+gen  4/30: best 0.334  elite mean 0.317  (incumbent 0.312)  spread 1.045  5s  eta 2m
+gen  5/30: best 0.344  elite mean 0.330  (incumbent 0.320)  spread 0.875  5s  eta 2m
+gen  6/30: best 0.358  elite mean 0.337  (incumbent 0.325)  spread 0.744  5s  eta 2m
+gen  7/30: best 0.355  elite mean 0.342  (incumbent 0.355)  spread 0.644  4s  eta 2m
+gen  8/30: best 0.365  elite mean 0.352  (incumbent 0.341)  spread 0.609  5s  eta 2m
+gen  9/30: best 0.362  elite mean 0.354  (incumbent 0.350)  spread 0.544  4s  eta 2m
+gen 10/30: best 0.370  elite mean 0.345  (incumbent 0.335)  spread 0.505  4s  eta 1m
+gen 11/30: best 0.372  elite mean 0.348  (incumbent 0.339)  spread 0.457  4s  eta 1m
+gen 12/30: best 0.382  elite mean 0.360  (incumbent 0.382)  spread 0.448  4s  eta 1m
+gen 13/30: best 0.368  elite mean 0.356  (incumbent 0.344)  spread 0.396  4s  eta 1m
+gen 14/30: best 0.357  elite mean 0.348  (incumbent 0.337)  spread 0.372  4s  eta 1m
+gen 15/30: best 0.385  elite mean 0.369  (incumbent 0.358)  spread 0.325  4s  eta 1m
+gen 16/30: best 0.382  elite mean 0.366  (incumbent 0.339)  spread 0.312  4s  eta 1m
+gen 17/30: best 0.379  elite mean 0.366  (incumbent 0.343)  spread 0.286  4s  eta 1m
+gen 18/30: best 0.369  elite mean 0.359  (incumbent 0.363)  spread 0.257  4s  eta 1m
+gen 19/30: best 0.372  elite mean 0.366  (incumbent 0.351)  spread 0.265  4s  eta 1m
+gen 20/30: best 0.378  elite mean 0.363  (incumbent 0.354)  spread 0.263  4s  eta 1m
+gen 21/30: best 0.380  elite mean 0.364  (incumbent 0.359)  spread 0.265  4s  eta 1m
+gen 22/30: best 0.370  elite mean 0.361  (incumbent 0.352)  spread 0.240  4s  eta 1m
+gen 23/30: best 0.376  elite mean 0.365  (incumbent 0.355)  spread 0.195  4s  eta 1m
+gen 24/30: best 0.365  elite mean 0.359  (incumbent 0.346)  spread 0.194  4s  eta 0m
+gen 25/30: best 0.378  elite mean 0.370  (incumbent 0.362)  spread 0.173  4s  eta 0m
+gen 26/30: best 0.375  elite mean 0.368  (incumbent 0.345)  spread 0.173  4s  eta 0m
+gen 27/30: best 0.390  elite mean 0.377  (incumbent 0.390)  spread 0.145  4s  eta 0m
+gen 28/30: best 0.377  elite mean 0.364  (incumbent 0.347)  spread 0.126  4s  eta 0m
+gen 29/30: best 0.380  elite mean 0.370  (incumbent 0.367)  spread 0.115  4s  eta 0m
+gen 30/30: best 0.376  elite mean 0.368  (incumbent 0.376)  spread 0.097  4s  eta 0m
+
+saved distribution mean to C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/bot/results/cem_d1/d1_app.txt (best single candidate scored 0.390)
+== CEM at depth 1, VS, 50/50 garbage Mon Oct 12 21:04:51 MPST 2026
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+frozen at 0: max_height wounds ready_repeat sz_single sz_double sz_triple lj_single lj_double lj_triple i_single i_double i_triple
+tuning (cem): 30 gens x 32 candidates x 24 games x 500 pieces, search beam 1 depth 1, fitness VS (attack + garbage cleared) / full budget
+gen  1/30: best 0.071  elite mean 0.053  (incumbent 0.039)  spread 2.343  1s  eta 0m
+gen  2/30: best 0.068  elite mean 0.055  (incumbent 0.046)  spread 1.750  1s  eta 0m
+gen  3/30: best 0.085  elite mean 0.076  (incumbent 0.050)  spread 1.337  1s  eta 0m
+gen  4/30: best 0.087  elite mean 0.084  (incumbent 0.076)  spread 1.177  1s  eta 0m
+gen  5/30: best 0.097  elite mean 0.082  (incumbent 0.078)  spread 1.017  1s  eta 0m
+gen  6/30: best 0.112  elite mean 0.103  (incumbent 0.106)  spread 0.871  1s  eta 0m
+gen  7/30: best 0.098  elite mean 0.094  (incumbent 0.084)  spread 0.721  1s  eta 0m
+gen  8/30: best 0.106  elite mean 0.096  (incumbent 0.095)  spread 0.607  1s  eta 0m
+gen  9/30: best 0.119  elite mean 0.102  (incumbent 0.090)  spread 0.538  1s  eta 0m
+gen 10/30: best 0.124  elite mean 0.109  (incumbent 0.096)  spread 0.528  1s  eta 0m
+gen 11/30: best 0.135  elite mean 0.119  (incumbent 0.108)  spread 0.566  1s  eta 0m
+gen 12/30: best 0.110  elite mean 0.088  (incumbent 0.084)  spread 0.538  1s  eta 0m
+gen 13/30: best 0.122  elite mean 0.112  (incumbent 0.080)  spread 0.518  1s  eta 0m
+gen 14/30: best 0.146  elite mean 0.123  (incumbent 0.089)  spread 0.492  1s  eta 0m
+gen 15/30: best 0.163  elite mean 0.147  (incumbent 0.132)  spread 0.443  1s  eta 0m
+gen 16/30: best 0.135  elite mean 0.124  (incumbent 0.101)  spread 0.454  1s  eta 0m
+gen 17/30: best 0.151  elite mean 0.139  (incumbent 0.150)  spread 0.408  1s  eta 0m
+gen 18/30: best 0.156  elite mean 0.134  (incumbent 0.116)  spread 0.445  1s  eta 0m
+gen 19/30: best 0.148  elite mean 0.127  (incumbent 0.107)  spread 0.403  1s  eta 0m
+gen 20/30: best 0.125  elite mean 0.120  (incumbent 0.098)  spread 0.408  1s  eta 0m
+gen 21/30: best 0.151  elite mean 0.129  (incumbent 0.102)  spread 0.344  1s  eta 0m
+gen 22/30: best 0.161  elite mean 0.136  (incumbent 0.133)  spread 0.316  1s  eta 0m
+gen 23/30: best 0.168  elite mean 0.161  (incumbent 0.143)  spread 0.262  1s  eta 0m
+gen 24/30: best 0.141  elite mean 0.133  (incumbent 0.119)  spread 0.255  1s  eta 0m
+gen 25/30: best 0.150  elite mean 0.134  (incumbent 0.111)  spread 0.237  1s  eta 0m
+gen 26/30: best 0.113  elite mean 0.106  (incumbent 0.099)  spread 0.237  1s  eta 0m
+gen 27/30: best 0.166  elite mean 0.144  (incumbent 0.113)  spread 0.239  1s  eta 0m
+gen 28/30: best 0.138  elite mean 0.126  (incumbent 0.120)  spread 0.239  1s  eta 0m
+gen 29/30: best 0.152  elite mean 0.132  (incumbent 0.111)  spread 0.200  1s  eta 0m
+gen 30/30: best 0.126  elite mean 0.113  (incumbent 0.097)  spread 0.188  1s  eta 0m
+
+saved distribution mean to C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/bot/results/cem_d1/d1_vs.txt (best single candidate scored 0.168)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+normal_d1_none                       4/64      487   0.261    0.254   0.261    0.254         -
+normal_d1_g20                       64/64       82   0.352    0.057   0.514    0.084  850/1816
+normal_d1_g50                       64/64       66   0.256    0.034   0.357    0.047  428/1460
+survive_d1_none                      1/64      497   0.286    0.284   0.286    0.284         -
+survive_d1_g20                      64/64      102   0.343    0.070   0.535    0.110 1257/2253
+survive_d1_g50                      64/64       76   0.243    0.037   0.375    0.057  640/1666
+d1_app_d1_none                       2/64      496   0.354    0.351   0.354    0.351         -
+d1_app_d1_g20                       64/64       97   0.321    0.062   0.507    0.098 1155/2143
+d1_app_d1_g50                       64/64       71   0.210    0.030   0.327    0.046  531/1555
+d1_vs_d1_none                        1/64      499   0.121    0.121   0.121    0.121         -
+d1_vs_d1_g20                        57/64      228   0.347    0.158   0.640    0.292 4289/5102
+d1_vs_d1_g50                        64/64      135   0.225    0.061   0.453    0.122 1968/2989
+cem d1 done Mon Oct 12 21:05:25 MPST 2026
