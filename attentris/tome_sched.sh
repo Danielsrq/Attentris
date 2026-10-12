@@ -21,10 +21,10 @@ trap 'rmdir "$DIR/.tome_sched.lock"' EXIT
 mkdir -p "$D"
 for cfg in "A 4 0,0.17,0.17,0.17 -" "B 6 0,1,1,1,1,1 20,36,0.25,0.10" "C 4 0,1,1,1 20,36,0.25,0.10"; do
     set -- $cfg; tag=$1; L=$2; MS=$3; BU=""; [ "$4" != "-" ] && BU="--tome-budget $4"
-    name=tome_s$tag; M="$DIR/data/model_$name.pt"; LOG="$DIR/train_$name.out"
+    MI=4; [ "$L" -gt 4 ] && MI=8; name=tome_s$tag; M="$DIR/data/model_$name.pt"; LOG="$DIR/train_$name.out"
     if ! grep -q "^epoch 4:" "$LOG" 2>/dev/null; then
         R=""; [ -f "$M" ] && R="--resume"
-        "$PYG" "$DIR/train.py" --arch tome --tome-pretok --tome-flat --tome-streams 2 --micro 4 --layers $L --merge $MS $BU --bucket 50 \
+        "$PYG" "$DIR/train.py" --arch tome --tome-pretok --tome-flat --tome-streams 2 --micro $MI --layers $L --merge $MS $BU --bucket 50 \
             --data "$V51" --train train.npz,dagger1.npz,train1m.npz --epochs 4 --batch 512 --lr 1.5e-3 --device cuda \
             --w-dense 0 --w-q1 0 --w-qs 1 --seed 0 --out "$M" $R >> "$LOG" 2>&1
     fi

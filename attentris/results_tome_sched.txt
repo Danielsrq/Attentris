@@ -1,0 +1,40 @@
+== tome_sA: 4 layers, merge 0,0.17,0.17,0.17 fixed fractions
+epoch 4: train loss 2.320 | val normal top1 0.600 top3 0.839 | val gate4 top1 0.582 top3 0.813 | | 529s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.24     2%                     0.24     0%            L2:72% L3:9% L4:17%
+  sky                  2000      1.00   100%                     1.00   100%            L2:100%
+  pit2                 1750      0.52    59%                     0.45    46%            L2:43% L3:27% L4:29%
+  well                 1685      0.48    40%                     0.50    42%            L2:90% L3:0% L4:8%
+  pit1                 1385      0.72    85%                     0.46    51%            L2:34% L3:30% L4:35%
+  fit_j open           1289      0.46    68%                     0.43    57%            L2:61% L3:22% L4:15%
+  fit_l open           1284      0.46    67%                     0.42    53%            L2:61% L3:19% L4:18%
+  tsd                  1150      0.49    74%                     0.47    69%            L2:68% L3:12% L4:19%
+  pit3                 1135      0.42    32%                     0.37    24%            L2:37% L3:27% L4:34%
+  fit_z open           1065      0.46    73%                     0.44    62%            L2:60% L3:22% L4:16%
+  fit_s open            993      0.45    69%                     0.44    59%            L2:59% L3:23% L4:17%
+  pit4                  740      0.33    14%                     0.30     9%            L2:31% L3:30% L4:37%
+  fit_j covered         690      0.46    70%                     0.45    64%            L2:75% L3:16% L4:7%
+  fit_l covered         628      0.46    72%                     0.45    65%            L2:76% L3:11% L4:11%
+  fit_t open            590      0.45    62%                     0.44    58%            L2:70% L3:16% L4:13%
+  fit_z covered         328      0.45    68%                     0.45    61%            L2:70% L3:23% L4:6%
+  fit_s covered         272      0.45    70%                     0.46    64%            L2:74% L3:18% L4:7%
+  setup_t               207      0.43    62%                     0.41    52%            L2:69% L3:22% L4:8%
+  fit_i covered         135      0.48    76%                     0.47    70%            L2:81% L3:7% L4:11%
+  fractal                98      0.32     4%                     0.30     1%            L2:42% L3:20% L4:36%
+  setup_j                84      0.43    61%                     0.46    67%            L2:71% L3:20% L4:8%
+  imperial               77      0.41    30%                     0.30     0%            L2:19% L3:14% L4:66%
+  setup_l                72      0.44    68%                     0.43    57%            L2:61% L3:25% L4:13%
+  setup_s                71      0.48    76%                     0.46    69%            L2:59% L3:22% L4:18%
+  setup_z                60      0.45    68%                     0.43    57%            L2:65% L3:21% L4:13%
+  setup_i                28      0.42    54%                     0.39    50%            L2:71% L3:17% L4:10%
+  rect12                 12      0.25     0%                     0.33     8%            L2:33% L3:16% L4:50%
+  vertical               11      0.52   100%                     0.48    82%            L2:18% L3:63% L4:18%
+  stsd                    8      0.41    25%                     0.35    12%            L3:37% L4:62%
+  cspin                   4      0.28     0%                     0.28     0%            L2:25% L3:50% L4:25%
+  band                    4      0.25     0%                     0.26     0%            L2:75% L4:25%
+tome_sA d1: APP 0.393 (APPfull 0.316), died 26/64, pieces 403 avg, TSD 648, TST 6, quads 356, max height 23, illegal 0, 34.0 ms/move (p90 44.3) + search 34.6 ms, 62s
+tome_sA d2: APP 0.491 (APPfull 0.450), died 13/64, pieces 458 avg, TSD 871, TST 7, quads 524, max height 23, illegal 0, 203.8 ms/move (p90 280.4) + search 204.5 ms, 401s
+tome_sA g20: APP 0.545 (APPfull 0.118), died 63/64, pieces 108 avg, TSD 151, TST 1, quads 352, max height 23, illegal 0, 30.4 ms/move (p90 39.5) + search 31.0 ms, 21s
+tome_sA g50: APP 0.396 (APPfull 0.062), died 64/64, pieces 78 avg, TSD 93, TST 0, quads 156, max height 22, illegal 0, 33.5 ms/move (p90 43.1) + search 34.0 ms, 17s
