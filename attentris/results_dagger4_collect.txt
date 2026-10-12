@@ -1,0 +1,4 @@
+v51_dagger3_ft g20: APP 0.662 (APPfull 0.578), died 28/100, pieces 437 avg, TSD 1424, TST 5, quads 2978, max height 22, illegal 0, 12.7 ms/move (p90 15.3) + sea
+v51_dagger3_ft g50: APP 0.466 (APPfull 0.266), died 78/100, pieces 286 avg, TSD 720, TST 0, quads 1090, max height 23, illegal 0, 13.4 ms/move (p90 20.4) + sear
+tome_v4_dagger3_ft g20: APP 0.641 (APPfull 0.498), died 48/100, pieces 388 avg, TSD 1143, TST 7, quads 2557, max height 23, illegal 0, 29.7 ms/move (p90 42.6) + sea
+tome_v4_dagger3_ft g50: APP 0.447 (APPfull 0.200), died 93/100, pieces 224 avg, TSD 559, TST 3, quads 784, max height 22, illegal 0, 34.4 ms/move (p90 48.0) + searc
