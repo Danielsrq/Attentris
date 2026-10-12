@@ -1,0 +1,75 @@
+== tome_v41
+epoch 8: train loss 2.188 | val normal top1 0.615 top3 0.857 | val gate4 top1 0.606 top3 0.837 | | 1126s
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.31    11%                     0.25     1%            L2:27% L3:20% L4:3% L5:21% L6:26%
+  sky                  2000      1.00   100%                     1.00   100%            L2:100%
+  pit2                 1750      0.56    60%                     0.44    45%            L2:33% L3:17% L4:18% L5:11% L6:18%
+  well                 1685      0.48    41%                     0.51    44%            L2:90% L3:1% L4:0% L5:2% L6:4%
+  pit1                 1385      0.65    78%                     0.44    48%            L2:33% L3:11% L4:30% L5:11% L6:13%
+  fit_j open           1289      0.46    66%                     0.42    52%            L2:43% L3:20% L4:14% L5:10% L6:10%
+  fit_l open           1284      0.46    66%                     0.41    51%            L2:42% L3:19% L4:14% L5:12% L6:10%
+  tsd                  1150      0.68    96%                     0.49    69%            L2:12% L3:31% L4:4% L5:15% L6:34%
+  pit3                 1135      0.45    35%                     0.36    22%            L2:24% L3:18% L4:14% L5:14% L6:27%
+  fit_z open           1065      0.46    70%                     0.42    54%            L2:41% L3:21% L4:15% L5:10% L6:10%
+  fit_s open            993      0.47    74%                     0.43    54%            L2:43% L3:16% L4:16% L5:11% L6:11%
+  pit4                  740      0.37    20%                     0.30    11%            L2:18% L3:15% L4:12% L5:21% L6:32%
+  fit_j covered         690      0.57    88%                     0.47    66%            L2:23% L3:30% L4:8% L5:10% L6:26%
+  fit_l covered         628      0.57    88%                     0.47    66%            L2:24% L3:31% L4:6% L5:9% L6:28%
+  fit_t open            590      0.50    66%                     0.42    52%            L2:39% L3:20% L4:7% L5:16% L6:15%
+  fit_z covered         328      0.52    90%                     0.46    66%            L2:35% L3:21% L4:18% L5:8% L6:16%
+  fit_s covered         272      0.50    88%                     0.47    67%            L2:38% L3:32% L4:10% L5:8% L6:10%
+  setup_t               207      0.42    58%                     0.42    57%            L2:47% L3:14% L4:18% L5:11% L6:7%
+  fit_i covered         135      0.55    81%                     0.44    56%            L2:31% L3:25% L4:10% L5:11% L6:20%
+  fractal                98      0.43    23%                     0.31     4%            L2:1% L3:29% L4:3% L5:9% L6:57%
+  setup_j                84      0.44    62%                     0.45    57%            L2:44% L3:11% L4:15% L5:14% L6:14%
+  imperial               77      0.42    23%                     0.34     8%            L3:11% L4:9% L5:44% L6:35%
+  setup_l                72      0.44    64%                     0.47    65%            L2:41% L3:20% L4:15% L5:13% L6:8%
+  setup_s                71      0.42    62%                     0.42    54%            L2:49% L3:14% L4:9% L5:14% L6:12%
+  setup_z                60      0.43    58%                     0.45    60%            L2:46% L3:10% L4:18% L5:18% L6:6%
+  setup_i                28      0.41    50%                     0.36    39%            L2:60% L3:14% L4:7% L5:7% L6:10%
+  rect12                 12      0.46    25%                     0.33     8%            L3:16% L4:16% L5:16% L6:50%
+  vertical               11      0.71   100%                     0.60    91%            L2:18% L3:9% L4:36% L5:18% L6:18%
+  stsd                    8      0.40    38%                     0.28     0%            L2:25% L3:12% L5:25% L6:37%
+  cspin                   4      0.39    25%                     0.24     0%            L4:75% L5:25%
+  band                    4      0.32    25%                     0.29     0%            L2:50% L4:50%
+== tome_v41_dagger3_ft
+epoch 3: train loss 2.366 | val normal top1 0.613 top3 0.854 | val gate4 top1 0.609 top3 0.834 | | 319s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.447 top3 0.708 loss 2.777 | argmax Qs top1 0.417 | MAE Qs 8.47
+tome_v41 normal d1: APP 0.558 (APPfull 0.537), died 7/64, pieces 481 avg, TSD 1230, TST 21, quads 666, max height 22, illegal 0, 43.7 ms/move (p90 56.5) + search 44.3 ms, 92s
+tome_v41 normal d2: APP 0.689 (APPfull 0.686), died 2/64, pieces 498 avg, TSD 1553, TST 23, quads 791, max height 22, illegal 0, 257.9 ms/move (p90 350.5) + search 258.7 ms, 535s
+tome_v41 normal g20: APP 0.611 (APPfull 0.169), died 62/64, pieces 138 avg, TSD 270, TST 4, quads 514, max height 23, illegal 0, 41.4 ms/move (p90 53.3) + search 41.9 ms, 31s
+tome_v41 normal g50: APP 0.478 (APPfull 0.081), died 64/64, pieces 84 avg, TSD 171, TST 2, quads 189, max height 22, illegal 0, 44.4 ms/move (p90 58.3) + search 45.0 ms, 20s
+tome_v41_dagger3_ft normal d1: APP 0.596 (APPfull 0.596), died 0/64, pieces 500 avg, TSD 1385, TST 17, quads 741, max height 19, illegal 0, 40.1 ms/move (p90 50.9) + search 40.7 ms, 87s
+tome_v41_dagger3_ft normal g20: APP 0.668 (APPfull 0.359), died 52/64, pieces 269 avg, TSD 515, TST 1, quads 1140, max height 23, illegal 0, 41.7 ms/move (p90 53.4) + search 42.3 ms, 52s
+tome_v41_dagger3_ft normal g50: APP 0.484 (APPfull 0.136), died 64/64, pieces 140 avg, TSD 230, TST 0, quads 349, max height 22, illegal 0, 45.8 ms/move (p90 59.6) + search 46.4 ms, 32s
+tome_v41_dagger3_ft danger d1: APP 0.563 (APPfull 0.563), died 0/64, pieces 500 avg, TSD 1497, TST 18, quads 717, max height 17, illegal 0, 36.1 ms/move (p90 45.2) + search 36.7 ms, 78s
+tome_v41_dagger3_ft danger g20: APP 0.664 (APPfull 0.517), died 31/64, pieces 389 avg, TSD 820, TST 6, quads 1634, max height 21, illegal 0, 37.5 ms/move (p90 47.2) + search 38.1 ms, 66s
+tome_v41_dagger3_ft danger g50: APP 0.451 (APPfull 0.214), died 56/64, pieces 237 avg, TSD 350, TST 3, quads 546, max height 22, illegal 0, 41.6 ms/move (p90 53.8) + search 42.1 ms, 48s
+tome_v41_dagger3_ft auto d1: APP 0.592 (APPfull 0.592), died 0/64, pieces 500 avg, TSD 1425, TST 17, quads 746, max height 19, illegal 0, 39.1 ms/move (p90 49.1) + search 39.9 ms, 85s, danger style on 16.5% of moves (height >= 12
+tome_v41_dagger3_ft auto g20: APP 0.678 (APPfull 0.460), died 40/64, pieces 339 avg, TSD 664, TST 2, quads 1481, max height 22, illegal 0, 39.3 ms/move (p90 49.3) + search 40.1 ms, 60s, danger style on 49.9% of moves (height >= 12
+tome_v41_dagger3_ft auto g50: APP 0.433 (APPfull 0.150), died 62/64, pieces 174 avg, TSD 241, TST 2, quads 382, max height 22, illegal 0, 43.9 ms/move (p90 56.5) + search 44.7 ms, 39s, danger style on 70.6% of moves (height >= 12 
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+tome_v41_normal_d1                   7/64      481   0.558    0.537   0.558    0.537         -
+tome_v41_normal_d2                   2/64      498   0.689    0.686   0.689    0.686         -
+tome_v41_normal_g20                 62/64      138   0.611    0.169   0.848    0.235 2101/3064
+tome_v41_normal_g50                 64/64       84   0.478    0.081   0.636    0.107  856/1880
+tome_v41_dagger3_ft_normal_d1        0/64      500   0.596    0.596   0.596    0.596         -
+tome_v41_dagger3_ft_normal_g20      52/64      269   0.668    0.359   0.964    0.519 5095/6000
+tome_v41_dagger3_ft_normal_g50      64/64      140   0.484    0.136   0.714    0.201 2072/3142
+tome_v41_dagger3_ft_danger_d1        0/64      500   0.563    0.563   0.563    0.563         -
+tome_v41_dagger3_ft_danger_g20      31/64      389   0.664    0.517   0.984    0.765 7956/8620
+tome_v41_dagger3_ft_danger_g50      56/64      237   0.451    0.214   0.735    0.348 4308/5298
+tome_v41_dagger3_ft_auto_d1          0/64      500   0.592    0.592   0.592    0.592         -
+tome_v41_dagger3_ft_auto_g20        40/64      339   0.678    0.460   0.990    0.672 6774/7566
+tome_v41_dagger3_ft_auto_g50        62/64      174   0.433    0.150   0.687    0.239 2832/3874
+tome_v4_dagger3_ft_normal_none       0/64      500   0.619    0.619   0.619    0.619         -
+tome_v4_dagger3_ft_normal_g20       57/64      214   0.669    0.286   0.948    0.406 3822/4775
+tome_v4_dagger3_ft_normal_g50       64/64      114   0.467    0.106   0.669    0.152 1469/2530
+tome_v4_dagger3_ft_danger_none       0/64      500   0.551    0.551   0.551    0.551         -
+tome_v4_dagger3_ft_danger_g20       26/64      415   0.642    0.533   0.968    0.804 8662/9207
+tome_v4_dagger3_ft_danger_g50       63/64      197   0.438    0.173   0.703    0.277 3342/4402
+tome_v4_dagger3_ft_auto_none         0/64      500   0.617    0.617   0.617    0.617         -
+tome_v4_dagger3_ft_auto_g20         47/64      314   0.640    0.402   0.945    0.594 6136/7002
+tome_v4_dagger3_ft_auto_g50         63/64      184   0.441    0.162   0.699    0.257 3032/4101
