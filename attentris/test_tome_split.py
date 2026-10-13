@@ -11,7 +11,9 @@
 5. the hash split is the same on CUDA as on the CPU (training on the GPU, play on the CPU), if CUDA is free;
 6. split="greedy" (no A/B sets): every merge step equals a sequential greedy matching on the same
    similarities; no blob used twice; only adjacent same-stream board blobs; deterministic, batch-independent
-   (and CUDA = CPU with --cuda); the budget shortfall per step; ms per move (one position, CPU) vs hash.
+   (and CUDA = CPU with --cuda); the budget shortfall per step; ms per move (one position, CPU) vs hash;
+7. pure merges (model_tome.apply_variant "pure"): no blob ever holds both filled and empty cells, with greedy
+   and hash; "6:x2" doubles the merges layer 6 is asked for (as far as the pure pairs allow).
 
     attentris/.venv/Scripts/python attentris/test_tome_split.py [--cuda]
 """
@@ -132,6 +134,37 @@ def greedy_checks(a, ck, d, idx):
     return ok
 
 
+def pure_checks(a, ck, d, idx):
+    ok = True
+    b = TR.batch_of(d, idx[:128])
+    cells = b["cells"].float().view(-1, 200)
+    asked = {}
+    for spec in ("split=greedy", "split=greedy,pure", "split=hash,pure", "split=greedy,pure,6:x2"):
+        net = build(MT, a)
+        net.load_state_dict(ck["model"])
+        MT.apply_variant(net, spec)
+        ev = []
+        MT.MERGE_HOOK = lambda e: ev.append((e["mask"].clone(), e["sel"].clone(), e["r"].clone()))
+        with torch.no_grad():
+            _, info = net(b, return_attn=True)
+        MT.MERGE_HOOK = None
+        masks = [m for m, _, _ in ev] + [info["merges"][-1]["mask"]]
+        mixed = 0
+        for m in masks:
+            nf = (m * cells[:, None, :]).sum(-1)
+            n = m.sum(-1)
+            mixed += int(((nf > 0.5) & (nf < n - 0.5)).sum())
+        asked[spec] = [int(r.sum()) for _, _, r in ev]
+        made = [int(sl.sum()) for _, sl, _ in ev]
+        print("7. %-24s mixed blobs %5d   merges made per step %s, asked %s" % (spec, mixed, made, asked[spec]))
+        if "pure" in spec:
+            ok &= mixed == 0
+    ok &= asked["split=greedy,pure,6:x2"][-1] == sum(2 * x for x in [asked["split=greedy,pure"][-1]]) or \
+        abs(asked["split=greedy,pure,6:x2"][-1] - 2 * asked["split=greedy,pure"][-1]) <= 128   # floor per position
+    ok &= asked["split=greedy,pure,6:x2"][:-1] == asked["split=greedy,pure"][:-1]
+    return ok
+
+
 def main():
     torch.set_num_threads(4)
     ck = torch.load(os.path.join(HERE, "data", "model_tome_v41.pt"), map_location="cpu", weights_only=False)
@@ -215,6 +248,7 @@ def main():
         ok &= same and gd < 1e-3 and bool((torch.isfinite(g) == f).all())
 
     ok &= greedy_checks(a, ck, d, idx)
+    ok &= pure_checks(a, ck, d, idx)
     print("ALL OK" if ok else "FAILED")
     sys.exit(0 if ok else 1)
 

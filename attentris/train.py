@@ -161,6 +161,7 @@ def main():
                     help="A/B split after the first merge: token = alternate in token order (row-major, biased sideways; up to v4.1), "
                          "hash = a hashed bit per (board, step, stream, first cell), direction-blind; "
                          "greedy = no A/B sets, a greedy matching over all adjacent pairs")
+    ap.add_argument("--tome-pure", action="store_true", help="blobs merge only with blobs of the same kind (all empty / all filled)")
     ap.add_argument("--tome-streams", type=int, default=1, help="tome v4: merging streams (partitions), stream s merges by head s's keys")
     ap.add_argument("--micro", type=int, default=1, help="split each batch into this many micro-batches (same gradient, less GPU memory)")
     ap.add_argument("--bucket", type=int, default=0, help="group batches by token count within chunks of this many batches (0 = off)")
@@ -248,7 +249,7 @@ def main():
     if args.arch == "tome":
         net = MT.AtTenTrisToMe(d=args.d, layers=args.layers, merge=[float(f) for f in args.merge.split(",")],
                                sky=args.tome_sky, pretok=args.tome_pretok, flat_bias=args.tome_flat,
-                               streams=args.tome_streams, n_teachers=args.n_teachers, budget=MT.budget_of(args.tome_budget), split=args.tome_split).to(args.device)
+                               streams=args.tome_streams, n_teachers=args.n_teachers, budget=MT.budget_of(args.tome_budget), split=args.tome_split, pure=args.tome_pure).to(args.device)
     else:
         net = M.AtTenTris(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops,
                           n_teachers=args.n_teachers).to(args.device)

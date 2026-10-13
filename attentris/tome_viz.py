@@ -169,8 +169,8 @@ def main():
     ap.add_argument("--games-notes", default="", help="JSON '<seed>_<n>' -> note for the game positions (sample_states.py)")
     ap.add_argument("--play", default="", help="JSON list of {value, label} play-test results for the page summary")
     ap.add_argument("--overrides", default="", help="inference-time merge overrides to render, ';'-separated LAYER:FRACTION "
-                    "specs ('none' = as trained; 'split=hash' renders with the direction-blind A/B split), e.g. "
-                    "'none;6:0.30;split=hash' (model_tome frac_override / split)")
+                    "specs ('none' = as trained), each a model_tome.apply_variant spec: split=token|hash|greedy, pure, "
+                    "LAYER:xK, LAYER:F, e.g. 'none;split=greedy;split=greedy,pure,6:x2'")
     ap.add_argument("--title", default="", help="page title (default: the template's)")
     ap.add_argument("--val-eval", action="store_true", help="score the held-out set under each schedule (top-1)")
     args = ap.parse_args()
@@ -181,24 +181,20 @@ def main():
     trained = a["merge"]
     scheds = args.merges.split(";") if args.merges else [trained]
     # variants: (merge schedule, override spec, name shown in the page)
-    own_split = a.get("tome_split", "token")
+    # (spec: model_tome.apply_variant, e.g. "split=greedy,pure,6:x2"; names filled in once the model exists)
     if args.overrides:
-        variants = []
-        for o in args.overrides.split(";"):
-            items = [] if o == "none" else o.split(",")
-            sp = [t_.split("=", 1)[1] for t_ in items if t_.startswith("split=")]
-            fr = [t_ for t_ in items if not t_.startswith("split=")]
-            name = [{"hash": "hash split at inference (bug-fixed; not retrained)", "token": "token split (as trained up to v4.1)",
-                     "greedy": "greedy matching at inference (no A/B; not retrained)"}.get(sp[0], sp[0] + " split")] if sp else []
-            name += ["layer %s merges %d%%" % (k, round(100 * float(v))) for k, v in (q.split(":") for q in fr)]
-            variants.append((trained, ",".join(fr), "as trained" if not name else "+ " + ", ".join(name), sp[0] if sp else own_split))
+        variants = [(trained, o, None) for o in args.overrides.split(";")]
     else:
-        variants = [(sc, "", None, own_split) for sc in scheds]
+        variants = [(sc, "", None) for sc in scheds]
     net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in trained.split(",")], sky=a.get("tome_sky", False),
                           pretok=a.get("tome_pretok", False), flat_bias=a.get("tome_flat", False),
-                          streams=a.get("tome_streams", 1), budget=MT.budget_of(a.get("tome_budget", "")), split=a.get("tome_split", "token"))
+                          streams=a.get("tome_streams", 1), budget=MT.budget_of(a.get("tome_budget", "")), split=a.get("tome_split", "token"), pure=a.get("tome_pure", False))
     net.load_state_dict(ck["model"])
     net.eval()
+    if args.overrides:
+        variants = [(sc, o, ("+ " if o not in ("", "none") else "") + MT.apply_variant(net, o) + ("" if o in ("", "none") else " (inference only)"))
+                    for sc, o, _ in variants]
+        MT.apply_variant(net, "none")
     d = load_packed(args.data, a.get("tome_pretok"))
     s = open(args.src, encoding="utf-8").read()
     src = json.JSONDecoder().raw_decode(s[s.index('{"summary"'):])[0]["positions"]
@@ -224,8 +220,7 @@ def main():
     pos, vals = [], []
     def use(v):
         net.merge = tuple(float(f) for f in v[0].split(","))
-        net.frac_override = MT.override_of(v[1])
-        net.split = v[3]
+        MT.apply_variant(net, v[1])
     for v in variants:
         use(v)
         if args.val_eval:

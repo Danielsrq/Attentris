@@ -192,6 +192,32 @@ def adjacency(mask):
     return adj & ~torch.eye(N, dtype=torch.bool, device=mask.device)
 
 
+def apply_variant(net, spec):
+    """Inference-time merge options from a spec like "split=greedy,pure,6:x2,5:0.3" ('none' or '' = as
+    trained): split=token|hash|greedy|col|random, pure (blobs merge only with blobs of the same kind: both
+    all-empty or both all-filled), LAYER:xK (that layer merges K times the merges its budget asks for),
+    LAYER:F (that layer merges a fraction F of its board blobs). Returns a readable name."""
+    net.split = net.trained_split
+    net.pure, net.r_scale, net.frac_override = net.trained_pure, {}, {}
+    names = []
+    for it in ([] if spec in ("", "none") else spec.split(",")):
+        if it.startswith("split="):
+            net.split = it[6:]
+            names.append({"hash": "hash split", "greedy": "greedy matching", "token": "token split"}.get(net.split, net.split + " split"))
+        elif it == "pure":
+            net.pure = True
+            names.append("pure (no filled + empty)")
+        elif ":x" in it:
+            L, k = it.split(":x")
+            net.r_scale[int(L)] = float(k)
+            names.append("layer %s merges x%s" % (L, k))
+        else:
+            L, f = it.split(":")
+            net.frac_override[int(L)] = float(f)
+            names.append("layer %s merges %d%%" % (L, round(100 * float(f))))
+    return ", ".join(names) or "as trained"
+
+
 def override_of(s):
     """--merge-override "6:0.30,5:0.2" -> {6: 0.3, 5: 0.2} (empty -> {})."""
     return {int(k): float(v) for k, v in (p.split(":") for p in s.split(",") if p)} if s else {}
@@ -207,10 +233,14 @@ def budget_of(s):
 
 class AtTenTrisToMe(nn.Module):
     def __init__(self, d=64, heads=4, layers=4, merge=(0.0, 0.45, 0.45, 0.45), n_teachers=2, sky=False,
-                 pretok=False, flat_bias=False, streams=1, budget=None, split="token"):
+                 pretok=False, flat_bias=False, streams=1, budget=None, split="token", pure=False):
         super().__init__()
         assert split in ("token", "hash", "greedy")
-        self.split = split
+        self.split = self.trained_split = split
+        # pure=True: blobs merge only with blobs of the same kind (both all-empty or both all-filled), so a
+        # blob never mixes filled and empty cells (the pre-tokens are all pure)
+        self.pure = self.trained_pure = pure
+        self.r_scale = {}              # inference-time: {layer (1-based): factor} on the merges the budget asks for
         # budget (dict or None): a per-position merge plan instead of fixed fractions. The layers with
         # merge > 0 merge; at the first, each position's board-token count n0 sets a budget
         # T = base + max(0, (n0 - at) * slope) blobs per stream; the first step merges `first` of the
@@ -267,7 +297,7 @@ class AtTenTrisToMe(nn.Module):
 
     @staticmethod
     def _merge(x, size, mask, box, alive, is_cell, keys, frac, first, adj, par0, stream=None, n_streams=1, heads=4, r_plan=None,
-               split="token", step=0, cells=None):
+               split="token", step=0, cells=None, pure=False):
         B, N, d = x.shape
         dev = x.device
         split = SPLIT_MODE or split
@@ -284,6 +314,11 @@ class AtTenTrisToMe(nn.Module):
             S = kn @ kn.transpose(1, 2)
         S0 = S
         same = stream[:, :, None] == stream[:, None, :]
+        if pure:
+            # only blobs of the same kind merge: kind 0 = all empty, 1 = all filled, 2 = mixed (never paired)
+            nf = (mask * cells.float().reshape(B, 1, -1)).sum(-1)
+            kind = torch.where(nf < 0.5, 0, torch.where(nf > mask.sum(-1) - 0.5, 1, 2))
+            same = same & (kind[:, :, None] == kind[:, None, :]) & (kind[:, :, None] < 2)
         r_all = torch.stack([(frac * (cand & (stream == st)).sum(1).float()).floor().long() if r_plan is None else r_plan[:, st]
                              for st in range(n_streams)], 1)                      # (B, streams): merges this step
         if split == "greedy":
@@ -458,7 +493,7 @@ class AtTenTrisToMe(nn.Module):
                     alive, x, size, mask, box, is_cell, par0, stream, keys = self._compact(alive, x, size, mask, box, is_cell, par0, stream, keys)
                     adj = adjacency(mask)
                 r_plan = None
-                if self.budget is not None or (li + 1) in self.frac_override:
+                if self.budget is not None or (li + 1) in self.frac_override or (li + 1) in self.r_scale:
                     cand = alive & is_cell
                     cnt = torch.stack([(cand & (stream == s_)).sum(1) for s_ in range(self.streams)], 1).float()   # (B, S)
                     if (li + 1) in self.frac_override:
@@ -467,9 +502,11 @@ class AtTenTrisToMe(nn.Module):
                         if plan is None:
                             plan = self.budget_plan(cnt, n_steps)                  # (B, S, n_steps) planned counts
                         r_plan = (cnt - plan[..., step]).clamp(min=0).floor().long()
+                    if (li + 1) in self.r_scale:
+                        r_plan = (r_plan.float() * self.r_scale[li + 1]).floor().long()
                 x, size, mask, box, alive, is_cell, par0, stream = self._merge(
                     x, size, mask, box, alive, is_cell, keys, frac, not merged_yet, adj, par0, stream, self.streams, self.heads, r_plan,
-                    self.split, step, cells)
+                    self.split, step, cells, self.pure)
                 step += 1
                 merged_yet = True
             x = x + blk.ff(blk.n2(x))

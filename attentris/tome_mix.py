@@ -4,7 +4,7 @@ empty + empty, filled + filled, empty + filled (two pure blobs of different kind
 already mixed blob; plus how many board blobs go into each step and how many merges the budget asks
 for; and at the last layer the share of mixed blobs (and of the cells in them), per stream.
 
-    attentris/.venv/Scripts/python attentris/tome_mix.py --model attentris/data/model_tome_v41.pt --split token,hash,greedy
+    attentris/.venv/Scripts/python attentris/tome_mix.py --model attentris/data/model_tome_v41.pt --variants "split=token;split=greedy;split=greedy,pure"
 """
 import argparse
 import collections
@@ -31,8 +31,8 @@ def kind_of(mask, cells):
     return torch.where(n > 0, k, -1)
 
 
-def run(net, d, idx, split, device):
-    MT.SPLIT_MODE = None if split == "own" else split
+def run(net, d, idx, spec, device):
+    name = MT.apply_variant(net, spec)
     per_step = collections.defaultdict(lambda: np.zeros(len(KINDS) + 2))     # step -> kinds..., blobs in, asked
     final = np.zeros((2, 4))                                                  # stream -> blobs, mixed blobs, cells, cells in mixed
     for s in range(0, len(idx), 128):
@@ -65,8 +65,8 @@ def run(net, d, idx, split, device):
             m = last["alive"] & (k >= 0) & (last["stream"] == st)
             final[st] += [int(m.sum()), int((m & (k == 2)).sum()), float(size[m].sum()), float(size[m & (k == 2)].sum())]
         print("  %s: %d / %d positions" % (split, min(s + 128, len(idx)), len(idx)), flush=True)
-    MT.SPLIT_MODE = None
-    return per_step, final
+    MT.apply_variant(net, "none")
+    return name, per_step, final
 
 
 def main():
@@ -74,7 +74,7 @@ def main():
     ap.add_argument("--model", default=os.path.join(HERE, "data", "model_tome_v41.pt"))
     ap.add_argument("--data", default=os.path.join(HERE, "data", "v51", "val.npz"))
     ap.add_argument("--n", type=int, default=2000)
-    ap.add_argument("--split", default="token,hash,greedy")
+    ap.add_argument("--variants", default="split=token;split=hash;split=greedy", help="';'-separated model_tome.apply_variant specs")
     ap.add_argument("--device", default="cpu", help="cpu by default: never share the GPU with a training run")
     args = ap.parse_args()
     pcores.pin()
@@ -82,7 +82,7 @@ def main():
     a = ck["args"]
     net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in a["merge"].split(",")], sky=a.get("tome_sky", False),
                           pretok=a.get("tome_pretok", False), flat_bias=a.get("tome_flat", False),
-                          streams=a.get("tome_streams", 1), budget=MT.budget_of(a.get("tome_budget", "")), split=a.get("tome_split", "token"))
+                          streams=a.get("tome_streams", 1), budget=MT.budget_of(a.get("tome_budget", "")), split=a.get("tome_split", "token"), pure=a.get("tome_pure", False))
     net.load_state_dict(ck["model"])
     net.to(args.device).eval()
     d = TR.load(args.data)
@@ -91,16 +91,16 @@ def main():
     idx = np.random.default_rng(0).choice(len(d["chosen"]), size=min(args.n, len(d["chosen"])), replace=False)
     idx.sort()
     layers = [li + 1 for li, f in enumerate(net.merge) if f > 0]
-    for split in args.split.split(","):
-        per_step, final = run(net, d, idx, split, args.device)
-        print("\n== %s, %d positions (both streams together)" % (split, len(idx)))
-        print("   layer   blobs in / merges asked per position+stream   " + "   ".join("%-15s" % k_ for k_ in KINDS))
+    for spec in args.variants.split(";"):
+        name, per_step, final = run(net, d, idx, spec, args.device)
+        print("\n== %s, %d positions (both streams together)" % (name, len(idx)))
+        print("   layer   blobs in / merges made / asked per position+stream   " + "   ".join("%-15s" % k_ for k_ in KINDS))
         tot = np.zeros(len(KINDS))
         for st_, a_ in sorted(per_step.items()):
             n = a_[:4].sum()
             tot += a_[:4]
-            print("   %d       %5.1f / %4.1f (%4.1f%%)                        " % (
-                layers[st_ - 1], a_[4] / (2 * len(idx)), a_[5] / (2 * len(idx)), 100 * a_[5] / a_[4]) +
+            print("   %d       %5.1f / %4.1f / %4.1f (%4.1f%% of the blobs)        " % (
+                layers[st_ - 1], a_[4] / (2 * len(idx)), n / (2 * len(idx)), a_[5] / (2 * len(idx)), 100 * n / a_[4]) +
                 "   ".join("%5.1f%%         " % (100 * a_[j] / n) for j in range(4)))
         print("   all merges                                            " + "   ".join("%5.1f%%         " % (100 * t / tot.sum()) for t in tot))
         for st in (0, 1):

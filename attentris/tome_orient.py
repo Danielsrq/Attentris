@@ -268,6 +268,7 @@ def main():
     ap.add_argument("--model", default=os.path.join(HERE, "data", "model_tome_v41.pt"))
     ap.add_argument("--data", default=os.path.join(HERE, "data", "v51", "val.npz"))
     ap.add_argument("--n", type=int, default=2000)
+    ap.add_argument("--variants", default="", help="';'-separated model_tome.apply_variant specs (e.g. 'none;split=greedy,pure,6:x2'); replaces --split")
     ap.add_argument("--split", default="own,col,random", help="own = the model's own split (token for <= v4.1); token / hash / col / random override it")
     ap.add_argument("--out", default=os.path.join(HERE, "results_tome_orient.txt"))
     ap.add_argument("--device", default="cpu", help="cpu by default: never share the GPU with a training run")
@@ -277,7 +278,7 @@ def main():
     a = ck["args"]
     net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in a["merge"].split(",")], sky=a.get("tome_sky", False),
                           pretok=a.get("tome_pretok", False), flat_bias=a.get("tome_flat", False),
-                          streams=a.get("tome_streams", 1), budget=MT.budget_of(a.get("tome_budget", "")), split=a.get("tome_split", "token"))
+                          streams=a.get("tome_streams", 1), budget=MT.budget_of(a.get("tome_budget", "")), split=a.get("tome_split", "token"), pure=a.get("tome_pure", False))
     net.load_state_dict(ck["model"])
     net.to(args.device).eval()
     d = TR.load(args.data)
@@ -287,8 +288,11 @@ def main():
     idx.sort()
     with open(args.out, "a") as f:
         print("\n######## %s, %d positions of %s" % (os.path.basename(args.model), len(idx), os.path.basename(args.data)), file=f)
-        for split in args.split.split(","):
-            report(split, *run(net, d, idx, args.device, split), f)
+        for item in (args.variants.split(";") if args.variants else args.split.split(",")):
+            if args.variants:
+                MT.apply_variant(net, item)
+            report(item, *run(net, d, idx, args.device, "own" if args.variants else item), f)
+        MT.apply_variant(net, "none")
 
 
 if __name__ == "__main__":
