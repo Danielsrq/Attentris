@@ -93,7 +93,8 @@ table.probs tr.on { background: var(--panel); outline: 1px solid var(--accent); 
     blue: the selected move (the model's top pick by default). Hover a row of the token list to outline that blob in pink. Keys: ← →.</p>
   <p class="note"><b>Merge steps</b> show the blobs going <i>into</i> one merge step (one stream). With an A/B split every blob carries its side for
     that step (<b style="color:var(--side-a)">A</b> / <b style="color:var(--side-b)">B</b> on each cell; only A–B neighbours may merge). Green links:
-    the merges made. <span style="color:var(--hl)">Pink dashed links</span>: blocked pairs — neighbours on the <i>same</i> side whose keys are more
+    the merges made — already the step's top r, so every one happens (the blobs are drawn before the step; the joined result is the
+    matching <b>after layer</b> view). <span style="color:var(--hl)">Pink dashed links</span>: blocked pairs — neighbours on the <i>same</i> side whose keys are more
     similar than the weakest merge this step made, so they would have merged without the sides. The greedy matching has no sides: it takes the most
     similar neighbour pairs first, each blob at most once per step.</p>
 </div>
@@ -200,7 +201,8 @@ function render() {
              `<circle cx="${x1}" cy="${y1}" r="2.6" fill="${col}"/><circle cx="${x2}" cy="${y2}" r="2.6" fill="${col}"/>`; };
     M.blocked.forEach(m => { s += link(m, "var(--hl)", true, 2.6); });
     M.merges.forEach(m => { s += link(m, "var(--link)", false, 3.4); });
-    $("cap").textContent = `Into the merge at layer ${M.layer}${multi ? ", stream " + (M.stream + 1) : ""}`;
+    $("cap").textContent = `Into the merge at layer ${M.layer}${multi ? ", stream " + (M.stream + 1) : ""}: blobs before it; every green link merges in this step ` +
+      `(result: "after layer ${M.layer}${multi ? " · stream " + (M.stream + 1) : ""}")`;
     const nA = M.sides ? M.sides.filter(x => x === "A").length : 0;
     $("stats").textContent = `${M.blobs.length} blobs in${M.sides ? ` (${nA} A, ${M.blobs.length - nA} B)` : ""} · ${M.merges.length} merges made of ${M.asked} asked` +
       (M.weakest !== null ? ` · weakest merge similarity ${M.weakest.toFixed(2)}` : "") +
