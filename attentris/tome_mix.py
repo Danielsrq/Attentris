@@ -64,7 +64,7 @@ def run(net, d, idx, spec, device):
         for st in (0, 1):
             m = last["alive"] & (k >= 0) & (last["stream"] == st)
             final[st] += [int(m.sum()), int((m & (k == 2)).sum()), float(size[m].sum()), float(size[m & (k == 2)].sum())]
-        print("  %s: %d / %d positions" % (split, min(s + 128, len(idx)), len(idx)), flush=True)
+        print("  %s: %d / %d positions" % (name, min(s + 128, len(idx)), len(idx)), flush=True)
     MT.apply_variant(net, "none")
     return name, per_step, final
 
