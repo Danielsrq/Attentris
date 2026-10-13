@@ -1,0 +1,122 @@
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+control model_v51.pt: top-1 0.617 on 10000 positions
+
+== l4g: top-1 0.614 overall (control 0.617)
+   kind            subset     bucket       n    ToMe top-1  control top-1  ToMe - control   ToMe regret  control regret
+   tsd             all        IoU < 0.5    718       0.607        0.623         -0.015          1.71         1.52
+   tsd             all        0.5-0.8     4137       0.611        0.620         -0.008          1.71         1.65
+   tsd             all        >= 0.8       524       0.672        0.683         -0.011          2.33         1.89
+   tsd             uses it    IoU < 0.5    127       0.764        0.787         -0.024          1.14         1.05
+   tsd             uses it    0.5-0.8      639       0.798        0.798         +0.000          1.00         1.06
+   tsd             uses it    >= 0.8        47       0.915        0.894         +0.021          0.74         0.82
+   pit1            all        IoU < 0.5    763       0.653        0.659         -0.007          1.34         1.33
+   pit1            all        0.5-0.8     2683       0.623        0.634         -0.012          1.44         1.38
+   pit1            all        >= 0.8      2921       0.638        0.640         -0.002          1.58         1.55
+   pit1            uses it    IoU < 0.5    161       0.988        0.988         +0.000          0.03         0.03
+   pit1            uses it    0.5-0.8      380       0.987        0.987         +0.000          0.09         0.14
+   pit1            uses it    >= 0.8       279       0.953        0.975         -0.022          0.20         0.14
+
+== l6g: top-1 0.609 overall (control 0.617)
+   kind            subset     bucket       n    ToMe top-1  control top-1  ToMe - control   ToMe regret  control regret
+   tsd             all        IoU < 0.5    385       0.610        0.626         -0.016          1.41         1.45
+   tsd             all        0.5-0.8     3833       0.612        0.632         -0.020          1.88         1.68
+   tsd             all        >= 0.8      1161       0.623        0.607         +0.016          1.77         1.62
+   tsd             uses it    IoU < 0.5     75       0.800        0.787         +0.013          1.23         1.00
+   tsd             uses it    0.5-0.8      620       0.802        0.811         -0.010          1.01         1.05
+   tsd             uses it    >= 0.8       118       0.797        0.763         +0.034          1.09         1.04
+   pit1            all        IoU < 0.5    314       0.624        0.605         +0.019          2.13         1.83
+   pit1            all        0.5-0.8     1358       0.634        0.635         -0.001          1.62         1.66
+   pit1            all        >= 0.8      4695       0.627        0.644         -0.016          1.53         1.36
+   pit1            uses it    IoU < 0.5     28       1.000        1.000         +0.000          0.00         0.00
+   pit1            uses it    0.5-0.8      161       0.963        0.969         -0.006          0.12         0.10
+   pit1            uses it    >= 0.8       631       0.976        0.986         -0.010          0.17         0.13
+
+== l4h: top-1 0.614 overall (control 0.617)
+   kind            subset     bucket       n    ToMe top-1  control top-1  ToMe - control   ToMe regret  control regret
+   tsd             all        IoU < 0.5   2561       0.610        0.606         +0.004          1.61         1.59
+   tsd             all        0.5-0.8     2599       0.616        0.642         -0.027          1.95         1.73
+   tsd             all        >= 0.8       219       0.635        0.671         -0.037          2.68         1.46
+   tsd             uses it    IoU < 0.5    357       0.793        0.784         +0.008          0.95         0.90
+   tsd             uses it    0.5-0.8      429       0.807        0.818         -0.012          1.09         1.14
+   tsd             uses it    >= 0.8        27       0.852        0.778         +0.074          0.44         1.26
+   pit1            all        IoU < 0.5    448       0.665        0.658         +0.007          1.04         1.03
+   pit1            all        0.5-0.8     2919       0.620        0.628         -0.008          1.69         1.51
+   pit1            all        >= 0.8      3000       0.645        0.649         -0.004          1.36         1.45
+   pit1            uses it    IoU < 0.5    114       0.982        1.000         -0.018          0.26         0.04
+   pit1            uses it    0.5-0.8      352       0.972        0.974         -0.003          0.18         0.17
+   pit1            uses it    >= 0.8       354       0.975        0.986         -0.011          0.12         0.09
+
+== tome_v4: top-1 0.616 overall (control 0.617)
+   kind            subset     bucket       n    ToMe top-1  control top-1  ToMe - control   ToMe regret  control regret
+   tsd             all        IoU < 0.5   3172       0.614        0.619         -0.004          1.79         1.68
+   tsd             all        0.5-0.8     2171       0.620        0.637         -0.017          1.81         1.62
+   tsd             all        >= 0.8        36       0.694        0.667         +0.028          2.29         1.45
+   tsd             uses it    IoU < 0.5    479       0.791        0.795         -0.004          1.10         1.08
+   tsd             uses it    0.5-0.8      333       0.793        0.811         -0.018          1.12         1.00
+   pit1            all        IoU < 0.5    632       0.671        0.665         +0.006          1.39         1.34
+   pit1            all        0.5-0.8     3147       0.616        0.620         -0.004          1.61         1.55
+   pit1            all        >= 0.8      2588       0.661        0.659         +0.002          1.30         1.36
+   pit1            uses it    IoU < 0.5    157       0.987        0.981         +0.006          0.01         0.02
+   pit1            uses it    0.5-0.8      367       0.967        0.975         -0.008          0.18         0.19
+   pit1            uses it    >= 0.8       296       0.976        0.993         -0.017          0.15         0.07
+
+######## setup / open fit kinds
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+control model_v51.pt: top-1 0.617 on 10000 positions
+
+== l4g: top-1 0.614 overall (control 0.617)
+   kind            subset     bucket       n    ToMe top-1  control top-1  ToMe - control   ToMe regret  control regret
+   setup_t         all        IoU < 0.5    229       0.624        0.664         -0.039          1.89         1.87
+   setup_t         all        0.5-0.8      408       0.681        0.706         -0.025          2.06         1.71
+   setup_t         all        >= 0.8        20       0.850        0.900         -0.050          1.44         1.32
+   setup_t         uses it    IoU < 0.5    102       0.745        0.814         -0.069          1.73         0.98
+   setup_t         uses it    0.5-0.8      239       0.803        0.866         -0.063          1.48         0.95
+   setup_s         all        IoU < 0.5     84       0.560        0.655         -0.095          2.90         2.37
+   setup_s         all        0.5-0.8      203       0.645        0.616         +0.030          2.29         2.26
+   setup_s         uses it    0.5-0.8       35       0.429        0.514         -0.086          4.00         2.61
+   setup_z         all        IoU < 0.5     77       0.636        0.688         -0.052          2.27         1.36
+   setup_z         all        0.5-0.8      175       0.651        0.646         +0.006          2.28         2.15
+   setup_z         uses it    0.5-0.8       23       0.652        0.696         -0.043          5.08         4.50
+   setup_l         all        IoU < 0.5    126       0.635        0.611         +0.024          2.19         2.57
+   setup_l         all        0.5-0.8      236       0.593        0.564         +0.030          2.41         2.62
+   setup_l         uses it    0.5-0.8       51       0.569        0.608         -0.039          3.17         2.29
+   setup_j         all        IoU < 0.5    126       0.587        0.603         -0.016          2.21         2.44
+   setup_j         all        0.5-0.8      220       0.609        0.595         +0.014          2.12         2.32
+   setup_j         uses it    IoU < 0.5     22       0.591        0.727         -0.136          2.14         2.08
+   setup_j         uses it    0.5-0.8       47       0.660        0.681         -0.021          1.96         1.71
+   setup_i         all        IoU < 0.5     86       0.407        0.453         -0.047          3.27         2.45
+   setup_i         all        0.5-0.8       44       0.545        0.614         -0.068          3.84         3.74
+   fit_t open      all        IoU < 0.5   1053       0.632        0.603         +0.029          1.48         1.70
+   fit_t open      all        0.5-0.8     1624       0.591        0.607         -0.016          1.87         1.72
+   fit_t open      all        >= 0.8        22       0.864        0.818         +0.045          0.64         0.64
+   fit_t open      uses it    IoU < 0.5    168       0.613        0.607         +0.006          1.48         1.87
+   fit_t open      uses it    0.5-0.8      219       0.635        0.612         +0.023          1.32         1.55
+
+== l6g: top-1 0.609 overall (control 0.617)
+   kind            subset     bucket       n    ToMe top-1  control top-1  ToMe - control   ToMe regret  control regret
+   setup_t         all        IoU < 0.5    246       0.618        0.634         -0.016          2.38         1.95
+   setup_t         all        0.5-0.8      386       0.692        0.731         -0.039          1.99         1.73
+   setup_t         all        >= 0.8        25       0.720        0.800         -0.080          1.52         0.20
+   setup_t         uses it    IoU < 0.5    108       0.685        0.787         -0.102          2.03         0.89
+   setup_t         uses it    0.5-0.8      230       0.839        0.878         -0.039          1.19         1.10
+   setup_s         all        IoU < 0.5    118       0.576        0.661         -0.085          2.60         1.94
+   setup_s         all        0.5-0.8      166       0.608        0.602         +0.006          2.62         2.56
+   setup_s         uses it    0.5-0.8       31       0.484        0.581         -0.097          3.19         2.95
+   setup_z         all        IoU < 0.5    113       0.664        0.681         -0.018          1.72         1.59
+   setup_z         all        0.5-0.8      136       0.632        0.632         +0.000          2.53         2.16
+   setup_z         uses it    0.5-0.8       22       0.591        0.727         -0.136          6.25         2.99
+   setup_l         all        IoU < 0.5    147       0.612        0.619         -0.007          2.56         2.53
+   setup_l         all        0.5-0.8      211       0.597        0.555         +0.043          2.81         2.52
+   setup_l         uses it    IoU < 0.5     25       0.440        0.640         -0.200          5.18         2.14
+   setup_l         uses it    0.5-0.8       38       0.553        0.553         +0.000          3.53         2.13
+   setup_j         all        IoU < 0.5    137       0.606        0.606         +0.000          2.25         2.27
+   setup_j         all        0.5-0.8      206       0.573        0.602         -0.029          2.95         2.45
+   setup_j         uses it    IoU < 0.5     24       0.583        0.583         +0.000          2.42         2.48
+   setup_j         uses it    0.5-0.8       45       0.600        0.756         -0.156          2.95         1.49
+   setup_i         all        IoU < 0.5     96       0.427        0.521         -0.094          3.37         2.61
+   setup_i         all        0.5-0.8       33       0.394        0.424         -0.030          3.84         4.51
+   fit_t open      all        IoU < 0.5    887       0.617        0.625         -0.008          2.06         1.73
+   fit_t open      all        0.5-0.8     1718       0.590        0.600         -0.010          2.03         1.68
+   fit_t open      all        >= 0.8        94       0.553        0.564         -0.011          1.98         1.86
+   fit_t open      uses it    IoU < 0.5    157       0.580        0.599         -0.019          1.37         1.59
+   fit_t open      uses it    0.5-0.8      226       0.628        0.624         +0.004          1.97         1.78
