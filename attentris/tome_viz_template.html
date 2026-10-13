@@ -202,7 +202,7 @@ function render() {
     M.blocked.forEach(m => { s += link(m, "var(--hl)", true, 2.6); });
     M.merges.forEach(m => { s += link(m, "var(--link)", false, 3.4); });
     $("cap").textContent = `Into the merge at layer ${M.layer}${multi ? ", stream " + (M.stream + 1) : ""}: blobs before it; every green link merges in this step ` +
-      `(result: "after layer ${M.layer}${multi ? " · stream " + (M.stream + 1) : ""}")`;
+      `(result: "after layer ${M.layer}${multi ? " · stream " + (M.stream + 1) : ""}"). One hue per blob: its filled cells darker, its empty cells lighter`;
     const nA = M.sides ? M.sides.filter(x => x === "A").length : 0;
     $("stats").textContent = `${M.blobs.length} blobs in${M.sides ? ` (${nA} A, ${M.blobs.length - nA} B)` : ""} · ${M.merges.length} merges made of ${M.asked} asked` +
       (M.weakest !== null ? ` · weakest merge similarity ${M.weakest.toFixed(2)}` : "") +
@@ -221,8 +221,10 @@ function render() {
     const sizes = L.blobs.map(b => b.length).sort((a, b) => b - a);
     $("stats").textContent = `${L.blobs.length} blobs · largest ${sizes.slice(0, 3).join(", ")} cells · ${sizes.filter(x => x === 1).length} single cells`;
   }
-  s += `<path d="${outline(p.chosen.cells, 1.5)}" stroke="var(--move)" stroke-width="2" stroke-dasharray="4 3" fill="none"/>`;
-  s += `<path d="${outline(cand.cells, 3.5)}" stroke="var(--pick)" stroke-width="2.5" fill="none"/>`;
+  if (view[0] !== "M") {      // merge-step views leave the move outlines out: they would read as blob walls
+    s += `<path d="${outline(p.chosen.cells, 1.5)}" stroke="var(--move)" stroke-width="2" stroke-dasharray="4 3" fill="none"/>`;
+    s += `<path d="${outline(cand.cells, 3.5)}" stroke="var(--pick)" stroke-width="2.5" fill="none"/>`;
+  }
   const hb = hoverJ !== null && p.final[hoverJ] && p.final[hoverJ].cells ? p.final[hoverJ].cells : null;
   if (hb) {
     const inside = new Set(hb);
