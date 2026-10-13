@@ -54,7 +54,7 @@ for n in $RUNS; do
     grep -E "^=====|picked V|^   (tsd|well|pit1|pit2|fit_t|play|\(all\))|^   (no T|no \||\|-)" "$D/${m}_orient.txt" | tee -a "$OUT"
     [ -f "$DIR/${m}_viz.html" ] || "$PYG" "$DIR/tome_viz.py" --model "$M" --random 24 --overrides "none;split=token;split=$other" --val-eval \
         --title "ToMe v4.2 $n" --out "$DIR/${m}_viz.html" \
-        --label "AtTenTris-ToMe v4.2 · 4 layers · 2 streams · $own merging, pure · per-position merge budget · 8 epochs" | tail -4 | tee -a "$OUT"
+        --label "AtTenTris-ToMe v4.2 $n · 2 streams · $own merging, pure · per-position merge budget · 8 epochs" | tail -4 | tee -a "$OUT"
     tests $m
 done
 for n in $RUNS; do

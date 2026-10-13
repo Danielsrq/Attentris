@@ -22,7 +22,7 @@ arch_of() {
     case $1 in
         l4h) echo "$COMMON --tome-split hash --layers 4 --merge 0,1,1,1 --micro 4";;
         l4g) echo "$COMMON --tome-split greedy --layers 4 --merge 0,1,1,1 --micro 4";;
-        l6g) echo "$COMMON --tome-split greedy --layers 6 --merge 0,1,1,1,1,1 --micro 8";;
+        l6g) echo "$COMMON --tome-split greedy --layers 6 --merge 0,1,1,1,1,1 --micro 8 --tome-budget 15,36,0.25,0.10";;   # ~15 blobs per stream
     esac
 }
 train() {   # name epochs log args...
@@ -43,8 +43,9 @@ for n in $RUNS; do
 done
 for n in $RUNS; do
     ARCH=$(arch_of $n)
+    case $n in l6*) FTM=16;; *) FTM=8;; esac     # DAgger 2 boards have ~25% more tokens: smaller micro-batches
     train tome_v42_${n}_dagger_ft 3 "$DIR/train_tome_v42_${n}_dagger_ft.out" \
-        --train train.npz@0.19,dagger1.npz@0.19,train1m.npz@0.19,dagger2.npz --epochs 3 --lr 3e-4 --micro 8 \
+        --train train.npz@0.19,dagger1.npz@0.19,train1m.npz@0.19,dagger2.npz --epochs 3 --lr 3e-4 --micro $FTM \
         --init "$DIR/data/model_tome_v42_$n.pt" --val2 val_dagger2.npz
 done
 echo "tome v42 training done"
