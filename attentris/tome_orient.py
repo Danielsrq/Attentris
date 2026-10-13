@@ -62,6 +62,8 @@ class Stats:
             L = self.layer
             mask, cand, stream, S = e["mask"], e["cand"], e["stream"], e["S"]
             A, Bs, sel, dst = e["A"], e["Bs"], e["sel"], e["dst"]
+            if A is None:                              # greedy matching: no sides, every adjacent pair is eligible
+                A = Bs = cand
             H, V = contacts(mask)
             same = (stream[:, :, None] == stream[:, None, :]) & cand[:, :, None] & cand[:, None, :]
             iu = torch.triu(torch.ones_like(same[0]), 1)[None]

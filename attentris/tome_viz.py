@@ -36,10 +36,57 @@ def piece_tokens(d, i):
     return toks
 
 
+def contact(a, b):
+    """A pair of 4-adjacent cells, one in cell list a and one in b (for drawing a link between two blobs)."""
+    sb = set(b)
+    for c in a:
+        r, q = divmod(c, 10)
+        for nb, okn in ((c + 1, q < 9), (c - 1, q > 0), (c + 10, r < 19), (c - 10, r > 0)):
+            if okn and nb in sb:
+                return [int(c), int(nb)]
+    return [int(a[0]), int(b[0])]
+
+
+def merge_step(ev, k, layer, st, max_blocked=16):
+    """One merge step of position k, stream st: the blobs going in (with their A / B side, if the split
+    has sides), the merges made, and -- for A / B splits -- the blocked pairs: adjacent, same side, and
+    more similar than the weakest merge this step made (so the merge would have been taken without the
+    sides)."""
+    cand, stream, mask = ev["cand"][k], ev["stream"][k], ev["mask"][k] > 0.5
+    toks = [j for j in range(len(cand)) if bool(cand[j]) and int(stream[j]) == st and bool(mask[j].any())]
+    at = {j: n for n, j in enumerate(toks)}
+    blobs = [np.nonzero(mask[j].numpy())[0].tolist() for j in toks]
+    S, adj = ev["S"][k], ev["adj"][k]
+    sides = None
+    if ev["A"] is not None:
+        sides = ["A" if bool(ev["A"][k, j]) else "B" if bool(ev["Bs"][k, j]) else "" for j in toks]
+    merges = []
+    for j in toks:
+        if bool(ev["sel"][k, j]):
+            q = int(ev["dst"][k, j])
+            merges.append([at[j], at[q]] + contact(blobs[at[j]], blobs[at[q]]) + [round(float(S[j, q]), 3)])
+    weakest = min((m[4] for m in merges), default=float("inf"))
+    blocked = []
+    if sides is not None:
+        for x in range(len(toks)):
+            for y in range(x + 1, len(toks)):
+                i, j = toks[x], toks[y]
+                if sides[x] == sides[y] and bool(adj[i, j]) and float(S[i, j]) > weakest:
+                    blocked.append([x, y] + contact(blobs[x], blobs[y]) + [round(float(S[i, j]), 3)])
+        blocked.sort(key=lambda b: -b[4])
+    return {"layer": layer, "stream": st, "blobs": blobs, "sides": sides, "merges": merges, "asked": int(ev["r"][k, st]),
+            "weakest": None if weakest == float("inf") else weakest, "n_blocked": len(blocked), "blocked": blocked[:max_blocked]}
+
+
 def render(net, d, idx, src):
     """Per position: blobs per merging layer (and stream), the final tokens, and the top moves."""
-    with torch.no_grad():
-        out, info = net(TR.batch_of(d, idx, "cpu"), return_attn=True)
+    events = []                                                 # every merge step's inputs and choices (model_tome.MERGE_HOOK)
+    MT.MERGE_HOOK = lambda e: events.append({k: e[k] for k in ("A", "Bs", "S", "sel", "dst", "mask", "cand", "stream", "adj", "r")})
+    try:
+        with torch.no_grad():
+            out, info = net(TR.batch_of(d, idx, "cpu"), return_attn=True)
+    finally:
+        MT.MERGE_HOOK = None
     prob = out.softmax(-1).numpy()
     cross = info["cross"].mean(1).numpy()                       # (P, NC, N_final), mean of heads
     merge_layers = [li for li, f in enumerate(net.merge) if f > 0]
@@ -81,7 +128,8 @@ def render(net, d, idx, src):
             return {"i": int(c), "cells": [int(x) for x in d["cand_cells"][i, c] if x >= 0], "piece": T.PIECES[m[0]],
                     "hold": int(m[1]), "spin": int(m[2]), "lines": int(m[3]), "attack": int(m[4]), "p": float(prob[k][c]),
                     "attn": [float(cross[k, c, j]) if final[j] is not None else 0.0 for j in range(len(final))]}
-        res.append({"layers": layers, "final": final, "chosen": cand(ch), "top": [cand(int(c)) for c in order[:8]],
+        steps = [merge_step(ev, k, li + 1, st) for ev, li in zip(events, merge_layers) for st in range(getattr(net, "streams", 1))]
+        res.append({"layers": layers, "steps": steps, "final": final, "chosen": cand(ch), "top": [cand(int(c)) for c in order[:8]],
                     "rank": int(np.where(order == ch)[0][0]) + 1})
     return res
 
@@ -123,6 +171,7 @@ def main():
     ap.add_argument("--overrides", default="", help="inference-time merge overrides to render, ';'-separated LAYER:FRACTION "
                     "specs ('none' = as trained; 'split=hash' renders with the direction-blind A/B split), e.g. "
                     "'none;6:0.30;split=hash' (model_tome frac_override / split)")
+    ap.add_argument("--title", default="", help="page title (default: the template's)")
     ap.add_argument("--val-eval", action="store_true", help="score the held-out set under each schedule (top-1)")
     args = ap.parse_args()
     pcores.pin()
@@ -139,7 +188,8 @@ def main():
             items = [] if o == "none" else o.split(",")
             sp = [t_.split("=", 1)[1] for t_ in items if t_.startswith("split=")]
             fr = [t_ for t_ in items if not t_.startswith("split=")]
-            name = [("hash split at inference (bug-fixed; not retrained)" if sp[0] == "hash" else sp[0] + " split")] if sp else []
+            name = [{"hash": "hash split at inference (bug-fixed; not retrained)", "token": "token split (as trained up to v4.1)",
+                     "greedy": "greedy matching at inference (no A/B; not retrained)"}.get(sp[0], sp[0] + " split")] if sp else []
             name += ["layer %s merges %d%%" % (k, round(100 * float(v))) for k, v in (q.split(":") for q in fr)]
             variants.append((trained, ",".join(fr), "as trained" if not name else "+ " + ", ".join(name), sp[0] if sp else own_split))
     else:
@@ -201,6 +251,8 @@ def main():
                        "positions": pos}, separators=(",", ":"))
     tpl = open(os.path.join(HERE, "tome_viz_template.html"), encoding="utf-8").read()
     with open(args.out, "w", encoding="utf-8") as f:
+        if args.title:
+            tpl = tpl.replace("<title>AtTenTris-ToMe Blobs</title>", "<title>%s</title>" % args.title, 1)
         f.write(tpl.replace("__DATA__", data))
     print("%d positions x %d variants -> %s" % (len(pos), len(variants), args.out))
 

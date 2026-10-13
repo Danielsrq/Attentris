@@ -5,17 +5,18 @@
   --empty: #ebeae4; --filled: #3a3f47; --grid: #ffffff; --accent: #2c55c9; --accent-fg: #ffffff;
   --heat: 214, 84, 20; --move: #111418; --pick: #2c55c9; --bar: #e0763a; --edge: #1d2127;
   --blob-l-empty: 86%; --blob-l-filled: 42%; --hl: #d61f69;
+  --side-a: #1f4fbf; --side-b: #b34a00; --link: #0f7a3d;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
   --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
   --heat: 255, 140, 70; --move: #f4f5f7; --pick: #7d9cff; --bar: #ff9a5c; --edge: #e7e9ec;
-  --blob-l-empty: 30%; --blob-l-filled: 62%; --hl: #ff5fa2; color-scheme: dark } }
+  --blob-l-empty: 30%; --blob-l-filled: 62%; --hl: #ff5fa2; --side-a: #9db8ff; --side-b: #ffb27a; --link: #5fe39a; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
   --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
   --heat: 255, 140, 70; --move: #f4f5f7; --pick: #7d9cff; --bar: #ff9a5c; --edge: #e7e9ec;
-  --blob-l-empty: 30%; --blob-l-filled: 62%; --hl: #ff5fa2; color-scheme: dark }
+  --blob-l-empty: 30%; --blob-l-filled: 62%; --hl: #ff5fa2; --side-a: #9db8ff; --side-b: #ffb27a; --link: #5fe39a; color-scheme: dark }
 body { background: var(--bg); color: var(--fg); font: 14px/1.45 "IBM Plex Sans", system-ui, sans-serif; }
 .wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: grid; gap: 14px; }
 header { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
@@ -28,7 +29,7 @@ select { max-width: min(420px, 100%); }
 .summary { display: flex; flex-wrap: wrap; gap: 8px 24px; font-variant-numeric: tabular-nums; }
 .summary b { font-size: 17px; } .summary span { color: var(--muted); }
 .meta .label { font-weight: 600; font-size: 15px; } .meta .sub { color: var(--muted); }
-.main { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: start; }
+.main { display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 1fr); gap: 24px; align-items: start; }
 @media (max-width: 680px) { .main { grid-template-columns: minmax(0, 1fr); } }
 figure { margin: 0; display: grid; gap: 8px; justify-items: center; min-width: 0; }
 figcaption { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); text-align: center; }
@@ -72,6 +73,7 @@ table.probs tr.on { background: var(--panel); outline: 1px solid var(--accent); 
       <svg class="board" id="board" viewBox="-20 -6 226 418"></svg>
       <figcaption id="cap"></figcaption>
       <div class="toggle" id="views"></div>
+      <div class="toggle" id="steps"></div>
       <div class="stats" id="stats"></div>
     </figure>
     <div class="list">
@@ -89,6 +91,11 @@ table.probs tr.on { background: var(--panel); outline: 1px solid var(--accent); 
     <b>Layer views</b> colour each blob (darker = filled cells, lighter = empty cells) with its outline. <b>Attention</b> paints the selected move's
     cross-attention through the final blobs, divided by blob size so a big sky blob and a 3-cell gap compare fairly. Dashed outline: the teacher's move;
     blue: the selected move (the model's top pick by default). Hover a row of the token list to outline that blob in pink. Keys: ← →.</p>
+  <p class="note"><b>Merge steps</b> show the blobs going <i>into</i> one merge step (one stream). With an A/B split every blob carries its side for
+    that step (<b style="color:var(--side-a)">A</b> / <b style="color:var(--side-b)">B</b> on each cell; only A–B neighbours may merge). Green links:
+    the merges made. <span style="color:var(--hl)">Pink dashed links</span>: blocked pairs — neighbours on the <i>same</i> side whose keys are more
+    similar than the weakest merge this step made, so they would have merged without the sides. The greedy matching has no sides: it takes the most
+    similar neighbour pairs first, each blob at most once per step.</p>
 </div>
 
 <script>
@@ -136,7 +143,7 @@ function render() {
   $("scheds").querySelectorAll("button").forEach(b => b.onclick = () => { si = +b.dataset.s; sel = 0; hoverJ = null; render(); });
   const multi = (DATA.streams || 1) > 1;
   const views = p.layers.map((L, i) => ({ key: "L" + i, name: `after layer ${L.layer}${multi ? " · stream " + (L.stream + 1) : ""}` })).concat([{ key: "attn", name: "attention" }]);
-  if (!view || !views.some(v => v.key === view)) view = "L" + (p.layers.length - (multi ? DATA.streams : 1));   // default: the final blobs (stream 1)
+  if (!view || !(views.some(v => v.key === view) || (view[0] === "M" && (p.steps || [])[+view.slice(1)]))) view = "L" + (p.layers.length - (multi ? DATA.streams : 1));   // default: the final blobs (stream 1)
   $("count").textContent = `${idx + 1} / ${P.length}`;
   $("jump").value = idx;
   $("label").innerHTML = `${p.why} · ${p.teacher} teacher · seed ${p.seed}, placement ${p.n}` +
@@ -144,6 +151,10 @@ function render() {
   $("sub").textContent = `Teacher played ${candLabel(p.chosen)}: the model ranks it #${p.rank} of ${p.n_cand} (p = ${(100 * p.chosen.p).toFixed(0)}%).`;
   $("views").innerHTML = views.map(v => `<button data-v="${v.key}" class="${v.key === view ? "on" : ""}">${v.name}</button>`).join("");
   $("views").querySelectorAll("button").forEach(b => b.onclick = () => { view = b.dataset.v; render(); });
+  const steps = p.steps || [];
+  $("steps").innerHTML = steps.length ? `<span class="lab">Merge steps</span>` + steps.map((M, i) =>
+    `<button data-v="M${i}" class="${view === "M" + i ? "on" : ""}">layer ${M.layer}${multi ? " · s" + (M.stream + 1) : ""}${M.n_blocked ? " · " + M.n_blocked + " blocked" : ""}</button>`).join("") : "";
+  $("steps").querySelectorAll("button").forEach(b => b.onclick = () => { view = b.dataset.v; render(); });
   const cand = p.top[sel] || p.chosen;
   let s = axis();
   const board = p.board;
@@ -162,6 +173,38 @@ function render() {
     $("cap").textContent = `Attention of ${sel === null ? "the teacher's move" : "model pick #" + (sel + 1)}`;
     const nb = p.final.filter(t => t && t.cells).length;
     $("stats").textContent = `${nb} board blobs + ${p.final.filter(t => t && t.piece).length} piece tokens after the last merge`;
+  } else if (view[0] === "M") {
+    const M = p.steps[+view.slice(1)];
+    const owner = new Array(200).fill(-1);
+    M.blobs.forEach((b, n) => b.forEach(k => owner[k] = n));
+    for (let k = 0; k < 200; k++) {
+      const r = Math.floor(k / COLS), c = k % COLS;
+      s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="${owner[k] >= 0 ? blobColour(owner[k], board[k]) : "var(--empty)"}" stroke="var(--grid)" stroke-width="0.5"/>`;
+      if (board[k]) s += `<rect x="${X(c) + 6}" y="${Y(r) + 6}" width="${CS - 12}" height="${CS - 12}" rx="2" fill="var(--filled)" opacity="0.35"/>`;
+    }
+    M.blobs.forEach(b => { s += `<path d="${outline(b, 0.75)}" stroke="var(--edge)" stroke-width="1.6" fill="none"/>`; });
+    // side letters: on every cell of a small blob; once, larger, at the centre of a big one (> 8 cells)
+    const letter = (k, sd, big) => { const r = Math.floor(k / COLS), c = k % COLS;
+      return `<text x="${X(c) + 10}" y="${Y(r) + (big ? 16 : 14)}" text-anchor="middle" font-size="${big ? 16 : 11}" font-weight="600" font-family="IBM Plex Mono, monospace" ` +
+             `fill="var(${sd === "A" ? "--side-a" : "--side-b"})" stroke="var(--panel)" stroke-width="${big ? 3 : 2.4}" paint-order="stroke">${sd}</text>`; };
+    if (M.sides) M.blobs.forEach((b, n) => {
+      if (b.length <= 8) { b.forEach(k => { s += letter(k, M.sides[n], false); }); return; }
+      const mr = b.reduce((t, k) => t + Math.floor(k / COLS), 0) / b.length, mc = b.reduce((t, k) => t + k % COLS, 0) / b.length;
+      const k0 = b.reduce((best, k) => { const d = (Math.floor(k / COLS) - mr) ** 2 + (k % COLS - mc) ** 2;
+        return d < best[1] ? [k, d] : best; }, [b[0], 1e9])[0];
+      s += letter(k0, M.sides[n], true);
+    });
+    const ctr = k => [X(k % COLS) + CS / 2, Y(Math.floor(k / COLS)) + CS / 2];
+    const link = (m, col, dash, w) => { const [x1, y1] = ctr(m[2]), [x2, y2] = ctr(m[3]);
+      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"${dash ? ' stroke-dasharray="3 3"' : ""}/>` +
+             `<circle cx="${x1}" cy="${y1}" r="2.6" fill="${col}"/><circle cx="${x2}" cy="${y2}" r="2.6" fill="${col}"/>`; };
+    M.blocked.forEach(m => { s += link(m, "var(--hl)", true, 2.6); });
+    M.merges.forEach(m => { s += link(m, "var(--link)", false, 3.4); });
+    $("cap").textContent = `Into the merge at layer ${M.layer}${multi ? ", stream " + (M.stream + 1) : ""}`;
+    const nA = M.sides ? M.sides.filter(x => x === "A").length : 0;
+    $("stats").textContent = `${M.blobs.length} blobs in${M.sides ? ` (${nA} A, ${M.blobs.length - nA} B)` : ""} · ${M.merges.length} merges made of ${M.asked} asked` +
+      (M.weakest !== null ? ` · weakest merge similarity ${M.weakest.toFixed(2)}` : "") +
+      (M.sides ? ` · ${M.n_blocked} blocked same-side pairs${M.n_blocked > M.blocked.length ? ` (${M.blocked.length} most similar drawn)` : ""}` : " · no sides (greedy)");
   } else {
     const L = p.layers[+view.slice(1)];
     const owner = new Array(200).fill(-1);

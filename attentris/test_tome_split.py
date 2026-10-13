@@ -8,7 +8,10 @@
 3. determinism / batch independence: a position's logits under split="hash" are the same alone and
    inside a batch, and on a second run;
 4. the two streams get different splits (share of tokens on the same side in both ~ 1/2);
-5. the hash split is the same on CUDA as on the CPU (training on the GPU, play on the CPU), if CUDA is free.
+5. the hash split is the same on CUDA as on the CPU (training on the GPU, play on the CPU), if CUDA is free;
+6. split="greedy" (no A/B sets): every merge step equals a sequential greedy matching on the same
+   similarities; no blob used twice; only adjacent same-stream board blobs; deterministic, batch-independent
+   (and CUDA = CPU with --cuda); the budget shortfall per step; ms per move (one position, CPU) vs hash.
 
     attentris/.venv/Scripts/python attentris/test_tome_split.py [--cuda]
 """
@@ -50,6 +53,83 @@ def eligibility(net, d, idx):
         if sub == "all" and cls in ("H", "V") and a[0]:
             out[(L, cls)] = a[1] / a[0]
     return out
+
+
+def greedy_checks(a, ck, d, idx):
+    import time
+    ok = True
+    net = build(MT, a, "greedy")
+    net.load_state_dict(ck["model"])
+    events = []
+    MT.MERGE_HOOK = lambda e: events.append({k: (v.detach().clone() if torch.is_tensor(v) else v) for k, v in e.items()})
+    with torch.no_grad():
+        out = net(TR.batch_of(d, idx[:128]))
+    MT.MERGE_HOOK = None
+    bad_ref = bad_twice = bad_valid = 0
+    short, want = np.zeros(len(events)), np.zeros(len(events))
+    for L, e in enumerate(events):
+        S, adj, cand, stream, sel, dst, mask, r = (e[k] for k in ("S", "adj", "cand", "stream", "sel", "dst", "mask", "r"))
+        anchor = mask.argmax(-1)
+        for b in range(S.shape[0]):
+            got = {(int(i), int(dst[b, i])) for i in torch.nonzero(sel[b]).flatten()}
+            used = [x for pr in got for x in pr]
+            bad_twice += len(used) != len(set(used))
+            for i, j in got:
+                bad_valid += not (bool(cand[b, i]) and bool(cand[b, j]) and bool(adj[b, i, j]) and int(stream[b, i]) == int(stream[b, j]) and i != j)
+            for st in range(r.shape[1]):
+                toks = [i for i in range(S.shape[1]) if bool(cand[b, i]) and int(stream[b, i]) == st]
+                edges = []
+                for x_ in range(len(toks)):
+                    for y_ in range(x_ + 1, len(toks)):
+                        i, j = toks[x_], toks[y_]
+                        if bool(adj[b, i, j]):
+                            lo, hi = sorted((int(anchor[b, i]), int(anchor[b, j])))
+                            edges.append((float(S[b, i, j].double()) - 1e-9 * (lo * 200 + hi) / 40000.0, i, j))
+                edges.sort(reverse=True)
+                taken, pick = set(), []
+                for w, i, j in edges:                         # the slow sequential greedy reference
+                    if i not in taken and j not in taken:
+                        taken |= {i, j}; pick.append((j, i))  # later token merges into the earlier
+                rr = int(r[b, st])
+                ref = set(pick[:rr])
+                mine = {pr for pr in got if int(stream[b, pr[0]]) == st}
+                bad_ref += ref != mine
+                want[L] += rr; short[L] += max(0, rr - len(pick))
+    print("6. greedy: steps differing from the sequential reference %d, blobs used twice %d, invalid pairs %d" % (bad_ref, bad_twice, bad_valid))
+    print("   budget shortfall per step (merges asked / missing): " + "  ".join("%d/%d" % (w, s_) for w, s_ in zip(want, short)))
+    ok &= bad_ref == 0 and bad_twice == 0 and bad_valid == 0
+    with torch.no_grad():
+        again = net(TR.batch_of(d, idx[:128]))
+        worst = 0.0
+        for i in (0, 9, 77, 127):
+            one = net(TR.batch_of(d, idx[i:i + 1]))[0]
+            f = torch.isfinite(one)
+            worst = max(worst, (one[f] - out[i][f]).abs().max().item())
+    rep = (out[torch.isfinite(out)] - again[torch.isfinite(again)]).abs().max().item()
+    print("   rerun max diff %.2e, alone vs in a batch of 128 max diff %.2e" % (rep, worst))
+    ok &= rep == 0.0 and worst < 1e-4
+    if "--cuda" in sys.argv and torch.cuda.is_available():
+        net.cuda()
+        with torch.no_grad():
+            g = net(TR.batch_of(d, idx[:128], "cuda")).cpu()
+        net.cpu()
+        f = torch.isfinite(out)
+        gd = (g[f] - out[f]).abs().max().item()
+        print("   greedy CUDA vs CPU logits max diff %.2e" % gd)
+        ok &= gd < 1e-3 and bool((torch.isfinite(g) == f).all())
+    times = {}
+    for split in ("hash", "greedy"):
+        n2 = build(MT, a, split); n2.load_state_dict(ck["model"])
+        bs = [TR.batch_of(d, idx[i:i + 1]) for i in range(64)]
+        with torch.no_grad():
+            for b_ in bs[:8]:
+                n2(b_)
+            t0 = time.perf_counter()
+            for b_ in bs:
+                n2(b_)
+        times[split] = 1000 * (time.perf_counter() - t0) / len(bs)
+    print("   ms per position (one at a time, CPU, 4 threads): hash %.1f, greedy %.1f" % (times["hash"], times["greedy"]))
+    return ok
 
 
 def main():
@@ -134,6 +214,7 @@ def main():
         print("5. hash sides CUDA == CPU: %s; logits max diff %.2e" % (same, gd))
         ok &= same and gd < 1e-3 and bool((torch.isfinite(g) == f).all())
 
+    ok &= greedy_checks(a, ck, d, idx)
     print("ALL OK" if ok else "FAILED")
     sys.exit(0 if ok else 1)
 

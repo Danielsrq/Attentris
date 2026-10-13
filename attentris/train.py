@@ -157,9 +157,10 @@ def main():
     ap.add_argument("--tome-flat", action="store_true", help="tome: FLAT-2D pair-feature bias in the self-attention")
     ap.add_argument("--tome-budget", default="", help="tome: per-position merge plan BASE,AT,SLOPE,FIRST (e.g. 20,36,0.25,0.10): "
                     "budget BASE + (n0 - AT) * SLOPE blobs per stream, first step FIRST, then equal ratios; --merge > 0 marks the merging layers")
-    ap.add_argument("--tome-split", default="token", choices=("token", "hash"),
+    ap.add_argument("--tome-split", default="token", choices=("token", "hash", "greedy"),
                     help="A/B split after the first merge: token = alternate in token order (row-major, biased sideways; up to v4.1), "
-                         "hash = a fixed random bit per (step, first cell), direction-blind")
+                         "hash = a hashed bit per (board, step, stream, first cell), direction-blind; "
+                         "greedy = no A/B sets, a greedy matching over all adjacent pairs")
     ap.add_argument("--tome-streams", type=int, default=1, help="tome v4: merging streams (partitions), stream s merges by head s's keys")
     ap.add_argument("--micro", type=int, default=1, help="split each batch into this many micro-batches (same gradient, less GPU memory)")
     ap.add_argument("--bucket", type=int, default=0, help="group batches by token count within chunks of this many batches (0 = off)")

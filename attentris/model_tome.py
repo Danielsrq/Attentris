@@ -57,6 +57,7 @@ N_GROUPS = 17                                   # sky + up to 16 blocks (pretok.
 #   "hash"  : each blob's side is a hashed bit of (board, merge step, stream, its first cell): any two
 #           adjacent blobs cross with probability 1/2 whatever their direction; deterministic and the same
 #           for a position in any batch (hash_side);
+#   "greedy": no A/B sets at all: a greedy matching over all adjacent same-stream pairs (greedy_match);
 #   analysis only: "col" (alternate in column-major order of the blobs' lowest-left corner), "random".
 # SPLIT_MODE (analysis) overrides every model's own split when set; MERGE_HOOK(dict) sees every merge's
 # sets, similarities and choices.
@@ -86,6 +87,43 @@ def hash_side(cells, anchor, step, stream):
     key = (cells.long().reshape(cells.shape[0], -1) * _W.to(cells.device)).sum(-1) & ((1 << 24) - 1)     # (B,)
     x = _mix(key[:, None] * 64 + step * 4 + stream)
     return (_mix(x * 256 + anchor) >> 11) & 1
+
+
+def greedy_match(S, valid, r, stream, anchor, n_streams):
+    """The "greedy" merge (no A/B sets): over the allowed pairs (valid: adjacent, same stream, both
+    board blobs), take pairs best-first by key similarity, skipping any pair with a blob already taken,
+    and merge the r best of them per stream. Computed in parallel by locally dominant rounds -- a pair
+    is taken when it is the best remaining pair of both its blobs; repeat on the free blobs -- which
+    gives exactly the sequential greedy matching (ties broken by the pair's cells, so distinct weights:
+    deterministic, batch-independent, and every round takes at least the best free pair). Each blob
+    joins at most one partner per step; if the matching has fewer than r pairs, the step merges fewer.
+    Returns sel (B, N) = the blob that merges away, dst = its partner, score = the pair's similarity."""
+    B, N, _ = S.shape
+    dev = S.device
+    ar = torch.arange(N, device=dev)
+    a = anchor.double()
+    lo, hi = torch.minimum(a[:, :, None], a[:, None, :]), torch.maximum(a[:, :, None], a[:, None, :])
+    W = (S.double() - 1e-9 * (lo * 200 + hi) / 40000.0).masked_fill(~valid, float("-inf"))
+    partner = torch.full((B, N), -1, dtype=torch.long, device=dev)
+    free = valid.any(-1)
+    while True:
+        v, j = W.masked_fill(~(free[:, :, None] & free[:, None, :]), float("-inf")).max(-1)
+        ok = torch.isfinite(v)
+        mutual = ok & ok.gather(1, j) & (j.gather(1, j) == ar)
+        if not bool(mutual.any()):
+            break
+        partner = torch.where(mutual, j, partner)
+        free = free & ~mutual
+    w = W.gather(2, partner.clamp(min=0)[..., None]).squeeze(-1)
+    src = (partner >= 0) & (partner < ar)                      # each pair once: the later token merges into the earlier
+    sel = torch.zeros_like(src)
+    for st in range(n_streams):
+        ins = src & (stream == st)
+        sc = w.masked_fill(~ins, float("-inf"))
+        order = sc.argsort(-1, descending=True)
+        rank = torch.empty_like(order).scatter_(1, order, ar.expand(B, N))
+        sel = sel | (ins & (rank < r[:, st, None]))
+    return sel, partner.clamp(min=0), w.float()
 
 
 class Attn(nn.Module):
@@ -171,7 +209,7 @@ class AtTenTrisToMe(nn.Module):
     def __init__(self, d=64, heads=4, layers=4, merge=(0.0, 0.45, 0.45, 0.45), n_teachers=2, sky=False,
                  pretok=False, flat_bias=False, streams=1, budget=None, split="token"):
         super().__init__()
-        assert split in ("token", "hash")
+        assert split in ("token", "hash", "greedy")
         self.split = split
         # budget (dict or None): a per-position merge plan instead of fixed fractions. The layers with
         # merge > 0 merge; at the first, each position's board-token count n0 sets a budget
@@ -236,28 +274,6 @@ class AtTenTrisToMe(nn.Module):
         if stream is None:
             stream = torch.zeros(B, N, dtype=torch.long, device=dev)
         cand = alive & is_cell
-        if first:
-            par = par0                                           # checkerboard for cells (sky columns: by column)
-        elif split == "hash":
-            par = hash_side(cells, mask.argmax(-1), step, stream)
-        elif split == "token":
-            par = torch.zeros_like(stream)
-            for st in range(n_streams):                          # alternate within each stream
-                cs = cand & (stream == st)
-                par = torch.where(stream == st, (torch.cumsum(cs.long(), 1) - 1) % 2, par)
-        else:
-            if split == "col":
-                key = (box[..., 2] * 100 + box[..., 0]).float() + torch.arange(N, device=dev) / (10.0 * N)
-            else:
-                key = torch.rand(B, N, device=dev)
-            par = torch.zeros_like(stream)
-            for st in range(n_streams):
-                cs = cand & (stream == st)
-                order = key.masked_fill(~cs, float("inf")).argsort(-1)
-                rank = torch.empty_like(order).scatter_(1, order, torch.arange(N, device=dev).expand(B, N))
-                par = torch.where(cs, rank % 2, par)
-        A = cand & (par == 0)
-        Bs = cand & (par == 1)
         if n_streams > 1:
             # stream s judges similarity with head s's keys
             kh = F.normalize(keys.view(B, N, heads, d // heads), dim=-1)
@@ -266,21 +282,53 @@ class AtTenTrisToMe(nn.Module):
         else:
             kn = F.normalize(keys, dim=-1)
             S = kn @ kn.transpose(1, 2)
-        valid = A[:, :, None] & Bs[:, None, :] & adj & (stream[:, :, None] == stream[:, None, :])
         S0 = S
-        S = S.masked_fill(~valid, float("-inf"))
-        score, dst = S.max(-1)                                   # (B, N): best adjacent B per A token
-        ok = torch.isfinite(score)
-        sel = torch.zeros_like(ok)
-        for st in range(n_streams):                              # each stream merges its own share
-            ins = stream == st
-            r = (frac * (cand & ins).sum(1).float()).floor().long() if r_plan is None else r_plan[:, st]
-            sc = score.masked_fill(~(ok & ins), float("-inf"))
-            order = sc.argsort(-1, descending=True)
-            rank = torch.empty_like(order).scatter_(1, order, torch.arange(N, device=dev).expand(B, N))
-            sel = sel | (ok & ins & (rank < r[:, None]))
+        same = stream[:, :, None] == stream[:, None, :]
+        r_all = torch.stack([(frac * (cand & (stream == st)).sum(1).float()).floor().long() if r_plan is None else r_plan[:, st]
+                             for st in range(n_streams)], 1)                      # (B, streams): merges this step
+        if split == "greedy":
+            # no A/B sets: a greedy matching over all adjacent same-stream pairs (greedy_match)
+            A = Bs = None
+            eye = torch.eye(N, dtype=torch.bool, device=dev)[None]
+            valid = cand[:, :, None] & cand[:, None, :] & adj & same & ~eye
+            sel, dst, score = greedy_match(S, valid, r_all, stream, mask.argmax(-1), n_streams)
+        else:
+            if first:
+                par = par0                                           # checkerboard for cells (sky columns: by column)
+            elif split == "hash":
+                par = hash_side(cells, mask.argmax(-1), step, stream)
+            elif split == "token":
+                par = torch.zeros_like(stream)
+                for st in range(n_streams):                          # alternate within each stream
+                    cs = cand & (stream == st)
+                    par = torch.where(stream == st, (torch.cumsum(cs.long(), 1) - 1) % 2, par)
+            else:
+                if split == "col":
+                    key = (box[..., 2] * 100 + box[..., 0]).float() + torch.arange(N, device=dev) / (10.0 * N)
+                else:
+                    key = torch.rand(B, N, device=dev)
+                par = torch.zeros_like(stream)
+                for st in range(n_streams):
+                    cs = cand & (stream == st)
+                    order = key.masked_fill(~cs, float("inf")).argsort(-1)
+                    rank = torch.empty_like(order).scatter_(1, order, torch.arange(N, device=dev).expand(B, N))
+                    par = torch.where(cs, rank % 2, par)
+            A = cand & (par == 0)
+            Bs = cand & (par == 1)
+            valid = A[:, :, None] & Bs[:, None, :] & adj & same
+            S = S.masked_fill(~valid, float("-inf"))
+            score, dst = S.max(-1)                                   # (B, N): best adjacent B per A token
+            ok = torch.isfinite(score)
+            sel = torch.zeros_like(ok)
+            for st in range(n_streams):                              # each stream merges its own share
+                ins = stream == st
+                sc = score.masked_fill(~(ok & ins), float("-inf"))
+                order = sc.argsort(-1, descending=True)
+                rank = torch.empty_like(order).scatter_(1, order, torch.arange(N, device=dev).expand(B, N))
+                sel = sel | (ok & ins & (rank < r_all[:, st, None]))
         if MERGE_HOOK is not None:
-            MERGE_HOOK(dict(A=A, Bs=Bs, S=S0, dst=dst, sel=sel, mask=mask, size=size, cand=cand, stream=stream, first=first, keys=keys))
+            MERGE_HOOK(dict(A=A, Bs=Bs, S=S0, dst=dst, sel=sel, mask=mask, size=size, cand=cand, stream=stream, first=first, keys=keys,
+                            adj=adj, r=r_all, split=split))
         self_w = size * sel
         xs = x * size[..., None]
         add = torch.zeros_like(xs).scatter_add(1, dst[..., None].expand(-1, -1, d), xs * sel[..., None])
