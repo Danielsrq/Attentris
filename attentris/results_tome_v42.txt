@@ -689,3 +689,285 @@ rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: 
   stsd                    8      0.42    62%                     0.35    25%            L2:12% L4:87%
   cspin                   4      0.44    50%                     0.41    25%            L3:25% L4:75%
   band                    4      0.26     0%                     0.28     0%            L2:50% L3:25% L4:25%
+16:57 tome_v42_l6g: training
+== tome_v42_l6g (19:56)
+epoch 8: train loss 2.221 | val normal top1 0.610 top3 0.846 | val gate4 top1 0.608 top3 0.830 | | 1351s
+19:56 tome_v42_l6g_dagger_ft: training
+== tome_v42_l6g (greedy split, pure): rule-token recovery
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.28     4%                     0.25     1%            L2:31% L3:17% L4:11% L5:20% L6:19%
+  sky                  2000      1.00   100%                     1.00   100%            L2:100%
+  pit2                 1750      0.69    89%                     0.62    75%            L2:23% L3:9% L4:13% L5:30% L6:23%
+  well                 1685      0.48    41%                     0.50    45%            L2:84% L3:1% L4:0% L5:1% L6:11%
+  pit1                 1385      0.89    97%                     0.67    86%            L2:10% L3:24% L4:26% L5:19% L6:18%
+  fit_j open           1289      0.53    83%                     0.53    79%            L2:29% L3:31% L4:13% L5:16% L6:8%
+  fit_l open           1284      0.53    81%                     0.53    76%            L2:30% L3:31% L4:14% L5:15% L6:7%
+  tsd                  1150      0.74    98%                     0.67    95%            L2:11% L3:26% L4:27% L5:27% L6:7%
+  pit3                 1135      0.57    68%                     0.51    54%            L2:10% L3:12% L4:11% L5:32% L6:33%
+  fit_z open           1065      0.56    92%                     0.56    85%            L2:27% L3:18% L4:10% L5:31% L6:12%
+  fit_s open            993      0.55    90%                     0.56    85%            L2:28% L3:19% L4:10% L5:31% L6:9%
+  pit4                  740      0.47    42%                     0.43    35%            L2:5% L3:6% L4:9% L5:33% L6:44%
+  fit_j covered         690      0.61    94%                     0.60    91%            L2:24% L3:28% L4:15% L5:18% L6:12%
+  fit_l covered         628      0.59    91%                     0.60    90%            L2:24% L3:30% L4:17% L5:17% L6:10%
+  fit_t open            590      0.55    75%                     0.54    75%            L2:30% L3:20% L4:8% L5:27% L6:13%
+  fit_z covered         328      0.56    94%                     0.60    91%            L2:36% L3:15% L4:10% L5:17% L6:19%
+  fit_s covered         272      0.55    92%                     0.59    92%            L2:35% L3:15% L4:11% L5:23% L6:14%
+  setup_t               207      0.52    78%                     0.50    74%            L2:23% L3:22% L4:16% L5:23% L6:14%
+  fit_i covered         135      0.61    93%                     0.60    91%            L2:36% L3:23% L4:14% L5:19% L6:5%
+  fractal                98      0.51    58%                     0.52    73%            L3:17% L4:27% L5:32% L6:22%
+  setup_j                84      0.50    80%                     0.51    75%            L2:16% L3:25% L4:26% L5:25% L6:7%
+  imperial               77      0.60    88%                     0.54    77%            L3:5% L4:18% L5:18% L6:58%
+  setup_l                72      0.50    75%                     0.53    85%            L2:40% L3:15% L4:18% L5:12% L6:13%
+  setup_s                71      0.52    86%                     0.56    82%            L2:28% L3:22% L4:14% L5:23% L6:11%
+  setup_z                60      0.53    88%                     0.57    85%            L2:28% L3:21% L4:23% L5:13% L6:13%
+  setup_i                28      0.47    57%                     0.42    57%            L2:50% L3:28% L4:7% L5:7% L6:7%
+  rect12                 12      0.58    83%                     0.51    42%            L3:8% L4:16% L6:75%
+  vertical               11      0.83   100%                     0.77   100%            L4:63% L5:18% L6:18%
+  stsd                    8      0.55    75%                     0.45    62%            L3:37% L4:12% L5:25% L6:25%
+  cspin                   4      0.47    50%                     0.50    75%            L4:50% L5:25% L6:25%
+  band                    4      0.26     0%                     0.28     0%            L2:50% L3:25% L6:25%
+== baseline (token split): tome_v41/tome_v41_iou.txt
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.31    11%                     0.25     1%            L2:27% L3:20% L4:3% L5:21% L6:26%
+  sky                  2000      1.00   100%                     1.00   100%            L2:100%
+  pit2                 1750      0.56    60%                     0.44    45%            L2:33% L3:17% L4:18% L5:11% L6:18%
+  well                 1685      0.48    41%                     0.51    44%            L2:90% L3:1% L4:0% L5:2% L6:4%
+  pit1                 1385      0.65    78%                     0.44    48%            L2:33% L3:11% L4:30% L5:11% L6:13%
+  fit_j open           1289      0.46    66%                     0.42    52%            L2:43% L3:20% L4:14% L5:10% L6:10%
+  fit_l open           1284      0.46    66%                     0.41    51%            L2:42% L3:19% L4:14% L5:12% L6:10%
+  tsd                  1150      0.68    96%                     0.49    69%            L2:12% L3:31% L4:4% L5:15% L6:34%
+  pit3                 1135      0.45    35%                     0.36    22%            L2:24% L3:18% L4:14% L5:14% L6:27%
+  fit_z open           1065      0.46    70%                     0.42    54%            L2:41% L3:21% L4:15% L5:10% L6:10%
+  fit_s open            993      0.47    74%                     0.43    54%            L2:43% L3:16% L4:16% L5:11% L6:11%
+  pit4                  740      0.37    20%                     0.30    11%            L2:18% L3:15% L4:12% L5:21% L6:32%
+  fit_j covered         690      0.57    88%                     0.47    66%            L2:23% L3:30% L4:8% L5:10% L6:26%
+  fit_l covered         628      0.57    88%                     0.47    66%            L2:24% L3:31% L4:6% L5:9% L6:28%
+  fit_t open            590      0.50    66%                     0.42    52%            L2:39% L3:20% L4:7% L5:16% L6:15%
+  fit_z covered         328      0.52    90%                     0.46    66%            L2:35% L3:21% L4:18% L5:8% L6:16%
+  fit_s covered         272      0.50    88%                     0.47    67%            L2:38% L3:32% L4:10% L5:8% L6:10%
+  setup_t               207      0.42    58%                     0.42    57%            L2:47% L3:14% L4:18% L5:11% L6:7%
+  fit_i covered         135      0.55    81%                     0.44    56%            L2:31% L3:25% L4:10% L5:11% L6:20%
+  fractal                98      0.43    23%                     0.31     4%            L2:1% L3:29% L4:3% L5:9% L6:57%
+  setup_j                84      0.44    62%                     0.45    57%            L2:44% L3:11% L4:15% L5:14% L6:14%
+  imperial               77      0.42    23%                     0.34     8%            L3:11% L4:9% L5:44% L6:35%
+  setup_l                72      0.44    64%                     0.47    65%            L2:41% L3:20% L4:15% L5:13% L6:8%
+  setup_s                71      0.42    62%                     0.42    54%            L2:49% L3:14% L4:9% L5:14% L6:12%
+  setup_z                60      0.43    58%                     0.45    60%            L2:46% L3:10% L4:18% L5:18% L6:6%
+  setup_i                28      0.41    50%                     0.36    39%            L2:60% L3:14% L4:7% L5:7% L6:10%
+  rect12                 12      0.46    25%                     0.33     8%            L3:16% L4:16% L5:16% L6:50%
+  vertical               11      0.71   100%                     0.60    91%            L2:18% L3:9% L4:36% L5:18% L6:18%
+  stsd                    8      0.40    38%                     0.28     0%            L2:25% L3:12% L5:25% L6:37%
+  cspin                   4      0.39    25%                     0.24     0%            L4:75% L5:25%
+  band                    4      0.32    25%                     0.29     0%            L2:50% L4:50%
+== tome_v42_l6g: merge direction (as trained = greedy; token / hash / greedy swapped in at inference, pure kept)
+================ split after the first merge: none   (policy top-1 on these positions 0.614)
+   A tokens that merged and had both an eligible H-only and an eligible V-only neighbour: share that picked V
+   step 1:  12866 tokens, picked V 37.0%
+   step 2:  22835 tokens, picked V 74.7%
+   step 3:  18471 tokens, picked V 77.6%
+   step 4:  14922 tokens, picked V 32.3%
+   step 5:  11602 tokens, picked V 48.4%
+   (all) empty          H     246605     94.9%    95.0%    97.6%
+   (all) empty          V     266173     91.3%    90.0%    93.2%
+   (all) filled         H      82287     86.7%    87.3%    89.0%
+   (all) filled         V      89950     90.8%    90.2%    93.4%
+   fit_t open           H       1180     63.7%    66.4%    81.6%
+   fit_t open           V        590     25.6%    19.3%    39.2%
+   pit1                 V       4342     85.6%    75.1%    90.8%
+   pit2                 H       2790     62.5%    69.2%    84.5%
+   pit2                 V       5754     69.6%    55.7%    79.3%
+   play                 H      29145     56.8%    57.5%    79.3%
+   tsd                  H       2300     56.5%    78.6%    87.4%
+   tsd                  V       1150     45.9%    35.0%    58.1%
+   well                 V       5072     95.3%    89.2%    98.0%
+   no T piece, centre's top open                   855     45.8%     34.3%     57.1%         24.7%
+   no |- TSS, centre's top open                    111     58.6%     51.4%     77.5%         45.9%
+   |- TSS also available, centre's top open        184     38.6%     28.8%     51.1%         13.6%
+   |- TSS also available, centre's top open: best IoU with the T shape s0 0.49 s1 0.62; with the |- shape s0 0.54 s1 0.46   (n 184)
+================ split after the first merge: split=token   (policy top-1 on these positions 0.611)
+   A tokens that merged and had both an eligible H-only and an eligible V-only neighbour: share that picked V
+   step 1:  12248 tokens, picked V 37.1%
+   step 2:  19576 tokens, picked V 62.9%
+   step 3:  15375 tokens, picked V 66.7%
+   step 4:  11413 tokens, picked V 33.6%
+   step 5:   8558 tokens, picked V 48.5%
+   (all) empty          H     246605     96.0%    96.2%    98.4%
+   (all) empty          V     266173     91.4%    89.9%    94.0%
+   (all) filled         H      82287     87.9%    87.8%    89.9%
+   (all) filled         V      89950     89.3%    88.5%    92.2%
+   fit_t open           H       1180     69.5%    74.5%    87.5%
+   fit_t open           V        590     27.6%    20.0%    41.5%
+   pit1                 V       4342     64.6%    61.7%    79.5%
+   pit2                 H       2790     66.1%    71.6%    87.6%
+   pit2                 V       5754     56.9%    49.5%    73.1%
+   play                 H      29145     66.1%    68.2%    86.6%
+   tsd                  H       2300     67.1%    86.6%    93.4%
+   tsd                  V       1150     50.4%    31.6%    63.4%
+   well                 V       5072     72.5%    74.9%    86.4%
+   no T piece, centre's top open                   855     49.6%     30.3%     61.6%         34.2%
+   no |- TSS, centre's top open                    111     66.7%     35.1%     80.2%         47.7%
+   |- TSS also available, centre's top open        184     44.6%     35.3%     61.4%         32.1%
+   |- TSS also available, centre's top open: best IoU with the T shape s0 0.58 s1 0.65; with the |- shape s0 0.50 s1 0.46   (n 184)
+================ split after the first merge: split=hash   (policy top-1 on these positions 0.602)
+   A tokens that merged and had both an eligible H-only and an eligible V-only neighbour: share that picked V
+   step 1:  12248 tokens, picked V 37.1%
+   step 2:  15784 tokens, picked V 66.6%
+   step 3:  12647 tokens, picked V 71.6%
+   step 4:  10152 tokens, picked V 42.4%
+   step 5:   7773 tokens, picked V 49.2%
+   (all) empty          H     246605     94.8%    94.9%    97.6%
+   (all) empty          V     266173     91.5%    90.5%    94.1%
+   (all) filled         H      82287     87.6%    87.6%    90.0%
+   (all) filled         V      89950     90.4%    89.8%    93.5%
+   fit_t open           H       1180     59.6%    65.3%    81.4%
+   fit_t open           V        590     29.2%    25.4%    45.3%
+   pit1                 V       4342     78.6%    71.7%    90.9%
+   pit2                 H       2790     54.9%    63.4%    80.7%
+   pit2                 V       5754     66.1%    58.9%    81.8%
+   play                 H      29145     56.2%    57.2%    79.5%
+   tsd                  H       2300     56.5%    76.7%    88.4%
+   tsd                  V       1150     51.7%    44.4%    69.0%
+   well                 V       5072     85.8%    83.4%    96.1%
+   no T piece, centre's top open                   855     51.0%     43.9%     68.0%         31.8%
+   no |- TSS, centre's top open                    111     64.0%     55.9%     83.8%         57.7%
+   |- TSS also available, centre's top open        184     47.8%     40.2%     65.2%         21.2%
+   |- TSS also available, centre's top open: best IoU with the T shape s0 0.51 s1 0.59; with the |- shape s0 0.52 s1 0.46   (n 184)
+================ split after the first merge: split=greedy   (policy top-1 on these positions 0.614)
+   A tokens that merged and had both an eligible H-only and an eligible V-only neighbour: share that picked V
+   step 1:  12866 tokens, picked V 37.0%
+   step 2:  22835 tokens, picked V 74.7%
+   step 3:  18471 tokens, picked V 77.6%
+   step 4:  14922 tokens, picked V 32.3%
+   step 5:  11602 tokens, picked V 48.4%
+   (all) empty          H     246605     94.9%    95.0%    97.6%
+   (all) empty          V     266173     91.3%    90.0%    93.2%
+   (all) filled         H      82287     86.7%    87.3%    89.0%
+   (all) filled         V      89950     90.8%    90.2%    93.4%
+   fit_t open           H       1180     63.7%    66.4%    81.6%
+   fit_t open           V        590     25.6%    19.3%    39.2%
+   pit1                 V       4342     85.6%    75.1%    90.8%
+   pit2                 H       2790     62.5%    69.2%    84.5%
+   pit2                 V       5754     69.6%    55.7%    79.3%
+   play                 H      29145     56.8%    57.5%    79.3%
+   tsd                  H       2300     56.5%    78.6%    87.4%
+   tsd                  V       1150     45.9%    35.0%    58.1%
+   well                 V       5072     95.3%    89.2%    98.0%
+   no T piece, centre's top open                   855     45.8%     34.3%     57.1%         24.7%
+   no |- TSS, centre's top open                    111     58.6%     51.4%     77.5%         45.9%
+   |- TSS also available, centre's top open        184     38.6%     28.8%     51.1%         13.6%
+   |- TSS also available, centre's top open: best IoU with the T shape s0 0.49 s1 0.62; with the |- shape s0 0.54 s1 0.46   (n 184)
+as trained: val top1 normal 0.610 gate4 0.608
++ token split (inference only): val top1 normal 0.599 gate4 0.606
++ hash split (inference only): val top1 normal 0.605 gate4 0.602
+72 positions x 3 variants -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/tome_v42_l6g_viz.html
+tome_v42_l6g normal d1: APP 0.478 (APPfull 0.450), died 8/64, pieces 471 avg, TSD 981, TST 11, quads 603, max height 22, illegal 0, 52.4 ms/move (p90 69.8) + search 54.2 ms, 122s
+tome_v42_l6g normal d2: APP 0.596 (APPfull 0.596), died 0/64, pieces 500 avg, TSD 1218, TST 17, quads 785, max height 21, illegal 0, 331.6 ms/move (p90 486.8) + search 333.1 ms, 700s
+tome_v42_l6g normal g20: APP 0.592 (APPfull 0.170), died 63/64, pieces 144 avg, TSD 220, TST 7, quads 541, max height 22, illegal 0, 45.9 ms/move (p90 58.2) + search 47.5 ms, 40s
+tome_v42_l6g normal g50: APP 0.416 (APPfull 0.066), died 64/64, pieces 79 avg, TSD 106, TST 5, quads 157, max height 21, illegal 0, 48.4 ms/move (p90 64.9) + search 49.6 ms, 24s
+== tome_v42_l6g_dagger_ft (20:43)
+epoch 3: train loss 2.422 | val normal top1 0.608 top3 0.846 | val gate4 top1 0.605 top3 0.826 | | 707s
+epoch 3: val2 (val_dagger2.npz, 9737) top1 0.392 top3 0.651 loss 2.908 | argmax Qs top1 0.355 | MAE Qs 7.48
+20:44 tome_v42_l6g_dagger3_ft: training
+tome_v42_l6g_dagger_ft normal d1: APP 0.543 (APPfull 0.543), died 0/64, pieces 500 avg, TSD 1207, TST 8, quads 861, max height 16, illegal 0, 41.8 ms/move (p90 53.4) + search 42.9 ms, 93s
+tome_v42_l6g_dagger_ft normal d2: APP 0.696 (APPfull 0.696), died 0/64, pieces 500 avg, TSD 1445, TST 10, quads 1006, max height 15, illegal 0, 257.4 ms/move (p90 378.5) + search 258.9 ms, 537s
+tome_v42_l6g_dagger_ft normal g20: APP 0.613 (APPfull 0.267), died 58/64, pieces 218 avg, TSD 366, TST 4, quads 864, max height 22, illegal 0, 44.9 ms/move (p90 56.4) + search 46.2 ms, 56s
+tome_v42_l6g_dagger_ft normal g50: APP 0.426 (APPfull 0.100), died 64/64, pieces 117 avg, TSD 162, TST 3, quads 254, max height 22, illegal 0, 48.2 ms/move (p90 64.0) + search 49.9 ms, 33s
+== APP / VS: v4.2 (hash / greedy, pure) vs screen C (token split, 4 epochs), v4.1 and v5.1 dagger-ft, same seeds
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+tome_v42_l6g_d1                      8/64      471   0.478    0.450   0.478    0.450         -
+tome_v42_l6g_d2                      0/64      500   0.596    0.596   0.596    0.596         -
+tome_v42_l6g_g20                    63/64      144   0.592    0.170   0.835    0.240 2235/3209
+tome_v42_l6g_g50                    64/64       79   0.416    0.066   0.561    0.089  737/1746
+tome_v42_l6g_dagger_ft_d1            0/64      500   0.543    0.543   0.543    0.543         -
+tome_v42_l6g_dagger_ft_d2            0/64      500   0.696    0.696   0.696    0.696         -
+tome_v42_l6g_dagger_ft_g20          58/64      218   0.613    0.267   0.893    0.389 3911/4872
+tome_v42_l6g_dagger_ft_g50          64/64      117   0.426    0.100   0.630    0.147 1528/2590
+screenC_token_4ep_d1                26/64      411   0.417    0.343   0.417    0.343         -
+tome_v41_d1                          7/64      481   0.558    0.537   0.558    0.537         -
+screenC_token_4ep_d2                16/64      443   0.518    0.459   0.518    0.459         -
+tome_v41_d2                          2/64      498   0.689    0.686   0.689    0.686         -
+screenC_token_4ep_g20               64/64       97   0.510    0.099   0.706    0.137 1219/2144
+tome_v41_g20                        62/64      138   0.611    0.169   0.848    0.235 2101/3064
+screenC_token_4ep_g50               64/64       73   0.404    0.059   0.541    0.079  637/1596
+tome_v41_g50                        64/64       84   0.478    0.081   0.636    0.107  856/1880
+v51_dagger_ft_d1                     0/64      500   0.648    0.648   0.648    0.648         -
+v51_dagger_ft_d2                     0/64      500   0.745    0.745   0.745    0.745         -
+v51_dagger_ft_g20                   55/64      276   0.693    0.383   0.990    0.547 5253/6197
+v51_dagger_ft_g50                   64/64      143   0.493    0.141   0.726    0.208 2129/3187
+== tome_v42_l6g_dagger3_ft (21:28)
+epoch 3: train loss 2.430 | val normal top1 0.611 top3 0.847 | val gate4 top1 0.601 top3 0.829 | | 866s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.441 top3 0.703 loss 2.790 | argmax Qs top1 0.408 | MAE Qs 8.44
+== tome_v42_l6g_dagger3_ft: rule-token recovery
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.27     4%                     0.25     1%            L2:31% L3:15% L4:10% L5:20% L6:21%
+  sky                  2000      1.00   100%                     1.00   100%            L2:100%
+  pit2                 1750      0.70    89%                     0.62    75%            L2:23% L3:8% L4:14% L5:28% L6:24%
+  well                 1685      0.48    41%                     0.50    45%            L2:81% L3:1% L4:0% L5:1% L6:15%
+  pit1                 1385      0.89    97%                     0.67    86%            L2:11% L3:22% L4:28% L5:18% L6:19%
+  fit_j open           1289      0.53    83%                     0.53    79%            L2:30% L3:30% L4:14% L5:15% L6:9%
+  fit_l open           1284      0.53    81%                     0.53    76%            L2:31% L3:31% L4:13% L5:14% L6:9%
+  tsd                  1150      0.72    97%                     0.67    95%            L2:12% L3:24% L4:25% L5:29% L6:8%
+  pit3                 1135      0.58    68%                     0.51    54%            L2:10% L3:11% L4:12% L5:31% L6:35%
+  fit_z open           1065      0.56    92%                     0.56    85%            L2:27% L3:18% L4:11% L5:31% L6:10%
+  fit_s open            993      0.55    91%                     0.56    85%            L2:27% L3:19% L4:11% L5:31% L6:9%
+  pit4                  740      0.47    42%                     0.43    35%            L2:7% L3:4% L4:9% L5:32% L6:46%
+  fit_j covered         690      0.60    92%                     0.60    91%            L2:25% L3:26% L4:13% L5:21% L6:13%
+  fit_l covered         628      0.58    91%                     0.60    90%            L2:24% L3:28% L4:16% L5:20% L6:11%
+  fit_t open            590      0.55    74%                     0.54    75%            L2:30% L3:17% L4:7% L5:29% L6:15%
+  fit_z covered         328      0.56    94%                     0.60    91%            L2:35% L3:15% L4:8% L5:20% L6:20%
+  fit_s covered         272      0.55    93%                     0.59    92%            L2:31% L3:14% L4:14% L5:25% L6:13%
+  setup_t               207      0.50    81%                     0.50    74%            L2:24% L3:33% L4:15% L5:18% L6:7%
+  fit_i covered         135      0.59    92%                     0.60    91%            L2:39% L3:23% L4:13% L5:15% L6:8%
+  fractal                98      0.49    48%                     0.52    73%            L3:17% L4:29% L5:26% L6:26%
+  setup_j                84      0.51    79%                     0.51    75%            L2:17% L3:15% L4:28% L5:25% L6:13%
+  imperial               77      0.59    84%                     0.54    77%            L3:7% L4:14% L5:25% L6:51%
+  setup_l                72      0.52    81%                     0.53    85%            L2:36% L3:15% L4:18% L5:19% L6:11%
+  setup_s                71      0.52    90%                     0.56    82%            L2:26% L3:30% L4:23% L5:12% L6:5%
+  setup_z                60      0.53    87%                     0.57    85%            L2:31% L3:26% L4:18% L5:18% L6:5%
+  setup_i                28      0.46    61%                     0.42    57%            L2:50% L3:32% L4:3% L5:7% L6:7%
+  rect12                 12      0.63    83%                     0.51    42%            L4:16% L6:83%
+  vertical               11      0.83   100%                     0.77   100%            L3:9% L4:63% L5:18% L6:9%
+  stsd                    8      0.59    75%                     0.45    62%            L3:25% L5:25% L6:50%
+  cspin                   4      0.47    50%                     0.50    75%            L4:25% L5:75%
+  band                    4      0.26     0%                     0.28     0%            L2:25% L3:25% L5:25% L6:25%
+tome_v42_l6g_dagger3_ft normal d1: APP 0.571 (APPfull 0.571), died 0/64, pieces 500 avg, TSD 1190, TST 10, quads 938, max height 16, illegal 0, 38.4 ms/move (p90 48.0) + search 38.9 ms, 83s
+tome_v42_l6g_dagger3_ft normal d2: APP 0.662 (APPfull 0.662), died 0/64, pieces 500 avg, TSD 1416, TST 12, quads 941, max height 15, illegal 0, 219.1 ms/move (p90 298.2) + search 219.9 ms, 452s
+tome_v42_l6g_dagger3_ft normal g20: APP 0.631 (APPfull 0.368), died 51/64, pieces 292 avg, TSD 444, TST 6, quads 1262, max height 22, illegal 0, 40.0 ms/move (p90 50.3) + search 40.5 ms, 54s
+tome_v42_l6g_dagger3_ft normal g50: APP 0.429 (APPfull 0.120), died 64/64, pieces 140 avg, TSD 159, TST 6, quads 327, max height 22, illegal 0, 43.9 ms/move (p90 57.2) + search 44.4 ms, 31s
+tome_v42_l6g_dagger3_ft danger g20: APP 0.621 (APPfull 0.461), died 34/64, pieces 372 avg, TSD 668, TST 9, quads 1571, max height 22, illegal 0, 37.3 ms/move (p90 47.2) + search 37.8 ms, 64s
+tome_v42_l6g_dagger3_ft danger g50: APP 0.420 (APPfull 0.168), died 60/64, pieces 200 avg, TSD 274, TST 7, quads 430, max height 22, illegal 0, 41.8 ms/move (p90 54.7) + search 42.4 ms, 40s
+== APP / VS: l6g dagger3-ft vs l6g dagger-ft, l4g dagger3-ft, v4.1-dagger3, v5.1 dagger3-ft (same seeds)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+tome_v42_l6g_dagger3_ft_normal_d1    0/64      500   0.571    0.571   0.571    0.571         -
+tome_v42_l6g_dagger3_ft_normal_d2    0/64      500   0.662    0.662   0.662    0.662         -
+tome_v42_l6g_dagger3_ft_normal_g20  51/64      292   0.631    0.368   0.932    0.544 5615/6511
+tome_v42_l6g_dagger3_ft_normal_g50  64/64      140   0.429    0.120   0.658    0.184 2056/3128
+tome_v42_l6g_dagger3_ft_danger_g20  34/64      372   0.621    0.461   0.938    0.697 7549/8271
+tome_v42_l6g_dagger3_ft_danger_g50  60/64      200   0.420    0.168   0.687    0.274 3417/4450
+tome_v42_l6g_dagger_ft_normal_d1     0/64      500   0.543    0.543   0.543    0.543         -
+tome_v42_l6g_dagger_ft_normal_d2     0/64      500   0.696    0.696   0.696    0.696         -
+tome_v42_l6g_dagger_ft_normal_g20   58/64      218   0.613    0.267   0.893    0.389 3911/4872
+tome_v42_l6g_dagger_ft_normal_g50   64/64      117   0.426    0.100   0.630    0.147 1528/2590
+tome_v42_l4g_dagger3_ft_normal_d1    0/64      500   0.606    0.606   0.606    0.606         -
+tome_v42_l4g_dagger3_ft_normal_d2    0/64      500   0.745    0.745   0.745    0.745         -
+tome_v42_l4g_dagger3_ft_normal_g20  56/64      247   0.675    0.333   0.963    0.475 4541/5500
+tome_v42_l4g_dagger3_ft_normal_g50  64/64      109   0.465    0.101   0.660    0.144 1360/2413
+tome_v42_l4g_dagger3_ft_danger_g20  26/64      400   0.630    0.504   0.955    0.765 8328/8886
+tome_v42_l4g_dagger3_ft_danger_g50  61/64      215   0.425    0.183   0.699    0.300 3760/4809
+tome_v41_dagger3_ft_normal_d1        0/64      500   0.596    0.596   0.596    0.596         -
+tome_v41_dagger3_ft_normal_g20      52/64      269   0.668    0.359   0.964    0.519 5095/6000
+tome_v41_dagger3_ft_normal_g50      64/64      140   0.484    0.136   0.714    0.201 2072/3142
+tome_v41_dagger3_ft_danger_g20      31/64      389   0.664    0.517   0.984    0.765 7956/8620
+tome_v41_dagger3_ft_danger_g50      56/64      237   0.451    0.214   0.735    0.348 4308/5298
+v51_dagger3_ft_normal_d1             0/256      500   0.631    0.631   0.631    0.631         -
+v51_dagger3_ft_normal_d2             0/64      500   0.748    0.748   0.748    0.748         -
+v51_dagger3_ft_normal_g20           32/64      355   0.706    0.501   1.023    0.726 7186/7853
+v51_dagger3_ft_normal_g50           60/64      197   0.490    0.193   0.759    0.299 3384/4402
+v51_dagger3_ft_danger_g20           14/64      452   0.676    0.612   1.008    0.912 9613/10007
+v51_dagger3_ft_danger_g50           43/64      318   0.474    0.301   0.780    0.496 6220/7067
