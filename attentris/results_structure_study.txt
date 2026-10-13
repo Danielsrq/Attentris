@@ -1,0 +1,767 @@
+tome_v42_l4g_dagger_ft: APP 0.623 (APPfull 0.623), died 0/64, pieces 500 avg, TSD 1382, TST 11, quads 915, max height 16, illegal 0, 30.9 ms/mov
+tome_v42_l4h_dagger_ft: APP 0.624 (APPfull 0.624), died 0/64, pieces 500 avg, TSD 1347, TST 15, quads 913, max height 16, illegal 0, 34.7 ms/mov
+tome_v42_l6g_dagger_ft: APP 0.576 (APPfull 0.576), died 0/64, pieces 500 avg, TSD 1195, TST 12, quads 953, max height 16, illegal 0, 45.2 ms/mov
+tome_v4: APP 0.572 (APPfull 0.557), died 4/64, pieces 487 avg, TSD 1261, TST 11, quads 613, max height 22, illegal 0, 39.3 ms/mov
+== structure study (23:11)
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+
+######## tome_v42_l4g_dagger_ft on its own 32000 positions (teacher CEM-depth6): top-1 0.404, regret 2.50; control model_v51_dagger_ft.pt: top-1 0.409, regret 2.46
+   recovery of each kind, all tokens:      clean       contained   partial     fragmented      n
+   tsd                                      18.4%       44.1%       36.5%        1.0%      13300
+   stsd                                      0.0%        0.0%       60.0%       40.0%         10
+   fractal                                   0.0%        5.8%       54.7%       39.5%        932
+   imperial                                  0.0%        0.0%       80.0%       20.0%         85
+   cspin                                     0.0%        0.0%       50.0%       50.0%          2
+   fit_t open                                1.7%       29.6%       63.1%        5.6%       9373
+   fit_s open                                1.5%       33.1%       60.4%        5.0%      20674
+   fit_s covered                             0.9%       30.2%       66.6%        2.3%       4810
+   fit_z open                                2.3%       31.7%       60.9%        5.1%      20863
+   fit_z covered                             1.0%       30.2%       65.8%        3.0%       4869
+   fit_l open                                2.6%       31.9%       60.7%        4.8%      24417
+   fit_l covered                             1.3%       24.8%       71.7%        2.2%       8932
+   fit_j open                                3.3%       30.2%       61.6%        4.9%      24483
+   fit_j covered                             1.2%       25.7%       70.9%        2.2%       8758
+   fit_i covered                             4.7%        6.4%       75.2%       13.8%       1887
+   pit1                                     53.8%       16.4%       22.3%        7.6%      21243
+   pit2                                     18.2%       11.1%       47.6%       23.2%      26764
+   pit3                                      4.5%        3.1%       36.1%       56.2%      16441
+   pit4                                      0.9%        0.8%       14.3%       84.0%      12176
+   setup_t                                   2.5%       33.7%       60.3%        3.5%       2067
+   setup_s                                   1.8%       31.7%       62.6%        3.9%       1997
+   setup_z                                   1.7%       36.1%       58.0%        4.2%       2059
+   setup_l                                   1.6%       26.7%       66.1%        5.6%       1870
+   setup_j                                   1.5%       26.6%       66.8%        5.2%       1902
+   setup_i                                   0.7%       12.5%       81.5%        5.4%        577
+   decisions by recovery (excess = model regret - control regret: lower = better relative to the control):
+   kind                   teacher          recovery        n   uses / ctl     top-1 / ctl     regret / ctl    excess
+   tsd                    teacher uses     clean           66   0.955 / 0.955  0.788 / 0.833   1.43 /  1.21   +0.22
+   tsd                    teacher uses     contained      582   0.859 / 0.873  0.674 / 0.713   1.45 /  1.32   +0.13
+   tsd                    teacher uses     partial        859   0.845 / 0.860  0.672 / 0.698   1.36 /  1.02   +0.34
+   tsd                    teacher doesn't  clean         2386   0.012 / 0.010  0.383 / 0.392   3.49 /  3.37   +0.12
+   tsd                    teacher doesn't  contained     5277   0.035 / 0.034  0.377 / 0.385   2.96 /  2.85   +0.10
+   tsd                    teacher doesn't  partial       3997   0.081 / 0.073  0.376 / 0.385   2.12 /  2.07   +0.05
+   tsd                    teacher doesn't  fragmented     118   0.076 / 0.093  0.398 / 0.381   1.37 /  1.57   -0.21
+   fractal                teacher uses     partial         63   0.952 / 0.937  0.952 / 0.937   0.31 /  0.41   -0.09
+   fractal                teacher uses     fragmented      91   0.945 / 0.945  0.923 / 0.923   0.72 /  0.60   +0.12
+   fractal                teacher doesn't  contained       51   0.039 / 0.020  0.451 / 0.412   2.65 /  3.82   -1.17
+   fractal                teacher doesn't  partial        447   0.025 / 0.025  0.360 / 0.387   3.58 /  3.32   +0.26
+   fractal                teacher doesn't  fragmented     277   0.029 / 0.029  0.379 / 0.368   2.08 /  1.81   +0.27
+   imperial               teacher doesn't  partial         49   0.000 / 0.000  0.347 / 0.388   2.14 /  1.92   +0.22
+   fit_t open             teacher uses     contained      428   0.570 / 0.535  0.481 / 0.428   2.45 /  2.87   -0.42
+   fit_t open             teacher uses     partial        957   0.582 / 0.586  0.479 / 0.480   2.06 /  2.11   -0.04
+   fit_t open             teacher uses     fragmented      75   0.640 / 0.627  0.560 / 0.507   0.94 /  0.99   -0.05
+   fit_t open             teacher doesn't  clean          145   0.124 / 0.103  0.317 / 0.331   3.34 /  2.77   +0.56
+   fit_t open             teacher doesn't  contained     2343   0.103 / 0.095  0.379 / 0.408   2.82 /  2.66   +0.16
+   fit_t open             teacher doesn't  partial       4960   0.109 / 0.105  0.393 / 0.399   2.31 /  2.23   +0.08
+   fit_t open             teacher doesn't  fragmented     451   0.091 / 0.082  0.410 / 0.366   1.48 /  1.81   -0.33
+   fit_s open             teacher uses     clean           54   0.593 / 0.630  0.519 / 0.574   1.78 /  2.06   -0.28
+   fit_s open             teacher uses     contained     1090   0.591 / 0.606  0.532 / 0.543   2.18 /  2.14   +0.04
+   fit_s open             teacher uses     partial       2035   0.621 / 0.609  0.545 / 0.537   1.82 /  1.86   -0.04
+   fit_s open             teacher uses     fragmented     143   0.657 / 0.671  0.622 / 0.650   1.06 /  1.08   -0.02
+   fit_s open             teacher doesn't  clean          256   0.137 / 0.129  0.324 / 0.320   3.68 /  3.41   +0.27
+   fit_s open             teacher doesn't  contained     5750   0.125 / 0.121  0.351 / 0.369   2.95 /  2.86   +0.09
+   fit_s open             teacher doesn't  partial      10461   0.135 / 0.130  0.365 / 0.379   2.53 /  2.48   +0.05
+   fit_s open             teacher doesn't  fragmented     885   0.102 / 0.134  0.384 / 0.371   1.81 /  1.91   -0.09
+   fit_s covered          teacher uses     contained      287   0.676 / 0.718  0.613 / 0.676   2.05 /  1.86   +0.19
+   fit_s covered          teacher uses     partial        612   0.672 / 0.708  0.618 / 0.647   1.98 /  1.79   +0.19
+   fit_s covered          teacher uses     fragmented      21   0.619 / 0.619  0.571 / 0.571   2.23 /  2.24   -0.01
+   fit_s covered          teacher doesn't  clean           32   0.062 / 0.125  0.281 / 0.250   3.83 /  4.66   -0.83
+   fit_s covered          teacher doesn't  contained     1168   0.140 / 0.131  0.356 / 0.350   3.16 /  3.07   +0.08
+   fit_s covered          teacher doesn't  partial       2591   0.111 / 0.113  0.351 / 0.356   3.19 /  3.01   +0.18
+   fit_s covered          teacher doesn't  fragmented      88   0.091 / 0.091  0.364 / 0.284   2.20 /  2.29   -0.08
+   fit_z open             teacher uses     clean           64   0.656 / 0.594  0.531 / 0.484   2.30 /  2.28   +0.02
+   fit_z open             teacher uses     contained     1069   0.597 / 0.609  0.529 / 0.546   2.25 /  2.09   +0.16
+   fit_z open             teacher uses     partial       2114   0.623 / 0.622  0.553 / 0.550   1.80 /  1.86   -0.06
+   fit_z open             teacher uses     fragmented     156   0.686 / 0.712  0.564 / 0.583   1.34 /  1.37   -0.04
+   fit_z open             teacher doesn't  clean          412   0.117 / 0.131  0.371 / 0.379   2.91 /  3.12   -0.21
+   fit_z open             teacher doesn't  contained     5548   0.132 / 0.130  0.348 / 0.364   3.02 /  3.00   +0.03
+   fit_z open             teacher doesn't  partial      10592   0.135 / 0.137  0.359 / 0.369   2.61 /  2.58   +0.04
+   fit_z open             teacher doesn't  fragmented     908   0.130 / 0.122  0.381 / 0.358   1.87 /  1.95   -0.08
+   fit_z covered          teacher uses     contained      285   0.632 / 0.712  0.575 / 0.653   1.84 /  1.42   +0.42
+   fit_z covered          teacher uses     partial        618   0.681 / 0.712  0.633 / 0.650   2.00 /  2.09   -0.09
+   fit_z covered          teacher uses     fragmented      33   0.485 / 0.485  0.424 / 0.424   1.95 /  2.07   -0.12
+   fit_z covered          teacher doesn't  clean           45   0.089 / 0.089  0.422 / 0.489   2.61 /  1.71   +0.90
+   fit_z covered          teacher doesn't  contained     1185   0.133 / 0.128  0.360 / 0.362   3.13 /  2.99   +0.13
+   fit_z covered          teacher doesn't  partial       2585   0.103 / 0.118  0.370 / 0.367   3.00 /  3.01   -0.01
+   fit_z covered          teacher doesn't  fragmented     113   0.124 / 0.159  0.354 / 0.354   2.24 /  2.23   +0.01
+   fit_l open             teacher uses     clean           59   0.542 / 0.610  0.492 / 0.593   1.57 /  1.59   -0.03
+   fit_l open             teacher uses     contained      795   0.462 / 0.496  0.410 / 0.442   3.19 /  2.94   +0.25
+   fit_l open             teacher uses     partial       1768   0.520 / 0.529  0.471 / 0.480   2.26 /  2.31   -0.05
+   fit_l open             teacher uses     fragmented      95   0.600 / 0.600  0.558 / 0.558   1.23 /  1.40   -0.16
+   fit_l open             teacher doesn't  clean          575   0.075 / 0.071  0.395 / 0.395   2.89 /  2.78   +0.11
+   fit_l open             teacher doesn't  contained     6991   0.067 / 0.068  0.386 / 0.396   2.83 /  2.67   +0.16
+   fit_l open             teacher doesn't  partial      13056   0.085 / 0.085  0.381 / 0.387   2.54 /  2.54   -0.00
+   fit_l open             teacher doesn't  fragmented    1078   0.060 / 0.058  0.393 / 0.362   1.74 /  1.87   -0.13
+   fit_l covered          teacher uses     clean           25   0.760 / 0.800  0.560 / 0.600   3.65 /  3.06   +0.59
+   fit_l covered          teacher uses     contained      523   0.799 / 0.820  0.685 / 0.692   1.80 /  2.01   -0.21
+   fit_l covered          teacher uses     partial       1367   0.808 / 0.821  0.712 / 0.715   1.63 /  1.58   +0.05
+   fit_l covered          teacher uses     fragmented      54   0.796 / 0.833  0.741 / 0.722   1.31 /  1.47   -0.17
+   fit_l covered          teacher doesn't  clean           95   0.053 / 0.063  0.400 / 0.442   2.42 /  2.82   -0.40
+   fit_l covered          teacher doesn't  contained     1694   0.151 / 0.139  0.360 / 0.362   3.03 /  2.86   +0.17
+   fit_l covered          teacher doesn't  partial       5033   0.108 / 0.111  0.365 / 0.360   2.75 /  2.75   +0.01
+   fit_l covered          teacher doesn't  fragmented     141   0.135 / 0.156  0.348 / 0.333   2.01 /  2.47   -0.46
+   fit_j open             teacher uses     clean           90   0.511 / 0.556  0.489 / 0.522   3.38 /  2.49   +0.89
+   fit_j open             teacher uses     contained      783   0.496 / 0.540  0.451 / 0.494   2.70 /  2.36   +0.34
+   fit_j open             teacher uses     partial       1751   0.517 / 0.526  0.467 / 0.472   2.23 /  2.21   +0.01
+   fit_j open             teacher uses     fragmented     119   0.571 / 0.513  0.496 / 0.445   1.64 /  1.88   -0.24
+   fit_j open             teacher doesn't  clean          718   0.074 / 0.079  0.414 / 0.398   2.69 /  2.73   -0.04
+   fit_j open             teacher doesn't  contained     6615   0.073 / 0.075  0.380 / 0.385   2.91 /  2.92   -0.00
+   fit_j open             teacher doesn't  partial      13333   0.078 / 0.083  0.386 / 0.397   2.57 /  2.45   +0.12
+   fit_j open             teacher doesn't  fragmented    1074   0.073 / 0.061  0.390 / 0.366   1.84 /  1.95   -0.11
+   fit_j covered          teacher uses     clean           23   0.783 / 0.826  0.739 / 0.783   2.07 /  1.92   +0.16
+   fit_j covered          teacher uses     contained      532   0.773 / 0.801  0.652 / 0.671   1.71 /  1.76   -0.05
+   fit_j covered          teacher uses     partial       1349   0.812 / 0.827  0.705 / 0.715   1.64 /  1.60   +0.04
+   fit_j covered          teacher uses     fragmented      39   0.872 / 0.872  0.795 / 0.769   0.71 /  0.79   -0.08
+   fit_j covered          teacher doesn't  clean           82   0.098 / 0.122  0.378 / 0.439   2.89 /  3.28   -0.39
+   fit_j covered          teacher doesn't  contained     1720   0.135 / 0.129  0.351 / 0.360   2.95 /  2.79   +0.15
+   fit_j covered          teacher doesn't  partial       4863   0.114 / 0.116  0.371 / 0.373   2.64 /  2.66   -0.02
+   fit_j covered          teacher doesn't  fragmented     150   0.140 / 0.107  0.387 / 0.407   2.29 /  1.86   +0.44
+   fit_i covered          teacher uses     contained       21   0.762 / 0.619  0.762 / 0.619   1.28 /  1.52   -0.24
+   fit_i covered          teacher uses     partial        239   0.665 / 0.715  0.661 / 0.703   1.73 /  1.43   +0.30
+   fit_i covered          teacher uses     fragmented      32   0.719 / 0.688  0.656 / 0.656   2.06 /  1.83   +0.24
+   fit_i covered          teacher doesn't  clean           72   0.181 / 0.153  0.250 / 0.250   4.68 /  4.34   +0.33
+   fit_i covered          teacher doesn't  contained       99   0.141 / 0.202  0.222 / 0.283   4.55 /  3.54   +1.01
+   fit_i covered          teacher doesn't  partial       1180   0.120 / 0.131  0.309 / 0.331   3.54 /  3.45   +0.09
+   fit_i covered          teacher doesn't  fragmented     228   0.105 / 0.136  0.351 / 0.355   3.81 /  3.96   -0.15
+   pit1                   teacher uses     clean          407   0.862 / 0.855  0.862 / 0.855   0.63 /  0.61   +0.02
+   pit1                   teacher uses     contained      176   0.858 / 0.841  0.858 / 0.841   0.47 /  0.62   -0.15
+   pit1                   teacher uses     partial        293   0.850 / 0.870  0.850 / 0.870   0.92 /  0.68   +0.25
+   pit1                   teacher uses     fragmented     136   0.824 / 0.860  0.824 / 0.860   0.73 /  0.45   +0.27
+   pit1                   teacher doesn't  clean        11022   0.015 / 0.014  0.419 / 0.423   2.36 /  2.34   +0.02
+   pit1                   teacher doesn't  contained     3305   0.025 / 0.023  0.405 / 0.409   2.50 /  2.37   +0.13
+   pit1                   teacher doesn't  partial       4434   0.023 / 0.022  0.403 / 0.403   2.64 /  2.52   +0.11
+   pit1                   teacher doesn't  fragmented    1470   0.033 / 0.024  0.380 / 0.390   2.89 /  2.74   +0.15
+   pit2                   teacher uses     clean          380   0.739 / 0.766  0.645 / 0.674   1.45 /  1.56   -0.11
+   pit2                   teacher uses     contained      273   0.725 / 0.762  0.652 / 0.718   2.28 /  2.04   +0.24
+   pit2                   teacher uses     partial       2107   0.774 / 0.781  0.681 / 0.691   1.61 /  1.48   +0.12
+   pit2                   teacher uses     fragmented    1759   0.801 / 0.824  0.653 / 0.674   1.88 /  1.79   +0.09
+   pit2                   teacher doesn't  clean         4485   0.039 / 0.042  0.395 / 0.400   2.41 /  2.43   -0.02
+   pit2                   teacher doesn't  contained     2691   0.046 / 0.048  0.384 / 0.383   2.56 /  2.61   -0.06
+   pit2                   teacher doesn't  partial      10629   0.073 / 0.076  0.377 / 0.382   2.51 /  2.47   +0.03
+   pit2                   teacher doesn't  fragmented    4440   0.127 / 0.128  0.346 / 0.349   2.69 /  2.65   +0.05
+   pit3                   teacher uses     clean          151   0.649 / 0.603  0.576 / 0.517   2.12 /  2.10   +0.02
+   pit3                   teacher uses     contained       83   0.687 / 0.675  0.566 / 0.578   2.23 /  2.57   -0.35
+   pit3                   teacher uses     partial       1187   0.682 / 0.691  0.564 / 0.555   1.99 /  2.14   -0.15
+   pit3                   teacher uses     fragmented    2631   0.762 / 0.775  0.602 / 0.612   2.12 /  2.03   +0.09
+   pit3                   teacher doesn't  clean          594   0.167 / 0.150  0.375 / 0.384   2.59 /  2.66   -0.07
+   pit3                   teacher doesn't  contained      430   0.100 / 0.105  0.367 / 0.370   2.99 /  2.92   +0.06
+   pit3                   teacher doesn't  partial       4754   0.127 / 0.121  0.359 / 0.376   2.50 /  2.42   +0.08
+   pit3                   teacher doesn't  fragmented    6611   0.155 / 0.147  0.348 / 0.349   2.75 /  2.72   +0.03
+   pit4                   teacher uses     clean           23   0.435 / 0.435  0.391 / 0.391   2.05 /  1.28   +0.76
+   pit4                   teacher uses     contained       23   0.565 / 0.652  0.261 / 0.391   4.28 /  2.82   +1.46
+   pit4                   teacher uses     partial        490   0.673 / 0.694  0.498 / 0.514   2.59 /  2.40   +0.18
+   pit4                   teacher uses     fragmented    3645   0.733 / 0.733  0.511 / 0.520   2.44 /  2.30   +0.14
+   pit4                   teacher doesn't  clean           90   0.200 / 0.089  0.444 / 0.522   2.53 /  1.81   +0.72
+   pit4                   teacher doesn't  contained       69   0.203 / 0.188  0.406 / 0.377   2.28 /  2.18   +0.10
+   pit4                   teacher doesn't  partial       1253   0.189 / 0.195  0.377 / 0.374   2.52 /  2.58   -0.06
+   pit4                   teacher doesn't  fragmented    6583   0.216 / 0.208  0.320 / 0.327   2.83 /  2.79   +0.05
+   setup_t                teacher uses     clean           29   0.483 / 0.586  0.448 / 0.448   5.44 /  5.31   +0.13
+   setup_t                teacher uses     contained      258   0.659 / 0.756  0.609 / 0.694   1.97 /  1.34   +0.63
+   setup_t                teacher uses     partial        390   0.685 / 0.777  0.608 / 0.692   1.97 /  1.29   +0.68
+   setup_t                teacher uses     fragmented      33   0.758 / 0.818  0.697 / 0.758   1.86 /  0.92   +0.94
+   setup_t                teacher doesn't  clean           23   0.261 / 0.217  0.348 / 0.391   6.04 /  5.19   +0.85
+   setup_t                teacher doesn't  contained      438   0.231 / 0.256  0.322 / 0.297   3.00 /  3.31   -0.31
+   setup_t                teacher doesn't  partial        857   0.182 / 0.263  0.352 / 0.341   2.51 /  2.69   -0.18
+   setup_t                teacher doesn't  fragmented      39   0.231 / 0.231  0.359 / 0.154   3.39 /  4.01   -0.62
+   setup_s                teacher uses     contained       93   0.237 / 0.441  0.161 / 0.366   5.65 /  3.66   +2.00
+   setup_s                teacher uses     partial        152   0.270 / 0.368  0.184 / 0.283   4.06 /  3.00   +1.05
+   setup_s                teacher doesn't  clean           22   0.045 / 0.091  0.227 / 0.273   3.40 /  3.18   +0.21
+   setup_s                teacher doesn't  contained      541   0.055 / 0.118  0.368 / 0.357   3.24 /  3.45   -0.21
+   setup_s                teacher doesn't  partial       1099   0.050 / 0.095  0.346 / 0.340   3.28 /  3.26   +0.02
+   setup_s                teacher doesn't  fragmented      64   0.031 / 0.016  0.312 / 0.188   3.23 /  3.42   -0.19
+   setup_z                teacher uses     contained      104   0.327 / 0.413  0.221 / 0.308   4.96 /  3.97   +1.00
+   setup_z                teacher uses     partial        140   0.257 / 0.371  0.186 / 0.250   3.94 /  3.88   +0.06
+   setup_z                teacher doesn't  clean           22   0.091 / 0.273  0.455 / 0.364   1.53 /  2.96   -1.43
+   setup_z                teacher doesn't  contained      640   0.066 / 0.120  0.356 / 0.359   3.27 /  3.38   -0.10
+   setup_z                teacher doesn't  partial       1055   0.051 / 0.102  0.349 / 0.342   3.11 /  3.31   -0.19
+   setup_z                teacher doesn't  fragmented      75   0.040 / 0.093  0.293 / 0.280   2.16 /  2.51   -0.35
+   setup_l                teacher uses     contained       66   0.485 / 0.439  0.409 / 0.409   3.00 /  2.40   +0.60
+   setup_l                teacher uses     partial        145   0.310 / 0.400  0.276 / 0.345   3.84 /  3.54   +0.30
+   setup_l                teacher doesn't  clean           27   0.074 / 0.074  0.370 / 0.370   3.14 /  2.84   +0.30
+   setup_l                teacher doesn't  contained      434   0.069 / 0.097  0.353 / 0.350   3.37 /  3.56   -0.19
+   setup_l                teacher doesn't  partial       1092   0.061 / 0.090  0.364 / 0.365   2.98 /  2.98   +0.00
+   setup_l                teacher doesn't  fragmented      94   0.064 / 0.043  0.383 / 0.351   2.00 /  2.23   -0.23
+   setup_j                teacher uses     contained       71   0.366 / 0.437  0.296 / 0.394   3.49 /  2.78   +0.71
+   setup_j                teacher uses     partial        143   0.427 / 0.573  0.378 / 0.469   3.05 /  2.16   +0.89
+   setup_j                teacher doesn't  clean           26   0.077 / 0.038  0.462 / 0.423   3.79 /  3.11   +0.68
+   setup_j                teacher doesn't  contained      434   0.046 / 0.071  0.382 / 0.373   3.19 /  3.35   -0.17
+   setup_j                teacher doesn't  partial       1128   0.060 / 0.106  0.360 / 0.373   3.12 /  3.04   +0.08
+   setup_j                teacher doesn't  fragmented      89   0.135 / 0.101  0.292 / 0.337   2.71 /  1.97   +0.74
+   setup_i                teacher doesn't  contained       71   0.028 / 0.014  0.493 / 0.507   2.16 /  2.31   -0.16
+   setup_i                teacher doesn't  partial        454   0.007 / 0.011  0.370 / 0.370   2.16 /  2.13   +0.02
+   setup_i                teacher doesn't  fragmented      29   0.000 / 0.000  0.310 / 0.310   1.80 /  1.16   +0.64
+   forced recovery (same positions; natural = the model's own merging):
+   kind                   teacher             n   recovered nat / forced   uses nat / forced   top-1 nat / forced   regret nat / forced   | treated: n   regret nat / forced   uses nat / forced
+   tsd                    teacher uses       1522       0.426 / 0.985        0.855 / 0.874      0.677 / 0.700        1.39 /  1.31        |   851      1.37 /  1.27        0.845 / 0.868
+   tsd                    teacher doesn't   11778       0.651 / 0.990        0.046 / 0.057      0.378 / 0.370        2.77 /  2.95        |  3992      2.12 /  2.35        0.081 / 0.107
+   fit_t open             teacher uses       1474       0.300 / 0.804        0.581 / 0.560      0.482 / 0.459        2.13 /  2.32        |   743      1.99 /  2.24        0.615 / 0.592
+   fit_t open             teacher doesn't    7899       0.315 / 0.811        0.106 / 0.102      0.388 / 0.379        2.43 /  2.65        |  3922      2.27 /  2.58        0.104 / 0.101
+   fit_s open             teacher uses       3322       0.344 / 0.887        0.612 / 0.549      0.544 / 0.489        1.91 /  2.28        |  1821      1.84 /  2.22        0.622 / 0.556
+   fit_s open             teacher doesn't   17352       0.346 / 0.879        0.130 / 0.115      0.361 / 0.355        2.65 /  2.81        |  9389      2.55 /  2.75        0.133 / 0.116
+   fit_z open             teacher uses       3403       0.333 / 0.892        0.618 / 0.552      0.546 / 0.485        1.93 /  2.25        |  1938      1.82 /  2.15        0.623 / 0.555
+   fit_z open             teacher doesn't   17460       0.341 / 0.887        0.134 / 0.121      0.357 / 0.350        2.71 /  2.88        |  9709      2.62 /  2.82        0.136 / 0.122
+   fit_l open             teacher uses       2717       0.314 / 0.767        0.506 / 0.481      0.456 / 0.430        2.48 /  2.78        |  1303      2.34 /  2.75        0.518 / 0.486
+   fit_l open             teacher doesn't   21700       0.349 / 0.802        0.077 / 0.078      0.383 / 0.364        2.60 /  2.88        | 10335      2.60 /  2.94        0.077 / 0.076
+   fit_j open             teacher uses       2743       0.318 / 0.771        0.513 / 0.491      0.464 / 0.444        2.37 /  2.53        |  1313      2.30 /  2.58        0.506 / 0.475
+   fit_j open             teacher doesn't   21740       0.337 / 0.804        0.076 / 0.077      0.385 / 0.368        2.65 /  2.97        | 10619      2.64 /  3.05        0.072 / 0.074
+   pit1                   teacher uses       1012       0.576 / 0.882        0.853 / 0.850      0.853 / 0.850        0.70 /  0.70        |   310      0.86 /  0.79        0.865 / 0.861
+   pit1                   teacher doesn't   20231       0.708 / 0.938        0.019 / 0.019      0.411 / 0.406        2.48 /  2.54        |  4653      2.79 /  2.84        0.024 / 0.025
+   pit2                   teacher uses       4519       0.145 / 0.740        0.779 / 0.771      0.665 / 0.656        1.74 /  1.76        |  2694      1.70 /  1.72        0.771 / 0.762
+   pit2                   teacher doesn't   22245       0.323 / 0.851        0.074 / 0.079      0.375 / 0.366        2.53 /  2.64        | 11784      2.56 /  2.69        0.080 / 0.089
+   setup_t                teacher uses        710       0.404 / 0.908        0.670 / 0.690      0.606 / 0.618        2.10 /  2.16        |   359      1.77 /  1.81        0.708 / 0.721
+   setup_t                teacher doesn't    1357       0.340 / 0.846        0.200 / 0.229      0.343 / 0.331        2.75 /  2.88        |   687      2.55 /  2.65        0.213 / 0.246
+
+######## tome_v42_l4h_dagger_ft on its own 32000 positions (teacher CEM-depth6): top-1 0.407, regret 2.54; control model_v51_dagger_ft.pt: top-1 0.412, regret 2.46
+   recovery of each kind, all tokens:      clean       contained   partial     fragmented      n
+   tsd                                       6.1%       38.5%       51.3%        4.1%      12918
+   stsd                                      0.0%        0.0%       71.4%       28.6%          7
+   fractal                                   0.8%        8.0%       61.5%       29.7%        623
+   imperial                                  0.0%        4.3%       60.9%       34.8%         23
+   cspin                                     0.0%        0.0%       66.7%       33.3%          6
+   fit_t open                                2.9%       31.3%       57.5%        8.4%       9468
+   fit_s open                                4.8%       33.1%       56.8%        5.3%      20956
+   fit_s covered                             0.9%       35.8%       58.7%        4.7%       4801
+   fit_z open                                4.7%       32.2%       57.3%        5.8%      20593
+   fit_z covered                             1.3%       35.1%       59.4%        4.2%       5232
+   fit_l open                                5.0%       38.4%       51.7%        4.9%      24199
+   fit_l covered                             1.3%       38.4%       55.4%        4.9%       8875
+   fit_j open                                5.2%       38.8%       51.2%        4.8%      24461
+   fit_j covered                             1.3%       37.8%       56.6%        4.3%       8895
+   fit_i covered                             0.7%       16.3%       57.3%       25.8%       1944
+   pit1                                     47.7%       28.6%       21.1%        2.6%      21176
+   pit2                                     17.2%       17.9%       50.3%       14.6%      26561
+   pit3                                      4.8%        5.9%       45.6%       43.7%      16693
+   pit4                                      1.3%        2.2%       24.8%       71.6%      12373
+   setup_t                                   2.8%       36.8%       56.9%        3.5%       2057
+   setup_s                                   0.8%       35.3%       59.8%        4.0%       1940
+   setup_z                                   1.7%       36.7%       56.1%        5.5%       1773
+   setup_l                                   0.9%       31.8%       59.5%        7.8%       1930
+   setup_j                                   1.5%       32.7%       58.6%        7.2%       1878
+   setup_i                                   0.6%       15.7%       78.3%        5.4%        663
+   decisions by recovery (excess = model regret - control regret: lower = better relative to the control):
+   kind                   teacher          recovery        n   uses / ctl     top-1 / ctl     regret / ctl    excess
+   tsd                    teacher uses     clean           24   0.833 / 0.875  0.708 / 0.875   1.74 /  0.30   +1.44
+   tsd                    teacher uses     contained      520   0.842 / 0.856  0.698 / 0.696   1.08 /  1.06   +0.02
+   tsd                    teacher uses     partial        939   0.841 / 0.841  0.674 / 0.691   1.20 /  1.13   +0.08
+   tsd                    teacher uses     fragmented      64   0.781 / 0.797  0.656 / 0.578   1.31 /  1.53   -0.23
+   tsd                    teacher doesn't  clean          765   0.004 / 0.005  0.393 / 0.414   3.21 /  3.08   +0.12
+   tsd                    teacher doesn't  contained     4451   0.035 / 0.032  0.386 / 0.395   2.95 /  2.88   +0.07
+   tsd                    teacher doesn't  partial       5692   0.055 / 0.053  0.379 / 0.395   2.54 /  2.41   +0.13
+   tsd                    teacher doesn't  fragmented     463   0.060 / 0.065  0.348 / 0.369   1.94 /  2.00   -0.06
+   fractal                teacher uses     partial         91   0.978 / 0.967  0.967 / 0.945   0.41 /  0.44   -0.03
+   fractal                teacher uses     fragmented      41   0.927 / 0.878  0.927 / 0.878   0.89 /  1.29   -0.41
+   fractal                teacher doesn't  contained       41   0.000 / 0.000  0.317 / 0.317   2.42 /  2.36   +0.06
+   fractal                teacher doesn't  partial        292   0.058 / 0.051  0.370 / 0.408   2.10 /  1.78   +0.31
+   fractal                teacher doesn't  fragmented     144   0.056 / 0.014  0.326 / 0.354   2.56 /  2.22   +0.34
+   fit_t open             teacher uses     clean           47   0.574 / 0.638  0.404 / 0.468   3.27 /  3.63   -0.35
+   fit_t open             teacher uses     contained      504   0.575 / 0.607  0.474 / 0.492   2.30 /  2.25   +0.04
+   fit_t open             teacher uses     partial        829   0.589 / 0.616  0.509 / 0.515   1.92 /  1.86   +0.06
+   fit_t open             teacher uses     fragmented     101   0.644 / 0.584  0.515 / 0.505   1.75 /  1.91   -0.16
+   fit_t open             teacher doesn't  clean          225   0.138 / 0.178  0.364 / 0.382   2.81 /  2.56   +0.24
+   fit_t open             teacher doesn't  contained     2457   0.120 / 0.121  0.381 / 0.396   2.77 /  2.61   +0.16
+   fit_t open             teacher doesn't  partial       4611   0.098 / 0.104  0.390 / 0.396   2.45 /  2.33   +0.12
+   fit_t open             teacher doesn't  fragmented     694   0.062 / 0.084  0.411 / 0.396   1.85 /  1.82   +0.03
+   fit_s open             teacher uses     clean          177   0.638 / 0.610  0.542 / 0.520   2.08 /  1.94   +0.14
+   fit_s open             teacher uses     contained     1210   0.598 / 0.604  0.519 / 0.528   2.19 /  2.06   +0.13
+   fit_s open             teacher uses     partial       1925   0.615 / 0.624  0.539 / 0.551   1.91 /  1.81   +0.09
+   fit_s open             teacher uses     fragmented     171   0.655 / 0.632  0.596 / 0.585   1.70 /  1.49   +0.21
+   fit_s open             teacher doesn't  clean          829   0.122 / 0.117  0.382 / 0.410   3.14 /  2.72   +0.42
+   fit_s open             teacher doesn't  contained     5734   0.130 / 0.130  0.371 / 0.384   2.95 /  2.85   +0.10
+   fit_s open             teacher doesn't  partial       9971   0.127 / 0.133  0.370 / 0.377   2.71 /  2.57   +0.14
+   fit_s open             teacher doesn't  fragmented     939   0.120 / 0.140  0.383 / 0.377   1.95 /  2.02   -0.07
+   fit_s covered          teacher uses     contained      363   0.628 / 0.725  0.581 / 0.650   2.16 /  1.58   +0.58
+   fit_s covered          teacher uses     partial        581   0.652 / 0.714  0.606 / 0.652   2.17 /  1.59   +0.58
+   fit_s covered          teacher uses     fragmented      45   0.689 / 0.733  0.689 / 0.711   1.73 /  1.78   -0.05
+   fit_s covered          teacher doesn't  clean           27   0.037 / 0.037  0.370 / 0.407   2.39 /  2.56   -0.16
+   fit_s covered          teacher doesn't  contained     1354   0.114 / 0.138  0.369 / 0.378   2.98 /  2.90   +0.08
+   fit_s covered          teacher doesn't  partial       2238   0.109 / 0.120  0.361 / 0.369   3.17 /  3.05   +0.12
+   fit_s covered          teacher doesn't  fragmented     179   0.089 / 0.095  0.318 / 0.374   3.19 /  2.58   +0.62
+   fit_z open             teacher uses     clean          136   0.625 / 0.691  0.581 / 0.618   2.00 /  1.50   +0.50
+   fit_z open             teacher uses     contained     1099   0.615 / 0.621  0.533 / 0.546   2.11 /  2.10   +0.01
+   fit_z open             teacher uses     partial       1878   0.625 / 0.620  0.552 / 0.545   1.92 /  1.84   +0.09
+   fit_z open             teacher uses     fragmented     168   0.702 / 0.673  0.643 / 0.595   1.33 /  1.27   +0.06
+   fit_z open             teacher doesn't  clean          842   0.143 / 0.140  0.357 / 0.365   2.87 /  2.74   +0.14
+   fit_z open             teacher doesn't  contained     5528   0.135 / 0.136  0.369 / 0.385   2.90 /  2.74   +0.16
+   fit_z open             teacher doesn't  partial       9916   0.123 / 0.126  0.377 / 0.388   2.63 /  2.52   +0.10
+   fit_z open             teacher doesn't  fragmented    1026   0.111 / 0.124  0.413 / 0.399   1.85 /  1.80   +0.05
+   fit_z covered          teacher uses     contained      373   0.665 / 0.705  0.579 / 0.633   2.45 /  2.26   +0.20
+   fit_z covered          teacher uses     partial        582   0.632 / 0.670  0.601 / 0.629   1.93 /  1.94   -0.01
+   fit_z covered          teacher uses     fragmented      47   0.745 / 0.809  0.702 / 0.766   1.00 /  0.57   +0.43
+   fit_z covered          teacher doesn't  clean           56   0.054 / 0.089  0.393 / 0.429   5.19 /  4.58   +0.60
+   fit_z covered          teacher doesn't  contained     1462   0.093 / 0.105  0.395 / 0.405   2.91 /  2.91   +0.00
+   fit_z covered          teacher doesn't  partial       2526   0.100 / 0.108  0.376 / 0.384   2.91 /  2.91   +0.00
+   fit_z covered          teacher doesn't  fragmented     174   0.132 / 0.144  0.345 / 0.368   3.18 /  2.57   +0.61
+   fit_l open             teacher uses     clean          173   0.503 / 0.514  0.480 / 0.491   2.64 /  2.43   +0.21
+   fit_l open             teacher uses     contained     1050   0.504 / 0.508  0.455 / 0.460   2.62 /  2.47   +0.14
+   fit_l open             teacher uses     partial       1463   0.506 / 0.535  0.468 / 0.489   2.46 /  2.18   +0.28
+   fit_l open             teacher uses     fragmented      91   0.549 / 0.495  0.527 / 0.451   1.76 /  2.38   -0.62
+   fit_l open             teacher doesn't  clean         1044   0.077 / 0.069  0.389 / 0.420   2.75 /  2.69   +0.06
+   fit_l open             teacher doesn't  contained     8253   0.071 / 0.073  0.384 / 0.396   2.82 /  2.69   +0.13
+   fit_l open             teacher doesn't  partial      11042   0.083 / 0.086  0.387 / 0.394   2.59 /  2.49   +0.10
+   fit_l open             teacher doesn't  fragmented    1083   0.054 / 0.063  0.397 / 0.383   1.96 /  2.09   -0.14
+   fit_l covered          teacher uses     contained      710   0.790 / 0.824  0.710 / 0.724   1.58 /  1.52   +0.06
+   fit_l covered          teacher uses     partial       1094   0.795 / 0.814  0.695 / 0.708   1.62 /  1.47   +0.15
+   fit_l covered          teacher uses     fragmented     149   0.852 / 0.852  0.685 / 0.698   1.62 /  1.35   +0.27
+   fit_l covered          teacher doesn't  clean           96   0.156 / 0.188  0.354 / 0.365   3.50 /  3.59   -0.09
+   fit_l covered          teacher doesn't  contained     2699   0.099 / 0.099  0.356 / 0.365   2.91 /  2.81   +0.10
+   fit_l covered          teacher doesn't  partial       3825   0.129 / 0.118  0.367 / 0.375   2.97 /  2.77   +0.20
+   fit_l covered          teacher doesn't  fragmented     284   0.127 / 0.134  0.359 / 0.363   2.71 /  2.53   +0.18
+   fit_j open             teacher uses     clean          150   0.487 / 0.467  0.433 / 0.420   2.57 /  2.91   -0.34
+   fit_j open             teacher uses     contained     1043   0.483 / 0.519  0.436 / 0.467   2.58 /  2.46   +0.11
+   fit_j open             teacher uses     partial       1548   0.532 / 0.545  0.473 / 0.467   2.33 /  2.30   +0.03
+   fit_j open             teacher uses     fragmented     106   0.594 / 0.566  0.528 / 0.491   1.57 /  1.47   +0.09
+   fit_j open             teacher doesn't  clean         1132   0.084 / 0.076  0.381 / 0.395   2.93 /  2.82   +0.11
+   fit_j open             teacher doesn't  contained     8440   0.068 / 0.067  0.374 / 0.392   2.88 /  2.74   +0.15
+   fit_j open             teacher doesn't  partial      10980   0.084 / 0.083  0.383 / 0.387   2.64 /  2.52   +0.12
+   fit_j open             teacher doesn't  fragmented    1062   0.059 / 0.072  0.390 / 0.379   2.03 /  2.10   -0.06
+   fit_j covered          teacher uses     clean           22   0.864 / 0.909  0.864 / 0.864   1.73 /  0.17   +1.56
+   fit_j covered          teacher uses     contained      689   0.776 / 0.823  0.678 / 0.724   2.02 /  1.68   +0.34
+   fit_j covered          teacher uses     partial       1208   0.804 / 0.829  0.702 / 0.719   1.55 /  1.45   +0.10
+   fit_j covered          teacher uses     fragmented     121   0.876 / 0.876  0.810 / 0.793   0.97 /  1.07   -0.10
+   fit_j covered          teacher doesn't  clean           94   0.096 / 0.085  0.340 / 0.415   2.60 /  2.48   +0.12
+   fit_j covered          teacher doesn't  contained     2677   0.091 / 0.091  0.381 / 0.392   2.85 /  2.81   +0.04
+   fit_j covered          teacher doesn't  partial       3823   0.123 / 0.137  0.360 / 0.358   2.87 /  2.85   +0.03
+   fit_j covered          teacher doesn't  fragmented     261   0.149 / 0.149  0.337 / 0.360   2.91 /  2.66   +0.25
+   fit_i covered          teacher uses     contained       56   0.732 / 0.750  0.714 / 0.732   1.29 /  1.21   +0.08
+   fit_i covered          teacher uses     partial        175   0.674 / 0.726  0.651 / 0.697   1.54 /  1.61   -0.08
+   fit_i covered          teacher uses     fragmented      78   0.628 / 0.654  0.603 / 0.603   2.32 /  2.44   -0.12
+   fit_i covered          teacher doesn't  contained      260   0.119 / 0.115  0.300 / 0.342   3.74 /  3.38   +0.36
+   fit_i covered          teacher doesn't  partial        939   0.116 / 0.134  0.315 / 0.339   3.80 /  3.34   +0.46
+   fit_i covered          teacher doesn't  fragmented     423   0.128 / 0.130  0.348 / 0.374   3.23 /  3.04   +0.19
+   pit1                   teacher uses     clean          506   0.791 / 0.828  0.791 / 0.828   1.11 /  0.85   +0.25
+   pit1                   teacher uses     contained      231   0.805 / 0.835  0.801 / 0.835   1.00 /  0.86   +0.14
+   pit1                   teacher uses     partial        304   0.826 / 0.865  0.826 / 0.862   0.82 /  0.66   +0.16
+   pit1                   teacher uses     fragmented      66   0.909 / 0.909  0.909 / 0.909   0.29 /  0.52   -0.23
+   pit1                   teacher doesn't  clean         9604   0.017 / 0.018  0.404 / 0.409   2.53 /  2.44   +0.08
+   pit1                   teacher doesn't  contained     5815   0.016 / 0.015  0.407 / 0.415   2.51 /  2.35   +0.16
+   pit1                   teacher doesn't  partial       4174   0.024 / 0.025  0.385 / 0.392   2.70 /  2.62   +0.08
+   pit1                   teacher doesn't  fragmented     476   0.032 / 0.032  0.410 / 0.405   2.23 /  2.32   -0.09
+   pit2                   teacher uses     clean          575   0.774 / 0.791  0.696 / 0.694   1.58 /  1.44   +0.14
+   pit2                   teacher uses     contained      648   0.748 / 0.778  0.657 / 0.691   1.63 /  1.52   +0.11
+   pit2                   teacher uses     partial       2505   0.767 / 0.795  0.665 / 0.687   1.60 /  1.44   +0.16
+   pit2                   teacher uses     fragmented    1115   0.760 / 0.796  0.593 / 0.628   2.30 /  2.11   +0.19
+   pit2                   teacher doesn't  clean         3985   0.049 / 0.048  0.396 / 0.406   2.54 /  2.41   +0.13
+   pit2                   teacher doesn't  contained     4106   0.053 / 0.059  0.396 / 0.403   2.54 /  2.57   -0.02
+   pit2                   teacher doesn't  partial      10853   0.077 / 0.083  0.376 / 0.382   2.56 /  2.50   +0.06
+   pit2                   teacher doesn't  fragmented    2774   0.119 / 0.121  0.357 / 0.354   2.70 /  2.61   +0.09
+   pit3                   teacher uses     clean          193   0.720 / 0.720  0.591 / 0.606   1.86 /  1.94   -0.08
+   pit3                   teacher uses     contained      212   0.703 / 0.698  0.547 / 0.533   1.71 /  1.98   -0.27
+   pit3                   teacher uses     partial       1705   0.718 / 0.746  0.575 / 0.590   2.24 /  1.99   +0.24
+   pit3                   teacher uses     fragmented    2098   0.729 / 0.756  0.574 / 0.578   2.18 /  2.21   -0.03
+   pit3                   teacher doesn't  clean          612   0.167 / 0.155  0.363 / 0.386   2.74 /  2.64   +0.11
+   pit3                   teacher doesn't  contained      775   0.146 / 0.134  0.368 / 0.409   2.77 /  2.39   +0.39
+   pit3                   teacher doesn't  partial       5907   0.123 / 0.125  0.359 / 0.371   2.71 /  2.63   +0.09
+   pit3                   teacher doesn't  fragmented    5191   0.146 / 0.154  0.355 / 0.355   2.74 /  2.67   +0.07
+   pit4                   teacher uses     clean           56   0.643 / 0.554  0.536 / 0.429   1.66 /  2.59   -0.93
+   pit4                   teacher uses     contained       72   0.611 / 0.431  0.431 / 0.319   2.58 /  3.21   -0.62
+   pit4                   teacher uses     partial        923   0.703 / 0.719  0.499 / 0.525   2.41 /  2.24   +0.17
+   pit4                   teacher uses     fragmented    3264   0.735 / 0.757  0.512 / 0.524   2.41 /  2.27   +0.15
+   pit4                   teacher doesn't  clean          108   0.204 / 0.185  0.417 / 0.454   2.14 /  2.08   +0.06
+   pit4                   teacher doesn't  contained      199   0.241 / 0.216  0.342 / 0.327   3.22 /  2.82   +0.41
+   pit4                   teacher doesn't  partial       2151   0.184 / 0.179  0.340 / 0.344   2.74 /  2.70   +0.03
+   pit4                   teacher doesn't  fragmented    5600   0.213 / 0.222  0.326 / 0.325   2.88 /  2.80   +0.08
+   setup_t                teacher uses     clean           30   0.700 / 0.833  0.500 / 0.800   4.67 /  0.97   +3.70
+   setup_t                teacher uses     contained      260   0.712 / 0.808  0.615 / 0.719   2.09 /  1.14   +0.95
+   setup_t                teacher uses     partial        365   0.690 / 0.827  0.619 / 0.737   1.77 /  1.11   +0.66
+   setup_t                teacher uses     fragmented      26   0.654 / 0.808  0.538 / 0.654   1.57 /  0.77   +0.80
+   setup_t                teacher doesn't  clean           27   0.222 / 0.444  0.148 / 0.037   4.44 /  4.85   -0.42
+   setup_t                teacher doesn't  contained      498   0.191 / 0.255  0.333 / 0.353   3.76 /  2.94   +0.82
+   setup_t                teacher doesn't  partial        805   0.184 / 0.247  0.338 / 0.323   2.99 /  3.01   -0.02
+   setup_t                teacher doesn't  fragmented      46   0.239 / 0.261  0.348 / 0.391   2.00 /  1.37   +0.62
+   setup_s                teacher uses     contained       98   0.388 / 0.490  0.286 / 0.388   4.15 /  3.58   +0.57
+   setup_s                teacher uses     partial        155   0.239 / 0.406  0.174 / 0.310   5.14 /  3.40   +1.74
+   setup_s                teacher doesn't  contained      587   0.060 / 0.145  0.353 / 0.325   3.70 /  3.68   +0.02
+   setup_s                teacher doesn't  partial       1006   0.061 / 0.099  0.379 / 0.351   3.07 /  3.08   -0.01
+   setup_s                teacher doesn't  fragmented      63   0.000 / 0.048  0.397 / 0.333   2.25 /  2.58   -0.33
+   setup_z                teacher uses     contained       88   0.307 / 0.489  0.250 / 0.386   4.80 /  3.61   +1.18
+   setup_z                teacher uses     partial        149   0.235 / 0.436  0.174 / 0.336   4.68 /  3.24   +1.44
+   setup_z                teacher doesn't  clean           25   0.240 / 0.280  0.240 / 0.240   5.52 /  4.70   +0.82
+   setup_z                teacher doesn't  contained      563   0.055 / 0.112  0.346 / 0.334   3.85 /  3.70   +0.15
+   setup_z                teacher doesn't  partial        845   0.052 / 0.093  0.357 / 0.333   3.16 /  3.09   +0.07
+   setup_z                teacher doesn't  fragmented      86   0.070 / 0.070  0.407 / 0.314   2.73 /  3.10   -0.37
+   setup_l                teacher uses     contained       75   0.293 / 0.507  0.253 / 0.413   3.14 /  2.47   +0.66
+   setup_l                teacher uses     partial        120   0.433 / 0.542  0.367 / 0.483   2.78 /  2.26   +0.52
+   setup_l                teacher doesn't  contained      539   0.063 / 0.093  0.369 / 0.369   3.14 /  2.92   +0.22
+   setup_l                teacher doesn't  partial       1028   0.054 / 0.084  0.384 / 0.337   2.92 /  2.83   +0.09
+   setup_l                teacher doesn't  fragmented     142   0.049 / 0.113  0.408 / 0.380   2.69 /  2.64   +0.06
+   setup_j                teacher uses     contained       70   0.400 / 0.443  0.314 / 0.343   4.42 /  3.16   +1.26
+   setup_j                teacher uses     partial        128   0.406 / 0.500  0.359 / 0.453   3.31 /  2.60   +0.71
+   setup_j                teacher doesn't  clean           20   0.200 / 0.250  0.400 / 0.450   2.29 /  2.58   -0.30
+   setup_j                teacher doesn't  contained      544   0.070 / 0.085  0.366 / 0.388   3.48 /  3.36   +0.12
+   setup_j                teacher doesn't  partial        972   0.044 / 0.091  0.373 / 0.358   3.13 /  3.08   +0.05
+   setup_j                teacher doesn't  fragmented     119   0.059 / 0.101  0.378 / 0.345   2.12 /  2.36   -0.24
+   setup_i                teacher doesn't  contained      101   0.000 / 0.000  0.356 / 0.396   2.33 /  2.65   -0.33
+   setup_i                teacher doesn't  partial        505   0.004 / 0.004  0.362 / 0.354   2.01 /  2.07   -0.06
+   setup_i                teacher doesn't  fragmented      36   0.000 / 0.000  0.389 / 0.278   1.63 /  2.23   -0.60
+
+######## tome_v42_l6g_dagger_ft on its own 32000 positions (teacher CEM-depth6): top-1 0.392, regret 2.70; control model_v51_dagger_ft.pt: top-1 0.406, regret 2.54
+   recovery of each kind, all tokens:      clean       contained   partial     fragmented      n
+   tsd                                      28.6%       61.2%       10.0%        0.2%      10757
+   stsd                                      0.0%       20.0%       80.0%        0.0%          5
+   fractal                                  23.0%        3.8%       46.7%       26.5%        396
+   imperial                                 66.9%        7.6%       25.4%        0.0%        118
+   cspin                                     0.0%        0.0%       62.5%       37.5%          8
+   fit_t open                                3.8%       57.9%       37.2%        1.0%       9692
+   fit_s open                                7.6%       46.1%       44.8%        1.5%      20315
+   fit_s covered                             4.3%       50.4%       44.7%        0.6%       4048
+   fit_z open                                7.2%       46.0%       45.3%        1.4%      20329
+   fit_z covered                             4.8%       50.8%       43.4%        1.0%       3924
+   fit_l open                                7.3%       35.2%       56.3%        1.3%      24821
+   fit_l covered                             4.2%       52.5%       42.4%        0.9%       7515
+   fit_j open                                7.1%       34.3%       57.1%        1.4%      24338
+   fit_j covered                             4.2%       50.9%       44.1%        0.8%       7461
+   fit_i covered                            11.1%       45.8%       42.0%        1.1%       2032
+   pit1                                     65.4%       17.4%       15.6%        1.6%      20821
+   pit2                                     36.5%       14.7%       41.0%        7.8%      25890
+   pit3                                     12.7%       11.4%       49.6%       26.4%      17028
+   pit4                                      5.1%        3.9%       37.0%       54.0%      11625
+   setup_t                                   3.5%       42.2%       53.9%        0.4%       2070
+   setup_s                                   1.4%       40.9%       55.7%        2.0%       1896
+   setup_z                                   1.4%       43.2%       53.2%        2.2%       1830
+   setup_l                                   2.0%       40.2%       55.2%        2.6%       1972
+   setup_j                                   2.4%       40.5%       54.4%        2.7%       1978
+   setup_i                                   1.2%       32.1%       66.3%        0.3%        591
+   decisions by recovery (excess = model regret - control regret: lower = better relative to the control):
+   kind                   teacher          recovery        n   uses / ctl     top-1 / ctl     regret / ctl    excess
+   tsd                    teacher uses     clean          177   0.898 / 0.870  0.655 / 0.650   1.35 /  1.26   +0.08
+   tsd                    teacher uses     contained     1023   0.873 / 0.863  0.713 / 0.692   1.17 /  1.13   +0.04
+   tsd                    teacher uses     partial        218   0.839 / 0.839  0.619 / 0.596   1.71 /  1.61   +0.10
+   tsd                    teacher doesn't  clean         2903   0.011 / 0.011  0.357 / 0.388   3.09 /  2.77   +0.32
+   tsd                    teacher doesn't  contained     5555   0.061 / 0.057  0.370 / 0.376   2.88 /  2.72   +0.16
+   tsd                    teacher doesn't  partial        863   0.076 / 0.066  0.388 / 0.397   2.13 /  1.86   +0.27
+   fractal                teacher uses     partial         55   0.964 / 0.945  0.945 / 0.927   0.04 /  0.20   -0.16
+   fractal                teacher uses     fragmented      28   1.000 / 1.000  1.000 / 1.000   0.00 /  0.00   +0.00
+   fractal                teacher doesn't  clean           79   0.051 / 0.038  0.405 / 0.430   2.14 /  1.95   +0.19
+   fractal                teacher doesn't  partial        130   0.023 / 0.008  0.400 / 0.392   1.93 /  1.82   +0.11
+   fractal                teacher doesn't  fragmented      77   0.000 / 0.013  0.390 / 0.442   1.60 /  1.49   +0.11
+   imperial               teacher doesn't  clean           77   0.000 / 0.000  0.351 / 0.325   4.42 /  4.57   -0.15
+   imperial               teacher doesn't  partial         21   0.000 / 0.000  0.333 / 0.429   1.48 /  0.83   +0.65
+   fit_t open             teacher uses     clean           58   0.379 / 0.483  0.345 / 0.397   3.64 /  3.18   +0.46
+   fit_t open             teacher uses     contained      750   0.548 / 0.551  0.467 / 0.448   2.56 /  2.38   +0.18
+   fit_t open             teacher uses     partial        627   0.557 / 0.608  0.451 / 0.510   2.14 /  1.80   +0.34
+   fit_t open             teacher doesn't  clean          314   0.108 / 0.115  0.357 / 0.401   3.41 /  2.85   +0.57
+   fit_t open             teacher doesn't  contained     4863   0.087 / 0.081  0.382 / 0.413   2.75 /  2.47   +0.29
+   fit_t open             teacher doesn't  partial       2982   0.146 / 0.132  0.390 / 0.418   2.45 /  2.16   +0.29
+   fit_t open             teacher doesn't  fragmented      86   0.116 / 0.081  0.372 / 0.430   2.12 /  1.72   +0.40
+   fit_s open             teacher uses     clean          255   0.478 / 0.514  0.427 / 0.471   3.19 /  2.96   +0.23
+   fit_s open             teacher uses     contained     1486   0.552 / 0.569  0.489 / 0.511   2.42 /  2.19   +0.23
+   fit_s open             teacher uses     partial       1524   0.610 / 0.632  0.534 / 0.548   1.81 /  1.81   +0.00
+   fit_s open             teacher uses     fragmented      52   0.673 / 0.788  0.577 / 0.692   1.97 /  1.10   +0.88
+   fit_s open             teacher doesn't  clean         1292   0.098 / 0.107  0.353 / 0.359   3.39 /  3.20   +0.19
+   fit_s open             teacher doesn't  contained     7870   0.118 / 0.124  0.360 / 0.378   3.00 /  2.74   +0.26
+   fit_s open             teacher doesn't  partial       7574   0.140 / 0.143  0.350 / 0.370   2.66 /  2.49   +0.16
+   fit_s open             teacher doesn't  fragmented     262   0.126 / 0.130  0.305 / 0.324   2.55 /  2.16   +0.39
+   fit_s covered          teacher uses     clean           38   0.789 / 0.763  0.737 / 0.711   0.83 /  1.03   -0.20
+   fit_s covered          teacher uses     contained      413   0.676 / 0.707  0.605 / 0.639   2.15 /  1.92   +0.23
+   fit_s covered          teacher uses     partial        365   0.710 / 0.740  0.668 / 0.696   1.97 /  1.69   +0.28
+   fit_s covered          teacher doesn't  clean          136   0.096 / 0.103  0.294 / 0.316   2.98 /  2.88   +0.10
+   fit_s covered          teacher doesn't  contained     1627   0.129 / 0.139  0.387 / 0.390   3.08 /  2.86   +0.22
+   fit_s covered          teacher doesn't  partial       1445   0.098 / 0.124  0.349 / 0.349   3.28 /  3.08   +0.21
+   fit_s covered          teacher doesn't  fragmented      22   0.136 / 0.091  0.227 / 0.227   2.93 /  2.55   +0.38
+   fit_z open             teacher uses     clean          231   0.576 / 0.589  0.511 / 0.541   2.66 /  2.35   +0.31
+   fit_z open             teacher uses     contained     1426   0.574 / 0.593  0.521 / 0.532   2.30 /  2.06   +0.24
+   fit_z open             teacher uses     partial       1649   0.608 / 0.633  0.532 / 0.555   1.92 /  1.83   +0.09
+   fit_z open             teacher uses     fragmented      43   0.744 / 0.605  0.674 / 0.512   0.81 /  1.41   -0.60
+   fit_z open             teacher doesn't  clean         1230   0.104 / 0.110  0.367 / 0.389   3.39 /  3.11   +0.28
+   fit_z open             teacher doesn't  contained     7933   0.113 / 0.112  0.369 / 0.382   2.96 /  2.81   +0.15
+   fit_z open             teacher doesn't  partial       7569   0.148 / 0.146  0.350 / 0.362   2.65 /  2.53   +0.11
+   fit_z open             teacher doesn't  fragmented     248   0.153 / 0.133  0.294 / 0.335   2.58 /  2.03   +0.56
+   fit_z covered          teacher uses     clean           33   0.758 / 0.697  0.697 / 0.667   1.74 /  1.83   -0.09
+   fit_z covered          teacher uses     contained      425   0.704 / 0.718  0.647 / 0.656   1.90 /  1.89   +0.01
+   fit_z covered          teacher uses     partial        341   0.698 / 0.707  0.636 / 0.648   1.96 /  1.82   +0.13
+   fit_z covered          teacher doesn't  clean          156   0.045 / 0.006  0.410 / 0.429   2.60 /  2.73   -0.12
+   fit_z covered          teacher doesn't  contained     1569   0.112 / 0.133  0.367 / 0.355   3.17 /  3.04   +0.13
+   fit_z covered          teacher doesn't  partial       1362   0.126 / 0.129  0.360 / 0.358   3.26 /  3.11   +0.15
+   fit_z covered          teacher doesn't  fragmented      32   0.062 / 0.094  0.344 / 0.344   2.51 /  2.66   -0.15
+   fit_l open             teacher uses     clean          186   0.403 / 0.382  0.376 / 0.360   3.60 /  3.53   +0.07
+   fit_l open             teacher uses     contained     1004   0.450 / 0.461  0.390 / 0.400   2.90 /  2.69   +0.21
+   fit_l open             teacher uses     partial       1720   0.539 / 0.553  0.491 / 0.502   2.25 /  2.09   +0.16
+   fit_l open             teacher uses     fragmented      27   0.630 / 0.778  0.556 / 0.630   3.01 /  1.82   +1.19
+   fit_l open             teacher doesn't  clean         1617   0.045 / 0.048  0.367 / 0.380   3.38 /  3.13   +0.25
+   fit_l open             teacher doesn't  contained     7721   0.069 / 0.064  0.370 / 0.388   3.02 /  2.78   +0.24
+   fit_l open             teacher doesn't  partial      12255   0.084 / 0.085  0.381 / 0.392   2.61 /  2.53   +0.09
+   fit_l open             teacher doesn't  fragmented     291   0.079 / 0.100  0.320 / 0.302   2.28 /  2.46   -0.18
+   fit_l covered          teacher uses     clean           92   0.826 / 0.793  0.728 / 0.707   1.21 /  1.25   -0.04
+   fit_l covered          teacher uses     contained      964   0.814 / 0.821  0.706 / 0.704   1.65 /  1.63   +0.02
+   fit_l covered          teacher uses     partial        635   0.817 / 0.828  0.723 / 0.729   1.67 /  1.59   +0.08
+   fit_l covered          teacher doesn't  clean          224   0.179 / 0.188  0.321 / 0.317   2.89 /  2.89   -0.00
+   fit_l covered          teacher doesn't  contained     2979   0.161 / 0.147  0.349 / 0.357   3.00 /  2.76   +0.23
+   fit_l covered          teacher doesn't  partial       2553   0.098 / 0.104  0.363 / 0.360   2.92 /  2.93   -0.01
+   fit_l covered          teacher doesn't  fragmented      51   0.157 / 0.137  0.235 / 0.235   3.08 /  2.57   +0.51
+   fit_j open             teacher uses     clean          176   0.420 / 0.466  0.398 / 0.432   3.22 /  2.98   +0.24
+   fit_j open             teacher uses     contained      983   0.433 / 0.463  0.375 / 0.395   3.08 /  2.76   +0.33
+   fit_j open             teacher uses     partial       1773   0.527 / 0.543  0.464 / 0.482   2.54 /  2.24   +0.31
+   fit_j open             teacher uses     fragmented      35   0.400 / 0.543  0.400 / 0.514   2.83 /  2.81   +0.02
+   fit_j open             teacher doesn't  clean         1557   0.058 / 0.066  0.377 / 0.388   3.10 /  2.97   +0.14
+   fit_j open             teacher doesn't  contained     7362   0.062 / 0.066  0.382 / 0.399   2.94 /  2.78   +0.16
+   fit_j open             teacher doesn't  partial      12136   0.090 / 0.088  0.377 / 0.393   2.72 /  2.52   +0.20
+   fit_j open             teacher doesn't  fragmented     316   0.073 / 0.070  0.297 / 0.316   2.52 /  2.37   +0.15
+   fit_j covered          teacher uses     clean           60   0.817 / 0.850  0.717 / 0.767   1.99 /  1.24   +0.75
+   fit_j covered          teacher uses     contained      960   0.814 / 0.825  0.724 / 0.727   1.55 /  1.41   +0.14
+   fit_j covered          teacher uses     partial        602   0.834 / 0.857  0.729 / 0.757   1.76 /  1.47   +0.29
+   fit_j covered          teacher doesn't  clean          254   0.193 / 0.177  0.374 / 0.378   3.19 /  3.10   +0.09
+   fit_j covered          teacher doesn't  contained     2835   0.163 / 0.163  0.351 / 0.349   3.10 /  2.92   +0.18
+   fit_j covered          teacher doesn't  partial       2687   0.098 / 0.098  0.364 / 0.359   3.08 /  2.97   +0.11
+   fit_j covered          teacher doesn't  fragmented      46   0.152 / 0.152  0.326 / 0.239   1.90 /  2.62   -0.71
+   fit_i covered          teacher uses     clean           46   0.761 / 0.739  0.761 / 0.717   1.05 /  1.01   +0.04
+   fit_i covered          teacher uses     contained      155   0.665 / 0.677  0.639 / 0.645   1.86 /  1.73   +0.13
+   fit_i covered          teacher uses     partial        171   0.596 / 0.690  0.573 / 0.649   3.10 /  2.18   +0.92
+   fit_i covered          teacher doesn't  clean          179   0.162 / 0.168  0.296 / 0.318   3.40 /  3.17   +0.23
+   fit_i covered          teacher doesn't  contained      775   0.102 / 0.115  0.317 / 0.324   3.70 /  3.51   +0.19
+   fit_i covered          teacher doesn't  partial        683   0.113 / 0.120  0.341 / 0.359   3.67 /  3.40   +0.27
+   pit1                   teacher uses     clean          813   0.845 / 0.849  0.845 / 0.849   0.71 /  0.69   +0.01
+   pit1                   teacher uses     contained      173   0.653 / 0.682  0.653 / 0.682   1.70 /  1.71   -0.02
+   pit1                   teacher uses     partial        141   0.723 / 0.723  0.723 / 0.723   1.74 /  1.54   +0.20
+   pit1                   teacher doesn't  clean        12811   0.022 / 0.022  0.395 / 0.413   2.45 /  2.30   +0.15
+   pit1                   teacher doesn't  contained     3455   0.019 / 0.021  0.378 / 0.381   3.28 /  3.01   +0.27
+   pit1                   teacher doesn't  partial       3102   0.022 / 0.022  0.373 / 0.394   3.15 /  2.90   +0.26
+   pit1                   teacher doesn't  fragmented     311   0.035 / 0.029  0.338 / 0.347   3.57 /  3.18   +0.39
+   pit2                   teacher uses     clean         1229   0.692 / 0.705  0.587 / 0.594   1.96 /  1.90   +0.06
+   pit2                   teacher uses     contained      594   0.714 / 0.704  0.588 / 0.584   2.16 /  2.17   -0.01
+   pit2                   teacher uses     partial       2239   0.750 / 0.770  0.653 / 0.663   1.83 /  1.75   +0.08
+   pit2                   teacher uses     fragmented     522   0.801 / 0.820  0.678 / 0.692   1.85 /  1.59   +0.26
+   pit2                   teacher doesn't  clean         8229   0.054 / 0.057  0.382 / 0.396   2.75 /  2.61   +0.14
+   pit2                   teacher doesn't  contained     3214   0.056 / 0.063  0.378 / 0.397   2.67 /  2.43   +0.24
+   pit2                   teacher doesn't  partial       8365   0.090 / 0.094  0.350 / 0.362   2.75 /  2.61   +0.14
+   pit2                   teacher doesn't  fragmented    1498   0.123 / 0.133  0.354 / 0.360   2.73 /  2.72   +0.02
+   pit3                   teacher uses     clean          479   0.643 / 0.639  0.532 / 0.526   2.32 /  1.84   +0.48
+   pit3                   teacher uses     contained      386   0.645 / 0.702  0.528 / 0.565   1.81 /  1.85   -0.04
+   pit3                   teacher uses     partial       2166   0.692 / 0.711  0.547 / 0.560   2.39 /  2.16   +0.23
+   pit3                   teacher uses     fragmented    1372   0.710 / 0.751  0.552 / 0.571   2.40 /  2.19   +0.21
+   pit3                   teacher doesn't  clean         1679   0.156 / 0.168  0.378 / 0.380   2.59 /  2.50   +0.09
+   pit3                   teacher doesn't  contained     1548   0.128 / 0.136  0.349 / 0.379   2.73 /  2.62   +0.11
+   pit3                   teacher doesn't  partial       6281   0.125 / 0.126  0.340 / 0.371   2.88 /  2.56   +0.32
+   pit3                   teacher doesn't  fragmented    3117   0.145 / 0.143  0.335 / 0.355   2.86 /  2.67   +0.19
+   pit4                   teacher uses     clean          137   0.555 / 0.613  0.423 / 0.453   2.48 /  2.13   +0.35
+   pit4                   teacher uses     contained      115   0.574 / 0.626  0.400 / 0.426   2.76 /  2.47   +0.28
+   pit4                   teacher uses     partial       1473   0.680 / 0.711  0.481 / 0.498   2.62 /  2.53   +0.08
+   pit4                   teacher uses     fragmented    2400   0.715 / 0.744  0.512 / 0.520   2.63 /  2.53   +0.10
+   pit4                   teacher doesn't  clean          457   0.201 / 0.171  0.370 / 0.422   2.63 /  2.31   +0.32
+   pit4                   teacher doesn't  contained      342   0.184 / 0.178  0.325 / 0.377   2.73 /  2.50   +0.24
+   pit4                   teacher doesn't  partial       2827   0.202 / 0.185  0.319 / 0.333   3.06 /  2.85   +0.21
+   pit4                   teacher doesn't  fragmented    3874   0.227 / 0.212  0.317 / 0.322   3.15 /  2.92   +0.23
+   setup_t                teacher uses     clean           28   0.893 / 0.929  0.893 / 0.857   0.98 /  0.76   +0.22
+   setup_t                teacher uses     contained      245   0.665 / 0.812  0.576 / 0.706   2.57 /  1.71   +0.87
+   setup_t                teacher uses     partial        344   0.648 / 0.846  0.593 / 0.733   2.04 /  1.20   +0.84
+   setup_t                teacher doesn't  clean           45   0.289 / 0.467  0.378 / 0.333   3.18 /  4.65   -1.47
+   setup_t                teacher doesn't  contained      628   0.178 / 0.256  0.296 / 0.312   3.60 /  3.20   +0.40
+   setup_t                teacher doesn't  partial        771   0.141 / 0.236  0.332 / 0.300   2.88 /  3.02   -0.14
+   setup_s                teacher uses     contained      120   0.308 / 0.500  0.242 / 0.383   4.51 /  3.86   +0.66
+   setup_s                teacher uses     partial        137   0.277 / 0.401  0.175 / 0.263   4.30 /  4.01   +0.29
+   setup_s                teacher doesn't  contained      655   0.070 / 0.104  0.374 / 0.382   3.38 /  3.39   -0.01
+   setup_s                teacher doesn't  partial        920   0.053 / 0.089  0.348 / 0.336   3.41 /  3.10   +0.31
+   setup_s                teacher doesn't  fragmented      35   0.057 / 0.029  0.257 / 0.371   3.75 /  2.82   +0.93
+   setup_z                teacher uses     contained      124   0.282 / 0.476  0.210 / 0.323   4.77 /  4.05   +0.73
+   setup_z                teacher uses     partial        122   0.287 / 0.426  0.164 / 0.213   4.03 /  3.48   +0.55
+   setup_z                teacher doesn't  clean           20   0.050 / 0.150  0.500 / 0.400   2.10 /  2.69   -0.59
+   setup_z                teacher doesn't  contained      667   0.069 / 0.087  0.336 / 0.348   3.78 /  3.55   +0.22
+   setup_z                teacher doesn't  partial        851   0.047 / 0.093  0.380 / 0.345   3.01 /  3.24   -0.23
+   setup_z                teacher doesn't  fragmented      32   0.062 / 0.094  0.406 / 0.438   2.46 /  2.50   -0.04
+   setup_l                teacher uses     contained       90   0.478 / 0.611  0.400 / 0.522   4.76 /  3.37   +1.40
+   setup_l                teacher uses     partial        120   0.342 / 0.458  0.283 / 0.383   3.65 /  3.13   +0.52
+   setup_l                teacher doesn't  clean           34   0.176 / 0.206  0.382 / 0.441   3.19 /  2.31   +0.89
+   setup_l                teacher doesn't  contained      703   0.068 / 0.100  0.349 / 0.361   3.78 /  3.56   +0.22
+   setup_l                teacher doesn't  partial        968   0.062 / 0.077  0.364 / 0.380   3.08 /  2.77   +0.31
+   setup_l                teacher doesn't  fragmented      46   0.000 / 0.087  0.283 / 0.326   2.76 /  2.53   +0.23
+   setup_j                teacher uses     contained       93   0.473 / 0.548  0.419 / 0.495   3.07 /  2.82   +0.25
+   setup_j                teacher uses     partial        144   0.389 / 0.556  0.340 / 0.472   3.40 /  2.61   +0.80
+   setup_j                teacher doesn't  clean           40   0.200 / 0.200  0.375 / 0.350   3.60 /  2.64   +0.96
+   setup_j                teacher doesn't  contained      708   0.076 / 0.109  0.345 / 0.343   3.63 /  3.51   +0.12
+   setup_j                teacher doesn't  partial        932   0.052 / 0.091  0.378 / 0.372   3.30 /  3.14   +0.16
+   setup_j                teacher doesn't  fragmented      49   0.061 / 0.122  0.347 / 0.245   4.31 /  4.60   -0.29
+   setup_i                teacher doesn't  contained      183   0.005 / 0.011  0.333 / 0.393   2.77 /  2.62   +0.15
+   setup_i                teacher doesn't  partial        378   0.003 / 0.003  0.373 / 0.392   2.08 /  1.85   +0.23
+   forced recovery (same positions; natural = the model's own merging):
+   kind                   teacher             n   recovered nat / forced   uses nat / forced   top-1 nat / forced   regret nat / forced   | treated: n   regret nat / forced   uses nat / forced
+   tsd                    teacher uses       1421       0.844 / 1.000        0.870 / 0.868      0.690 / 0.694        1.28 /  1.28        |   221      1.75 /  1.45        0.833 / 0.855
+   tsd                    teacher doesn't    9336       0.906 / 0.999        0.047 / 0.053      0.368 / 0.365        2.87 /  2.95        |   871      2.13 /  2.32        0.077 / 0.098
+   fit_t open             teacher uses       1447       0.558 / 0.820        0.546 / 0.442      0.456 / 0.366        2.41 /  3.21        |   390      2.01 /  3.08        0.608 / 0.474
+   fit_t open             teacher doesn't    8245       0.628 / 0.850        0.110 / 0.085      0.384 / 0.373        2.66 /  3.12        |  1879      2.51 /  2.94        0.129 / 0.084
+   fit_s open             teacher uses       3317       0.525 / 0.903        0.575 / 0.513      0.506 / 0.449        2.19 /  2.62        |  1306      1.75 /  2.45        0.621 / 0.521
+   fit_s open             teacher doesn't   16998       0.539 / 0.907        0.127 / 0.115      0.354 / 0.347        2.87 /  3.14        |  6523      2.68 /  3.01        0.138 / 0.118
+   fit_z open             teacher uses       3349       0.495 / 0.905        0.593 / 0.528      0.528 / 0.465        2.12 /  2.59        |  1424      1.81 /  2.41        0.621 / 0.529
+   fit_z open             teacher doesn't   16980       0.540 / 0.910        0.128 / 0.115      0.359 / 0.349        2.85 /  3.10        |  6535      2.65 /  3.02        0.151 / 0.129
+   fit_l open             teacher uses       2937       0.405 / 0.808        0.501 / 0.442      0.450 / 0.388        2.56 /  3.03        |  1236      2.36 /  2.99        0.533 / 0.451
+   fit_l open             teacher doesn't   21884       0.427 / 0.842        0.076 / 0.068      0.375 / 0.355        2.81 /  3.14        |  9458      2.65 /  3.10        0.071 / 0.061
+   fit_j open             teacher uses       2967       0.391 / 0.809        0.488 / 0.405      0.430 / 0.353        2.77 /  3.30        |  1289      2.62 /  3.43        0.527 / 0.408
+   fit_j open             teacher doesn't   21371       0.417 / 0.839        0.078 / 0.068      0.378 / 0.360        2.82 /  3.16        |  9315      2.80 /  3.18        0.076 / 0.067
+   pit1                   teacher uses       1142       0.863 / 0.985        0.801 / 0.793      0.801 / 0.793        0.99 /  1.04        |   139      1.84 /  1.81        0.719 / 0.719
+   pit1                   teacher doesn't   19679       0.827 / 0.987        0.022 / 0.023      0.388 / 0.389        2.73 /  2.77        |  3173      3.26 /  3.36        0.024 / 0.028
+   pit2                   teacher uses       4584       0.398 / 0.987        0.735 / 0.725      0.630 / 0.615        1.91 /  2.04        |  2702      1.84 /  1.97        0.759 / 0.746
+   pit2                   teacher doesn't   21306       0.537 / 0.975        0.073 / 0.080      0.367 / 0.362        2.74 /  2.88        |  9426      2.77 /  2.96        0.097 / 0.107
+   setup_t                teacher uses        620       0.440 / 0.871        0.666 / 0.613      0.600 / 0.552        2.21 /  2.49        |   276      1.97 /  2.22        0.692 / 0.623
+   setup_t                teacher doesn't    1450       0.464 / 0.761        0.162 / 0.159      0.317 / 0.323        3.20 /  3.20        |   473      3.12 /  3.40        0.190 / 0.197
+
+######## tome_v4 on its own 31146 positions (teacher CEM-depth6): top-1 0.374, regret 3.88; control model_v51_dagger_ft.pt: top-1 0.431, regret 3.30
+   recovery of each kind, all tokens:      clean       contained   partial     fragmented      n
+   tsd                                       2.4%       22.6%       58.6%       16.3%      15727
+   stsd                                      0.0%        0.0%        2.8%       97.2%         71
+   fractal                                   0.1%        0.5%       25.1%       74.2%        765
+   imperial                                  0.0%        0.0%        6.0%       94.0%         67
+   cspin                                     0.0%        0.0%        3.3%       96.7%         30
+   fit_t open                                0.7%        7.2%       75.6%       16.4%       8588
+   fit_s open                                0.9%        9.0%       82.3%        7.9%      18912
+   fit_s covered                             0.0%        1.0%       76.4%       22.5%       6455
+   fit_z open                                0.7%        9.4%       82.9%        7.0%      18597
+   fit_z covered                             0.0%        1.3%       77.6%       21.1%       6045
+   fit_l open                                0.8%       23.7%       67.3%        8.2%      22868
+   fit_l covered                             0.0%        8.1%       70.9%       21.0%      10654
+   fit_j open                                0.8%       22.9%       67.6%        8.7%      22552
+   fit_j covered                             0.0%        8.1%       71.9%       19.9%      11016
+   fit_i covered                             0.3%        1.9%       12.9%       84.9%       1886
+   pit1                                     28.5%       23.5%       34.5%       13.6%      21715
+   pit2                                     11.0%        7.7%       41.7%       39.5%      27231
+   pit3                                      2.5%        1.7%       24.8%       71.0%      16214
+   pit4                                      0.7%        1.2%        8.4%       89.7%      11493
+   setup_t                                   0.8%       16.6%       71.4%       11.2%       1890
+   setup_s                                   0.1%       14.6%       73.7%       11.6%       1608
+   setup_z                                   0.1%       14.2%       73.8%       11.9%       1693
+   setup_l                                   0.2%       10.9%       70.5%       18.3%       1685
+   setup_j                                   0.5%       12.0%       73.0%       14.5%       1630
+   setup_i                                   0.0%        5.6%       81.7%       12.7%        393
+   decisions by recovery (excess = model regret - control regret: lower = better relative to the control):
+   kind                   teacher          recovery        n   uses / ctl     top-1 / ctl     regret / ctl    excess
+   tsd                    teacher uses     partial       1037   0.814 / 0.885  0.679 / 0.734   1.71 /  1.21   +0.50
+   tsd                    teacher uses     fragmented     458   0.812 / 0.871  0.701 / 0.753   1.79 /  1.45   +0.34
+   tsd                    teacher doesn't  clean          377   0.000 / 0.000  0.318 / 0.422   5.89 /  4.81   +1.08
+   tsd                    teacher doesn't  contained     3541   0.002 / 0.003  0.334 / 0.415   5.82 /  4.51   +1.30
+   tsd                    teacher doesn't  partial       8186   0.031 / 0.035  0.358 / 0.412   4.10 /  3.37   +0.73
+   tsd                    teacher doesn't  fragmented    2111   0.056 / 0.058  0.374 / 0.412   3.68 /  3.33   +0.35
+   stsd                   teacher uses     fragmented      23   0.435 / 0.913  0.304 / 0.652   3.10 /  3.42   -0.32
+   stsd                   teacher doesn't  fragmented      46   0.043 / 0.196  0.391 / 0.391   6.24 /  4.45   +1.79
+   fractal                teacher uses     partial         24   0.917 / 0.917  0.917 / 0.917   0.00 /  0.00   +0.00
+   fractal                teacher uses     fragmented     117   0.949 / 0.957  0.949 / 0.957   0.28 /  0.17   +0.11
+   fractal                teacher doesn't  partial        168   0.036 / 0.048  0.387 / 0.423   3.32 /  2.73   +0.59
+   fractal                teacher doesn't  fragmented     451   0.051 / 0.053  0.377 / 0.375   2.11 /  2.29   -0.17
+   imperial               teacher uses     fragmented      32   0.781 / 0.875  0.656 / 0.750   2.89 /  1.33   +1.56
+   imperial               teacher doesn't  fragmented      31   0.065 / 0.032  0.452 / 0.419   3.01 /  2.42   +0.59
+   cspin                  teacher doesn't  fragmented      22   0.091 / 0.182  0.500 / 0.364   6.32 /  6.54   -0.22
+   fit_t open             teacher uses     contained      132   0.568 / 0.606  0.455 / 0.485   3.59 /  2.39   +1.20
+   fit_t open             teacher uses     partial       1090   0.497 / 0.558  0.401 / 0.453   4.05 /  3.31   +0.75
+   fit_t open             teacher uses     fragmented     162   0.500 / 0.525  0.377 / 0.401   5.41 /  4.02   +1.38
+   fit_t open             teacher doesn't  clean           47   0.128 / 0.149  0.426 / 0.426   2.45 /  2.76   -0.31
+   fit_t open             teacher doesn't  contained      489   0.186 / 0.147  0.342 / 0.419   3.39 /  2.74   +0.65
+   fit_t open             teacher doesn't  partial       5403   0.108 / 0.119  0.366 / 0.424   3.69 /  3.10   +0.59
+   fit_t open             teacher doesn't  fragmented    1248   0.067 / 0.084  0.357 / 0.409   3.49 /  3.26   +0.22
+   fit_s open             teacher uses     clean           20   0.650 / 0.700  0.650 / 0.700   3.05 /  1.51   +1.54
+   fit_s open             teacher uses     contained      323   0.582 / 0.635  0.486 / 0.539   2.83 /  2.88   -0.04
+   fit_s open             teacher uses     partial       2587   0.547 / 0.617  0.488 / 0.554   3.62 /  2.74   +0.87
+   fit_s open             teacher uses     fragmented     228   0.557 / 0.649  0.518 / 0.583   3.49 /  2.57   +0.92
+   fit_s open             teacher doesn't  clean          149   0.228 / 0.134  0.275 / 0.349   4.23 /  3.38   +0.85
+   fit_s open             teacher doesn't  contained     1373   0.152 / 0.154  0.367 / 0.431   3.64 /  3.10   +0.54
+   fit_s open             teacher doesn't  partial      12975   0.127 / 0.133  0.339 / 0.399   3.96 /  3.32   +0.64
+   fit_s open             teacher doesn't  fragmented    1257   0.107 / 0.116  0.306 / 0.364   3.85 /  3.56   +0.29
+   fit_s covered          teacher uses     partial        890   0.583 / 0.693  0.540 / 0.635   3.81 /  2.81   +0.99
+   fit_s covered          teacher uses     fragmented     260   0.592 / 0.696  0.558 / 0.650   3.52 /  2.83   +0.69
+   fit_s covered          teacher doesn't  contained       51   0.078 / 0.118  0.176 / 0.333   5.88 /  5.50   +0.38
+   fit_s covered          teacher doesn't  partial       4044   0.100 / 0.128  0.342 / 0.387   4.65 /  4.16   +0.49
+   fit_s covered          teacher doesn't  fragmented    1195   0.107 / 0.131  0.346 / 0.396   4.75 /  4.21   +0.54
+   fit_z open             teacher uses     contained      328   0.595 / 0.613  0.527 / 0.552   2.94 /  2.65   +0.28
+   fit_z open             teacher uses     partial       2624   0.534 / 0.625  0.467 / 0.552   3.78 /  2.72   +1.06
+   fit_z open             teacher uses     fragmented     211   0.469 / 0.630  0.436 / 0.569   3.95 /  2.51   +1.44
+   fit_z open             teacher doesn't  clean          108   0.204 / 0.194  0.343 / 0.343   3.10 /  2.75   +0.36
+   fit_z open             teacher doesn't  contained     1427   0.165 / 0.145  0.362 / 0.413   3.61 /  3.19   +0.42
+   fit_z open             teacher doesn't  partial      12797   0.128 / 0.140  0.341 / 0.388   3.97 /  3.49   +0.48
+   fit_z open             teacher doesn't  fragmented    1084   0.109 / 0.135  0.319 / 0.354   3.66 /  3.70   -0.04
+   fit_z covered          teacher uses     partial        837   0.605 / 0.738  0.568 / 0.689   3.25 /  2.21   +1.04
+   fit_z covered          teacher uses     fragmented     222   0.617 / 0.721  0.586 / 0.662   2.54 /  1.85   +0.68
+   fit_z covered          teacher doesn't  contained       64   0.047 / 0.109  0.297 / 0.328   3.67 /  5.20   -1.53
+   fit_z covered          teacher doesn't  partial       3854   0.095 / 0.129  0.352 / 0.398   4.75 /  4.06   +0.69
+   fit_z covered          teacher doesn't  fragmented    1052   0.101 / 0.118  0.337 / 0.382   4.33 /  4.20   +0.14
+   fit_l open             teacher uses     clean           27   0.519 / 0.593  0.444 / 0.481   3.32 /  2.22   +1.10
+   fit_l open             teacher uses     contained      680   0.482 / 0.565  0.444 / 0.516   3.85 /  2.89   +0.96
+   fit_l open             teacher uses     partial       2013   0.490 / 0.535  0.434 / 0.482   3.96 /  3.39   +0.57
+   fit_l open             teacher uses     fragmented     203   0.468 / 0.606  0.409 / 0.532   4.09 /  3.06   +1.03
+   fit_l open             teacher doesn't  clean          157   0.146 / 0.127  0.382 / 0.414   3.73 /  3.05   +0.68
+   fit_l open             teacher doesn't  contained     4732   0.081 / 0.078  0.349 / 0.401   3.86 /  3.30   +0.55
+   fit_l open             teacher doesn't  partial      13383   0.085 / 0.092  0.362 / 0.419   3.98 /  3.38   +0.60
+   fit_l open             teacher doesn't  fragmented    1673   0.064 / 0.084  0.331 / 0.405   4.02 /  3.51   +0.51
+   fit_l covered          teacher uses     contained      122   0.623 / 0.795  0.615 / 0.787   3.51 /  1.72   +1.80
+   fit_l covered          teacher uses     partial       1631   0.686 / 0.809  0.584 / 0.664   3.41 /  2.66   +0.75
+   fit_l covered          teacher uses     fragmented     588   0.694 / 0.798  0.599 / 0.658   3.13 /  2.46   +0.67
+   fit_l covered          teacher doesn't  contained      738   0.045 / 0.076  0.354 / 0.386   5.61 /  4.67   +0.94
+   fit_l covered          teacher doesn't  partial       5923   0.122 / 0.132  0.327 / 0.378   4.32 /  3.78   +0.54
+   fit_l covered          teacher doesn't  fragmented    1649   0.146 / 0.152  0.311 / 0.372   4.23 /  3.86   +0.38
+   fit_j open             teacher uses     clean           29   0.655 / 0.621  0.483 / 0.552   2.50 /  2.76   -0.26
+   fit_j open             teacher uses     contained      640   0.528 / 0.573  0.467 / 0.514   3.63 /  2.93   +0.70
+   fit_j open             teacher uses     partial       1961   0.496 / 0.540  0.422 / 0.470   4.01 /  3.24   +0.77
+   fit_j open             teacher uses     fragmented     206   0.413 / 0.476  0.369 / 0.422   3.66 /  3.15   +0.51
+   fit_j open             teacher doesn't  clean          152   0.132 / 0.118  0.329 / 0.454   3.55 /  2.52   +1.03
+   fit_j open             teacher doesn't  contained     4523   0.074 / 0.081  0.355 / 0.403   4.18 /  3.43   +0.76
+   fit_j open             teacher doesn't  partial      13289   0.087 / 0.088  0.357 / 0.407   3.95 /  3.45   +0.50
+   fit_j open             teacher doesn't  fragmented    1752   0.066 / 0.089  0.348 / 0.368   3.82 /  3.77   +0.05
+   fit_j covered          teacher uses     contained      100   0.650 / 0.750  0.630 / 0.700   3.44 /  2.25   +1.19
+   fit_j covered          teacher uses     partial       1678   0.681 / 0.803  0.575 / 0.661   3.34 /  2.44   +0.90
+   fit_j covered          teacher uses     fragmented     553   0.638 / 0.745  0.548 / 0.593   3.16 /  2.72   +0.44
+   fit_j covered          teacher doesn't  contained      796   0.034 / 0.060  0.389 / 0.416   4.31 /  3.71   +0.60
+   fit_j covered          teacher doesn't  partial       6244   0.114 / 0.122  0.330 / 0.389   4.58 /  3.85   +0.73
+   fit_j covered          teacher doesn't  fragmented    1641   0.146 / 0.160  0.323 / 0.371   4.25 /  3.86   +0.39
+   fit_i covered          teacher uses     partial         49   0.694 / 0.816  0.673 / 0.796   2.81 /  1.29   +1.53
+   fit_i covered          teacher uses     fragmented     278   0.676 / 0.698  0.647 / 0.673   2.18 /  2.15   +0.03
+   fit_i covered          teacher doesn't  contained       28   0.071 / 0.107  0.286 / 0.429   4.97 /  3.13   +1.83
+   fit_i covered          teacher doesn't  partial        195   0.128 / 0.138  0.338 / 0.349   4.19 /  4.27   -0.08
+   fit_i covered          teacher doesn't  fragmented    1324   0.148 / 0.127  0.293 / 0.369   5.45 /  4.51   +0.93
+   pit1                   teacher uses     clean          466   0.584 / 0.897  0.584 / 0.897   2.47 /  0.57   +1.90
+   pit1                   teacher uses     contained      270   0.489 / 0.826  0.489 / 0.826   2.77 /  0.71   +2.05
+   pit1                   teacher uses     partial        769   0.285 / 0.849  0.285 / 0.848   4.71 /  0.93   +3.77
+   pit1                   teacher uses     fragmented     640   0.164 / 0.873  0.164 / 0.873   5.30 /  0.71   +4.59
+   pit1                   teacher doesn't  clean         5717   0.015 / 0.027  0.411 / 0.441   3.27 /  2.95   +0.32
+   pit1                   teacher doesn't  contained     4831   0.008 / 0.020  0.405 / 0.417   3.28 /  2.95   +0.32
+   pit1                   teacher doesn't  partial       6717   0.010 / 0.048  0.388 / 0.404   3.69 /  3.44   +0.25
+   pit1                   teacher doesn't  fragmented    2305   0.016 / 0.124  0.375 / 0.373   4.81 /  4.34   +0.47
+   pit2                   teacher uses     clean          157   0.713 / 0.803  0.682 / 0.777   1.83 /  1.30   +0.53
+   pit2                   teacher uses     contained      215   0.712 / 0.828  0.688 / 0.800   2.48 /  1.03   +1.45
+   pit2                   teacher uses     partial       2097   0.620 / 0.821  0.544 / 0.734   3.44 /  1.86   +1.58
+   pit2                   teacher uses     fragmented    3742   0.573 / 0.825  0.425 / 0.660   4.17 /  2.34   +1.83
+   pit2                   teacher doesn't  clean         2852   0.026 / 0.032  0.397 / 0.453   3.11 /  2.66   +0.45
+   pit2                   teacher doesn't  contained     1872   0.045 / 0.058  0.392 / 0.421   3.29 /  2.82   +0.47
+   pit2                   teacher doesn't  partial       9270   0.061 / 0.094  0.357 / 0.390   3.75 /  3.35   +0.40
+   pit2                   teacher doesn't  fragmented    7026   0.104 / 0.207  0.359 / 0.340   3.81 /  3.82   -0.01
+   pit3                   teacher uses     clean           76   0.553 / 0.658  0.500 / 0.553   2.19 /  2.21   -0.02
+   pit3                   teacher uses     contained       51   0.627 / 0.765  0.529 / 0.647   2.37 /  1.63   +0.74
+   pit3                   teacher uses     partial        831   0.628 / 0.721  0.533 / 0.628   3.23 /  2.46   +0.77
+   pit3                   teacher uses     fragmented    3985   0.607 / 0.792  0.430 / 0.600   4.29 /  2.70   +1.59
+   pit3                   teacher doesn't  clean          332   0.145 / 0.163  0.322 / 0.389   3.99 /  3.41   +0.58
+   pit3                   teacher doesn't  contained      225   0.133 / 0.111  0.382 / 0.444   3.19 /  2.43   +0.76
+   pit3                   teacher doesn't  partial       3190   0.124 / 0.134  0.359 / 0.391   3.53 /  3.04   +0.49
+   pit3                   teacher doesn't  fragmented    7524   0.136 / 0.197  0.344 / 0.356   3.95 /  3.76   +0.20
+   pit4                   teacher uses     contained       40   0.775 / 0.600  0.525 / 0.350   2.59 /  2.18   +0.41
+   pit4                   teacher uses     partial        290   0.631 / 0.714  0.472 / 0.579   3.27 /  2.54   +0.73
+   pit4                   teacher uses     fragmented    4255   0.645 / 0.780  0.408 / 0.541   4.36 /  3.10   +1.26
+   pit4                   teacher doesn't  clean           58   0.224 / 0.207  0.379 / 0.431   2.40 /  2.26   +0.15
+   pit4                   teacher doesn't  contained       97   0.216 / 0.155  0.361 / 0.474   2.04 /  2.08   -0.04
+   pit4                   teacher doesn't  partial        677   0.165 / 0.155  0.365 / 0.397   3.02 /  2.69   +0.33
+   pit4                   teacher doesn't  fragmented    6058   0.186 / 0.238  0.332 / 0.340   4.04 /  3.84   +0.20
+   setup_t                teacher uses     contained      120   0.758 / 0.825  0.675 / 0.708   2.91 /  1.98   +0.93
+   setup_t                teacher uses     partial        419   0.697 / 0.804  0.616 / 0.716   2.69 /  1.65   +1.04
+   setup_t                teacher uses     fragmented      65   0.554 / 0.646  0.477 / 0.523   3.32 /  2.41   +0.91
+   setup_t                teacher doesn't  contained      194   0.175 / 0.201  0.289 / 0.314   5.35 /  4.60   +0.75
+   setup_t                teacher doesn't  partial        930   0.178 / 0.261  0.312 / 0.320   4.62 /  4.12   +0.50
+   setup_t                teacher doesn't  fragmented     147   0.082 / 0.197  0.347 / 0.299   3.22 /  4.27   -1.05
+   setup_s                teacher uses     contained       37   0.514 / 0.676  0.378 / 0.486   4.62 /  3.39   +1.23
+   setup_s                teacher uses     partial        154   0.338 / 0.461  0.247 / 0.344   4.89 /  4.49   +0.40
+   setup_s                teacher uses     fragmented      29   0.414 / 0.552  0.310 / 0.379   5.74 /  4.86   +0.88
+   setup_s                teacher doesn't  contained      198   0.045 / 0.111  0.313 / 0.359   4.66 /  4.17   +0.49
+   setup_s                teacher doesn't  partial       1031   0.069 / 0.107  0.330 / 0.365   4.52 /  3.99   +0.53
+   setup_s                teacher doesn't  fragmented     157   0.064 / 0.134  0.331 / 0.338   3.11 /  3.53   -0.43
+   setup_z                teacher uses     contained       30   0.600 / 0.633  0.400 / 0.400   5.63 /  4.30   +1.33
+   setup_z                teacher uses     partial        198   0.303 / 0.495  0.222 / 0.414   4.98 /  3.86   +1.12
+   setup_z                teacher uses     fragmented      33   0.303 / 0.364  0.242 / 0.333   4.14 /  3.01   +1.12
+   setup_z                teacher doesn't  contained      210   0.067 / 0.110  0.319 / 0.357   5.95 /  4.61   +1.34
+   setup_z                teacher doesn't  partial       1052   0.068 / 0.117  0.323 / 0.378   4.59 /  3.78   +0.81
+   setup_z                teacher doesn't  fragmented     168   0.065 / 0.101  0.321 / 0.375   4.13 /  3.84   +0.29
+   setup_l                teacher uses     contained       26   0.385 / 0.462  0.269 / 0.385   6.96 /  2.27   +4.69
+   setup_l                teacher uses     partial        136   0.426 / 0.522  0.397 / 0.471   5.19 /  3.83   +1.36
+   setup_l                teacher uses     fragmented      34   0.471 / 0.529  0.353 / 0.471   3.82 /  2.98   +0.85
+   setup_l                teacher doesn't  contained      158   0.057 / 0.063  0.354 / 0.424   4.88 /  3.61   +1.27
+   setup_l                teacher doesn't  partial       1052   0.077 / 0.114  0.333 / 0.375   4.47 /  3.98   +0.49
+   setup_l                teacher doesn't  fragmented     275   0.036 / 0.062  0.287 / 0.356   3.99 /  3.35   +0.64
+   setup_j                teacher uses     contained       26   0.423 / 0.615  0.385 / 0.577   4.68 /  2.52   +2.16
+   setup_j                teacher uses     partial        126   0.444 / 0.508  0.365 / 0.397   5.26 /  4.73   +0.52
+   setup_j                teacher uses     fragmented      24   0.375 / 0.333  0.292 / 0.292   6.03 /  5.03   +0.99
+   setup_j                teacher doesn't  contained      170   0.106 / 0.129  0.306 / 0.306   5.08 /  5.10   -0.02
+   setup_j                teacher doesn't  partial       1064   0.065 / 0.099  0.295 / 0.355   4.87 /  4.02   +0.85
+   setup_j                teacher doesn't  fragmented     212   0.075 / 0.108  0.373 / 0.340   3.79 /  3.77   +0.02
+   setup_i                teacher doesn't  contained       20   0.000 / 0.100  0.300 / 0.250   4.37 /  2.94   +1.43
+   setup_i                teacher doesn't  partial        308   0.000 / 0.019  0.383 / 0.390   2.80 /  2.94   -0.14
+   setup_i                teacher doesn't  fragmented      49   0.000 / 0.000  0.388 / 0.327   3.12 /  3.52   -0.40
