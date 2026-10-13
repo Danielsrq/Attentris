@@ -4,19 +4,19 @@
   --bg: #f4f3ee; --panel: #ffffff; --fg: #1d2127; --muted: #5c626b; --line: #d8d5ca;
   --empty: #ebeae4; --filled: #3a3f47; --grid: #ffffff; --accent: #2c55c9; --accent-fg: #ffffff;
   --heat: 214, 84, 20; --move: #111418; --pick: #2c55c9; --bar: #e0763a; --edge: #1d2127;
-  --blob-l-empty: 86%; --blob-l-filled: 42%; --hl: #d61f69;
+  --blob-l: 78%; --hl: #d61f69;
   --side-a: #1f4fbf; --side-b: #b34a00; --link: #0f7a3d;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
   --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
   --heat: 255, 140, 70; --move: #f4f5f7; --pick: #7d9cff; --bar: #ff9a5c; --edge: #e7e9ec;
-  --blob-l-empty: 30%; --blob-l-filled: 62%; --hl: #ff5fa2; --side-a: #9db8ff; --side-b: #ffb27a; --link: #5fe39a; color-scheme: dark } }
+  --blob-l: 36%; --hl: #ff5fa2; --side-a: #9db8ff; --side-b: #ffb27a; --link: #5fe39a; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
   --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
   --heat: 255, 140, 70; --move: #f4f5f7; --pick: #7d9cff; --bar: #ff9a5c; --edge: #e7e9ec;
-  --blob-l-empty: 30%; --blob-l-filled: 62%; --hl: #ff5fa2; --side-a: #9db8ff; --side-b: #ffb27a; --link: #5fe39a; color-scheme: dark }
+  --blob-l: 36%; --hl: #ff5fa2; --side-a: #9db8ff; --side-b: #ffb27a; --link: #5fe39a; color-scheme: dark }
 body { background: var(--bg); color: var(--fg); font: 14px/1.45 "IBM Plex Sans", system-ui, sans-serif; }
 .wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: grid; gap: 14px; }
 header { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
@@ -88,7 +88,7 @@ table.probs tr.on { background: var(--panel); outline: 1px solid var(--accent); 
     a connected region; candidates then cross-attend to the final blobs. The model was trained with one schedule; the others are the same weights
     merging harder at inference (no retraining). Positions tagged <b>game at merge …</b> come from games played at that schedule, labelled afterwards
     by the teacher.
-    <b>Layer views</b> colour each blob (darker = filled cells, lighter = empty cells) with its outline. <b>Attention</b> paints the selected move's
+    <b>Layer views</b> give each blob one colour and an outline; a dark square marks a filled cell. <b>Attention</b> paints the selected move's
     cross-attention through the final blobs, divided by blob size so a big sky blob and a 3-cell gap compare fairly. Dashed outline: the teacher's move;
     blue: the selected move (the model's top pick by default). Hover a row of the token list to outline that blob in pink. Keys: ← →.</p>
   <p class="note"><b>Merge steps</b> show the blobs going <i>into</i> one merge step (one stream). With an A/B split every blob carries its side for
@@ -131,9 +131,9 @@ function axis() {
   return s;
 }
 
-function blobColour(n, filled) {
+function blobColour(n) {        // one colour per blob, filled or empty cells alike (filled = the inner square)
   const h = (n * 137.508 + 20) % 360;
-  return `hsl(${h.toFixed(0)} 55% ${filled ? css("--blob-l-filled") : css("--blob-l-empty")})`;
+  return `hsl(${h.toFixed(0)} 55% ${css("--blob-l")})`;
 }
 
 const schedName = k => DATA.sched_names ? DATA.sched_names[k] : DATA.schedules[k].split(",").map(f => f.replace(/^0\./, ".")).join(" · ") + (DATA.schedules[k] === DATA.trained ? " (trained)" : "");
@@ -180,8 +180,8 @@ function render() {
     M.blobs.forEach((b, n) => b.forEach(k => owner[k] = n));
     for (let k = 0; k < 200; k++) {
       const r = Math.floor(k / COLS), c = k % COLS;
-      s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="${owner[k] >= 0 ? blobColour(owner[k], board[k]) : "var(--empty)"}" stroke="var(--grid)" stroke-width="0.5"/>`;
-      if (board[k]) s += `<rect x="${X(c) + 6}" y="${Y(r) + 6}" width="${CS - 12}" height="${CS - 12}" rx="2" fill="var(--filled)" opacity="0.35"/>`;
+      s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="${owner[k] >= 0 ? blobColour(owner[k]) : "var(--empty)"}" stroke="var(--grid)" stroke-width="0.5"/>`;
+      if (board[k]) s += `<rect x="${X(c) + 5}" y="${Y(r) + 5}" width="${CS - 10}" height="${CS - 10}" rx="2" fill="var(--filled)" opacity="0.6"/>`;
     }
     M.blobs.forEach(b => { s += `<path d="${outline(b, 0.75)}" stroke="var(--edge)" stroke-width="1.6" fill="none"/>`; });
     // side letters: on every cell of a small blob; once, larger, at the centre of a big one (> 8 cells)
@@ -202,7 +202,7 @@ function render() {
     M.blocked.forEach(m => { s += link(m, "var(--hl)", true, 2.6); });
     M.merges.forEach(m => { s += link(m, "var(--link)", false, 3.4); });
     $("cap").textContent = `Into the merge at layer ${M.layer}${multi ? ", stream " + (M.stream + 1) : ""}: blobs before it; every green link merges in this step ` +
-      `(result: "after layer ${M.layer}${multi ? " · stream " + (M.stream + 1) : ""}"). One hue per blob: its filled cells darker, its empty cells lighter`;
+      `(result: "after layer ${M.layer}${multi ? " · stream " + (M.stream + 1) : ""}"). One colour per blob; a dark square marks a filled cell`;
     const nA = M.sides ? M.sides.filter(x => x === "A").length : 0;
     $("stats").textContent = `${M.blobs.length} blobs in${M.sides ? ` (${nA} A, ${M.blobs.length - nA} B)` : ""} · ${M.merges.length} merges made of ${M.asked} asked` +
       (M.weakest !== null ? ` · weakest merge similarity ${M.weakest.toFixed(2)}` : "") +
@@ -213,8 +213,8 @@ function render() {
     L.blobs.forEach((b, n) => b.forEach(k => owner[k] = n));
     for (let k = 0; k < 200; k++) {
       const r = Math.floor(k / COLS), c = k % COLS;
-      s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="${blobColour(owner[k], board[k])}" stroke="var(--grid)" stroke-width="0.5"/>`;
-      if (board[k]) s += `<rect x="${X(c) + 6}" y="${Y(r) + 6}" width="${CS - 12}" height="${CS - 12}" rx="2" fill="var(--filled)" opacity="0.35"/>`;
+      s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="${blobColour(owner[k])}" stroke="var(--grid)" stroke-width="0.5"/>`;
+      if (board[k]) s += `<rect x="${X(c) + 5}" y="${Y(r) + 5}" width="${CS - 10}" height="${CS - 10}" rx="2" fill="var(--filled)" opacity="0.6"/>`;
     }
     L.blobs.forEach(b => { s += `<path d="${outline(b, 0.75)}" stroke="var(--edge)" stroke-width="1.6" fill="none"/>`; });
     $("cap").textContent = `Blobs after layer ${L.layer}${multi ? ", stream " + (L.stream + 1) : ""}`;
