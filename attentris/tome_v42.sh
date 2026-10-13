@@ -1,11 +1,11 @@
 #!/bin/sh
 # ToMe v4.2 = ToMe v4.1's recipes with the direction-blind A/B split (--tome-split hash; the token split
 # made ~78% of side-by-side neighbour pairs eligible to merge vs ~51% of stacked: tome_orient.py,
-# test_tome_split.py). PLAN_2026-10-13.md (not started until the user says go). GPU chain, one job at a time:
+# test_tome_split.py). PLAN_2026-10-13.md . GPU chain, one job at a time:
 #   1. tome_v42_l4: 4 layers, merge 0,1,1,1 + per-position budget (screen C's config), 8 epochs
-#   2. tome_v42_l6: 6 layers, merge 0,1,1,1,1,1 + budget (= v4.1), 8 epochs
-#   3. DAgger 3 fine-tunes of both (as v4.1-dagger3: from the base, 70/30 with danger.npz, 3 epochs,
-#      lr 3e-4, 3 style rows)
+#   2. its DAgger 3 fine-tune (as v4.1-dagger3: from the base, 70/30 with danger.npz, 3 epochs, lr 3e-4,
+#      3 style rows)
+# (the 6-layer run was dropped on 2026-10-13: too slow for what it adds; set LAYERS="l4 l6" to include it)
 # Tests run on the CPU in tome_v42_eval.sh (start it alongside; it waits for each model). Resumable;
 # one copy at a time.   sh tome_v42.sh > tome_v42.out 2>&1
 DIR=$(cd "$(dirname "$0")" && pwd)
@@ -32,8 +32,9 @@ train() {   # name epochs log args...
 }
 F=0.1851      # 70/30 with the 86,195 danger positions over train + dagger1 + train1m (as tome_v41.sh)
 ARCH=$L4; train tome_v42_l4 8 "$DIR/train_tome_v42_l4.out" --train train.npz,dagger1.npz,train1m.npz --epochs 8 --lr 1.5e-3
-ARCH=$L6; train tome_v42_l6 8 "$DIR/train_tome_v42_l6.out" --train train.npz,dagger1.npz,train1m.npz --epochs 8 --lr 1.5e-3
-for n in l4 l6; do
+LAYERS=${LAYERS:-l4}
+case " $LAYERS " in *" l6 "*) ARCH=$L6; train tome_v42_l6 8 "$DIR/train_tome_v42_l6.out" --train train.npz,dagger1.npz,train1m.npz --epochs 8 --lr 1.5e-3;; esac
+for n in $LAYERS; do
     [ $n = l4 ] && ARCH=$L4 || ARCH=$L6
     train tome_v42_${n}_dagger3_ft 3 "$DIR/train_tome_v42_${n}_dagger3_ft.out" \
         --train train.npz@$F,dagger1.npz@$F,train1m.npz@$F,danger.npz --epochs 3 --lr 3e-4 --n-teachers 3 \

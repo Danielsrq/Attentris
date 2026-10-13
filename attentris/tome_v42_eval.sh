@@ -18,6 +18,7 @@ OUT="$DIR/results_tome_v42.txt"
 mkdir "$DIR/.tome_v42_eval.lock" 2>/dev/null || { echo "tome_v42_eval.sh is already running (remove $DIR/.tome_v42_eval.lock if not)"; exit 1; }
 trap 'rmdir "$DIR/.tome_v42_eval.lock"' EXIT
 mkdir -p "$D"
+LAYERS=${LAYERS:-l4}      # the 6-layer run was dropped on 2026-10-13; LAYERS="l4 l6" to include it
 await() {   # log epoch name: wait for the training run, give up if the GPU chain reported a failure
     until grep -q "^epoch $2:" "$1" 2>/dev/null; do
         grep -q "$3: training did not finish\|test_tome_split.py failed" "$OUT" 2>/dev/null && { echo "$3: no model, stopping"; exit 1; }
@@ -35,7 +36,7 @@ play() {   # model style tag flags...
 }
 G20="--depth 1 --seed 33001 --garbage 10,3-4,cheese0.2,0.2"
 G50="--depth 1 --seed 33001 --garbage 10,3-4,cheese0.5,0.2"
-for n in l4 l6; do
+for n in $LAYERS; do
     m=tome_v42_$n; M="$DIR/data/model_$m.pt"
     await "$DIR/train_$m.out" 8 $m
     [ -f "$D/${m}_iou.txt" ] || "$PYG" "$DIR/tome_iou.py" --model "$M" --n 2000 | grep -v "positions$" > "$D/${m}_iou.txt"
@@ -52,7 +53,7 @@ for n in l4 l6; do
     play $m normal g20 $G20
     play $m normal g50 $G50
 done
-for n in l4 l6; do
+for n in $LAYERS; do
     m=tome_v42_${n}_dagger3_ft
     await "$DIR/train_$m.out" 3 $m
     for s in normal danger auto; do
@@ -63,9 +64,9 @@ for n in l4 l6; do
 done
 args=""
 V=$(cygpath -m "$DIR/data/tome_v41")
-for m in tome_v42_l4 tome_v42_l6; do for t in d1 d2 g20 g50; do args="$args ${m}_$t=$WD/${m}_normal_$t.games"; done; done
+for m in $(for n in $LAYERS; do echo tome_v42_$n; done); do for t in d1 d2 g20 g50; do args="$args ${m}_$t=$WD/${m}_normal_$t.games"; done; done
 for t in d1 d2 g20 g50; do args="$args tome_v41_$t=$V/tome_v41_normal_$t.games"; done
-for m in tome_v42_l4_dagger3_ft tome_v42_l6_dagger3_ft; do for s in normal danger auto; do for t in d1 g20 g50; do
+for m in $(for n in $LAYERS; do echo tome_v42_${n}_dagger3_ft; done); do for s in normal danger auto; do for t in d1 g20 g50; do
     args="$args ${m}_${s}_$t=$WD/${m}_${s}_$t.games"; done; done; done
 for s in normal danger auto; do for t in d1 g20 g50; do args="$args tome_v41_dagger3_ft_${s}_$t=$V/tome_v41_dagger3_ft_${s}_$t.games"; done; done
 echo "== APP / VS: v4.2 (hash split) vs v4.1 (token split), same seeds" | tee -a "$OUT"
