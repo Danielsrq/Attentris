@@ -63,6 +63,11 @@ N_GROUPS = 17                                   # sky + up to 16 blocks (pretok.
 # sets, similarities and choices.
 MERGE_HOOK = None
 SPLIT_MODE = None
+# analysis only (structure_study.py --force): MERGE_GUIDE = (B, 200) long, a group id per cell (-1 none) for
+# the batch about to run. Two blobs whose cells all lie in the same group get GUIDE_BONUS added to their key
+# similarity, so they merge first (forced recovery of a rule token); everything else is the model's own merging.
+MERGE_GUIDE = None
+GUIDE_BONUS = 4.0
 
 
 _W = torch.randint(1, 1 << 20, (200,), generator=torch.Generator().manual_seed(20261013))   # board -> position key
@@ -312,6 +317,14 @@ class AtTenTrisToMe(nn.Module):
         else:
             kn = F.normalize(keys, dim=-1)
             S = kn @ kn.transpose(1, 2)
+        if MERGE_GUIDE is not None:
+            g = MERGE_GUIDE.to(dev)[:, None, :].expand(B, N, mask.shape[-1])
+            on = mask > 0.5
+            big = 1 << 20
+            mn = torch.where(on, g, torch.full_like(g, big)).amin(-1)
+            mx = torch.where(on, g, torch.full_like(g, -big)).amax(-1)
+            grp = torch.where((mn == mx) & (mn >= 0) & on.any(-1), mn, torch.full_like(mn, -1))
+            S = S + GUIDE_BONUS * ((grp[:, :, None] == grp[:, None, :]) & (grp[:, :, None] >= 0)).float()
         S0 = S
         same = stream[:, :, None] == stream[:, None, :]
         if pure:
