@@ -12,3 +12,6 @@ target/
 
 # Friend's RL bot (TetrisBattle), copied in for bot-vs-bot experiments; not ours to commit
 external/tetrisbattle/
+
+# Cold Clear 2 (MinusKelvin, MIT/Apache), downloaded unmodified for bot comparisons; not ours to commit
+external/cold-clear-2/

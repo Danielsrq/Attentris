@@ -416,8 +416,10 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
                 break;
             }
         };
-        if cfg.external {
-            external_move(&mut d, n, &board, spawned, &queue[1..], hold, b2b, &shapes, &mut stats);
+        if cfg.external && !external_move(&mut d, n, &board, spawned, &queue[1..], hold, b2b, &bag_next, &shapes, &mut stats) {
+            // the other process resigned (it sees no legal move: Cold Clear 2 topped out)
+            stats.died = true;
+            break;
         }
         stats.think_us.push(t0.elapsed().as_micros().min(u32::MAX as u128) as u32);
         stats.nodes += searcher.nodes - nodes_before;
@@ -663,22 +665,28 @@ fn read_shortlist(n: usize, board: &Board, spawned: Piece, previews: &[Piece], h
 }
 
 /// `bot play-ext`: send the state, read the move, and play it if it is one of the legal moves
-/// (several routes to the same cells: the highest-attack one).
+/// (several routes to the same cells: the highest-attack one). False when the other process
+/// resigns ({"resign": true}).
 fn external_move(d: &mut crate::search::Decision, n: usize, board: &Board, spawned: Piece, previews: &[Piece], hold: Option<Piece>,
-                 b2b: i32, shapes: &crate::rules::Shapes, stats: &mut Stats) {
+                 b2b: i32, bag_next: &[Piece], shapes: &crate::rules::Shapes, stats: &mut Stats) -> bool {
     use std::io::{BufRead, Write};
     let up = |p: Piece| p.letter().to_ascii_uppercase();
     {
         let mut o = std::io::stdout().lock();
-        let _ = writeln!(o, "{{\"n\":{},\"rows\":[{}],\"piece\":\"{}\",\"queue\":[{}],\"hold\":{},\"b2b\":{}}}", n,
+        // "bag": the pieces the draw after the last preview can be (7-bag state, for Cold Clear 2's start)
+        let _ = writeln!(o, "{{\"n\":{},\"rows\":[{}],\"piece\":\"{}\",\"queue\":[{}],\"hold\":{},\"b2b\":{},\"bag\":[{}]}}", n,
             board.rows.iter().map(|r| r.to_string()).collect::<Vec<_>>().join(","), up(spawned),
             previews.iter().take(5).map(|&p| format!("\"{}\"", up(p))).collect::<Vec<_>>().join(","),
-            hold.map_or("null".to_string(), |p| format!("\"{}\"", up(p))), b2b);
+            hold.map_or("null".to_string(), |p| format!("\"{}\"", up(p))), b2b,
+            bag_next.iter().map(|&p| format!("\"{}\"", up(p))).collect::<Vec<_>>().join(","));
         let _ = o.flush();
     }
     let mut line = String::new();
     std::io::stdin().lock().read_line(&mut line).expect("read move");
     let v: serde_json::Value = serde_json::from_str(&line).expect("move JSON");
+    if v["resign"].as_bool().unwrap_or(false) {
+        return false;
+    }
     let uh = v["hold"].as_i64().unwrap_or(0) != 0;
     let c: Vec<i32> = v["cells"].as_array().map(|a| a.iter().map(|x| x.as_i64().unwrap_or(-99) as i32).collect()).unwrap_or_default();
     let mut want: Vec<(i32, i32)> = c.chunks(2).filter(|p| p.len() == 2).map(|p| (p[0], p[1])).collect();
@@ -695,6 +703,7 @@ fn external_move(d: &mut crate::search::Decision, n: usize, board: &Board, spawn
         }
         None => stats.ext_illegal += 1,
     }
+    true
 }
 
 fn omax(a: Option<f32>, b: Option<f32>) -> Option<f32> {
