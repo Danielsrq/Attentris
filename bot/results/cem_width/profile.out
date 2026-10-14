@@ -1,0 +1,17 @@
+normal_d6b8 ms/pc 7.82
+normal_d6b16 ms/pc 13.41
+normal_d6b20 ms/pc 13.99
+normal_d6b64 ms/pc 35.60
+survive_d6b8 ms/pc 6.20
+survive_d6b16 ms/pc 11.02
+survive_d6b20 ms/pc 13.11
+survive_d6b64 ms/pc 33.03
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+normal_d6b8                          5/16      416   0.846    0.704   1.175    0.979 2196/2323
+normal_d6b16                         4/16      439   0.887    0.780   1.223    1.075 2360/2457
+normal_d6b20                         0/16      500   0.909    0.909   1.247    1.247 2700/2774
+normal_d6b64                         1/16      484   0.938    0.908   1.277    1.237 2627/2688
+survive_d6b8                         0/16      500   0.835    0.835   1.177    1.177 2743/2774
+survive_d6b16                        0/16      500   0.877    0.877   1.221    1.221 2758/2774
+survive_d6b20                        0/16      500   0.903    0.903   1.249    1.249 2765/2774
+survive_d6b64                        0/16      500   0.940    0.940   1.286    1.286 2763/2774
