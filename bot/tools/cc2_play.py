@@ -79,6 +79,19 @@ def cc_view(st):
     return st["hold"], q
 
 
+def suggest(cc, patience_ms=200):
+    """Cold Clear 2's suggestion. Right after a `start` with a short think time its tree may not
+    be expanded yet and it suggests nothing; ask again every millisecond (the wait counts as its
+    thinking time) and only report no moves (topped out) after `patience_ms`."""
+    t0 = time.perf_counter()
+    while True:
+        cc.send({"type": "suggest"})
+        sug = cc.recv()
+        if sug.get("moves") or time.perf_counter() - t0 > patience_ms / 1000.0:
+            return sug
+        time.sleep(0.001)
+
+
 def pin_to(proc, mask):
     k32 = ctypes.WinDLL("kernel32", use_last_error=True)
     k32.SetProcessAffinityMask.argtypes = [ctypes.c_void_p, ctypes.c_size_t]
@@ -155,8 +168,7 @@ def play_game(seed, args, mask):
                     cc.send({"type": "new_piece", "piece": p})
             t0 = time.perf_counter()
             time.sleep(args.think_ms / 1000.0)
-            cc.send({"type": "suggest"})
-            sug = cc.recv()
+            sug = suggest(cc)
             think.append(time.perf_counter() - t0)
             nodes.append(sug.get("move_info", {}).get("nodes", 0))
             if not sug.get("moves"):

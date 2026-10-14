@@ -293,6 +293,9 @@ pub struct GameConfig {
     /// With `dataset`: also run a root-diverse search (keeping this many lines per first
     /// move) so every legal move's record gets a search score. 0 = survivors only.
     pub all_roots: usize,
+    /// `bot play-ext --versus`: garbage comes from the opponent through the referee (stdout: a
+    /// lock line after every placement; stdin: the garbage to add before the next piece).
+    pub versus: bool,
 }
 
 pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
@@ -367,7 +370,21 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
     let mut expected: Option<(Piece, [(i32, i32); 4])> = None;
     let counts_at_start = crate::eval::template_counts();
     let mut followup_left = 0u8;
+    let mut incoming: Vec<(usize, i32)> = Vec::new();
     for n in 0..cfg.pieces {
+        if !incoming.is_empty() {
+            // versus: the opponent's garbage, one hole column per attack
+            for &(rows, hole) in &incoming {
+                let holes = vec![hole.clamp(0, W - 1); rows];
+                board.push_garbage(&holes);
+                colors.push_garbage(&holes);
+                garbage_rows_total += rows as u64;
+                garbage_left += rows as u64;
+                stats.garbage_in += rows as u64;
+                stats.garbage_log.push([n as u32, rows as u32, 0]);
+            }
+            incoming.clear();
+        }
         if cfg.garbage.every > 0 && n > 0 && n % cfg.garbage.every == 0 {
             let g = &cfg.garbage;
             let n_rows = if g.rows_min > 0 && g.rows_min < g.rows { g.rows_min + grng.below((g.rows - g.rows_min + 1) as u64) as usize } else { g.rows };
@@ -567,6 +584,12 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         }
         board = o_board;
         b2b = o.b2b;
+        if cfg.versus {
+            match versus_lock(n, &o, &board, h, &shapes, &p) {
+                Some(g) => incoming = g,
+                None => break, // the referee ended the game (the opponent topped out)
+            }
+        }
     }
     let counts = crate::eval::template_counts();
     for i in 0..3 {
@@ -662,6 +685,32 @@ fn read_shortlist(n: usize, board: &Board, spawned: Piece, previews: &[Piece], h
     std::io::stdin().lock().read_line(&mut line).expect("read shortlist");
     let v: serde_json::Value = serde_json::from_str(&line).expect("shortlist JSON");
     v["moves"].as_array().map(|a| a.iter().map(parse_move).collect()).unwrap_or_default()
+}
+
+/// `bot play-ext --versus`: report the lock ({"lock": n, "attack", "lines", "spin" 0/1/2, "piece",
+/// "b2b", "combo", "height", "cells"}) and read the garbage to add before the next piece
+/// ({"garbage": [[rows, hole column], ...]}); None for {"stop": true} (the game ends, not as a death).
+fn versus_lock(n: usize, o: &crate::search::Outcome, board: &Board, height: i32, shapes: &crate::rules::Shapes,
+               p: &crate::board::Placement) -> Option<Vec<(usize, i32)>> {
+    use std::io::{BufRead, Write};
+    let spin = match o.spin { Spin::None => 0, Spin::Mini => 1, _ => 2 };
+    {
+        let mut out = std::io::stdout().lock();
+        let cells = p.abs_cells(shapes).iter().map(|(x, y)| format!("{},{}", x, y)).collect::<Vec<_>>().join(",");
+        let _ = writeln!(out, "{{\"lock\":{},\"attack\":{},\"lines\":{},\"spin\":{},\"piece\":\"{}\",\"b2b\":{},\"combo\":{},\"height\":{},\"cells\":[{}]}}",
+            n, o.attack, o.lines, spin, p.piece.letter().to_ascii_uppercase(), o.b2b, board.combo, height, cells);
+        let _ = out.flush();
+    }
+    let mut line = String::new();
+    std::io::stdin().lock().read_line(&mut line).expect("read garbage");
+    let v: serde_json::Value = serde_json::from_str(&line).expect("garbage JSON");
+    if v["stop"].as_bool().unwrap_or(false) {
+        return None;
+    }
+    Some(v["garbage"].as_array().map(|a| a.iter().filter_map(|g| {
+        let g = g.as_array()?;
+        Some((g.first()?.as_u64()? as usize, g.get(1)?.as_i64()? as i32))
+    }).filter(|&(r, _)| r > 0).collect()).unwrap_or_default())
 }
 
 /// `bot play-ext`: send the state, read the move, and play it if it is one of the legal moves

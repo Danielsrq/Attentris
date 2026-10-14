@@ -76,7 +76,8 @@ def arrays(states, teacher, version=T.TOK_VERSION, drop=()):
 
 
 class Player:
-    def __init__(self, model_path, depth, beam, teacher, mode, policy="logit", propose=0, temp=0.0, seed=0, merge="", merge_override=""):
+    def __init__(self, model_path, depth, beam, teacher, mode, policy="logit", propose=0, temp=0.0, seed=0, merge="", merge_override="",
+                 expand_args=()):
         import torch
         import model as M
         torch.set_num_threads(1)
@@ -109,7 +110,8 @@ class Player:
         self.qscale = M.Q_SCALE
         self.torch = torch
         self.depth, self.beam, self.teacher = depth, beam, teacher
-        self.ex = subprocess.Popen([BOT, "expand", "--mode", mode], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        # expand_args: more rule flags for `bot expand` (bot/tools/versus.py: --no-180)
+        self.ex = subprocess.Popen([BOT, "expand", "--mode", mode, *expand_args], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                    stderr=subprocess.DEVNULL, text=True, bufsize=1)
 
     def expand(self, st):

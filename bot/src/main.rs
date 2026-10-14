@@ -102,10 +102,12 @@ fn rules_for(a: &Args, mode: Option<&str>) -> Rules {
         Some("gate_b2b") => Rules::gate_b2b(),
         Some("battle") => Rules::battle(),
         Some("standard") => Rules { all_spin: false, ..Rules::default() },
+        Some("coldclear") => Rules::coldclear(),
+        Some("tetrio") => Rules::tetrio(),
         // Normal rules are the default, as in the Godot game.
         Some("normal") | None => Rules::normal(),
         Some("competitive") => Rules::default(),
-        Some(m) => panic!("unknown --mode {} (normal | burst | burst2 | gate | gate_b2b | battle | standard | competitive | allspin | allspin_nw)", m),
+        Some(m) => panic!("unknown --mode {} (normal | burst | burst2 | gate | gate_b2b | battle | standard | coldclear | tetrio | competitive | allspin | allspin_nw)", m),
     };
     if a.has("no-allspin") {
         r.all_spin = false;
@@ -705,7 +707,7 @@ fn cmd_label(a: &Args) {
                             }
                         }
                         let cfg = GameConfig { pieces: 0, seed: v["seed"].as_u64().unwrap_or(0), garbage: GarbageConfig::default(),
-                                               label: label.clone(), record: false, env_rules: None, dataset: true, external: false, shortlist: false, all_roots: 0 };
+                                               label: label.clone(), record: false, env_rules: None, dataset: true, external: false, shortlist: false, all_roots: 0, versus: false };
                         game::dataset_record(&mut out, &cfg, v["n"].as_u64().unwrap_or(0) as usize, &b, piece, &queue[1..], hold, b2b, &d, &r, &shapes);
                     }
                     let k = done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
@@ -865,13 +867,18 @@ fn cmd_play_ext(a: &Args) {
     // --shortlist: the other process names the first moves worth searching and this bot's
     // full search (--weights, --beam, --depth) picks among them; otherwise it names the move.
     let shortlist = a.has("shortlist");
-    let sc = if shortlist { search_config(a) } else { SearchConfig { depth: 1, chance: false, roots: true, ..search_config(a) } };
+    // --versus: a versus game (bot/tools/versus.py): after every lock a {"lock", "attack", ...} line,
+    // then a {"garbage": [[rows, hole], ...]} line from the referee, injected before the next piece;
+    // no scripted garbage. --self: this bot's own search (--weights --depth --beam) plays.
+    let versus = a.has("versus");
+    let own = a.has("self");
+    let sc = if shortlist || own { search_config(a) } else { SearchConfig { depth: 1, chance: false, roots: true, ..search_config(a) } };
     let mut s = Searcher::new(sc, weights(a), r);
     // --replay FILE: also write the game as Godot replay records (label from --label, default "ext")
     let replay = a.str("replay").map(|x| x.to_string());
     let cfg = GameConfig { pieces: a.get("pieces", 500usize), seed: a.get("seed", 1u64), garbage: garbage(a),
                            label: a.str("label").unwrap_or("ext").to_string(),
-                           record: replay.is_some(), env_rules: None, dataset: false, external: !shortlist, shortlist, all_roots: 0 };
+                           record: replay.is_some(), env_rules: None, dataset: false, external: !shortlist && !own, shortlist, all_roots: 0, versus };
     let (st, rec) = game::play(&mut s, &cfg);
     if let Some(path) = replay {
         std::fs::write(&path, rec).expect("write --replay");
@@ -923,7 +930,7 @@ fn cmd_dataset(a: &Args) {
                     if path.exists() {
                         continue;
                     }
-                    let cfg = GameConfig { pieces, seed: sd, garbage: g.clone(), label: label.clone(), record: false, env_rules: None, dataset: true, external: false, shortlist: false, all_roots };
+                    let cfg = GameConfig { pieces, seed: sd, garbage: g.clone(), label: label.clone(), record: false, env_rules: None, dataset: true, external: false, shortlist: false, all_roots, versus: false };
                     let (st, js) = game::play(&mut searcher, &cfg);
                     let part = path.with_extension("part");
                     std::fs::write(&part, js).expect("write");
@@ -1022,7 +1029,7 @@ fn run_games(sc: &SearchConfig, w: &Weights, r: Rules, env: Option<Rules>, g: &G
                 let mut searcher = Searcher::new(sc, w, r);
                 let mut i = t;
                 while i < games {
-                    let cfg = GameConfig { pieces, seed: seed + i as u64, garbage: g.clone(), label: label.clone(), record, env_rules: env, dataset: false, external: false, shortlist: false, all_roots: 0 };
+                    let cfg = GameConfig { pieces, seed: seed + i as u64, garbage: g.clone(), label: label.clone(), record, env_rules: env, dataset: false, external: false, shortlist: false, all_roots: 0, versus: false };
                     let (st, js) = game::play(&mut searcher, &cfg);
                     out.push((i, st, js));
                     i += threads;

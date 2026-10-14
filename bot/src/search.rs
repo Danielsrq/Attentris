@@ -174,7 +174,10 @@ pub fn apply(board: &Board, p: &Placement, b2b: i32, rules: &Rules, shapes: &Sha
     } else {
         let (burst, left) = rules.burst_step(board.burst_armed, spin, lines);
         nb.burst_armed = left;
-        if rules.combo == crate::rules::ComboTable::None {
+        if rules.table != crate::rules::AttackTable::Ours {
+            nb.combo = if lines > 0 { board.combo.saturating_add(1) } else { -1 };
+            (rules.table_attack(spin, lines, nb.combo as i32, nb2, perfect), false)
+        } else if rules.combo == crate::rules::ComboTable::None {
             (rules.attack_with(p.piece, spin, lines, nb2, perfect, burst), burst)
         } else {
             // the combo applies to base + B2B; the perfect clear bonus comes on top

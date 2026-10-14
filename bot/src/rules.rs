@@ -234,6 +234,21 @@ pub enum ComboTable {
 
 pub const GUIDELINE_COMBO: [i32; 12] = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5];
 
+/// Whose attack table scores a clear (`--mode coldclear | tetrio` presets).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum AttackTable {
+    /// attack_with: ours (B2B mode, minis send nothing, perfect clear +bonus) and --combo.
+    Ours,
+    /// Cold Clear 1 (libtetris lock_data / board.rs): single 0, double 1, triple 2, quad 4,
+    /// mini T-spin single 0 / double 1, T-spin single 2 / double 4 / triple 6, +1 for a
+    /// back-to-back hard clear (quads and every T-spin, minis included), the guideline combo
+    /// table, and a perfect clear sends 10 in place of everything else.
+    ColdClear,
+    /// TETR.IO (Tetra League), as battle_attack: B2B levels, combo multiplier, minis earn the
+    /// B2B level, perfect clear +perfect_clear_bonus.
+    Tetrio,
+}
+
 impl ComboTable {
     pub fn parse(s: &str) -> Option<ComboTable> {
         match s {
@@ -305,8 +320,11 @@ pub struct Rules {
     pub battle: bool,
     /// No 180-degree rotation (cw / ccw only, as Cold Clear and TetrisBattle): `--no-180`.
     pub no_180: bool,
-    /// Combo attack (`--combo none | guideline | tetrio`); not used by the battle and gate rules.
+    /// Combo attack (`--combo none | guideline | tetrio`); not used by the battle and gate rules
+    /// or by the coldclear / tetrio tables (they have their own).
     pub combo: ComboTable,
+    /// Attack table (`--mode coldclear | tetrio`); Ours everywhere else.
+    pub table: AttackTable,
 }
 
 /// Gate chain state: (placements left in the window, spin clears in the chain, value
@@ -334,6 +352,7 @@ impl Default for Rules {
             battle: false,
             no_180: false,
             combo: ComboTable::None,
+            table: AttackTable::Ours,
         }
     }
 }
@@ -371,6 +390,42 @@ impl Rules {
 
     /// gate_b2b: the gate rules, plus the B2B bonus on every spin clear of a paid chain,
     /// so digging with plain clears (which break B2B) costs future chain value.
+    /// Cold Clear's rules: SRS, T-spins only (3-corner), Cold Clear 1's attack table and
+    /// guideline combo table. Use with --no-180 (Cold Clear has no 180 rotation).
+    pub fn coldclear() -> Rules {
+        Rules { all_spin: false, b2b: B2bMode::Flat, perfect_clear_bonus: 10, table: AttackTable::ColdClear, ..Rules::default() }
+    }
+
+    /// TETR.IO's attack table and combo multiplier on SRS (T-spins only), unlike `battle`
+    /// (TetrisBattle's kicks and top-out rule). Use with --no-180 for Cold Clear.
+    pub fn tetrio() -> Rules {
+        Rules { all_spin: false, b2b: B2bMode::Tetrio, perfect_clear_bonus: 10, table: AttackTable::Tetrio, ..Rules::default() }
+    }
+
+    /// Attack of a clear under `table` (not Ours). `combo_after` / `b2b_after` as battle_attack.
+    pub fn table_attack(&self, spin: Spin, lines: u32, combo_after: i32, b2b_after: i32, perfect: bool) -> i32 {
+        match self.table {
+            AttackTable::Tetrio => self.battle_attack(spin, lines, combo_after, b2b_after, perfect),
+            AttackTable::ColdClear => {
+                if lines == 0 {
+                    return 0;
+                }
+                if perfect {
+                    return 10;
+                }
+                let l = lines.min(4) as usize;
+                let base = match spin {
+                    Spin::None => [0, 0, 1, 2, 4][l],
+                    Spin::Mini => [0, 0, 1, 1, 1][l],
+                    Spin::Full => [0, 2, 4, 6, 6][l],
+                };
+                let b2b = (is_difficult(spin, lines) && b2b_after >= 1) as i32;
+                base + b2b + if combo_after >= 0 { GUIDELINE_COMBO[(combo_after as usize).min(GUIDELINE_COMBO.len() - 1)] } else { 0 }
+            }
+            AttackTable::Ours => self.attack_with(Piece::T, spin, lines, b2b_after, perfect, false),
+        }
+    }
+
     /// TetrisBattle's rules (see the `battle` field).
     pub fn battle() -> Rules {
         Rules { battle: true, all_spin: false, b2b: B2bMode::Tetrio, perfect_clear_bonus: 10, ..Rules::default() }
@@ -683,6 +738,23 @@ mod tests {
         assert_eq!(run(Spin::None, 4, 1), 0, "a quad holds the gate: +1, no bonus");
         assert_eq!(run(Spin::Full, 2, 2), 5 + 1 + 6, "pays (4+1) + 1 + (4+2)");
         assert_eq!(run(Spin::Full, 3, 2), 12, "a later TST: 10 + 2");
+    }
+
+    #[test]
+    fn coldclear_table() {
+        // libtetris lock_data: PlacementKind::garbage, +1 B2B on hard clears, COMBO_GARBAGE, PC = 10
+        let r = Rules::coldclear();
+        let a = |spin, lines, combo, b2b| r.table_attack(spin, lines, combo, b2b, false);
+        assert_eq!([1, 2, 3, 4].map(|l| a(Spin::None, l, 0, -1)), [0, 1, 2, 4]);
+        assert_eq!([1, 2, 3].map(|l| a(Spin::Full, l, 0, 0)), [2, 4, 6], "first T-spins: no B2B yet");
+        assert_eq!([1, 2].map(|l| a(Spin::Mini, l, 0, 0)), [0, 1]);
+        assert_eq!(a(Spin::Full, 2, 0, 1), 5, "B2B TSD");
+        assert_eq!(a(Spin::Mini, 2, 0, 1), 2, "B2B mini TSD: minis are hard");
+        assert_eq!(a(Spin::None, 4, 0, 1), 5, "B2B quad");
+        assert_eq!(a(Spin::None, 1, 2, -1), 1, "single at combo 2: +1");
+        assert_eq!(a(Spin::None, 2, 11, -1), 1 + 5, "combo 11+: +5");
+        assert_eq!(r.table_attack(Spin::Full, 2, 3, 4, true), 10, "a perfect clear sends 10, nothing else");
+        assert_eq!(a(Spin::Full, 0, -1, 2), 0);
     }
 
     #[test]

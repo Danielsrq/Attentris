@@ -69,6 +69,7 @@ impl Fitness {
                         external: false,
                         shortlist: false,
                         all_roots: 0,
+                        versus: false,
                     };
                     let st = game::play(&mut searcher, &cfg).0;
                     let score = if self.lines { st.lines as i64 } else { st.attack + if self.vs { st.garbage_cleared as i64 } else { 0 } };
