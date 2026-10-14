@@ -212,9 +212,10 @@ class Player:
 def play_game(args, seed):
     pcores.pin(verbose=False)
     auto = args.style == "auto"
+    rule_args = ("--no-180",) if args.no_180 else ()
     pl = Player(args.model, args.depth, args.beam, STYLES["normal" if auto else args.style], args.mode, args.policy, args.propose,
-                temp=args.temp, seed=seed, merge=args.merge, merge_override=args.merge_override)
-    cmd = [BOT, "play-ext", "--mode", args.mode, "--pieces", str(args.pieces), "--seed", str(seed)]
+                temp=args.temp, seed=seed, merge=args.merge, merge_override=args.merge_override, expand_args=rule_args)
+    cmd = [BOT, "play-ext", "--mode", args.mode, *rule_args, "--pieces", str(args.pieces), "--seed", str(seed)]
     if auto and getattr(pl, "n_styles", 2) < 3:
         raise SystemExit("--style auto needs a model with a danger style (3 style rows)")
     if args.shortlist or args.takeover >= 0:
@@ -307,6 +308,7 @@ def main():
     ap.add_argument("--shortlist", type=int, default=0, help="intuition + calculation: the policy's top-k moves, then the "
                     "teacher's full search (its handcrafted V) picks among them")
     ap.add_argument("--mode", default="normal")
+    ap.add_argument("--no-180", action="store_true", help="no 180 rotation (Cold Clear's rules; bot --no-180)")
     ap.add_argument("--garbage", default="")
     ap.add_argument("--jobs", type=int, default=0, help="parallel games (0 = P-core logical processors)")
     ap.add_argument("--out", default="")
