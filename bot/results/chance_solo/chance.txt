@@ -1,0 +1,26 @@
+== solo: chance ply on / off (coldclear rules, no 180, d6 b64; ms/pc in the logs)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+normal_chance_none                   0/64      500   0.703    0.703   0.703    0.703         -
+normal_nochance_none                 0/64      500   0.694    0.694   0.694    0.694         -
+normal_chance_g20                    6/64      476   0.944    0.899   1.279    1.218 10190/10514
+normal_nochance_g20                 13/64      441   0.908    0.801   1.238    1.093 9329/9751
+normal_chance_g50                    8/64      461   0.899    0.830   1.229    1.134 9751/10188
+normal_nochance_g50                 12/64      447   0.853    0.762   1.181    1.056 9386/9877
+survive_chance_none                  0/64      500   0.799    0.799   0.799    0.799         -
+survive_nochance_none                0/64      500   0.766    0.766   0.766    0.766         -
+survive_chance_g20                   0/64      500   0.936    0.936   1.278    1.278 10966/11029
+survive_nochance_g20                 0/64      500   0.909    0.909   1.251    1.251 10955/11029
+survive_chance_g50                   0/64      500   0.881    0.881   1.224    1.224 10974/11035
+survive_nochance_g50                 0/64      500   0.847    0.847   1.188    1.188 10924/11035
+normal_chance_none: ms/pc 37.35
+normal_nochance_none: ms/pc 32.99
+survive_chance_none: ms/pc 33.05
+survive_nochance_none: ms/pc 29.09
+normal_chance_g20: ms/pc 37.96
+normal_nochance_g20: ms/pc 34.95
+survive_chance_g20: ms/pc 33.31
+survive_nochance_g20: ms/pc 29.17
+normal_chance_g50: ms/pc 38.23
+normal_nochance_g50: ms/pc 34.24
+survive_chance_g50: ms/pc 33.03
+survive_nochance_g50: ms/pc 29.10
