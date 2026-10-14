@@ -1,0 +1,45 @@
+cem:bot/weights/normal.txt:6:64 vs cem:bot/results/survive/survive.txt:6:64 (coldclear, 3 matches): a wins 1, b wins 2, draws 0 (a score 0.333)
+  a: APP 0.856, VS 1.171, sent 134.7/match, 34.0 ms/move, illegal 0
+  b: APP 0.887, VS 1.194, sent 141.0/match, 28.7 ms/move, illegal 0
+cem:bot/weights/normal.txt:6:64 vs cc2:match (coldclear, 3 matches): a wins 2, b wins 1, draws 0 (a score 0.667)
+  a: APP 0.848, VS 1.146, sent 82.7/match, 33.7 ms/move, illegal 0
+  b: APP 0.825, VS 1.115, sent 80.3/match, 33.6 ms/move, illegal 1
+cem:bot/results/survive/survive.txt:6:64 vs cc2:match (coldclear, 3 matches): a wins 3, b wins 0, draws 0 (a score 1.000)
+  a: APP 0.848, VS 1.133, sent 81.0/match, 30.9 ms/move, illegal 0
+  b: APP 0.779, VS 1.035, sent 54.0/match, 30.9 ms/move, illegal 0
+cem:bot/weights/normal.txt:6:64 vs cem:bot/results/survive/survive.txt:6:64 (coldclear, 3 matches): a wins 1, b wins 2, draws 0 (a score 0.333)
+  a: APP 0.856, VS 1.171, sent 134.7/match, 33.8 ms/move, illegal 0
+  b: APP 0.887, VS 1.194, sent 141.0/match, 29.6 ms/move, illegal 0
+cem:bot/weights/normal.txt:6:64 vs cc2:500 (coldclear, 3 matches): a wins 2, b wins 1, draws 0 (a score 0.667)
+  a: APP 0.850, VS 1.086, sent 48.0/match, 33.6 ms/move, illegal 0
+  b: APP 0.767, VS 1.015, sent 39.3/match, 501.6 ms/move, illegal 0
+cem:bot/results/survive/survive.txt:6:64 vs cc2:500 (coldclear, 3 matches): a wins 3, b wins 0, draws 0 (a score 1.000)
+  a: APP 0.911, VS 1.211, sent 46.7/match, 30.8 ms/move, illegal 0
+  b: APP 0.844, VS 1.078, sent 37.7/match, 506.2 ms/move, illegal 0
+/c/Users/Admin/Documents/tetris/.claude/worktrees/burst/bot/tools/../../data/bot/versus/2pps:
+cem_vs_cc2.jsonl
+cem_vs_cc2_s50001.json
+cem_vs_cc2_s50002.json
+cem_vs_cc2_s50003.json
+cem_vs_surv.jsonl
+cem_vs_surv_s50001.json
+cem_vs_surv_s50002.json
+cem_vs_surv_s50003.json
+surv_vs_cc2.jsonl
+surv_vs_cc2_s50001.json
+surv_vs_cc2_s50002.json
+surv_vs_cc2_s50003.json
+
+/c/Users/Admin/Documents/tetris/.claude/worktrees/burst/bot/tools/../../data/bot/versus/fixed:
+cem_vs_cc2.jsonl
+cem_vs_cc2_s50001.json
+cem_vs_cc2_s50002.json
+cem_vs_cc2_s50003.json
+cem_vs_surv.jsonl
+cem_vs_surv_s50001.json
+cem_vs_surv_s50002.json
+cem_vs_surv_s50003.json
+surv_vs_cc2.jsonl
+surv_vs_cc2_s50001.json
+surv_vs_cc2_s50002.json
+surv_vs_cc2_s50003.json
