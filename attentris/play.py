@@ -41,8 +41,9 @@ def readjson(proc):
             return json.loads(line)
 
 
-def arrays(states, teacher, version=T.TOK_VERSION):
-    """Model inputs for a list of (state, expand-result) pairs; returns the batch dict."""
+def arrays(states, teacher, version=T.TOK_VERSION, drop=()):
+    """Model inputs for a list of (state, expand-result) pairs; returns the batch dict. drop: token-kind
+    prefixes to blank after tokenizing (an ablation checkpoint's train.py --drop-kinds: same as training)."""
     import torch
     n = len(states)
     NT, NC, NE = P.NT, P.NC, P.NE
@@ -56,6 +57,8 @@ def arrays(states, teacher, version=T.TOK_VERSION):
         toks = T.tokenize(b, st["piece"], st["queue"], st["hold"], ex["structures"], version=version)
         a["cells"][i] = b.reshape(-1)
         for j, t in enumerate(toks[:NT]):
+            if drop and any(t.kind.startswith(p) for p in drop):
+                continue                                         # blanked, as in training (the slot stays padding)
             a["tok_kind"][i, j] = P.KIND_ID[t.kind]
             a["tok_mask"][i, j] = t.mask.reshape(-1)
             if t.box is not None:
@@ -99,6 +102,7 @@ class Player:
         self.net.eval()
         self.tok_version = 4 if tome else ck.get("tok_version", 5 if ck["model"]["kind.weight"].shape[0] > 31 else 4)
         self.no_setups = "setup_" in ck["args"].get("drop_kinds", "")
+        self.drop = tuple(p for p in ck["args"].get("drop_kinds", "").split(",") if p)
         self.policy = policy
         self.propose = propose
         self.temp, self.rng, self.last_entropy = temp, np.random.default_rng(seed), None
@@ -120,7 +124,7 @@ class Player:
         """Per position: the policy's log-probabilities, and Q in lines of attack from the
         chosen value head (None when moves are chosen by the policy)."""
         with self.torch.inference_mode():
-            a = arrays(pairs, self.teacher, self.tok_version)
+            a = arrays(pairs, self.teacher, self.tok_version, self.drop)
             if getattr(self.net, "pretok", False):      # ToMe v3: the rule pre-tokens of each position
                 import pretok as PT
                 a["pretok"] = self.torch.from_numpy(np.stack([PT.groups(a["cells"][i].numpy().astype(bool)) for i in range(len(pairs))]).astype(np.int64))
