@@ -1,0 +1,28 @@
+== v5.1 at d=96 (params 604851)
+epoch 1: train loss 2.924 | val normal top1 0.542 top3 0.790 | val gate4 top1 0.536 top3 0.778 | | 217s
+epoch 2: train loss 2.429 | val normal top1 0.583 top3 0.820 | val gate4 top1 0.570 top3 0.803 | | 214s
+epoch 3: train loss 2.312 | val normal top1 0.600 top3 0.832 | val gate4 top1 0.593 top3 0.820 | | 212s
+epoch 4: train loss 2.242 | val normal top1 0.617 top3 0.847 | val gate4 top1 0.609 top3 0.833 | | 202s
+epoch 5: train loss 2.191 | val normal top1 0.630 top3 0.857 | val gate4 top1 0.614 top3 0.844 | | 207s
+epoch 6: train loss 2.149 | val normal top1 0.639 top3 0.860 | val gate4 top1 0.619 top3 0.850 | | 203s
+epoch 7: train loss 2.118 | val normal top1 0.639 top3 0.860 | val gate4 top1 0.621 top3 0.847 | | 204s
+epoch 8: train loss 2.101 | val normal top1 0.640 top3 0.860 | val gate4 top1 0.623 top3 0.848 | | 203s
+== fit check (own training positions vs val): d=96, then v5.1 (d=64)
+set                                n    top1    top3    loss   Qs MAE
+train.npz [normal]             10023   0.663   0.883   2.129     5.17
+train.npz [gate4]               9977   0.641   0.862   2.046     6.40
+dagger1.npz [normal]            6377   0.447   0.731   2.736     7.56
+dagger1.npz [gate4]            13623   0.480   0.762   2.653     8.58
+train1m.npz [normal]            9713   0.655   0.879   2.146     5.51
+train1m.npz [gate4]            10287   0.654   0.870   2.020     6.48
+val.npz [normal]                5000   0.640   0.860   2.187     5.23
+val.npz [gate4]                 5000   0.623   0.848   2.076     6.44
+set                                n    top1    top3    loss   Qs MAE
+train1m.npz [normal]            9709   0.635   0.863   2.213     5.69
+train1m.npz [gate4]            10291   0.623   0.856   2.113     6.69
+val.npz [normal]                5000   0.621   0.854   2.239     5.36
+val.npz [gate4]                 5000   0.612   0.845   2.135     6.61
+v51_d96 normal none: APP 0.604 (APPfull 0.601), died 2/256, pieces 497 avg, TSD 5831, TST 73, quads 2852, max height 22, illegal 0, 14.5 ms/move (p90 16.8) + search 14.9 ms, 125s
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_base_none                        1/256      500   0.587    0.586   0.587    0.586         -
+v51_d96_none                         2/256      497   0.604    0.601   0.604    0.601         -
