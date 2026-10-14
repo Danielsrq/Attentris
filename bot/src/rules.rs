@@ -219,6 +219,50 @@ impl B2bMode {
     }
 }
 
+/// Combo attack (`--combo`): extra attack for consecutive clearing placements. `combo_after`
+/// counts like Board::combo: 0 on the first clear of a streak, -1 after a placement that clears
+/// nothing. Off in every preset; battle rules have their own TETR.IO combo (battle_attack).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ComboTable {
+    None,
+    /// Guideline table as Cold Clear 1 (libtetris COMBO_GARBAGE): +0 0 1 1 2 2 3 3 4 4 4 5, then +5.
+    Guideline,
+    /// TETR.IO (Tetra League) multiplier: attack x (1 + combo / 4), floored; a clear worth
+    /// nothing sends floor(ln(1 + 1.25 combo)) instead.
+    Tetrio,
+}
+
+pub const GUIDELINE_COMBO: [i32; 12] = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5];
+
+impl ComboTable {
+    pub fn parse(s: &str) -> Option<ComboTable> {
+        match s {
+            "none" | "off" => Some(ComboTable::None),
+            "guideline" | "coldclear" | "cc" => Some(ComboTable::Guideline),
+            "tetrio" => Some(ComboTable::Tetrio),
+            _ => None,
+        }
+    }
+
+    /// `attack`: the clear's attack before the combo (base + B2B bonus, no perfect clear bonus).
+    pub fn apply(self, attack: i32, combo_after: i32) -> i32 {
+        if combo_after < 0 {
+            return attack;
+        }
+        match self {
+            ComboTable::None => attack,
+            ComboTable::Guideline => attack + GUIDELINE_COMBO[(combo_after as usize).min(GUIDELINE_COMBO.len() - 1)],
+            ComboTable::Tetrio => {
+                if attack == 0 {
+                    (1.25 * combo_after as f64).ln_1p().floor() as i32
+                } else {
+                    combo_after * attack / 4 + attack
+                }
+            }
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Rules {
     pub b2b: B2bMode,
@@ -261,6 +305,8 @@ pub struct Rules {
     pub battle: bool,
     /// No 180-degree rotation (cw / ccw only, as Cold Clear and TetrisBattle): `--no-180`.
     pub no_180: bool,
+    /// Combo attack (`--combo none | guideline | tetrio`); not used by the battle and gate rules.
+    pub combo: ComboTable,
 }
 
 /// Gate chain state: (placements left in the window, spin clears in the chain, value
@@ -287,6 +333,7 @@ impl Default for Rules {
             gate_b2b: false,
             battle: false,
             no_180: false,
+            combo: ComboTable::None,
         }
     }
 }
@@ -636,5 +683,22 @@ mod tests {
         assert_eq!(run(Spin::None, 4, 1), 0, "a quad holds the gate: +1, no bonus");
         assert_eq!(run(Spin::Full, 2, 2), 5 + 1 + 6, "pays (4+1) + 1 + (4+2)");
         assert_eq!(run(Spin::Full, 3, 2), 12, "a later TST: 10 + 2");
+    }
+
+    #[test]
+    fn combo_tables() {
+        // Cold Clear 1's guideline table: combo 0, 1 -> +0, 2, 3 -> +1, ... 11+ -> +5
+        let g: Vec<i32> = (-1..14).map(|c| ComboTable::Guideline.apply(1, c)).collect();
+        assert_eq!(g, vec![1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 6, 6, 6]);
+        assert_eq!(ComboTable::None.apply(4, 7), 4);
+        // TETR.IO multiplier = the battle rules' formula (base + B2B level, no perfect clear)
+        let r = Rules::battle();
+        for combo in -1..20 {
+            for (spin, lines) in [(Spin::None, 1), (Spin::None, 2), (Spin::None, 4), (Spin::Full, 2), (Spin::Full, 3), (Spin::Mini, 1)] {
+                let c = combo.max(0);
+                let plain = r.battle_attack(spin, lines, 0, 0, false);
+                assert_eq!(ComboTable::Tetrio.apply(plain, c), r.battle_attack(spin, lines, c, 0, false), "{:?} {} combo {}", spin, lines, c);
+            }
+        }
     }
 }

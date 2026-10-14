@@ -673,11 +673,12 @@ fn external_move(d: &mut crate::search::Decision, n: usize, board: &Board, spawn
     let up = |p: Piece| p.letter().to_ascii_uppercase();
     {
         let mut o = std::io::stdout().lock();
-        // "bag": the pieces the draw after the last preview can be (7-bag state, for Cold Clear 2's start)
-        let _ = writeln!(o, "{{\"n\":{},\"rows\":[{}],\"piece\":\"{}\",\"queue\":[{}],\"hold\":{},\"b2b\":{},\"bag\":[{}]}}", n,
+        // "bag": the pieces the draw after the last preview can be (7-bag state, for Cold Clear 2's start);
+        // "combo": Board::combo (-1 none, 0 after the first clear of a streak; tracked under --combo / battle)
+        let _ = writeln!(o, "{{\"n\":{},\"rows\":[{}],\"piece\":\"{}\",\"queue\":[{}],\"hold\":{},\"b2b\":{},\"combo\":{},\"bag\":[{}]}}", n,
             board.rows.iter().map(|r| r.to_string()).collect::<Vec<_>>().join(","), up(spawned),
             previews.iter().take(5).map(|&p| format!("\"{}\"", up(p))).collect::<Vec<_>>().join(","),
-            hold.map_or("null".to_string(), |p| format!("\"{}\"", up(p))), b2b,
+            hold.map_or("null".to_string(), |p| format!("\"{}\"", up(p))), b2b, board.combo,
             bag_next.iter().map(|&p| format!("\"{}\"", up(p))).collect::<Vec<_>>().join(","));
         let _ = o.flush();
     }

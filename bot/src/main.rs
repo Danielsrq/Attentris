@@ -113,6 +113,10 @@ fn rules_for(a: &Args, mode: Option<&str>) -> Rules {
     if a.has("no-180") {
         r.no_180 = true;
     }
+    // --combo none (default) | guideline (Cold Clear 1's table) | tetrio (TETR.IO multiplier)
+    if let Some(c) = a.str("combo") {
+        r.combo = rules::ComboTable::parse(c).unwrap_or_else(|| panic!("unknown --combo {} (none | guideline | tetrio)", c));
+    }
     r.wound_clears = a.get("wound-clears", r.wound_clears);
     if let Some(c) = a.str("b2b-cap") {
         r.b2b_cap = c.parse().ok();

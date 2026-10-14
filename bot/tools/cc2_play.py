@@ -114,7 +114,7 @@ class Cc2:
 
 
 def play_game(seed, args, mask):
-    cmd = [BOT, "play-ext", "--mode", "standard", "--no-180", "--pieces", str(args.pieces), "--seed", str(seed)]
+    cmd = [BOT, "play-ext", "--mode", "standard", "--no-180", "--combo", args.combo, "--pieces", str(args.pieces), "--seed", str(seed)]
     if args.garbage:
         cmd += ["--garbage", args.garbage]
     bot = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
@@ -144,6 +144,8 @@ def play_game(seed, args, mask):
                     if args.every and st["n"] % args.every == 0:
                         garbage_restarts += 1
             if fresh:
+                if "combo" in st and st["combo"] >= 0:
+                    combo = st["combo"] + 1   # TBP: consecutive clears so far; ours: 0 after the first
                 bag = st.get("bag") or list("IJLOSTZ")
                 cc.send({"type": "start", "board": tbp_board(st["rows"]), "queue": [st["piece"]] + st["queue"],
                          "hold": st["hold"], "combo": combo, "back_to_back": st["b2b"] >= 0,
@@ -212,6 +214,7 @@ def main():
     ap.add_argument("--pieces", type=int, default=500)
     ap.add_argument("--garbage", default="", help="as bot play --garbage, e.g. 10,3-4,cheese0.2,0.2")
     ap.add_argument("--think-ms", type=float, default=100)
+    ap.add_argument("--combo", default="none", help="combo attack: none | guideline | tetrio (bot --combo)")
     ap.add_argument("--jobs", type=int, default=8, help="games at a time, one physical P-core each")
     ap.add_argument("--out", required=True, help="JSON lines, one per game (resumable)")
     ap.add_argument("--label", default=None)
