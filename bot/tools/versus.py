@@ -10,7 +10,8 @@ at most --cap rows per placement; garbage sent this turn can still be cancelled 
 A match ends when a player tops out (the other wins) or both have placed --pieces pieces (a draw).
 
 Players (--a / --b):
-  cem:WEIGHTS:DEPTH:BEAM       our CEM bot, its own search inside play-ext (--self)
+  cem:WEIGHTS:DEPTH:BEAM[:nochance]  our CEM bot, its own search inside play-ext (--self); nochance = no
+                               expectimax ply over the piece after the preview (--no-chance)
   cc2:THINK_MS                 Cold Clear 2 (external/cold-clear-2, unmodified, TBP), THINK_MS per move
   cc2:match                    Cold Clear 2 thinking as long as its opponent has taken per move so far (running mean)
   nn:MODEL:STYLE[:DEPTH:BEAM]  AtTenTris (STYLE normal | danger | auto), depth 1 by default, else its Qs beam search
@@ -59,6 +60,8 @@ class Side:
         if kind == "cem":
             w, depth, beam = rest[0], rest[1], rest[2]
             cmd += ["--self", "--weights", os.path.join(ROOT, w) if not os.path.isabs(w) else w, "--depth", depth, "--beam", beam, "--threads", "1"]
+            if len(rest) > 3 and rest[3] == "nochance":
+                cmd += ["--no-chance"]
         elif kind == "cc2":
             self.think_ms = None if rest[0] == "match" else float(rest[0])
             self.cc = C.Cc2(0)
