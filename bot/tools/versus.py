@@ -200,11 +200,21 @@ def match(job):
     sent = [0, 0]
     received = [0, 0]
     turn = 0
+    frames = []                 # --record: one entry per turn, both players
     pool = cf.ThreadPoolExecutor(2)
     try:
         while True:
+            nthink = [len(s.think) for s in sides]
             locks = list(pool.map(lambda s: s.turn(), sides))
             dead = [bool(l.get("done")) for l in locks]
+            if args.record:
+                fr = []
+                for i in range(2):
+                    l = locks[i]
+                    ms = 1000 * sides[i].think[-1] if len(sides[i].think) > nthink[i] else 0.0
+                    fr.append({"dead": True, "ms": round(ms, 1)} if dead[i] else
+                              {k: l[k] for k in ("piece", "cells", "rows", "attack", "lines", "spin", "b2b", "combo") if k in l} | {"ms": round(ms, 1)})
+                frames.append(fr)
             if any(dead):
                 break
             # cancel own pending garbage first
@@ -241,6 +251,10 @@ def match(job):
                             pending[i].pop(0)
                 sides[i].send({"garbage": g})
                 sides[i].t_sent = time.perf_counter()
+                if args.record:
+                    frames[-1][i]["garbage"] = g
+                    frames[-1][i]["pending"] = sum(x[0] for x in pending[i])
+                    frames[-1][i]["sent"] = sent[i]
             turn += 1
     finally:
         pool.shutdown()
@@ -253,6 +267,13 @@ def match(job):
         out[k] = {"died": died[i], "pieces": r.get("pieces"), "attack": r.get("attack"), "sent": sent[i], "received": received[i],
                   "garbage_cleared": r.get("garbage_cleared"), "tsd": r.get("tsd"), "quads": r.get("quads"),
                   "think_ms": round(r.get("think_ms", 0.0), 2), "illegal": r.get("illegal", 0), "resigned": r.get("resigned", False)}
+    if args.record:
+        # replay for bot/tools/versus_watch.py: both boards turn by turn, with the measured think times;
+        # budget_ms = the pace a turn takes at speed x1 when the bots are faster (2 PPS: 500)
+        os.makedirs(args.record, exist_ok=True)
+        with open(os.path.join(args.record, "%s_s%d.json" % (args.tag or "match", seed)), "w") as f:
+            json.dump({"seed": seed, "a": args.a, "b": args.b, "mode": args.mode, "budget_ms": args.budget_ms, "winner": out["winner"],
+                       "turns": turn, "frames": frames}, f)
     return out
 
 
@@ -267,6 +288,9 @@ def main():
     ap.add_argument("--cap", type=int, default=8, help="garbage rows landing per placement at most")
     ap.add_argument("--jobs", type=int, default=4, help="matches at a time (two physical P-cores each)")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--record", default="", help="DIR: also write each match as a replay (bot/tools/versus_watch.py)")
+    ap.add_argument("--tag", default="", help="replay file name prefix")
+    ap.add_argument("--budget-ms", type=float, default=0.0, help="replay pace per turn at speed x1 when both bots are faster (2 PPS: 500)")
     args = ap.parse_args()
     pcores.pin(verbose=False)
     pm = pcores.performance_mask()

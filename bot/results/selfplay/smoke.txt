@@ -1,0 +1,36 @@
+# tuned by `bot tune --algo cem`, gen 2, distribution mean
+#! features normalised
+holes        -27.5270
+hole_rows    8.6736
+cover        1.5958
+bump         10.7185
+bump_sq      -12.4361
+row_trans    -28.1991
+col_trans    -9.4707
+max_height   -0.0880
+danger       -98.1185
+well_rows    5.4394
+extra_wells  0.2816
+t_single     1.3280
+t_double     1.6009
+t_triple     0.0431
+t_fill       -0.5672
+b2b          2.2667
+b2b_level    2.0673
+b2b_next     3.8276
+wounds       -0.1052
+ready_repeat -0.0291
+sz_single    0.0891
+sz_double    0.4848
+sz_triple    -0.0966
+lj_single    0.0261
+lj_double    -0.0915
+lj_triple    -0.2585
+i_single     -0.0009
+i_double     -0.0581
+i_triple     -0.0496
+burst_armed  0.1592
+t_followup   0.2326
+t_vertical   -0.6914
+danger_relief -0.9543
+combo        -0.6273

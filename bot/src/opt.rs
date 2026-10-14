@@ -37,6 +37,10 @@ pub struct Fitness {
     /// --fitness lines: lines cleared per piece of the full budget (classic Tetris: survival and
     /// line clears only, attack ignored).
     pub lines: bool,
+    /// --fitness versus --opponents a.txt,b.txt: versus matches (crate::versus) instead of solo
+    /// games; match k is against opponents[k % len] on seed + k, `pieces` per player, and scores
+    /// MatchResult::score (win 1 / draw 0.5 / loss 0, plus a sent-vs-received margin of +-0.25).
+    pub opponents: Vec<Weights>,
 }
 
 impl Fitness {
@@ -58,6 +62,15 @@ impl Fitness {
                     }
                     let (ci, k) = (j / self.games, j % self.games);
                     let mut searcher = Searcher::new(self.sc.clone(), Weights { w: cands[ci] }, self.rules);
+                    if !self.opponents.is_empty() {
+                        let opp = self.opponents[k % self.opponents.len()].clone();
+                        let mut other = Searcher::new(self.sc.clone(), opp, self.rules);
+                        let r = crate::versus::play_match(&mut searcher, &mut other, &self.rules, seed + k as u64, self.pieces, 8);
+                        // fixed-point so the per-candidate sums stay atomic integers
+                        attack[ci].fetch_add((r.score(0) * 1e6).round() as i64, Ordering::Relaxed);
+                        on_job(done.fetch_add(1, Ordering::Relaxed) + 1, total);
+                        continue;
+                    }
                     let cfg = GameConfig {
                         pieces: self.pieces,
                         seed: seed + k as u64,
@@ -78,6 +91,9 @@ impl Fitness {
                 });
             }
         });
+        if !self.opponents.is_empty() {
+            return attack.iter().map(|a| a.load(Ordering::Relaxed) as f64 / 1e6 / self.games as f64).collect();
+        }
         attack.iter().map(|a| a.load(Ordering::Relaxed) as f64 / (self.games * self.pieces) as f64).collect()
     }
 }
@@ -90,11 +106,19 @@ fn fitness_from_args(a: &Args, default_games: usize) -> Fitness {
         games: a.get("games", default_games),
         pieces: a.get("pieces", 300),
         vs: match a.str("fitness") {
-            None | Some("app") | Some("lines") => false,
+            None | Some("app") | Some("lines") | Some("versus") => false,
             Some("vs") => true,
-            Some(x) => panic!("--fitness {}: expected app | vs | lines", x),
+            Some(x) => panic!("--fitness {}: expected app | vs | lines | versus", x),
         },
         lines: a.str("fitness") == Some("lines"),
+        opponents: if a.str("fitness") == Some("versus") {
+            a.str("opponents").expect("--fitness versus needs --opponents a.txt,b.txt").split(',').map(|p| {
+                let t = std::fs::read_to_string(p).unwrap_or_else(|e| panic!("{}: {}", p, e));
+                Weights::parse(&t).unwrap_or_else(|e| panic!("{}: {}", p, e))
+            }).collect()
+        } else {
+            Vec::new()
+        },
     }
 }
 

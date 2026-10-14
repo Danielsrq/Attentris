@@ -33,6 +33,7 @@ mod parity;
 mod rules;
 mod search;
 mod slots;
+mod versus;
 
 use std::collections::HashMap;
 use std::time::Instant;
@@ -889,6 +890,50 @@ fn cmd_play_ext(a: &Args) {
         st.garbage_in, st.garbage_cleared, garbage_json(&st.garbage_log));
 }
 
+/// `bot versus --weights A --opponent B [--mode --no-180 --depth --beam --games --pieces --seed --threads]`:
+/// in-process versus matches (versus.rs), A vs B on seeds seed..seed+games; wins / draws / losses for A,
+/// its mean MatchResult::score (the tuner's versus fitness) and garbage sent / received per match.
+fn cmd_versus(a: &Args) {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let r = rules(a);
+    let sc = search_config(a);
+    let wa = weights(a);
+    let wb = {
+        let p = a.str("opponent").expect("--opponent weights file");
+        let t = std::fs::read_to_string(p).unwrap_or_else(|e| panic!("{}: {}", p, e));
+        Weights::parse(&t).unwrap_or_else(|e| panic!("{}: {}", p, e))
+    };
+    let (games, pieces, seed) = (a.get("games", 64usize), a.get("pieces", 1000usize), a.get("seed", 50001u64));
+    let threads = threads_used().min(games).max(1);
+    let next = AtomicUsize::new(0);
+    let results = std::sync::Mutex::new(Vec::new());
+    let t0 = Instant::now();
+    std::thread::scope(|s| {
+        for _ in 0..threads {
+            let (sc, wa, wb, next, results) = (sc.clone(), wa.clone(), wb.clone(), &next, &results);
+            s.spawn(move || loop {
+                let i = next.fetch_add(1, Ordering::Relaxed);
+                if i >= games {
+                    break;
+                }
+                let mut sa = Searcher::new(sc.clone(), wa.clone(), r);
+                let mut sb = Searcher::new(sc.clone(), wb.clone(), r);
+                let m = versus::play_match(&mut sa, &mut sb, &r, seed + i as u64, pieces, 8);
+                results.lock().unwrap().push(m);
+            });
+        }
+    });
+    let rs = results.into_inner().unwrap();
+    let n = rs.len() as f64;
+    let wins = rs.iter().filter(|m| m.winner == 0).count();
+    let losses = rs.iter().filter(|m| m.winner == 1).count();
+    let score: f64 = rs.iter().map(|m| m.score(0)).sum::<f64>() / n;
+    let mean = |f: &dyn Fn(&versus::MatchResult) -> f64| rs.iter().map(f).sum::<f64>() / n;
+    println!("versus {} games: A wins {}, B wins {}, draws {} (A score {:.3}, fitness {:.3}); sent A {:.1} B {:.1}, turns {:.0}  ({:.0}s)",
+        rs.len(), wins, losses, rs.len() - wins - losses, (wins as f64 + 0.5 * (rs.len() - wins - losses) as f64) / n, score,
+        mean(&|m| m.sent[0] as f64), mean(&|m| m.sent[1] as f64), mean(&|m| m.turns as f64), t0.elapsed().as_secs_f64());
+}
+
 /// A game's garbage batches as JSON: [[piece, rows, cheese 0|1], ...].
 fn garbage_json(log: &[[u32; 3]]) -> String {
     format!("[{}]", log.iter().map(|g| format!("[{},{},{}]", g[0], g[1], g[2])).collect::<Vec<_>>().join(","))
@@ -1333,6 +1378,7 @@ fn main() {
         "value" => cmd_value(&a),
         "label" => cmd_label(&a),
         "play-ext" => cmd_play_ext(&a),
+        "versus" => cmd_versus(&a),
         "structures" => cmd_structures(),
         "battle-parity" => {
             if let Err(e) = battle::parity(a.str("data").expect("--data dump.jsonl")) {

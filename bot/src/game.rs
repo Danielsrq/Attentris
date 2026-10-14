@@ -697,8 +697,10 @@ fn versus_lock(n: usize, o: &crate::search::Outcome, board: &Board, height: i32,
     {
         let mut out = std::io::stdout().lock();
         let cells = p.abs_cells(shapes).iter().map(|(x, y)| format!("{},{}", x, y)).collect::<Vec<_>>().join(",");
-        let _ = writeln!(out, "{{\"lock\":{},\"attack\":{},\"lines\":{},\"spin\":{},\"piece\":\"{}\",\"b2b\":{},\"combo\":{},\"height\":{},\"cells\":[{}]}}",
-            n, o.attack, o.lines, spin, p.piece.letter().to_ascii_uppercase(), o.b2b, board.combo, height, cells);
+        // "rows": the board after this lock (before the referee's garbage), for replays (versus.py --record)
+        let rows = board.rows.iter().map(|r| r.to_string()).collect::<Vec<_>>().join(",");
+        let _ = writeln!(out, "{{\"lock\":{},\"attack\":{},\"lines\":{},\"spin\":{},\"piece\":\"{}\",\"b2b\":{},\"combo\":{},\"height\":{},\"cells\":[{}],\"rows\":[{}]}}",
+            n, o.attack, o.lines, spin, p.piece.letter().to_ascii_uppercase(), o.b2b, board.combo, height, cells, rows);
         let _ = out.flush();
     }
     let mut line = String::new();
