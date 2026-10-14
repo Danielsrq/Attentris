@@ -200,6 +200,7 @@ impl Searcher {
         let mut mg = MoveGen::new();
         mg.all_spin = rules.all_spin;
         mg.battle = rules.battle;
+        mg.no_180 = rules.no_180;
         Searcher { cfg, weights, rules, shapes: Shapes::for_rules(&rules), mg, buf: Vec::with_capacity(256), nodes: 0, root_allow: Vec::new() }
     }
 

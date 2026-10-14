@@ -110,6 +110,9 @@ fn rules_for(a: &Args, mode: Option<&str>) -> Rules {
     if a.has("no-allspin") {
         r.all_spin = false;
     }
+    if a.has("no-180") {
+        r.no_180 = true;
+    }
     r.wound_clears = a.get("wound-clears", r.wound_clears);
     if let Some(c) = a.str("b2b-cap") {
         r.b2b_cap = c.parse().ok();
@@ -760,6 +763,7 @@ fn cmd_expand(a: &Args) {
     let mut mg = movegen::MoveGen::new();
     mg.all_spin = r.all_spin;
     mg.battle = r.battle;
+    mg.no_180 = r.no_180;
     let letter = |v: &serde_json::Value| v.as_str().and_then(|s| s.chars().next()).and_then(rules::Piece::from_letter);
     let up = |p: rules::Piece| p.letter().to_ascii_uppercase();
     let stdout = std::io::stdout();

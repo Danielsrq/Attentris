@@ -25,6 +25,8 @@ pub struct MoveGen {
     pub all_spin: bool,
     /// TetrisBattle rotation and spins (battle.rs) instead of SRS.
     pub battle: bool,
+    /// Rotate cw / ccw only (Rules::no_180).
+    pub no_180: bool,
     /// Battle BFS: per (x, y, rot, tspin) the smallest lock-delay count seen, stamped.
     bvisit: Vec<u32>,
     bground: Vec<u8>,
@@ -42,6 +44,7 @@ impl MoveGen {
         MoveGen {
             all_spin: true,
             battle: false,
+            no_180: false,
             bvisit: vec![0; STATES * 3],
             bground: vec![0; STATES * 3],
             bqueue: Vec::with_capacity(4096),
@@ -104,6 +107,9 @@ impl MoveGen {
             }
             // Rotations: cw, ccw, 180. First fitting kick wins (Game.try_rotate).
             for to in [(r + 1) % 4, (r + 3) % 4, (r + 2) % 4] {
+                if self.no_180 && to == (r + 2) % 4 {
+                    continue;
+                }
                 let tcells = &sh[to];
                 for (k, &(kx, ky)) in kicks(piece, r, to).iter().enumerate() {
                     let (nx, ny) = (x + kx as i32, y + ky as i32);

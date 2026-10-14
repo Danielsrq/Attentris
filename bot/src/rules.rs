@@ -259,6 +259,8 @@ pub struct Rules {
     /// rotation and kicks (battle.rs), T-spins only, TETR.IO attack with combos, and
     /// top-out when the top visible row is filled after a lock. See `battle_attack`.
     pub battle: bool,
+    /// No 180-degree rotation (cw / ccw only, as Cold Clear and TetrisBattle): `--no-180`.
+    pub no_180: bool,
 }
 
 /// Gate chain state: (placements left in the window, spin clears in the chain, value
@@ -284,6 +286,7 @@ impl Default for Rules {
             gate: false,
             gate_b2b: false,
             battle: false,
+            no_180: false,
         }
     }
 }
