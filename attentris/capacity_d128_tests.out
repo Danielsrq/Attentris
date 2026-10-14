@@ -1,0 +1,9 @@
+d2 model_v51_d128.pt: APP 0.770 (APPfull 0.770), died 0/64, pieces 500 avg, TSD 1793, TST 14, quads 775, max height 19, illegal 0, 81.6 ms/move (p90 102.4) + search 83.1 ms, 187s
+g20 model_v51_d128.pt: APP 0.717 (APPfull 0.286), died 62/64, pieces 199 avg, TSD 464, TST 5, quads 852, max height 23, illegal 0, 14.9 ms/move (p90 18.0) + search 15.4 ms, 25s
+== base models, d=64 (v5.1) vs d=128: depth 2 no garbage, depth 1 at 80/20 (64 games)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_base_d2                          0/64      500   0.726    0.726   0.726    0.726         -
+v51_d128_base_d2                     0/64      500   0.770    0.770   0.770    0.770         -
+v51_base_g20                        62/64      186   0.655    0.243   0.922    0.342 3169/4171
+v51_d128_base_g20                   62/64      199   0.717    0.286   0.989    0.394 3468/4481
+d128 tests done

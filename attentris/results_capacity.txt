@@ -62,3 +62,39 @@ v51_d96_dagger3_ft_normal_g20       28/64      383   0.740    0.567   1.064    0
 v51_d96_dagger3_ft_normal_g50       60/64      219   0.528    0.232   0.805    0.353 3885/4900
 v51_d96_dagger3_ft_danger_g20       13/64      456   0.713    0.651   1.044    0.952 9653/10084
 v51_d96_dagger3_ft_danger_g50       50/64      291   0.507    0.294   0.807    0.469 5591/6480
+== v5.1 at d=128 (params 1064211)
+epoch 1: train loss 2.870 | val normal top1 0.539 top3 0.787 | val gate4 top1 0.539 top3 0.774 | | 250s
+epoch 2: train loss 2.406 | val normal top1 0.590 top3 0.832 | val gate4 top1 0.581 top3 0.816 | | 248s
+epoch 3: train loss 2.284 | val normal top1 0.611 top3 0.843 | val gate4 top1 0.600 top3 0.832 | | 247s
+epoch 4: train loss 2.209 | val normal top1 0.622 top3 0.852 | val gate4 top1 0.611 top3 0.844 | | 248s
+epoch 5: train loss 2.155 | val normal top1 0.638 top3 0.860 | val gate4 top1 0.616 top3 0.851 | | 247s
+epoch 6: train loss 2.109 | val normal top1 0.637 top3 0.863 | val gate4 top1 0.624 top3 0.851 | | 247s
+epoch 7: train loss 2.074 | val normal top1 0.644 top3 0.865 | val gate4 top1 0.625 top3 0.855 | | 249s
+epoch 8: train loss 2.053 | val normal top1 0.640 top3 0.865 | val gate4 top1 0.626 top3 0.854 | | 256s
+== fit check (own training positions vs val): d=128, then v5.1 (d=64)
+set                                n    top1    top3    loss   Qs MAE
+train.npz [normal]             10023   0.682   0.894   2.083     5.07
+train.npz [gate4]               9977   0.657   0.871   1.994     6.30
+dagger1.npz [normal]            6377   0.482   0.750   2.651     7.37
+dagger1.npz [gate4]            13623   0.504   0.784   2.568     8.41
+train1m.npz [normal]            9713   0.675   0.887   2.099     5.41
+train1m.npz [gate4]            10287   0.671   0.884   1.967     6.37
+val.npz [normal]                5000   0.640   0.865   2.159     5.13
+val.npz [gate4]                 5000   0.626   0.854   2.053     6.35
+set                                n    top1    top3    loss   Qs MAE
+train1m.npz [normal]            9709   0.635   0.863   2.213     5.69
+train1m.npz [gate4]            10291   0.623   0.856   2.113     6.69
+val.npz [normal]                5000   0.621   0.854   2.239     5.36
+val.npz [gate4]                 5000   0.612   0.845   2.135     6.61
+v51_d128 normal none: APP 0.651 (APPfull 0.647), died 4/256, pieces 497 avg, TSD 6246, TST 67, quads 3047, max height 21, illegal 0, 18.4 ms/move (p90 27.8) + search 19.3 ms, 195s
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_base_none                        1/256      500   0.587    0.586   0.587    0.586         -
+v51_d128_none                        4/256      497   0.651    0.647   0.651    0.647         -
+d2 model_v51_d128.pt: APP 0.770 (APPfull 0.770), died 0/64, pieces 500 avg, TSD 1793, TST 14, quads 775, max height 19, illegal 0, 81.6 ms/move (p90 102.4) + search 83.1 ms, 187s
+g20 model_v51_d128.pt: APP 0.717 (APPfull 0.286), died 62/64, pieces 199 avg, TSD 464, TST 5, quads 852, max height 23, illegal 0, 14.9 ms/move (p90 18.0) + search 15.4 ms, 25s
+== base models, d=64 (v5.1) vs d=128: depth 2 no garbage, depth 1 at 80/20 (64 games)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_base_d2                          0/64      500   0.726    0.726   0.726    0.726         -
+v51_d128_base_d2                     0/64      500   0.770    0.770   0.770    0.770         -
+v51_base_g20                        62/64      186   0.655    0.243   0.922    0.342 3169/4171
+v51_d128_base_g20                   62/64      199   0.717    0.286   0.989    0.394 3468/4481
