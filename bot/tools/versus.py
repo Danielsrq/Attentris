@@ -13,7 +13,7 @@ Players (--a / --b):
   cem:WEIGHTS:DEPTH:BEAM       our CEM bot, its own search inside play-ext (--self)
   cc2:THINK_MS                 Cold Clear 2 (external/cold-clear-2, unmodified, TBP), THINK_MS per move
   cc2:match                    Cold Clear 2 thinking as long as its opponent has taken per move so far (running mean)
-  nn:MODEL:STYLE               AtTenTris at depth 1 (STYLE normal | danger | auto)
+  nn:MODEL:STYLE[:DEPTH:BEAM]  AtTenTris (STYLE normal | danger | auto), depth 1 by default, else its Qs beam search
 Rules: --mode coldclear (Cold Clear 1's attack table + guideline combos) or tetrio (TETR.IO table and
 combo multiplier); both SRS, T-spins only, with --no-180.
 
@@ -68,8 +68,10 @@ class Side:
             import play as PL
             model = rest[0] if os.path.isabs(rest[0]) else os.path.join(ROOT, rest[0])
             self.style = rest[1] if len(rest) > 1 else "normal"
+            depth = int(rest[2]) if len(rest) > 2 else 1
+            beam = int(rest[3]) if len(rest) > 3 else 8
             self.styles = PL.STYLES
-            self.pl = PL.Player(model, 1, 8, PL.STYLES["normal" if self.style == "auto" else self.style], args.mode,
+            self.pl = PL.Player(model, depth, beam, PL.STYLES["normal" if self.style == "auto" else self.style], args.mode,
                                 expand_args=("--no-180",))
             self.T, self.P = PL.T, PL.P
         else:
