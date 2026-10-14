@@ -1,0 +1,30 @@
+== start 19:59
+d1b1: APP 0.609 (APPfull 0.419), died 10/16, pieces 344 avg, TSD 165, TST 0, quads 367, max height 21, illegal 0, 7.1 ms/move (p90 8.8) + search 7.5 ms, 9s, danger style on 56.8% of moves (height >= 12 or holes >= 6)
+d2b8: APP 0.673 (APPfull 0.599), died 4/16, pieces 445 avg, TSD 256, TST 3, quads 515, max height 20, illegal 0, 48.0 ms/move (p90 57.0) + search 48.4 ms, 50s, danger style on 53.9% of moves (height >= 12 or holes >= 6)
+d2b16: APP 0.676 (APPfull 0.601), died 4/16, pieces 445 avg, TSD 257, TST 4, quads 511, max height 20, illegal 0, 90.8 ms/move (p90 109.7) + search 91.2 ms, 93s, danger style on 53.0% of moves (height >= 12 or holes >= 6)
+d2b32: APP 0.676 (APPfull 0.601), died 4/16, pieces 445 avg, TSD 257, TST 4, quads 511, max height 20, illegal 0, 180.6 ms/move (p90 227.4) + search 181.1 ms, 182s, danger style on 53.0% of moves (height >= 12 or holes >= 6)
+d3b8: APP 0.692 (APPfull 0.579), died 5/16, pieces 418 avg, TSD 262, TST 3, quads 460, max height 21, illegal 0, 95.3 ms/move (p90 114.5) + search 95.7 ms, 96s, danger style on 51.0% of moves (height >= 12 or holes >= 6)
+d3b16: APP 0.694 (APPfull 0.624), died 3/16, pieces 450 avg, TSD 287, TST 2, quads 506, max height 21, illegal 0, 180.0 ms/move (p90 216.5) + search 180.4 ms, 184s, danger style on 52.0% of moves (height >= 12 or holes >= 6)
+d3b32: APP 0.694 (APPfull 0.624), died 3/16, pieces 450 avg, TSD 291, TST 1, quads 502, max height 21, illegal 0, 362.1 ms/move (p90 437.6) + search 362.6 ms, 365s, danger style on 52.9% of moves (height >= 12 or holes >= 6)
+d4b8: APP 0.756 (APPfull 0.754), died 1/16, pieces 499 avg, TSD 380, TST 6, quads 624, max height 19, illegal 0, 142.7 ms/move (p90 164.5) + search 143.1 ms, 147s, danger style on 48.6% of moves (height >= 12 or holes >= 6)
+d4b16: APP 0.749 (APPfull 0.689), died 3/16, pieces 460 avg, TSD 333, TST 2, quads 582, max height 20, illegal 0, 271.6 ms/move (p90 319.2) + search 272.0 ms, 275s, danger style on 49.5% of moves (height >= 12 or holes >= 6)
+d4b32: APP 0.752 (APPfull 0.704), died 2/16, pieces 468 avg, TSD 337, TST 2, quads 599, max height 20, illegal 0, 558.5 ms/move (p90 655.3) + search 559.0 ms, 564s, danger style on 49.4% of moves (height >= 12 or holes >= 6)
+d6b8: APP 0.769 (APPfull 0.769), died 0/16, pieces 500 avg, TSD 403, TST 5, quads 620, max height 20, illegal 0, 221.7 ms/move (p90 252.0) + search 222.1 ms, 227s, danger style on 50.0% of moves (height >= 12 or holes >= 6)
+d6b16: APP 0.774 (APPfull 0.744), died 2/16, pieces 481 avg, TSD 408, TST 2, quads 604, max height 21, illegal 0, 428.6 ms/move (p90 492.4) + search 429.0 ms, 435s, danger style on 52.5% of moves (height >= 12 or holes >= 6)
+d6b20: APP 0.772 (APPfull 0.745), died 1/16, pieces 482 avg, TSD 384, TST 2, quads 610, max height 20, illegal 0, 542.1 ms/move (p90 620.0) + search 542.5 ms, 549s, danger style on 51.6% of moves (height >= 12 or holes >= 6)
+== APP / VS by search setting (16 games each, 80/20 garbage, coldclear rules, no 180)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+d1b1                                10/16      344   0.609    0.419   0.929    0.639 1758/1938
+d2b8                                 4/16      445   0.673    0.599   1.007    0.896 2379/2477
+d2b16                                4/16      445   0.676    0.601   1.010    0.898 2378/2477
+d2b32                                4/16      445   0.676    0.601   1.010    0.898 2378/2477
+d3b8                                 5/16      418   0.692    0.579   1.022    0.854 2203/2332
+d3b16                                3/16      450   0.694    0.624   1.028    0.925 2406/2501
+d3b32                                3/16      450   0.694    0.624   1.028    0.925 2404/2501
+d4b8                                 1/16      499   0.756    0.754   1.095    1.092 2708/2770
+d4b16                                3/16      460   0.749    0.689   1.084    0.998 2467/2567
+d4b32                                2/16      468   0.752    0.704   1.088    1.019 2516/2607
+d6b8                                 0/16      500   0.769    0.769   1.108    1.108 2710/2774
+d6b16                                2/16      481   0.774    0.744   1.111    1.069 2594/2678
+d6b20                                1/16      482   0.772    0.745   1.108    1.069 2595/2673
+profile done 20:53
