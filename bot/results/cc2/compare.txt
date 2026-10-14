@@ -1,0 +1,51 @@
+cem_d1b1 none: cem_d1b1                0.266  6/64    481   2.23   1.42   0.00   0.80   0.32   0.00  16.97    0/0    14  0.00    0    0.11    0.256
+cem_d2b8 none: cem_d2b8                0.455  0/64    500   3.27   3.99   0.01   1.17   0.22   0.00   9.79    0/0    28  0.00    0    0.94    0.455
+cem_d4b32 none: cem_d4b32               0.753  0/64    500   3.71   7.29   0.02   1.99   0.29   0.00   4.03    0/0    43  0.00    0   10.26    0.753
+cem_d6b64 none: cem_d6b64               1.008  0/64    500   3.53   9.58   0.02   2.21   0.13   0.00   1.80    0/0    86  0.00    0   37.80    1.008
+cem_d1b1 g20: cem_d1b1                0.317 64/64     72   3.70   1.28   0.00   0.82   0.58   0.00  20.80 644/1601     4  0.00    0    0.12    0.046
+cem_d2b8 g20: cem_d2b8                0.512 62/64    172   5.21   3.05   0.03   1.11   0.91   0.00  21.24 2816/3860     9  0.00    0    1.11    0.176
+cem_d4b32 g20: cem_d4b32               0.769 22/64    412   7.50   5.51   0.01   1.48   0.69   0.00  15.65 8583/9121    19  0.00    0   11.96    0.634
+cem_d6b64 g20: cem_d6b64               0.980  8/64    474   8.87   6.98   0.03   1.86   0.61   0.00  10.73 10100/10465    34  0.00    0   38.49    0.928
+survive_d6b64 g20: survive_d6b64           0.952  0/64    500   8.75   6.96   0.02   1.81   0.49   0.00  11.68 10927/11029    31  0.00    0   34.40    0.952
+cem_d1b1 g50: cem_d1b1                0.235 64/64     61   2.14   1.06   0.00   1.06   0.85   0.00  22.65 325/1332     3  0.00    0    0.14    0.029
+cem_d2b8 g50: cem_d2b8                0.379 64/64    103   2.69   2.41   0.02   1.70   1.16   0.00  24.60 1206/2278     8  0.00    0    1.16    0.078
+cem_d4b32 g50: cem_d4b32               0.605 41/64    338   4.93   4.55   0.01   2.10   1.05   0.00  23.52 6698/7548    11  0.00    0   11.45    0.410
+cem_d6b64 g50: cem_d6b64               0.788 22/64    421   6.47   5.96   0.02   2.40   0.91   0.00  17.90 8741/9349    25  0.00    0   39.30    0.664
+survive_d6b64 g50: survive_d6b64           0.772  0/64    500   6.24   6.15   0.04   2.30   0.67   0.00  19.35 10903/11035    20  0.00    0   34.47    0.772
+Cold Clear 2 20ms: APP 0.926 +- 0.013 (95% CI, 64 games), died 0/64, TSD 8.30 TST 0.00 quads 5.05 per 100 pieces, illegal 0, restarts 0.0/game (garbage 0.0), CC2 48114 nodes/move, think 30.8 ms/move
+Cold Clear 2 100ms: APP 0.942 +- 0.014 (95% CI, 64 games), died 0/64, TSD 8.31 TST 0.00 quads 4.80 per 100 pieces, illegal 0, restarts 0.0/game (garbage 0.0), CC2 165468 nodes/move, think 109.3 ms/move
+Cold Clear 2 20ms: APP 0.962 +- 0.022 (95% CI, 64 games), died 12/64, TSD 7.62 TST 0.00 quads 9.90 per 100 pieces, illegal 8, restarts 45.3/game (garbage 45.2), CC2 48041 nodes/move, think 30.8 ms/move
+Cold Clear 2 100ms: APP 0.996 +- 0.022 (95% CI, 64 games), died 12/64, TSD 8.11 TST 0.00 quads 10.08 per 100 pieces, illegal 5, restarts 43.5/game (garbage 43.4), CC2 164511 nodes/move, think 109.2 ms/move
+Cold Clear 2 20ms: APP 0.753 +- 0.021 (95% CI, 64 games), died 43/64, TSD 7.41 TST 0.00 quads 7.01 per 100 pieces, illegal 14, restarts 32.0/game (garbage 31.9), CC2 46814 nodes/move, think 30.8 ms/move
+Cold Clear 2 100ms: APP 0.793 +- 0.020 (95% CI, 64 games), died 39/64, TSD 7.77 TST 0.00 quads 7.40 per 100 pieces, illegal 18, restarts 34.9/game (garbage 34.7), CC2 163082 nodes/move, think 109.4 ms/move
+Cold Clear 2 500ms: APP 0.933 +- 0.013 (95% CI, 64 games), died 0/64, TSD 7.58 TST 0.00 quads 4.60 per 100 pieces, illegal 0, restarts 0.0/game (garbage 0.0), CC2 641902 nodes/move, think 505.9 ms/move
+== APP / VS (same seeds; ms per move: CEM from the logs' ms/pc, Cold Clear 2 measured think time)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+cem_d1b1_none                        6/64      481   0.266    0.256   0.266    0.256         -
+cem_d2b8_none                        0/64      500   0.455    0.455   0.455    0.455         -
+cem_d4b32_none                       0/64      500   0.753    0.753   0.753    0.753         -
+cem_d6b64_none                       0/64      500   1.008    1.008   1.008    1.008         -
+cc2_20ms_none                        0/64      500   0.926    0.926   0.926    0.926         -
+cc2_100ms_none                       0/64      500   0.942    0.942   0.942    0.942         -
+cc2_500ms_none                       0/64      500   0.933    0.933   0.933    0.933         -
+cem_d1b1_g20                        64/64       72   0.317    0.046   0.456    0.066  644/1601
+cem_d2b8_g20                        62/64      172   0.512    0.176   0.767    0.264 2816/3860
+cem_d4b32_g20                       22/64      412   0.769    0.634   1.095    0.902 8583/9121
+cem_d6b64_g20                        8/64      474   0.980    0.928   1.313    1.244 10100/10465
+survive_d6b64_g20                    0/64      500   0.952    0.952   1.293    1.293 10927/11029
+cc2_20ms_g20                        12/64      461   0.964    0.889   1.299    1.198 9881/10180
+cc2_100ms_g20                       12/64      444   1.008    0.894   1.343    1.191 9509/9799
+cem_d1b1_g50                        64/64       61   0.235    0.029   0.319    0.039  325/1332
+cem_d2b8_g50                        64/64      103   0.379    0.078   0.563    0.116 1206/2278
+cem_d4b32_g50                       41/64      338   0.605    0.410   0.915    0.619 6698/7548
+cem_d6b64_g50                       22/64      421   0.788    0.664   1.112    0.937 8741/9349
+survive_d6b64_g50                    0/64      500   0.772    0.772   1.113    1.113 10903/11035
+cc2_20ms_g50                        43/64      326   0.773    0.504   1.085    0.707 6502/7257
+cc2_100ms_g50                       39/64      355   0.810    0.575   1.126    0.799 7174/7883
+cc2_100ms_g20          think 109.2 ms/move, 164511 nodes/move, illegal 5, no-move resigns 0, restarts 43.5/game
+cc2_100ms_g50          think 109.4 ms/move, 163082 nodes/move, illegal 18, no-move resigns 0, restarts 34.9/game
+cc2_100ms_none         think 109.3 ms/move, 165468 nodes/move, illegal 0, no-move resigns 0, restarts 0.0/game
+cc2_20ms_g20           think 30.8 ms/move, 48041 nodes/move, illegal 8, no-move resigns 0, restarts 45.3/game
+cc2_20ms_g50           think 30.8 ms/move, 46814 nodes/move, illegal 14, no-move resigns 2, restarts 32.0/game
+cc2_20ms_none          think 30.8 ms/move, 48114 nodes/move, illegal 0, no-move resigns 0, restarts 0.0/game
+cc2_500ms_none         think 505.9 ms/move, 641902 nodes/move, illegal 0, no-move resigns 0, restarts 0.0/game

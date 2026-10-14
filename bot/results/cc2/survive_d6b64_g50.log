@@ -1,0 +1,8 @@
+cpu: power throttling off, pinned to 16 performance logical processors (mask 0xffff)
+config                    APP  died    pcs  quad%   TSD%   TST%   TSS%  mini%  spin%   1-3%  gbclr   b2b  rep%  wnd   ms/pc  APPfull
+survive_d6b64           0.772  0/64    500   6.24   6.15   0.04   2.30   0.67   0.00  19.35 10903/11035    20  0.00    0   34.47    0.772
+think time per move (wall clock, 8 threads): mean 34.3 ms  p50 33.3  p95 45.9  p99 53.0  max 73.3
+clears per 100 pieces -- spin singles 2.97, doubles 6.15, triples 0.04; plain 1/2/3/4: 10.66/6.83/1.86/6.24; attack per line 1.10
+burst -- 7-pc window APP best 2.51 p90 1.43, 14-pc window APP best 1.80 p90 1.21; pair rate 5.0% of 4714 qualifying clears; burst-pair attack share 9.3%; doubled 0 clears sending 0.0% of attack
+STSD/TST template -- in search: 0.20% of 485634666 V evals saw a slot, 0.10% a ready one; on the board: ready before 53 moves, cashed 36 (followed by a TSD 3); vertical T-spin doubles/triples 36, 36 of them found by the template beforehand
+plan stability: 80.3% of moves were exactly what the previous search planned (23129 / 28800)

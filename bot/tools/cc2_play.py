@@ -124,6 +124,7 @@ def play_game(seed, args, mask):
     restarts = garbage_restarts = no_move = 0
     nodes = []
     think = []
+    log = open(os.path.join(args.log, "s%d.jsonl" % seed), "w") if args.log else None
     try:
         while True:
             line = bot.stdout.readline()
@@ -168,6 +169,8 @@ def play_game(seed, args, mask):
             use_hold = int(loc["type"] != st["piece"])
             bot.stdin.write(json.dumps({"hold": use_hold, "cells": [c for xy in cells for c in xy]}) + "\n")
             bot.stdin.flush()
+            if log:
+                log.write(json.dumps({"state": st, "move": mv, "hold": use_hold, "cells": cells, "fresh": fresh}) + "\n")
             cc.send({"type": "play", "move": mv})
             rows, lines = place(st["rows"], cells)
             combo = combo + 1 if lines else 0
@@ -176,6 +179,8 @@ def play_game(seed, args, mask):
             front = queue[0]
             expect = (rows, front if loc["type"] != front else reserve, queue[1:])
     finally:
+        if log:
+            log.close()
         cc.close()
         if bot.poll() is None:
             bot.kill()
@@ -210,7 +215,10 @@ def main():
     ap.add_argument("--jobs", type=int, default=8, help="games at a time, one physical P-core each")
     ap.add_argument("--out", required=True, help="JSON lines, one per game (resumable)")
     ap.add_argument("--label", default=None)
+    ap.add_argument("--log", default=None, help="DIR: every turn's state and Cold Clear 2's move, s<seed>.jsonl (illegal-move checks)")
     args = ap.parse_args()
+    if args.log:
+        os.makedirs(args.log, exist_ok=True)
     args.every = int(args.garbage.split(",")[0]) if args.garbage else 0
     pcores.pin(verbose=False)
     pmask = pcores.performance_mask()
