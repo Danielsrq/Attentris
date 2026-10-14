@@ -1,0 +1,40 @@
+== cem_vs_cc2 (coldclear)
+cem:bot/weights/normal.txt:6:64 vs cc2:500 (coldclear, 64 matches): a wins 50, b wins 14, draws 0 (a score 0.781)
+  a: APP 0.839, VS 1.149, sent 50.0/match, 36.8 ms/move, illegal 0
+  b: APP 0.843, VS 1.126, sent 51.4/match, 504.8 ms/move, illegal 7
+== surv_vs_cc2 (coldclear)
+cem:bot/results/survive/survive.txt:6:64 vs cc2:500 (coldclear, 64 matches): a wins 61, b wins 3, draws 0 (a score 0.953)
+  a: APP 0.904, VS 1.241, sent 57.7/match, 34.4 ms/move, illegal 0
+  b: APP 0.867, VS 1.168, sent 54.3/match, 504.9 ms/move, illegal 11
+== nn_vs_cc2 (coldclear)
+nn:attentris/data/model_v51_dagger3_ft.pt:auto:4:32 vs cc2:500 (coldclear, 64 matches): a wins 25, b wins 39, draws 0 (a score 0.391)
+  a: APP 0.715, VS 1.036, sent 43.4/match, 595.3 ms/move, illegal 0
+  b: APP 0.838, VS 1.093, sent 55.6/match, 508.8 ms/move, illegal 2
+== nn_vs_cem (coldclear)
+nn:attentris/data/model_v51_dagger3_ft.pt:auto:4:32 vs cem:bot/weights/normal.txt:6:64 (coldclear, 64 matches): a wins 17, b wins 47, draws 0 (a score 0.266)
+  a: APP 0.677, VS 0.980, sent 49.8/match, 472.9 ms/move, illegal 0
+  b: APP 0.812, VS 1.043, sent 67.2/match, 34.7 ms/move, illegal 0
+== nn_vs_surv (coldclear)
+nn:attentris/data/model_v51_dagger3_ft.pt:auto:4:32 vs cem:bot/results/survive/survive.txt:6:64 (coldclear, 64 matches): a wins 0, b wins 64, draws 0 (a score 0.000)
+  a: APP 0.692, VS 1.013, sent 55.9/match, 469.3 ms/move, illegal 0
+  b: APP 0.848, VS 1.123, sent 78.5/match, 31.9 ms/move, illegal 0
+== cem_vs_cc2 (tetrio)
+cem:bot/weights/normal.txt:6:64 vs cc2:500 (tetrio, 64 matches): a wins 46, b wins 18, draws 0 (a score 0.719)
+  a: APP 0.894, VS 1.173, sent 37.6/match, 36.0 ms/move, illegal 0
+  b: APP 0.883, VS 1.151, sent 38.8/match, 504.3 ms/move, illegal 9
+== surv_vs_cc2 (tetrio)
+cem:bot/results/survive/survive.txt:6:64 vs cc2:500 (tetrio, 64 matches): a wins 54, b wins 10, draws 0 (a score 0.844)
+  a: APP 0.975, VS 1.293, sent 42.3/match, 33.3 ms/move, illegal 0
+  b: APP 0.895, VS 1.176, sent 36.4/match, 503.7 ms/move, illegal 8
+== nn_vs_cc2 (tetrio)
+nn:attentris/data/model_v51_dagger3_ft.pt:auto:4:32 vs cc2:500 (tetrio, 64 matches): a wins 15, b wins 49, draws 0 (a score 0.234)
+  a: APP 0.706, VS 0.986, sent 28.2/match, 588.4 ms/move, illegal 0
+  b: APP 0.893, VS 1.113, sent 41.8/match, 507.7 ms/move, illegal 5
+== nn_vs_cem (tetrio)
+nn:attentris/data/model_v51_dagger3_ft.pt:auto:4:32 vs cem:bot/weights/normal.txt:6:64 (tetrio, 64 matches): a wins 10, b wins 54, draws 0 (a score 0.156)
+  a: APP 0.704, VS 0.974, sent 31.1/match, 474.5 ms/move, illegal 0
+  b: APP 0.894, VS 1.123, sent 46.1/match, 34.5 ms/move, illegal 0
+== nn_vs_surv (tetrio)
+nn:attentris/data/model_v51_dagger3_ft.pt:auto:4:32 vs cem:bot/results/survive/survive.txt:6:64 (tetrio, 64 matches): a wins 1, b wins 63, draws 0 (a score 0.016)
+  a: APP 0.718, VS 1.026, sent 39.2/match, 469.1 ms/move, illegal 0
+  b: APP 0.925, VS 1.188, sent 60.5/match, 31.8 ms/move, illegal 0
