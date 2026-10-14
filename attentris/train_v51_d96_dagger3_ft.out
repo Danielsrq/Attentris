@@ -1,0 +1,47 @@
+pinned to 16 performance logical processors (mask 0xffff), power throttling off
+device cuda NVIDIA GeForce RTX 3060 Ti
+style table grown 2 -> 3 rows (new rows = normal)
+warm start from C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/data/model_v51_d96_dagger_ft.pt (3 epochs)
+params 604947, train 1261044 positions (287329 per epoch: train.npz 15394, dagger1.npz 4121, train1m.npz 166531, dagger2.npz 15088, danger.npz 86195), val 10000 + val2 8812, 3 epochs x 562 batches
+  epoch 1 batch 0/562 loss 2.548  (1s, epoch ETA 312s)
+  epoch 1 batch 50/562 loss 2.453  (5s, epoch ETA 52s)
+  epoch 1 batch 100/562 loss 2.428  (10s, epoch ETA 45s)
+  epoch 1 batch 150/562 loss 2.416  (15s, epoch ETA 40s)
+  epoch 1 batch 200/562 loss 2.410  (19s, epoch ETA 35s)
+  epoch 1 batch 250/562 loss 2.403  (24s, epoch ETA 30s)
+  epoch 1 batch 300/562 loss 2.398  (29s, epoch ETA 25s)
+  epoch 1 batch 350/562 loss 2.394  (33s, epoch ETA 20s)
+  epoch 1 batch 400/562 loss 2.390  (38s, epoch ETA 15s)
+  epoch 1 batch 450/562 loss 2.386  (43s, epoch ETA 10s)
+  epoch 1 batch 500/562 loss 2.382  (47s, epoch ETA 6s)
+  epoch 1 batch 550/562 loss 2.378  (52s, epoch ETA 1s)
+epoch 1: train loss 2.376 | val normal top1 0.633 top3 0.853 | val gate4 top1 0.623 top3 0.850 | argmax Qs top1 0.550 / 0.558, Q1 top1 0.000 / 0.000 | MAE Q1 19.32 Qs 5.97 | 55s
+epoch 1: val2 (val_danger.npz, 8812) top1 0.453 top3 0.725 loss 2.695 | argmax Qs top1 0.420 | MAE Qs 8.16
+  epoch 2 batch 0/562 loss 2.347  (0s, epoch ETA 63s)
+  epoch 2 batch 50/562 loss 2.326  (5s, epoch ETA 48s)
+  epoch 2 batch 100/562 loss 2.323  (10s, epoch ETA 44s)
+  epoch 2 batch 150/562 loss 2.324  (14s, epoch ETA 39s)
+  epoch 2 batch 200/562 loss 2.323  (19s, epoch ETA 34s)
+  epoch 2 batch 250/562 loss 2.322  (24s, epoch ETA 29s)
+  epoch 2 batch 300/562 loss 2.323  (28s, epoch ETA 25s)
+  epoch 2 batch 350/562 loss 2.321  (33s, epoch ETA 20s)
+  epoch 2 batch 400/562 loss 2.320  (38s, epoch ETA 15s)
+  epoch 2 batch 450/562 loss 2.320  (42s, epoch ETA 10s)
+  epoch 2 batch 500/562 loss 2.319  (47s, epoch ETA 6s)
+  epoch 2 batch 550/562 loss 2.319  (52s, epoch ETA 1s)
+epoch 2: train loss 2.319 | val normal top1 0.636 top3 0.860 | val gate4 top1 0.618 top3 0.850 | argmax Qs top1 0.554 / 0.558, Q1 top1 0.001 / 0.000 | MAE Q1 19.13 Qs 5.90 | 54s
+epoch 2: val2 (val_danger.npz, 8812) top1 0.458 top3 0.727 loss 2.663 | argmax Qs top1 0.430 | MAE Qs 7.98
+  epoch 3 batch 0/562 loss 2.274  (0s, epoch ETA 66s)
+  epoch 3 batch 50/562 loss 2.298  (5s, epoch ETA 48s)
+  epoch 3 batch 100/562 loss 2.301  (10s, epoch ETA 43s)
+  epoch 3 batch 150/562 loss 2.301  (14s, epoch ETA 39s)
+  epoch 3 batch 200/562 loss 2.302  (19s, epoch ETA 34s)
+  epoch 3 batch 250/562 loss 2.302  (24s, epoch ETA 29s)
+  epoch 3 batch 300/562 loss 2.300  (28s, epoch ETA 25s)
+  epoch 3 batch 350/562 loss 2.300  (33s, epoch ETA 20s)
+  epoch 3 batch 400/562 loss 2.300  (38s, epoch ETA 15s)
+  epoch 3 batch 450/562 loss 2.299  (43s, epoch ETA 10s)
+  epoch 3 batch 500/562 loss 2.300  (47s, epoch ETA 6s)
+  epoch 3 batch 550/562 loss 2.300  (52s, epoch ETA 1s)
+epoch 3: train loss 2.300 | val normal top1 0.638 top3 0.861 | val gate4 top1 0.619 top3 0.850 | argmax Qs top1 0.556 / 0.558, Q1 top1 0.001 / 0.000 | MAE Q1 19.13 Qs 5.91 | 54s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.459 top3 0.727 loss 2.660 | argmax Qs top1 0.426 | MAE Qs 7.95

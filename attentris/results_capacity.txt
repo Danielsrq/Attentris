@@ -36,3 +36,29 @@ v51_base_d2                          0/64      500   0.726    0.726   0.726    0
 v51_d96_base_d2                      0/64      500   0.770    0.770   0.770    0.770         -
 v51_base_g20                        62/64      186   0.655    0.243   0.922    0.342 3169/4171
 v51_d96_base_g20                    61/64      181   0.700    0.254   0.965    0.349 3067/4033
+== v51_d96_dagger_ft
+epoch 3: train loss 2.300 | val normal top1 0.639 top3 0.863 | val gate4 top1 0.623 top3 0.849 | | 55s
+epoch 3: val2 (val_dagger2.npz, 9737) top1 0.408 top3 0.670 loss 2.810 | argmax Qs top1 0.368 | MAE Qs 7.12
+== v51_d96_dagger3_ft
+epoch 3: train loss 2.300 | val normal top1 0.638 top3 0.861 | val gate4 top1 0.619 top3 0.850 | | 54s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.459 top3 0.727 loss 2.660 | argmax Qs top1 0.426 | MAE Qs 7.95
+v51_d96_dagger3_ft normal none: APP 0.661 (APPfull 0.661), died 0/256, pieces 500 avg, TSD 6361, TST 52, quads 3243, max height 16, illegal 0, 14.9 ms/move (p90 17.3) + search 15.4 ms, 128s
+v51_d96_dagger3_ft normal d2: APP 0.774 (APPfull 0.774), died 0/64, pieces 500 avg, TSD 1781, TST 11, quads 909, max height 15, illegal 0, 62.8 ms/move (p90 71.6) + search 63.3 ms, 131s
+v51_d96_dagger3_ft normal g20: APP 0.740 (APPfull 0.567), died 28/64, pieces 383 avg, TSD 846, TST 4, quads 1808, max height 22, illegal 0, 13.7 ms/move (p90 16.2) + search 14.2 ms, 27s
+v51_d96_dagger3_ft normal g50: APP 0.528 (APPfull 0.232), died 60/64, pieces 219 avg, TSD 432, TST 1, quads 620, max height 23, illegal 0, 13.4 ms/move (p90 16.0) + search 13.9 ms, 17s
+v51_d96_dagger3_ft danger g20: APP 0.713 (APPfull 0.651), died 13/64, pieces 456 avg, TSD 1033, TST 7, quads 2048, max height 21, illegal 0, 13.8 ms/move (p90 16.4) + search 14.2 ms, 31s
+v51_d96_dagger3_ft danger g50: APP 0.507 (APPfull 0.294), died 50/64, pieces 291 avg, TSD 554, TST 0, quads 750, max height 22, illegal 0, 13.6 ms/move (p90 16.2) + search 14.0 ms, 22s
+== APP / VS: v5.1 dagger3-ft (d=64) vs d=96 dagger3-ft (same seeds)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_dagger3_ft_normal_none           0/256      500   0.631    0.631   0.631    0.631         -
+v51_dagger3_ft_normal_d2             0/64      500   0.748    0.748   0.748    0.748         -
+v51_dagger3_ft_normal_g20           32/64      355   0.706    0.501   1.023    0.726 7186/7853
+v51_dagger3_ft_normal_g50           60/64      197   0.490    0.193   0.759    0.299 3384/4402
+v51_dagger3_ft_danger_g20           14/64      452   0.676    0.612   1.008    0.912 9613/10007
+v51_dagger3_ft_danger_g50           43/64      318   0.474    0.301   0.780    0.496 6220/7067
+v51_d96_dagger3_ft_normal_none       0/256      500   0.661    0.661   0.661    0.661         -
+v51_d96_dagger3_ft_normal_d2         0/64      500   0.774    0.774   0.774    0.774         -
+v51_d96_dagger3_ft_normal_g20       28/64      383   0.740    0.567   1.064    0.815 7939/8512
+v51_d96_dagger3_ft_normal_g50       60/64      219   0.528    0.232   0.805    0.353 3885/4900
+v51_d96_dagger3_ft_danger_g20       13/64      456   0.713    0.651   1.044    0.952 9653/10084
+v51_d96_dagger3_ft_danger_g50       50/64      291   0.507    0.294   0.807    0.469 5591/6480
