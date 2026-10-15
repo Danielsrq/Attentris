@@ -1,0 +1,44 @@
+== dagger5 12:37
+collect danger g20: APP 0.735 (APPfull 0.700), died 12/100, pieces 476 avg, TSD 1879, TST 15, quads 3384, max height 21, illegal 0, 15.0 ms/move (p90 17.4) + se
+collect danger g50: APP 0.513 (APPfull 0.332), died 73/100, pieces 323 avg, TSD 969, TST 9, quads 1294, max height 23, illegal 0, 14.9 ms/move (p90 17.3) + sear
+collect normal g20: APP 0.762 (APPfull 0.515), died 63/100, pieces 338 avg, TSD 1263, TST 6, quads 2450, max height 23, illegal 0, 14.8 ms/move (p90 17.2) + sea
+collect normal g50: APP 0.528 (APPfull 0.244), died 85/100, pieces 231 avg, TSD 652, TST 3, quads 989, max height 22, illegal 0, 14.7 ms/move (p90 17.1) + searc
+400 games, 136837 states, 233 deaths
+selected 50023 of 136837 states (36.6%) -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/data/dagger5/selected.jsonl
+reasons (a state can have several): danger 27010, holes_up 17765, death 13949, unsure 6629, duplicate (dropped) 4
+routed: 50023 danger records, 21133 hot normal-style positions copied as normal, 4736 calm normal-style states for normal.txt
+dagger5 records: 75892 (danger 50023, normal 25869)
+train 87188, held out 9780
+dagger4: 87188 positions (normal 0, gate4 0), 0 lost positions left out, 0 candidates over NC dropped -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/data/v51\dagger4.npz
+val_dagger4: 9780 positions (normal 0, gate4 0), 0 lost positions left out, 0 candidates over NC dropped -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/data/v51\val_dagger4.npz
+train 68566, held out 7326
+dagger5: 68566 positions (normal 23442, gate4 0), 0 lost positions left out, 0 candidates over NC dropped -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/data/v51\dagger5.npz
+val_dagger5: 7326 positions (normal 2427, gate4 0), 0 lost positions left out, 0 candidates over NC dropped -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/data/v51\val_dagger5.npz
+mix: existing files at 0.4805 each per epoch, all of danger + dagger4 + dagger5
+== v51_d128_dagger5_ft
+epoch 3: train loss 2.241 | val normal top1 0.643 top3 0.867 | val gate4 top1 0.629 top3 0.856 | | 185s
+epoch 3: val2 (val_dagger5.npz, 4899) top1 0.478 top3 0.737 loss 2.550 | argmax Qs top1 0.447 | MAE Qs 7.33
+v51_d128_dagger3_ft on val_dagger5: pinned to 16 performance logical processors (mask 0xffff), power throttling off
+v51_d128_dagger3_ft on val_dagger5: model_v51_d128_dagger3_ft.pt on val_dagger5.npz (normal, 2427): top1 0.466 top3 0.732 loss 3.220 | argmax Qs top1 0.401 | MAE Qs 14.48
+v51_d128_dagger3_ft on val_dagger5: model_v51_d128_dagger3_ft.pt on val_dagger5.npz (danger, 4899): top1 0.468 top3 0.731 loss 2.594 | argmax Qs top1 0.437 | MAE Qs 7.51
+v51_d128_dagger5_ft normal none: APP 0.739 (APPfull 0.739), died 0/256, pieces 500 avg, TSD 6662, TST 60, quads 3610, max height 16, illegal 0, 16.4 ms/move (p90 18.9) + search 16.9 ms, 141s
+v51_d128_dagger5_ft normal d2: APP 0.856 (APPfull 0.856), died 0/64, pieces 500 avg, TSD 1857, TST 16, quads 947, max height 15, illegal 0, 67.5 ms/move (p90 76.3) + search 67.9 ms, 142s
+v51_d128_dagger5_ft normal g20: APP 0.795 (APPfull 0.652), died 27/64, pieces 410 avg, TSD 995, TST 6, quads 1985, max height 22, illegal 0, 15.0 ms/move (p90 17.7) + search 15.5 ms, 31s
+v51_d128_dagger5_ft normal g50: APP 0.559 (APPfull 0.271), died 59/64, pieces 242 avg, TSD 512, TST 1, quads 679, max height 22, illegal 0, 15.0 ms/move (p90 17.5) + search 15.4 ms, 21s
+v51_d128_dagger5_ft danger g20: APP 0.730 (APPfull 0.704), died 6/64, pieces 482 avg, TSD 1189, TST 7, quads 2182, max height 20, illegal 0, 15.4 ms/move (p90 17.8) + search 15.8 ms, 35s
+v51_d128_dagger5_ft danger g50: APP 0.511 (APPfull 0.418), died 24/64, pieces 409 avg, TSD 737, TST 7, quads 1083, max height 21, illegal 0, 14.9 ms/move (p90 17.4) + search 15.3 ms, 31s
+== APP / VS: d=128 dagger3-ft vs dagger5-ft (same seeds)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_dagger3_ft_normal_none      0/256      500   0.724    0.724   0.724    0.724         -
+v51_d128_dagger3_ft_normal_d2        0/64      500   0.827    0.827   0.827    0.827         -
+v51_d128_dagger3_ft_normal_g20      32/64      381   0.757    0.577   1.077    0.821 7800/8469
+v51_d128_dagger3_ft_normal_g50      55/64      244   0.538    0.263   0.823    0.402 4444/5436
+v51_d128_dagger3_ft_danger_g20       9/64      477   0.742    0.707   1.078    1.028 10262/10542
+v51_d128_dagger3_ft_danger_g50      43/64      320   0.511    0.327   0.819    0.523 6282/7116
+v51_d128_dagger5_ft_normal_none      0/256      500   0.739    0.739   0.739    0.739         -
+v51_d128_dagger5_ft_normal_d2        0/64      500   0.856    0.856   0.856    0.856         -
+v51_d128_dagger5_ft_normal_g20      27/64      410   0.795    0.652   1.119    0.919 8527/9119
+v51_d128_dagger5_ft_normal_g50      59/64      242   0.559    0.271   0.843    0.409 4404/5426
+v51_d128_dagger5_ft_danger_g20       6/64      482   0.730    0.704   1.068    1.030 10420/10657
+v51_d128_dagger5_ft_danger_g50      24/64      409   0.511    0.418   0.833    0.681 8434/9076
+dagger5 done
