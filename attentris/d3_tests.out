@@ -1,0 +1,13 @@
+== v51_d128_dagger5b_ft depth 3 beam 8 17:40
+v51_d128_dagger5b_ft normal d3_none: APP 0.931 (APPfull 0.931), died 0/64, pieces 500 avg, TSD 2003, TST 15, quads 936, max height 15, illegal 0, 126.6 ms/move (p90 145.2) + search 126.9 ms, 512s
+v51_d128_dagger5b_ft normal d3_g20: APP 0.913 (APPfull 0.850), died 9/64, pieces 465 avg, TSD 1382, TST 9, quads 2486, max height 20, illegal 0, 117.7 ms/move (p90 135.3) + search 118.0 ms, 468s
+v51_d128_dagger5b_ft normal d3_g50: APP 0.636 (APPfull 0.475), died 31/64, pieces 374 avg, TSD 887, TST 4, quads 1246, max height 21, illegal 0, 114.1 ms/move (p90 130.7) + search 114.4 ms, 371s
+v51_d128_dagger5b_ft danger d3_g20: APP 0.832 (APPfull 0.810), died 2/64, pieces 487 avg, TSD 1549, TST 10, quads 2357, max height 19, illegal 0, 125.1 ms/move (p90 143.9) + search 125.5 ms, 505s
+v51_d128_dagger5b_ft danger d3_g50: APP 0.627 (APPfull 0.599), died 6/64, pieces 478 avg, TSD 1237, TST 9, quads 1515, max height 20, illegal 0, 119.0 ms/move (p90 135.7) + search 119.3 ms, 477s
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_dagger5b_ft_normal_d3_none   0/64      500   0.931    0.931   0.931    0.931         -
+v51_d128_dagger5b_ft_normal_d3_g20   9/64      465   0.913    0.850   1.246    1.160 9923/10273
+v51_d128_dagger5b_ft_normal_d3_g50  31/64      374   0.636    0.475   0.953    0.713 7588/8314
+v51_d128_dagger5b_ft_danger_d3_g20   2/64      487   0.832    0.810   1.171    1.141 10570/10733
+v51_d128_dagger5b_ft_danger_d3_g50   6/64      478   0.627    0.599   0.961    0.918 10210/10556
+d3 tests done
