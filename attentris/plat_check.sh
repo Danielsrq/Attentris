@@ -6,5 +6,14 @@ ATT="$DIR"; . "$ATT/plat.sh"
 M=${1:-$DIR/data/model_v51_d128_dagger5b_ft.pt}
 echo "EXE='$EXE' VPY=$VPY CPUPY=$CPUPY"
 "$DIR/../bot/target/release/bot$EXE" cpus | tail -1
-"$DIR/.venv/$VPY" -c "import sys; sys.path.insert(0, '$(wpath "$DIR")'); import pcores, torch; print('pcores:', pcores.pin()); print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
+"$DIR/.venv/$VPY" -c "
+import sys; sys.path.insert(0, '$(wpath "$DIR")')
+import pcores, torch
+print('pcores:', pcores.pin())
+print('torch', torch.__version__, 'cuda', torch.cuda.is_available())
+if torch.cuda.is_available():   # training uses this GPU; play tests stay on the CPU
+    p = torch.cuda.get_device_properties(0)
+    print('gpu: %s, %.1f GB, compute %d.%d' % (p.name, p.total_memory / 2**30, p.major, p.minor))
+    x = torch.randn(256, 256, device='cuda'); print('gpu matmul ok', float((x @ x).sum()) == float((x @ x).sum()))
+"
 "$CPUPY" "$DIR/play.py" --model "$(wpath "$M")" --games 2 --depth 1 --style normal | grep "^AtTenTris" | cut -c1-150

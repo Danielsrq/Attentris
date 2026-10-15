@@ -45,18 +45,7 @@ pub fn cpu_sets() -> Vec<(u32, u8)> {
 /// every online CPU gets class 0, so `performance_mask` sees no hybrid CPU and restricts nothing.
 #[cfg(target_os = "linux")]
 pub fn cpu_sets() -> Vec<(u32, u8)> {
-    fn list(path: &str) -> Vec<u32> {
-        let mut out = Vec::new();
-        for part in std::fs::read_to_string(path).unwrap_or_default().trim().split(',').filter(|p| !p.is_empty()) {
-            let mut ends = part.split('-').map(|v| v.trim().parse::<u32>());
-            match (ends.next(), ends.next()) {
-                (Some(Ok(a)), Some(Ok(b))) => out.extend(a..=b),
-                (Some(Ok(a)), None) => out.push(a),
-                _ => return Vec::new(), // unexpected format: treat as unknown
-            }
-        }
-        out
-    }
+    let list = |path: &str| parse_cpu_list(&std::fs::read_to_string(path).unwrap_or_default());
     let (p, e) = (list("/sys/devices/cpu_core/cpus"), list("/sys/devices/cpu_atom/cpus"));
     let mut out: Vec<(u32, u8)> = if !p.is_empty() && !e.is_empty() {
         p.iter().map(|&i| (i, 1)).chain(e.iter().map(|&i| (i, 0))).collect()
@@ -70,6 +59,35 @@ pub fn cpu_sets() -> Vec<(u32, u8)> {
 #[cfg(not(any(windows, target_os = "linux")))]
 pub fn cpu_sets() -> Vec<(u32, u8)> {
     Vec::new()
+}
+
+/// A Linux sysfs CPU list ("0-15,20,22-23"); empty on a missing file or an unexpected format.
+#[allow(dead_code)] // used on Linux only; tested everywhere
+fn parse_cpu_list(s: &str) -> Vec<u32> {
+    let mut out = Vec::new();
+    for part in s.trim().split(',').filter(|p| !p.is_empty()) {
+        let mut ends = part.split('-').map(|v| v.trim().parse::<u32>());
+        match (ends.next(), ends.next(), ends.next()) {
+            (Some(Ok(a)), Some(Ok(b)), None) if a <= b => out.extend(a..=b),
+            (Some(Ok(a)), None, None) => out.push(a),
+            _ => return Vec::new(),
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_cpu_list;
+
+    #[test]
+    fn sysfs_cpu_lists() {
+        assert_eq!(parse_cpu_list("0-3\n"), vec![0, 1, 2, 3]);
+        assert_eq!(parse_cpu_list("0-1,4,6-7"), vec![0, 1, 4, 6, 7]);
+        assert_eq!(parse_cpu_list(""), Vec::<u32>::new()); // no such file: not hybrid
+        assert_eq!(parse_cpu_list("garbage"), Vec::<u32>::new());
+        assert_eq!(parse_cpu_list("5-2"), Vec::<u32>::new());
+    }
 }
 
 /// Logical processors in the highest efficiency class (the P-cores), as an affinity mask.
