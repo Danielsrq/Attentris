@@ -1,0 +1,5 @@
+# attentris/.venv (GPU training; Python 3.10). CUDA 12.6 build of torch:
+#   python -m venv attentris/.venv
+#   attentris/.venv/Scripts/python -m pip install -r attentris/requirements.txt --extra-index-url https://download.pytorch.org/whl/cu126
+numpy==2.2.6
+torch==2.14.1

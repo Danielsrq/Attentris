@@ -15,3 +15,6 @@ external/tetrisbattle/
 
 # Cold Clear 2 (MinusKelvin, MIT/Apache), downloaded unmodified for bot comparisons; not ours to commit
 external/cold-clear-2/
+
+# Data bundles for Google Drive (attentris/data_bundle.py pack --out bundle)
+/bundle/
