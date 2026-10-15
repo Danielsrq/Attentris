@@ -8,13 +8,14 @@
 # tests against v5.1: depth 1 x 256 games (survival), depth 2 beam 4 and depth 3 beam 8 x 64 games,
 # and depth 1 with garbage x 64 games (fresh seeds 33001+). Resumable: every step skips what is done.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 V51="$DIR/data/v51"
 OUT="$DIR/results_dagger2_train.txt"
 [ -f "$DIR/data/raw_dagger2_tr/normal_dagger2_s0.jsonl" ] || "$PYC" "$DIR/split_dagger2.py"
-[ -f "$V51/dagger2.npz" ] || "$PYC" "$DIR/pack.py" --only "$(cygpath -m "$DIR/data/raw_dagger2_tr")" --name dagger2 --jobs 16 --out "$(cygpath -m "$V51")" | tail -1
-[ -f "$V51/val_dagger2.npz" ] || "$PYC" "$DIR/pack.py" --only "$(cygpath -m "$DIR/data/raw_dagger2_val")" --name val_dagger2 --jobs 4 --out "$(cygpath -m "$V51")" | tail -1
+[ -f "$V51/dagger2.npz" ] || "$PYC" "$DIR/pack.py" --only "$(wpath "$DIR/data/raw_dagger2_tr")" --name dagger2 --jobs 16 --out "$(wpath "$V51")" | tail -1
+[ -f "$V51/val_dagger2.npz" ] || "$PYC" "$DIR/pack.py" --only "$(wpath "$DIR/data/raw_dagger2_val")" --name val_dagger2 --jobs 4 --out "$(wpath "$V51")" | tail -1
 echo "== dagger2 training $(date)" | tee -a "$OUT"
 "$PYG" "$DIR/eval_val.py" --model "$DIR/data/model_v51.pt" --data "$V51" --val val_dagger2.npz | tee -a "$OUT"
 

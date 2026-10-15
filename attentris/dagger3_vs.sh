@@ -5,9 +5,10 @@
 # (2) every death of dagger3-ft --style auto: can CEM-survival take over 30 / 10 moves before it and
 # survive? Resumable per step.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYC="$CPUPY"
 D="$DIR/data/dagger3_eval"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 mkdir -p "$D"
 for g in "g20:10,3-4,cheese0.2,0.2" "g50:10,3-4,cheese0.5,0.2"; do
     tag=${g%%:*}; garb=${g#*:}
@@ -17,7 +18,7 @@ for g in "g20:10,3-4,cheese0.2,0.2" "g50:10,3-4,cheese0.5,0.2"; do
         [ -f "$f" ] && grep -q "^AtTenTris" "$f" && continue
         rm -f "$f"
         "$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --games 64 --depth 1 --seed 33001 --garbage $garb --style $s \
-            --out "$(cygpath -m "$f")" | grep "^AtTenTris" | cut -c1-120
+            --out "$(wpath "$f")" | grep "^AtTenTris" | cut -c1-120
     done
 done
 "$PYC" "$DIR/vs_score.py" \
@@ -26,7 +27,7 @@ done
     "dagger-ft, 50/50=$WD/v51_dagger_ft_normal_g50.games" "dagger3-ft normal, 50/50=$WD/v51_dagger3_ft_normal_g50.games" \
     "dagger3-ft danger, 50/50=$WD/v51_dagger3_ft_danger_g50.games" "dagger3-ft auto, 50/50=$WD/v51_dagger3_ft_auto_g50.games" \
     | tee "$DIR/results_dagger3_vs.txt"
-SURV=$(cygpath -m "$DIR/../bot/results/survive/survive.txt")
+SURV=$(wpath "$DIR/../bot/results/survive/survive.txt")
 for g in "g20:10,3-4,cheese0.2,0.2" "g50:10,3-4,cheese0.5,0.2"; do
     tag=${g%%:*}; garb=${g#*:}
     out="$D/takeover_auto_$tag.txt"

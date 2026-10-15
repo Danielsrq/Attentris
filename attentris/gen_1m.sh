@@ -7,8 +7,9 @@
 # One file per game (resumable), then packed in parallel into data/v3/train1m.npz.
 #   THREADS=16 sh attentris/gen_1m.sh
 DIR=$(cd "$(dirname "$0")" && pwd)
-BOT="$DIR/../bot/target/release/bot.exe"
-PYCPU="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+BOT="$DIR/../bot/target/release/bot$EXE"
+PYCPU="$CPUPY"
 OUT="$DIR/data/raw_1m"
 T=${THREADS:-16}
 TRAIN_G="15,4,0,0.2"

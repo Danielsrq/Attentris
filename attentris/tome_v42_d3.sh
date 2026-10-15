@@ -10,11 +10,12 @@
 # tome_v42_eval.sh is done (no two 16-worker play runs at once).
 #   RUN=l4g sh tome_v42_d3.sh > tome_v42_d3.out 2>&1
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 V51="$DIR/data/v51"
 D="$DIR/data/tome_v42"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 OUT="$DIR/results_tome_v42.txt"
 mkdir "$DIR/.tome_v42_d3.lock" 2>/dev/null || { echo "tome_v42_d3.sh is already running (remove $DIR/.tome_v42_d3.lock if not)"; exit 1; }
 trap 'rmdir "$DIR/.tome_v42_d3.lock"' EXIT
@@ -52,7 +53,7 @@ play() {   # style tag flags...
     f="$D/${m}_${s}_$tag.games"
     [ -f "$f" ] && grep -q "^AtTenTris" "$f" && return
     rm -f "$f"
-    echo "$m $s $tag: $("$PYC" "$DIR/play.py" --model "$M" --games 64 --style $s "$@" --out "$(cygpath -m "$f")" \
+    echo "$m $s $tag: $("$PYC" "$DIR/play.py" --model "$M" --games 64 --style $s "$@" --out "$(wpath "$f")" \
         | grep "^AtTenTris" | sed 's/.*: APP/APP/' | cut -c1-200)" | tee -a "$OUT"
 }
 while [ -d "$DIR/.tome_v42_eval.lock" ]; do sleep 60; done        # one play run at a time
@@ -69,7 +70,7 @@ for x in normal_d1 normal_d2 normal_g20 normal_g50 danger_g20 danger_g50; do arg
 for t in d1 d2 g20 g50; do args="$args tome_v42_${RUN}_dagger_ft_normal_$t=$WD/tome_v42_${RUN}_dagger_ft_normal_$t.games"; done
 [ $RUN = l4g ] || for x in normal_d1 normal_d2 normal_g20 normal_g50 danger_g20 danger_g50; do
     args="$args tome_v42_l4g_dagger3_ft_$x=$WD/tome_v42_l4g_dagger3_ft_$x.games"; done
-V=$(cygpath -m "$DIR/data/tome_v41"); E=$(cygpath -m "$DIR/data/dagger3_eval")
+V=$(wpath "$DIR/data/tome_v41"); E=$(wpath "$DIR/data/dagger3_eval")
 for x in normal_d1 normal_g20 normal_g50 danger_g20 danger_g50; do args="$args tome_v41_dagger3_ft_$x=$V/tome_v41_dagger3_ft_$x.games"; done
 args="$args v51_dagger3_ft_normal_d1=$E/v51_dagger3_ft_normal_none.games v51_dagger3_ft_normal_d2=$E/v51_dagger3_ft_normal_d2.games"
 for x in normal_g20 normal_g50 danger_g20 danger_g50; do args="$args v51_dagger3_ft_$x=$E/v51_dagger3_ft_$x.games"; done

@@ -3,7 +3,8 @@
 # on random 25% / 50% subsets of the 1M positions, against v4 on all 1.09M. If top-1 is
 # still rising ~2.5-3 points per doubling at this end, more data keeps paying.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PY="$DIR/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PY="$DIR/.venv/$VPY"
 OUT="$DIR/results_learning_curve2.txt"
 : > "$OUT"
 for n in 272000 544000; do

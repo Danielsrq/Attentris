@@ -11,11 +11,12 @@
 # (64), 80/20 and 50/50 (64 each) in normal and danger style. Resumable.
 #   sh fit_ablation.sh > fit_ablation.out 2>&1
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 V51="$DIR/data/v51"
 D="$DIR/data/dagger3_eval"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 OUT="$DIR/results_fit_ablation.txt"
 mkdir "$DIR/.fit_ablation.lock" 2>/dev/null || { echo "fit_ablation.sh is already running"; exit 1; }
 trap 'rmdir "$DIR/.fit_ablation.lock"' EXIT
@@ -53,7 +54,7 @@ play() {   # model style tag games flags...
     f="$D/$1_$2_$3.games"; m=$1; s=$2; t=$3; g=$4; shift 4
     [ -f "$f" ] && grep -q "^AtTenTris" "$f" && return
     rm -f "$f"
-    echo "$m $s $t: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --style $s --games $g "$@" --out "$(cygpath -m "$f")" \
+    echo "$m $s $t: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --style $s --games $g "$@" --out "$(wpath "$f")" \
         | grep "^AtTenTris" | sed 's/.*: APP/APP/' | cut -c1-200)" | tee -a "$OUT"
 }
 for a in $ARMS; do

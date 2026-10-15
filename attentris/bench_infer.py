@@ -79,7 +79,7 @@ def main():
 
     # 3. per-move pipeline from a raw board
     torch.set_num_threads(1)
-    proc = subprocess.Popen([os.path.join(HERE, "..", "bot", "target", "release", "bot.exe"), "structures"],
+    proc = subprocess.Popen([os.path.join(HERE, "..", "bot", "target", "release", "bot.exe" if os.name == "nt" else "bot"), "structures"],
                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
     raw = [json.loads(l) for l in open(os.path.join(HERE, "data", "raw", "gate4_s2010.jsonl"))][:args.n]
     t_struct, t_tok, t_pack, t_fwd = [], [], [], []

@@ -4,8 +4,9 @@
 # shortlist + teacher search; 64 games, no garbage and stress) and the teacher's
 # self-agreement (beam 128 vs 64 on the validation games).
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 OUT="$DIR/results_v4.txt"
 until [ -f "$DIR/data/v3/train1m.npz" ] && grep -q "gen_1m done" "$DIR/gen_1m.out"; do sleep 30; done
 : > "$OUT"

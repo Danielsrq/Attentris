@@ -6,11 +6,12 @@
 # 64 games) and depth 2 beam 4 (normal, no garbage, 64 games), against v5.1-dagger3-ft. Resumable;
 # one copy at a time.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 V51="$DIR/data/v51"
 D="$DIR/data/dagger3_eval"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 OUT="$DIR/results_v52_dagger.txt"
 mkdir "$DIR/.v52_dagger.lock" 2>/dev/null || { echo "v52_dagger.sh is already running"; exit 1; }
 trap 'rmdir "$DIR/.v52_dagger.lock"' EXIT
@@ -40,7 +41,7 @@ play() {   # model style tag games flags...
     f="$D/${m}_${s}_$tag.games"
     [ -f "$f" ] && grep -q "^AtTenTris" "$f" && return
     rm -f "$f"
-    echo "$m $s $tag: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --games $n --style $s "$@" --out "$(cygpath -m "$f")" \
+    echo "$m $s $tag: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --games $n --style $s "$@" --out "$(wpath "$f")" \
         | grep "^AtTenTris" | sed 's/.*: APP/APP/' | cut -c1-190)" | tee -a "$OUT"
 }
 for m in v52_loop_dagger3_ft v52_untied_dagger3_ft v51_dagger3_ft; do

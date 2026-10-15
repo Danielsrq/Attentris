@@ -4,8 +4,9 @@
 # best line of every first move. Original games -> data/raw_v3, DAgger-1 -> data/raw_dagger1_v3;
 # then packed into data/v3/{train,val,dagger1}.npz. Resumable: finished files are skipped.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYCPU="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
-BOT="$DIR/../bot/target/release/bot.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYCPU="$CPUPY"
+BOT="$DIR/../bot/target/release/bot$EXE"
 W_normal="$DIR/../bot/weights/normal.txt"
 W_gate4="$DIR/../bot/results/gate4/gate4.txt"
 relabel() {

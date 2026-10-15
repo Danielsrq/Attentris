@@ -10,11 +10,12 @@
 # Baseline: ToMe v4 (4 layers, 0,0.17x3, 8 epochs). Resumable; one copy at a time (lock).
 #   sh tome_sched.sh > tome_sched.out 2>&1
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 V51="$DIR/data/v51"
 D="$DIR/data/tome_sched"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 OUT="$DIR/results_tome_sched.txt"
 mkdir "$DIR/.tome_sched.lock" 2>/dev/null || { echo "tome_sched.sh is already running (remove $DIR/.tome_sched.lock if not)"; exit 1; }
 trap 'rmdir "$DIR/.tome_sched.lock"' EXIT
@@ -40,12 +41,12 @@ for cfg in "A 4 0,0.17,0.17,0.17 -" "B 6 0,1,1,1,1,1 20,36,0.25,0.10" "C 4 0,1,1
         f="$D/${name}_$tt.games"
         [ -f "$f" ] && grep -q "^AtTenTris" "$f" && continue
         rm -f "$f"
-        echo "$name $tt: $("$PYC" "$DIR/play.py" --model "$M" --games 64 $flags --out "$(cygpath -m "$f")" | grep "^AtTenTris" | sed 's/.*: APP/APP/' | cut -c1-180)" | tee -a "$OUT"
+        echo "$name $tt: $("$PYC" "$DIR/play.py" --model "$M" --games 64 $flags --out "$(wpath "$f")" | grep "^AtTenTris" | sed 's/.*: APP/APP/' | cut -c1-180)" | tee -a "$OUT"
     done
 done
 args=""
 for n in tome_sA tome_sB tome_sC; do for tt in d1 d2 g20 g50; do args="$args ${n}_$tt=$WD/${n}_$tt.games"; done; done
-E=$(cygpath -m "$DIR/data/dagger3_eval")
+E=$(wpath "$DIR/data/dagger3_eval")
 args="$args tome_v4_d1=$E/tome_v4_normal_none.games tome_v4_g20=$E/tome_v4_normal_g20.games tome_v4_g50=$E/tome_v4_normal_g50.games"
 "$PYC" "$DIR/vs_score.py" $args | tee -a "$OUT"
 echo "tome sched done"

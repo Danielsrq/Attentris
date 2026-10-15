@@ -9,11 +9,12 @@
 # Waits for fit_ablation.sh to finish (CPU-heavy play tests would distort the timings). Resumable.
 #   sh bot/tools/cc2_compare.sh > bot/results/cc2/compare.out 2>&1
 DIR=$(cd "$(dirname "$0")" && pwd)
+ATT="$DIR/../../attentris"; . "$ATT/plat.sh"
 ROOT="$DIR/../.."
-BOT="$ROOT/bot/target/release/bot.exe"
-PY="$ROOT/attentris/.venv/Scripts/python.exe"
+BOT="$ROOT/bot/target/release/bot$EXE"
+PY="$ROOT/attentris/.venv/$VPY"
 R="$ROOT/bot/results/cc2"
-WR=$(cygpath -m "$R")
+WR=$(wpath "$R")
 OUT="$R/compare.txt"
 mkdir -p "$R"
 while [ -d "$ROOT/attentris/.fit_ablation.lock" ]; do sleep 30; done
@@ -36,8 +37,8 @@ cem() {   # tag name weights depth beam
         echo "$2 $1: $(grep -A1 '^config' "$R/$2_$1.log" | tail -1)" | tee -a "$OUT"
     fi
 }
-WN=$(cygpath -m "$ROOT/bot/weights/normal.txt")
-WS=$(cygpath -m "$ROOT/bot/results/survive/survive.txt")
+WN=$(wpath "$ROOT/bot/weights/normal.txt")
+WS=$(wpath "$ROOT/bot/results/survive/survive.txt")
 for t in none g20 g50; do
     cem $t cem_d1b1 "$WN" 1 1
     cem $t cem_d2b8 "$WN" 2 8

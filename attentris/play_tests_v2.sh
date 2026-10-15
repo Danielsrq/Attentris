@@ -4,7 +4,8 @@
 # play_tests.sh: 16 x 500 pieces, seeds 5001-5016, normal rules, no garbage and stress.
 #   MODEL=attentris/data/model_v2.pt OUT=attentris/results_play_v2.txt sh attentris/play_tests_v2.sh
 DIR=$(cd "$(dirname "$0")" && pwd)
-PY="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PY="$CPUPY"
 OUT=${OUT:-$DIR/results_play_v2.txt}
 MODEL=${MODEL:-$DIR/data/model_v2.pt}
 STRESS="10,3-4,cheese0.2,0.2"

@@ -2,8 +2,9 @@
 # v4b: warm start from v4 (8 more epochs, fresh one-cycle schedule at a lower peak lr) on the
 # same 1.09M positions, then 64-game play tests of the policy alone and the depth-3 beam.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 OUT="$DIR/results_v4b.txt"
 : > "$OUT"
 "$PYG" "$DIR/train.py" --data "$DIR/data/v3" --train train.npz,dagger1.npz,train1m.npz --init "$DIR/data/model_v4.pt" \

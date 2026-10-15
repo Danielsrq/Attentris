@@ -4,11 +4,12 @@
 # (dagger3-ft = 3e-4 x 3). Then at depth 1: danger style at 80/20 and 50/50 (64 games, seeds
 # 33001+, per-game logs for VS), normal style with no garbage (256 games: APP / TSD / quads must hold).
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 V51="$DIR/data/v51"
 D="$DIR/data/dagger3_eval"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 OUT="$DIR/results_dagger3_sweep.txt"
 F=0.1712      # existing files per epoch: 70/30 with the 86,195 danger positions (dagger3_train.sh)
 mkdir -p "$D"
@@ -30,7 +31,7 @@ for v in A B C; do
         tag=${g%%:*}; garb=${g#*:}
         f="$D/${name}_danger_$tag.games"
         [ -f "$f" ] && grep -q "^AtTenTris" "$f" || { rm -f "$f"; "$PYC" "$DIR/play.py" --model "$DIR/data/model_$name.pt" --games 64 --depth 1 \
-            --seed 33001 --garbage $garb --style danger --out "$(cygpath -m "$f")" > /dev/null; }
+            --seed 33001 --garbage $garb --style danger --out "$(wpath "$f")" > /dev/null; }
     done
     echo "$name normal, no garbage: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$name.pt" --games 256 --depth 1 | grep "^AtTenTris" | cut -c1-150)" | tee -a "$OUT"
 done

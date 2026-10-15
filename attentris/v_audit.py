@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pcores
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-BOT = os.path.join(HERE, "..", "bot", "target", "release", "bot.exe")
+BOT = os.path.join(HERE, "..", "bot", "target", "release", "bot.exe" if os.name == "nt" else "bot")
 NAMES = ["holes", "hole_rows", "cover", "bump", "bump_sq", "row_trans", "col_trans", "max_height", "danger"]
 PHASES = [(0, 25), (25, 50), (50, 100), (100, 200), (200, 500)]
 # eval::features divides by eval::SCALE; multiply back for raw units (holes, rows, cells)

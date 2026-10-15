@@ -30,8 +30,8 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(HERE, "..", "..")
-BOT = os.path.join(ROOT, "bot", "target", "release", "bot.exe")
-CC2 = os.path.join(ROOT, "external", "cold-clear-2", "target", "release", "cold-clear-2.exe")
+BOT = os.path.join(ROOT, "bot", "target", "release", "bot.exe" if os.name == "nt" else "bot")
+CC2 = os.path.join(ROOT, "external", "cold-clear-2", "target", "release", "cold-clear-2.exe" if os.name == "nt" else "cold-clear-2")
 sys.path.insert(0, os.path.join(ROOT, "attentris"))
 import pcores  # noqa: E402
 
@@ -93,9 +93,7 @@ def suggest(cc, patience_ms=200):
 
 
 def pin_to(proc, mask):
-    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
-    k32.SetProcessAffinityMask.argtypes = [ctypes.c_void_p, ctypes.c_size_t]
-    k32.SetProcessAffinityMask(ctypes.c_void_p(int(proc._handle)), ctypes.c_size_t(mask))
+    pcores.set_mask(mask, proc)
 
 
 class Cc2:

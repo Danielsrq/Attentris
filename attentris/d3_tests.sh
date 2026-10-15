@@ -4,12 +4,13 @@
 # in normal and danger style; same seeds as the depth-1 tests. Resumable.
 #   MODEL=v51_d128_dagger5b_ft DEPTH=4 sh d3_tests.sh >> d3_tests.out 2>&1
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYC="$CPUPY"
 DE="$DIR/data/dagger3_eval"
 OUT="$DIR/results_d3.txt"
 M=${MODEL:-v51_d128_dagger5b_ft}
 DP=${DEPTH:-3}
-m() { cygpath -m "$1"; }
+m() { wpath "$1"; }
 play() {   # style tag flags...
     f="$DE/${M}_$1_$2.games"; s=$1; t=$2; shift 2
     [ -f "$f" ] && grep -q "^AtTenTris" "$f" && return

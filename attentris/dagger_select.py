@@ -30,7 +30,7 @@ import pack as P
 import tokenizer as T
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-BOT = os.path.join(HERE, "..", "bot", "target", "release", "bot.exe")
+BOT = os.path.join(HERE, "..", "bot", "target", "release", "bot.exe" if os.name == "nt" else "bot")
 
 
 def main():

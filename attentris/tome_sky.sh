@@ -5,7 +5,8 @@
 # count (--bucket). Same data and recipe as base ToMe / v5.1. Own checkpoint data/model_tome_sky.pt.
 # Resumable: rerun to continue (mid-epoch checkpoints every 300 batches). Then tome_post.sh.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
 M="$DIR/data/model_tome_sky.pt"
 R=""; [ -f "$M" ] && R="--resume"
 "$PYG" "$DIR/train.py" --arch tome --tome-sky --merge 0,0.25,0.25,0.25 --bucket 50 --data "$DIR/data/v51" \

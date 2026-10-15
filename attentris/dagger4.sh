@@ -8,10 +8,11 @@
 #                                    CEM-survival at beam 128 (all moves), teacher "danger"; takeover check
 # Resumable per student and step.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
-BOT="$DIR/../bot/target/release/bot.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYC="$CPUPY"
+BOT="$DIR/../bot/target/release/bot$EXE"
 D="$DIR/data/dagger4"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 SURV="$DIR/../bot/results/survive/survive.txt"
 OUT="$DIR/results_dagger4_collect.txt"
 mkdir -p "$D/games"
@@ -39,8 +40,8 @@ elif [ "$cmd" = label ]; then
     for f in "$D"/games/*_g20.games; do
         m=$(basename "$f" _g20.games)
         t="$D/takeover_$m.txt"
-        [ -f "$t" ] || "$PYC" "$DIR/takeover.py" --deaths "$m:$(cygpath -m "$f")" --style danger --garbage 10,3-4,cheese0.2,0.2 \
-            --teacher-weights "$(cygpath -m "$SURV")" --sample 8 --before 30,10 --no-alone --jobs 8 > "$t.part" 2> "$t.err" && mv "$t.part" "$t"
+        [ -f "$t" ] || "$PYC" "$DIR/takeover.py" --deaths "$m:$(wpath "$f")" --style danger --garbage 10,3-4,cheese0.2,0.2 \
+            --teacher-weights "$(wpath "$SURV")" --sample 8 --before 30,10 --no-alone --jobs 8 > "$t.part" 2> "$t.err" && mv "$t.part" "$t"
         echo "takeover, $m 80/20:" | tee -a "$OUT"; sed -n '/^summary/,$p' "$t" | tail -n +2 | tee -a "$OUT"
     done
     echo "dagger4 label done"

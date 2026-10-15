@@ -17,7 +17,9 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PYC = os.path.join(HERE, "..", "external", "tetrisbattle", ".venv", "Scripts", "python.exe")
+PYC = os.path.join(HERE, "..", "external", "tetrisbattle", ".venv", *(("Scripts", "python.exe") if os.name == "nt" else ("bin", "python")))
+if not os.path.exists(PYC):   # no TetrisBattle copy (Linux training machine): use this python
+    PYC = sys.executable
 
 
 def run(model, seed, takeover, garbage="", teacher_weights="", style="normal"):

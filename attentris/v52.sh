@@ -5,8 +5,9 @@
 # Own checkpoints (data/model_v52_loop.pt, data/model_v52_untied.pt); resumable (rerun).
 # Then 64-game play tests (depth 1, depth 2 beam 4, depth 3 beam 8; normal, no garbage) for both.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 OUT="$DIR/results_v52.txt"
 for v in loop untied; do
     M="$DIR/data/model_v52_$v.pt"

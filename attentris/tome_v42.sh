@@ -10,7 +10,8 @@
 # model (v4.1's layout). GPU only, one job at a time; tests in tome_v42_eval.sh (CPU, start alongside).
 # Resumable; one copy at a time.   sh tome_v42.sh > tome_v42.out 2>&1
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
 V51="$DIR/data/v51"
 OUT="$DIR/results_tome_v42.txt"
 mkdir "$DIR/.tome_v42.lock" 2>/dev/null || { echo "tome_v42.sh is already running (remove $DIR/.tome_v42.lock if not)"; exit 1; }

@@ -5,7 +5,8 @@
 # cells, piece tokens and candidates from the v5.1 packing). Own checkpoint: data/model_tome.pt
 # (train.py refuses to overwrite an AtTenTris checkpoint). Resumable: rerun to continue.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
 M="$DIR/data/model_tome.pt"
 R=""; [ -f "$M" ] && R="--resume"
 "$PYG" "$DIR/train.py" --arch tome --merge 0,0.45,0.45,0.45 --data "$DIR/data/v51" --train train.npz,dagger1.npz,train1m.npz \

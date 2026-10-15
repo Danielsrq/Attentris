@@ -4,8 +4,9 @@
 # seeds 5001-5016 (not in the training data). Baselines on the same seeds: the teacher's
 # V greedy (depth 1, no chance ply) and the full search.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PY="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
-BOT="$DIR/../bot/target/release/bot.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PY="$CPUPY"
+BOT="$DIR/../bot/target/release/bot$EXE"
 OUT=${OUT:-$DIR/results_play.txt}
 MODEL=${MODEL:-$DIR/data/model.pt}
 STRESS="10,3-4,cheese0.2,0.2"

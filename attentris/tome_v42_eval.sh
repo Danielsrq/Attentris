@@ -10,10 +10,11 @@
 # dagger-ft on the same seeds. RUNS as in tome_v42.sh. Resumable.
 #   sh tome_v42_eval.sh > tome_v42_eval.out 2>&1
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 D="$DIR/data/tome_v42"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 OUT="$DIR/results_tome_v42.txt"
 mkdir "$DIR/.tome_v42_eval.lock" 2>/dev/null || { echo "tome_v42_eval.sh is already running (remove $DIR/.tome_v42_eval.lock if not)"; exit 1; }
 trap 'rmdir "$DIR/.tome_v42_eval.lock"' EXIT
@@ -31,7 +32,7 @@ play() {   # model tag flags...
     f="$D/${m}_normal_$tag.games"
     [ -f "$f" ] && grep -q "^AtTenTris" "$f" && return
     rm -f "$f"
-    echo "$m normal $tag: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --games 64 --style normal "$@" --out "$(cygpath -m "$f")" \
+    echo "$m normal $tag: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --games 64 --style normal "$@" --out "$(wpath "$f")" \
         | grep "^AtTenTris" | sed 's/.*: APP/APP/' | cut -c1-200)" | tee -a "$OUT"
 }
 tests() {   # model
@@ -64,7 +65,7 @@ for n in $RUNS; do
 done
 args=""
 for n in $RUNS; do for m in tome_v42_$n tome_v42_${n}_dagger_ft; do for t in d1 d2 g20 g50; do args="$args ${m}_$t=$WD/${m}_normal_$t.games"; done; done; done
-S=$(cygpath -m "$DIR/data/tome_sched"); V=$(cygpath -m "$DIR/data/tome_v41"); E=$(cygpath -m "$DIR/data/dagger3_eval")
+S=$(wpath "$DIR/data/tome_sched"); V=$(wpath "$DIR/data/tome_v41"); E=$(wpath "$DIR/data/dagger3_eval")
 for t in d1 d2 g20 g50; do args="$args screenC_token_4ep_$t=$S/tome_sC_$t.games tome_v41_$t=$V/tome_v41_normal_$t.games"; done
 args="$args v51_dagger_ft_d1=$E/v51_dagger_ft_normal_none64.games v51_dagger_ft_d2=$E/v51_dagger_ft_normal_d264.games"
 args="$args v51_dagger_ft_g20=$E/v51_dagger_ft_normal_g2064.games v51_dagger_ft_g50=$E/v51_dagger_ft_normal_g5064.games"

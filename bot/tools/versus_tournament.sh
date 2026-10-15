@@ -9,10 +9,11 @@
 #   CC2       Cold Clear 2, time-matched
 # Resumable.   sh bot/tools/versus_tournament.sh > bot/results/versus/tournament.out 2>&1
 DIR=$(cd "$(dirname "$0")" && pwd)
+ATT="$DIR/../../attentris"; . "$ATT/plat.sh"
 ROOT="$DIR/../.."
-PY="$ROOT/external/tetrisbattle/.venv/Scripts/python.exe"
+PY="$CPUPY"
 R="$ROOT/bot/results/versus"
-WR=$(cygpath -m "$R")
+WR=$(wpath "$R")
 OUT="$R/tournament.txt"
 mkdir -p "$R"
 CEM="cem:bot/weights/normal.txt:6:64"

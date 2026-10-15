@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tokenizer as T
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-EXE = os.path.join(HERE, "..", "bot", "target", "release", "bot.exe")
+EXE = os.path.join(HERE, "..", "bot", "target", "release", "bot.exe" if os.name == "nt" else "bot")
 REPLAYS = os.path.join(HERE, "..", "data", "bot", "gate4_garbage.jsonl")
 
 # DESIGN.md's worked example (rows 10..1 from the top). (9,5) is an overhang zero.

@@ -212,7 +212,7 @@ def play_game(args, g):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="best.pt")
-    ap.add_argument("--exe", default=os.path.join("..", "..", "bot", "target", "release", "bot.exe"))
+    ap.add_argument("--exe", default=os.path.join("..", "..", "bot", "target", "release", "bot.exe" if os.name == "nt" else "bot"))
     ap.add_argument("--weights", required=True)
     ap.add_argument("--name", default="ours")
     ap.add_argument("--bot-args", default="", help="extra args for bot serve-battle, e.g. '--depth 1'")

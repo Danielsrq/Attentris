@@ -3,9 +3,10 @@
 # only -- they have no danger style), 64 games: depth 1 and depth 2 beam 4 without garbage, depth 1 at
 # 80/20 and 50/50. Then one APP / VS table: both stages x the three architectures. Waits for v52_dagger.sh.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYC="$CPUPY"
 D="$DIR/data/dagger3_eval"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 OUT="$DIR/results_v52_dagger.txt"
 until grep -q "v52 dagger done" "$DIR/v52_dagger.out" 2>/dev/null; do sleep 30; done
 play() {   # model tag flags...
@@ -13,7 +14,7 @@ play() {   # model tag flags...
     f="$D/${m}_normal_${tag}64.games"
     [ -f "$f" ] && grep -q "^AtTenTris" "$f" && return
     rm -f "$f"
-    echo "$m normal ${tag}64: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --games 64 --style normal "$@" --out "$(cygpath -m "$f")" \
+    echo "$m normal ${tag}64: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --games 64 --style normal "$@" --out "$(wpath "$f")" \
         | grep "^AtTenTris" | sed 's/.*: APP/APP/' | cut -c1-190)" | tee -a "$OUT"
 }
 for m in v51_dagger_ft v52_loop_dagger_ft v52_untied_dagger_ft; do

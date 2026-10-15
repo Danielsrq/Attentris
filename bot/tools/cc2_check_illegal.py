@@ -12,7 +12,7 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-BOT = os.path.join(HERE, "..", "target", "release", "bot.exe")
+BOT = os.path.join(HERE, "..", "target", "release", "bot.exe" if os.name == "nt" else "bot")
 
 
 def show(rows, cells):

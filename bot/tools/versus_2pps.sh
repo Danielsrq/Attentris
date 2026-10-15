@@ -7,10 +7,11 @@
 # 4 matches at a time (two physical P-cores each). CEM vs CEM-survival is unchanged (same as the fixed-time
 # tournament), so it is not rerun. Resumable.   sh bot/tools/versus_2pps.sh > bot/results/versus/2pps.out 2>&1
 DIR=$(cd "$(dirname "$0")" && pwd)
+ATT="$DIR/../../attentris"; . "$ATT/plat.sh"
 ROOT="$DIR/../.."
-PY="$ROOT/external/tetrisbattle/.venv/Scripts/python.exe"
+PY="$CPUPY"
 R="$ROOT/bot/results/versus"
-WR=$(cygpath -m "$R")
+WR=$(wpath "$R")
 OUT="$R/2pps.txt"
 mkdir -p "$R"
 CEM="cem:bot/weights/normal.txt:6:64"

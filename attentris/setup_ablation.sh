@@ -7,11 +7,12 @@
 # Tests at depth 1 on the seeds of the with-setup models: stage 1 vs v5.1 (256 games, no garbage);
 # stage 3 vs dagger3-ft: no garbage 256, 80/20 and 50/50 64 each, normal and danger styles. Resumable.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 V51="$DIR/data/v51"
 D="$DIR/data/dagger3_eval"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 OUT="$DIR/results_setup_ablation.txt"
 C="--data $V51 --batch 512 --device cuda --w-dense 0 --w-q1 0 --w-qs 1 --seed 0 --drop-kinds setup_"
 mkdir -p "$D"
@@ -37,7 +38,7 @@ play() {   # model style tag garbage games
     [ -f "$f" ] && grep -q "^AtTenTris" "$f" && return
     rm -f "$f"
     g=""; [ "$4" != "-" ] && g="--seed 33001 --garbage $4"
-    echo "$1 $2 $3: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$1.pt" --depth 1 --style $2 --games $5 $g --out "$(cygpath -m "$f")" \
+    echo "$1 $2 $3: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$1.pt" --depth 1 --style $2 --games $5 $g --out "$(wpath "$f")" \
         | grep "^AtTenTris" | sed 's/.*: APP/APP/' | cut -c1-200)" | tee -a "$OUT"
 }
 play v51_nosetup normal none - 256

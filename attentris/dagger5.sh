@@ -12,9 +12,10 @@
 #   7. tests vs v51_d128_dagger3_ft (same seeds): none 256, d2 64, 80/20 + 50/50 in normal and danger style
 # Resumable per step.   sh dagger5.sh > dagger5.out 2>&1
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
-BOT="$DIR/../bot/target/release/bot.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
+BOT="$DIR/../bot/target/release/bot$EXE"
 V51="$DIR/data/v51"
 D="$DIR/data/dagger5"
 D4="$DIR/data/dagger4"
@@ -22,7 +23,7 @@ SURV="$DIR/../bot/results/survive/survive.txt"
 NORM="$DIR/../bot/weights/normal.txt"
 OUT="$DIR/results_dagger5.txt"
 STUDENT=v51_d128_dagger3_ft
-m() { cygpath -m "$1"; }
+m() { wpath "$1"; }
 mkdir -p "$D/games"
 echo "== dagger5 $(date '+%H:%M')" | tee -a "$OUT"
 # 1. collect

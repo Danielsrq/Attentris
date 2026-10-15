@@ -3,7 +3,8 @@
 # original training positions (no DAgger data, so the subsets are comparable), same val set.
 # If validation accuracy is still rising steeply at 100%, more data will help.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PY="$DIR/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PY="$DIR/.venv/$VPY"
 OUT="$DIR/results_learning_curve.txt"
 : > "$OUT"
 for n in 22480 44960 89920; do

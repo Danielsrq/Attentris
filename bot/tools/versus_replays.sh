@@ -5,10 +5,11 @@
 # (Cold Clear 2 500 ms per move; replays paced at 500 ms per piece). Into data/bot/versus/{fixed,2pps}.
 #   sh bot/tools/versus_replays.sh
 DIR=$(cd "$(dirname "$0")" && pwd)
+ATT="$DIR/../../attentris"; . "$ATT/plat.sh"
 ROOT="$DIR/../.."
-PY="$ROOT/external/tetrisbattle/.venv/Scripts/python.exe"
+PY="$CPUPY"
 R="$ROOT/data/bot/versus"
-WR=$(cygpath -m "$R")
+WR=$(wpath "$R")
 CEM="cem:bot/weights/normal.txt:6:64"
 SURV="cem:bot/results/survive/survive.txt:6:64"
 mkdir -p "$R/fixed" "$R/2pps"

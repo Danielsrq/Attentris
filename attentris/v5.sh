@@ -5,8 +5,9 @@
 # beam 4 (cms-RL's compute), depth 3 beam 8, top-10 shortlist + teacher; no garbage and stress;
 # and single-game latency (--jobs 1) for depth 1 / 2 / 3 against v4b at depth 2.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 OUT="$DIR/results_v5.txt"
 V5="$DIR/data/v5"
 M="$DIR/data/model_v5.pt"

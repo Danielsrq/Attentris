@@ -5,8 +5,9 @@
 #   sh tome_post.sh [model name, default model_tome]  -> results_<name>.txt, <name>_viz.html
 NAME=${1:-model_tome}
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 M="$DIR/data/$NAME.pt"
 SHORT=$(echo "$NAME" | sed 's/^model_//')
 OUT="$DIR/results_$SHORT.txt"

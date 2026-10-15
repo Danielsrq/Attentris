@@ -34,7 +34,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
-BOT = os.path.join(ROOT, "bot", "target", "release", "bot.exe")
+BOT = os.path.join(ROOT, "bot", "target", "release", "bot.exe" if os.name == "nt" else "bot")
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(ROOT, "attentris"))
 import cc2_play as C  # noqa: E402
@@ -187,10 +187,11 @@ class Side:
 def match(job):
     seed, args, mask = job
     if mask:
-        k32 = ctypes.WinDLL("kernel32")
-        k32.SetProcessAffinityMask(ctypes.c_void_p(k32.GetCurrentProcess()), ctypes.c_size_t(mask))
-    # 1 ms timer resolution, so Cold Clear 2's think time is what we ask for (default tick ~15.6 ms)
-    ctypes.WinDLL("winmm").timeBeginPeriod(1)
+        pcores.set_mask(mask)
+    # 1 ms timer resolution, so Cold Clear 2's think time is what we ask for (Windows' default tick ~15.6 ms;
+    # Linux timers are already fine-grained)
+    if sys.platform == "win32":
+        ctypes.WinDLL("winmm").timeBeginPeriod(1)
     rng = random.Random(seed * 7919 + 17)
     holes = [rng.randrange(10) for _ in range(4096)]
     sides = [Side(args.a, args, seed), Side(args.b, args, seed)]

@@ -5,10 +5,11 @@
 # out), labelled by CEM-survival (bot/results/survive/survive.txt) at beam 128 with every move
 # scored, as teacher "danger". Resumable per step.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
-BOT="$DIR/../bot/target/release/bot.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYC="$CPUPY"
+BOT="$DIR/../bot/target/release/bot$EXE"
 D="$DIR/data/dagger3"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 mkdir -p "$D"
 echo "== dagger3 more collection started $(date)"
 for m in v51_dagger v51_dagger_ft tome_v4; do

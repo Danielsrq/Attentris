@@ -5,12 +5,13 @@
 # Depth 1; depth 2 / 3 / 4 at beam 8 / 16 / 32; depth 6 at beam 8 / 16 / 20. Resumable.
 #   sh nn_search_profile.sh > nn_search_profile.out 2>&1
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYC="$CPUPY"
 D="$DIR/data/nn_search_profile"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 OUT="$DIR/results_nn_search_profile.txt"
 mkdir -p "$D"
-M=$(cygpath -m "$DIR/data/model_v51_dagger3_ft.pt")
+M=$(wpath "$DIR/data/model_v51_dagger3_ft.pt")
 echo "== start $(date '+%H:%M')"
 args=""
 for cfg in 1:1 2:8 2:16 2:32 3:8 3:16 3:32 4:8 4:16 4:32 6:8 6:16 6:20; do

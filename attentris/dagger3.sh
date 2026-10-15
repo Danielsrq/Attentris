@@ -8,11 +8,12 @@
 #   3. size: dagger_select.py on the dumps, trouble positions only (no random share)
 # Resumable per step.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYC="$CPUPY"
 G=10,3-4,cheese0.2,0.2
 D="$DIR/data/dagger3"
-WD=$(cygpath -m "$D")
-SURV=$(cygpath -m "$DIR/../bot/results/survive/survive.txt")
+WD=$(wpath "$D")
+SURV=$(wpath "$DIR/../bot/results/survive/survive.txt")
 mkdir -p "$D"
 echo "== dagger3 collection started $(date)"
 for m in v51_dagger v51_dagger_ft tome_v4; do

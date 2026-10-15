@@ -3,13 +3,14 @@
 # schedule depends on the seed only) for the teacher (CEM-depth6: normal.txt, beam 64, depth 6) and
 # 5.1-dagger-ft at depth 1; every game's garbage batches logged; then cheese_hazard.py.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
-BOT="$DIR/../bot/target/release/bot.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYC="$CPUPY"
+BOT="$DIR/../bot/target/release/bot$EXE"
 G=10,3-4,cheese0.2,0.2
 N=128
 D="$DIR/data/cheese"
 mkdir -p "$D"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 [ -f "$D/teacher.jsonl" ] || "$BOT" play --mode normal --weights "$DIR/../bot/weights/normal.txt" --garbage $G --games $N --seed 33001 \
     --threads 16 --game-log "$WD/teacher.jsonl" | grep -E "^config|^beam" > "$D/teacher.summary"
 cat "$D/teacher.summary"

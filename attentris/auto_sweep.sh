@@ -4,9 +4,10 @@
 # stack < 5 and no holes). No garbage (256 games: the APP cost), 80/20 and 50/50 (64 games, seeds
 # 33001+, per-game logs for VS). Resumable per run.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYC="$CPUPY"
 D="$DIR/data/dagger3_eval"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 OUT="$DIR/results_auto_sweep.txt"
 M="$DIR/data/model_v51_dagger3_ft.pt"
 mkdir -p "$D"
@@ -19,7 +20,7 @@ for r in "r10:--auto-height 10 --auto-holes 4" "r8:--auto-height 8 --auto-holes 
         [ -f "$f" ] && grep -q "^AtTenTris" "$f" && continue
         rm -f "$f"
         if [ "$garb" = "-" ]; then gs="--games 256"; else gs="--games 64 --seed 33001 --garbage $garb"; fi
-        echo "$name $tag: $("$PYC" "$DIR/play.py" --model "$M" --depth 1 --style auto $flags $gs --out "$(cygpath -m "$f")" \
+        echo "$name $tag: $("$PYC" "$DIR/play.py" --model "$M" --depth 1 --style auto $flags $gs --out "$(wpath "$f")" \
             | grep "^AtTenTris" | sed 's/.*: APP/APP/' | cut -c1-230)" | tee -a "$OUT"
     done
 done

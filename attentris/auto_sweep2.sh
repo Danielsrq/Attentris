@@ -4,9 +4,10 @@
 # trigger moves: h10 (stack >= 10), h8 (>= 8), h8s (>= 8, stays in danger until stack < 5 and
 # holes <= 2). Same tests as auto_sweep.sh, but 64 no-garbage games (a quick test). Waits for auto_sweep.sh (the CPU is shared).
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYC="$CPUPY"
 D="$DIR/data/dagger3_eval"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 OUT="$DIR/results_auto_sweep.txt"
 M="$DIR/data/model_v51_dagger3_ft.pt"
 until grep -q "auto sweep done" "$DIR/auto_sweep.out" 2>/dev/null; do sleep 15; done
@@ -19,7 +20,7 @@ for r in "h10:--auto-height 10 --auto-holes 6" "h8:--auto-height 8 --auto-holes 
         [ -f "$f" ] && grep -q "^AtTenTris" "$f" && continue
         rm -f "$f"
         if [ "$garb" = "-" ]; then gs="--games 64"; else gs="--games 64 --seed 33001 --garbage $garb"; fi
-        echo "$name $tag: $("$PYC" "$DIR/play.py" --model "$M" --depth 1 --style auto $flags $gs --out "$(cygpath -m "$f")" \
+        echo "$name $tag: $("$PYC" "$DIR/play.py" --model "$M" --depth 1 --style auto $flags $gs --out "$(wpath "$f")" \
             | grep "^AtTenTris" | sed 's/.*: APP/APP/' | cut -c1-230)" | tee -a "$OUT"
     done
 done

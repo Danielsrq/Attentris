@@ -8,8 +8,9 @@
 # P-cores; then (b) trains; then 64-game play tests (depth 1, depth 2 beam 4, depth 3 beam 8;
 # no garbage) for both.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 OUT="$DIR/results_v51.txt"
 V51="$DIR/data/v51"
 mkdir -p "$V51"

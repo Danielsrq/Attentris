@@ -28,7 +28,7 @@ import pcores
 import tokenizer as T
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-BOT = os.path.join(HERE, "..", "bot", "target", "release", "bot.exe")
+BOT = os.path.join(HERE, "..", "bot", "target", "release", "bot.exe" if os.name == "nt" else "bot")
 STYLES = {t: i for i, t in enumerate(P.TEACHERS)}     # the style input: normal 0, gate4 1, danger 2
 
 

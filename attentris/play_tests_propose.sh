@@ -2,7 +2,8 @@
 # Value heads restricted to the policy's proposals (the policy's top-k moves, then argmax Q):
 # the standard guard against a Q function picking moves it was never trained on.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PY="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PY="$CPUPY"
 OUT=${OUT:-$DIR/results_play_v2_propose.txt}
 MODEL=${MODEL:-$DIR/data/model_v2.pt}
 STRESS="10,3-4,cheese0.2,0.2"

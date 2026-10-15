@@ -8,8 +8,9 @@
 #   3. pack: data/<ROUND>.npz, train-only (validation stays the original teacher games)
 #   ROUND=dagger1 MODEL=attentris/data/model.pt GAMES=150 sh attentris/dagger.sh
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYCPU="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
-BOT="$DIR/../bot/target/release/bot.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYCPU="$CPUPY"
+BOT="$DIR/../bot/target/release/bot$EXE"
 ROUND=${ROUND:-dagger1}
 MODEL=${MODEL:-$DIR/data/model.pt}
 GAMES=${GAMES:-150}

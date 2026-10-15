@@ -6,18 +6,19 @@
 # CEM-survival; 8 games at a time (one physical P-core each) so the ms per move are comparable.
 # Resumable.   sh bot/tools/chance_test.sh > bot/results/chance_solo/chance.out 2>&1
 DIR=$(cd "$(dirname "$0")" && pwd)
+ATT="$DIR/../../attentris"; . "$ATT/plat.sh"
 ROOT="$DIR/../.."
-BOT="$ROOT/bot/target/release/bot.exe"
-PY="$ROOT/external/tetrisbattle/.venv/Scripts/python.exe"
+BOT="$ROOT/bot/target/release/bot$EXE"
+PY="$CPUPY"
 VS="$ROOT/attentris/vs_score.py"
 R="$ROOT/bot/results/chance_solo"
-WR=$(cygpath -m "$R")
+WR=$(wpath "$R")
 OUT="$R/chance.txt"
 mkdir -p "$R"
 echo "== start $(date '+%H:%M')"
 args=""
 for w in normal survive; do
-    case $w in normal) WF=$(cygpath -m "$ROOT/bot/weights/normal.txt");; survive) WF=$(cygpath -m "$ROOT/bot/results/survive/survive.txt");; esac
+    case $w in normal) WF=$(wpath "$ROOT/bot/weights/normal.txt");; survive) WF=$(wpath "$ROOT/bot/results/survive/survive.txt");; esac
     for g in none g20 g50; do
         case $g in none) ga="";; g20) ga="--garbage 10,3-4,cheese0.2,0.2";; g50) ga="--garbage 10,3-4,cheese0.5,0.2";; esac
         for c in chance nochance; do

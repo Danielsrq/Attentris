@@ -4,19 +4,20 @@
 # train1m; it never had dagger2). Then 64-game tests at depth 1 (no depth 3): ToMe v4 vs ToMe-dagger3
 # in style normal / danger / auto, no garbage, 80/20 and 50/50 (seeds 5001+ / 33001+).
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 V51="$DIR/data/v51"
 D="$DIR/data/dagger3_eval"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 OUT="$DIR/results_tome_dagger3.txt"
 M="$DIR/data/model_tome_v4_dagger3_ft.pt"
 mkdir -p "$D"
 [ -f "$V51/danger.pretok.npy" ] && [ -f "$V51/val_danger.pretok.npy" ] || \
-    "$PYG" "$DIR/pretok.py" --data "$(cygpath -m "$V51")" --files danger.npz,val_danger.npz | grep -v pinned
+    "$PYG" "$DIR/pretok.py" --data "$(wpath "$V51")" --files danger.npz,val_danger.npz | grep -v pinned
 F=$("$PYC" -c "
 import numpy as np
-d = '$(cygpath -m "$V51")/'
+d = '$(wpath "$V51")/'
 nd = len(np.load(d + 'danger.npz')['chosen'])
 rest = sum(len(np.load(d + f)['chosen']) for f in ('train.npz', 'dagger1.npz', 'train1m.npz'))
 print('%.4f' % (7 / 3 * nd / rest))")
@@ -38,7 +39,7 @@ for g in "none:-" "g20:10,3-4,cheese0.2,0.2" "g50:10,3-4,cheese0.5,0.2"; do
         f="$D/${m}_${s}_$tag.games"
         [ -f "$f" ] && grep -q "^AtTenTris" "$f" && continue
         rm -f "$f"
-        echo "$m $s $tag: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --depth 1 --style $s $gs --out "$(cygpath -m "$f")" \
+        echo "$m $s $tag: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --depth 1 --style $s $gs --out "$(wpath "$f")" \
             | grep "^AtTenTris" | sed 's/.*: APP/APP/' | cut -c1-200)" | tee -a "$OUT"
     done
 done

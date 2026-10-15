@@ -6,12 +6,13 @@
 # positions (every 10th seed). Then play tests at depth 1 (no depth 3): dagger-ft (normal) vs the new
 # model with style normal / danger / auto, with no garbage (256 games), 80/20 and 50/50 (64 each).
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 V51="$DIR/data/v51"
 D="$DIR/data/dagger3"
 OUT="$DIR/results_dagger3_train.txt"
-m() { cygpath -m "$1"; }
+m() { wpath "$1"; }
 [ -f "$D/raw_tr/danger_s0.jsonl" ] || "$PYC" "$DIR/split_by_seed.py" --src "$(m "$D/labelled.jsonl")" --tr "$(m "$D/raw_tr")" --val "$(m "$D/raw_val")"
 [ -f "$V51/danger.npz" ] || "$PYC" "$DIR/pack.py" --only "$(m "$D/raw_tr")" --name danger --jobs 16 --out "$(m "$V51")" | tail -1
 [ -f "$V51/val_danger.npz" ] || "$PYC" "$DIR/pack.py" --only "$(m "$D/raw_val")" --name val_danger --jobs 8 --out "$(m "$V51")" | tail -1

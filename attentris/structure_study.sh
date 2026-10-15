@@ -6,12 +6,13 @@
 # positions against the teacher, with v5.1 dagger-ft on the same positions as a difficulty control.
 # Resumable per model and step; CPU (play, label, pack) then the analysis.   sh structure_study.sh > structure_study.out 2>&1
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
-BOT="$DIR/../bot/target/release/bot.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
+BOT="$DIR/../bot/target/release/bot$EXE"
 D="$DIR/data/structure_study"
-WD=$(cygpath -m "$D")
-W=$(cygpath -m "$DIR/../bot/weights/normal.txt")
+WD=$(wpath "$D")
+W=$(wpath "$DIR/../bot/weights/normal.txt")
 OUT="$DIR/results_structure_study.txt"
 mkdir "$DIR/.structure_study.lock" 2>/dev/null || { echo "structure_study.sh is already running"; exit 1; }
 trap 'rmdir "$DIR/.structure_study.lock"' EXIT
@@ -41,8 +42,8 @@ for l in open(src):
         "$PYG" "$DIR/pack.py" --only "$WD/raw_$m" --name "pack_$m" --out "$WD" --jobs 16 | tail -1
         "$PYG" "$DIR/pretok.py" --data "$WD" --files "pack_$m.npz" | tail -1
     fi
-    spec="$spec --tome $m=$(cygpath -m "$DIR/data/model_$m.pt")=$WD/pack_$m.npz"
+    spec="$spec --tome $m=$(wpath "$DIR/data/model_$m.pt")=$WD/pack_$m.npz"
 done
 echo "== structure study ($(date '+%H:%M'))" | tee -a "$OUT"
-"$PYG" "$DIR/structure_study.py" $spec --control "$(cygpath -m "$DIR/data/model_v51_dagger_ft.pt")" --device cuda | tee -a "$OUT"
+"$PYG" "$DIR/structure_study.py" $spec --control "$(wpath "$DIR/data/model_v51_dagger_ft.pt")" --device cuda | tee -a "$OUT"
 echo "structure study done"

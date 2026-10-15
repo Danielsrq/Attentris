@@ -7,9 +7,10 @@
 # v51_d128_dagger3_ft (same recipe as dagger5-ft) -> v51_d128_dagger5b_ft; tests vs dagger3-ft / dagger5-ft.
 # Resumable per step.   sh dagger5b.sh > dagger5b.out 2>&1
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
-BOT="$DIR/../bot/target/release/bot.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
+BOT="$DIR/../bot/target/release/bot$EXE"
 V51="$DIR/data/v51"
 D="$DIR/data/dagger5b"
 DA="$DIR/data/dagger5all"
@@ -17,7 +18,7 @@ SURV="$DIR/../bot/results/survive/survive.txt"
 NORM="$DIR/../bot/weights/normal.txt"
 OUT="$DIR/results_dagger5.txt"
 STUDENT=v51_d128_dagger3_ft
-m() { cygpath -m "$1"; }
+m() { wpath "$1"; }
 mkdir -p "$D/games" "$DA"
 echo "== dagger5b (more deaths) $(date '+%H:%M')" | tee -a "$OUT"
 for g in "danger:g50:43001:10,3-4,cheese0.5,0.2" "normal:g50:44001:10,3-4,cheese0.5,0.2"; do

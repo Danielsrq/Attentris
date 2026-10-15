@@ -5,10 +5,11 @@
 # Waits for the DAgger 4 labelling (dagger4_label.out) to free the CPU; then marks the day's plan done
 # (attentris/.plan_done), which starts the queued depth-1 CEM tunes.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 D="$DIR/data/tome_v41"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 OUT="$DIR/results_tome_v41_ov.txt"
 OV="--merge-override 6:0.30"
 until grep -q "dagger4 label done" "$DIR/dagger4_label.out" 2>/dev/null; do sleep 30; done
@@ -20,7 +21,7 @@ play() {   # model style tag flags...
     f="$D/${m}_ov_${s}_$tag.games"
     [ -f "$f" ] && grep -q "^AtTenTris" "$f" && return
     rm -f "$f"
-    echo "$m (layer 6 at 30%) $s $tag: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --games 64 --style $s $OV "$@" --out "$(cygpath -m "$f")" \
+    echo "$m (layer 6 at 30%) $s $tag: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --games 64 --style $s $OV "$@" --out "$(wpath "$f")" \
         | grep "^AtTenTris" | sed 's/.*: APP/APP/' | cut -c1-200)" | tee -a "$OUT"
 }
 play tome_v41 normal d1 --depth 1

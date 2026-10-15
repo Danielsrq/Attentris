@@ -6,7 +6,8 @@
 # count. Same data and recipe as v5.1 / ToMe base / v2. Own checkpoint data/model_tome_v3.pt;
 # resumable (rerun). Then tome_post.sh.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
 M="$DIR/data/model_tome_v3.pt"
 "$PYG" "$DIR/pretok.py" --data "$DIR/data/v51" | grep -v pinned
 R=""; [ -f "$M" ] && R="--resume"

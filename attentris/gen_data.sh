@@ -5,7 +5,8 @@
 # games are skipped, so rerunning resumes.
 #   GAMES=100 THREADS=16 sh attentris/gen_data.sh
 DIR=$(cd "$(dirname "$0")" && pwd)
-BOT="$DIR/../bot/target/release/bot.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+BOT="$DIR/../bot/target/release/bot$EXE"
 OUT="$DIR/data/raw"
 GAMES=${GAMES:-100}
 T=${THREADS:-16}

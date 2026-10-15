@@ -4,8 +4,9 @@
 #   sh tome_post_rest.sh model_tome_v4
 NAME=${1:-model_tome}
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 M="$DIR/data/$NAME.pt"
 SHORT=$(echo "$NAME" | sed 's/^model_//')
 OUT="$DIR/results_$SHORT.txt"

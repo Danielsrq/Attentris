@@ -350,7 +350,7 @@ def check_partition(toks):
 def structures_for(boards40, exe=None, pieces=None):
     """Runs `bot structures` over replay boards (one subprocess for the whole list). With
     `pieces` (per board: (piece, queue, hold)) it also returns covered piece slots and setups."""
-    exe = exe or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bot", "target", "release", "bot.exe")
+    exe = exe or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bot", "target", "release", "bot.exe" if os.name == "nt" else "bot")
     reqs = []
     for i, b in enumerate(boards40):
         r = {"board": b}

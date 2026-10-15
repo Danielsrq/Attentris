@@ -4,7 +4,8 @@
 # pieces, seeds 5001-5064, normal rules, no garbage and stress. Then the shortlist with the
 # beam widened (the search budget spent on fewer first moves).
 DIR=$(cd "$(dirname "$0")" && pwd)
-PY="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PY="$CPUPY"
 OUT=${OUT:-$DIR/results_play_hybrid.txt}
 MODEL=${MODEL:-$DIR/data/model_v3.pt}
 GAMES=${GAMES:-64}

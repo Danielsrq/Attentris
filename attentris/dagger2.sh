@@ -11,8 +11,9 @@
 #      scored (--all-roots 1)
 # Output: data/raw_dagger2/selected_labelled.jsonl (+ summary in dagger2.out). Resumable per step.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
-BOT="$DIR/../bot/target/release/bot.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYC="$CPUPY"
+BOT="$DIR/../bot/target/release/bot$EXE"
 D="$DIR/data/dagger2"
 OUTD="$DIR/data/raw_dagger2"
 mkdir -p "$D" "$OUTD"
@@ -32,7 +33,7 @@ for m in v51 tome_v4; do
         echo "$tag: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --games 100 --depth 1 $extra --out "$D/$tag.games" --dump "$D/$tag.jsonl" | grep "^AtTenTris")"
     done
 done
-WD=$(cygpath -m "$D")   # Windows-style path: Windows Python cannot glob /c/... paths
+WD=$(wpath "$D")   # Windows-style path: Windows Python cannot glob /c/... paths
 [ -f "$D/selected.jsonl" ] || "$PYC" "$DIR/dagger_select.py" --games "$WD/*.games" --states "$WD/*.jsonl" --out "$WD/selected.jsonl"
 if [ ! -f "$OUTD/selected_labelled.jsonl" ]; then
     "$BOT" label --mode normal --weights "$DIR/../bot/weights/normal.txt" --label normal --threads 16 --all-roots 1 --beam 128 \

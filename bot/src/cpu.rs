@@ -40,7 +40,34 @@ pub fn cpu_sets() -> Vec<(u32, u8)> {
     out
 }
 
-#[cfg(not(windows))]
+/// Linux: a hybrid Intel CPU lists its P-cores in /sys/devices/cpu_core/cpus and its E-cores in
+/// /sys/devices/cpu_atom/cpus (class 1 / 0). Anything else (AMD, older Intel, a VM) has neither:
+/// every online CPU gets class 0, so `performance_mask` sees no hybrid CPU and restricts nothing.
+#[cfg(target_os = "linux")]
+pub fn cpu_sets() -> Vec<(u32, u8)> {
+    fn list(path: &str) -> Vec<u32> {
+        let mut out = Vec::new();
+        for part in std::fs::read_to_string(path).unwrap_or_default().trim().split(',').filter(|p| !p.is_empty()) {
+            let mut ends = part.split('-').map(|v| v.trim().parse::<u32>());
+            match (ends.next(), ends.next()) {
+                (Some(Ok(a)), Some(Ok(b))) => out.extend(a..=b),
+                (Some(Ok(a)), None) => out.push(a),
+                _ => return Vec::new(), // unexpected format: treat as unknown
+            }
+        }
+        out
+    }
+    let (p, e) = (list("/sys/devices/cpu_core/cpus"), list("/sys/devices/cpu_atom/cpus"));
+    let mut out: Vec<(u32, u8)> = if !p.is_empty() && !e.is_empty() {
+        p.iter().map(|&i| (i, 1)).chain(e.iter().map(|&i| (i, 0))).collect()
+    } else {
+        list("/sys/devices/system/cpu/online").into_iter().map(|i| (i, 0)).collect()
+    };
+    out.sort();
+    out
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
 pub fn cpu_sets() -> Vec<(u32, u8)> {
     Vec::new()
 }
@@ -95,7 +122,25 @@ pub fn prefer_performance_cores() -> String {
     notes.join(", ")
 }
 
-#[cfg(not(windows))]
+/// Linux: pin to the P-cores of a hybrid CPU (sched_setaffinity; threads started later inherit
+/// it). No power-throttling equivalent is needed. Not hybrid: nothing to do.
+#[cfg(target_os = "linux")]
+pub fn prefer_performance_cores() -> String {
+    unsafe extern "C" {
+        fn sched_setaffinity(pid: i32, cpusetsize: usize, mask: *const u64) -> i32;
+    }
+    let Some(mask) = performance_mask() else { return String::new() };
+    let mut set = [0u64; 16]; // cpu_set_t: 1024 bits
+    set[0] = mask as u64;
+    let ok = unsafe { sched_setaffinity(0, std::mem::size_of_val(&set), set.as_ptr()) } == 0;
+    if ok {
+        format!("pinned to {} performance logical processors (mask {:#x})", mask.count_ones(), mask)
+    } else {
+        "affinity unchanged".to_string()
+    }
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
 pub fn prefer_performance_cores() -> String {
     String::new()
 }

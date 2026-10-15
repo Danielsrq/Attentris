@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pcores
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-BOT = os.path.join(HERE, "..", "bot", "target", "release", "bot.exe")
+BOT = os.path.join(HERE, "..", "bot", "target", "release", "bot.exe" if os.name == "nt" else "bot")
 W = {"normal": os.path.join(HERE, "..", "bot", "weights", "normal.txt"),
      "gate4": os.path.join(HERE, "..", "bot", "results", "gate4", "gate4.txt")}
 

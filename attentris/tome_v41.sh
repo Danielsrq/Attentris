@@ -6,11 +6,12 @@
 # v4.1-dagger3 in style normal / danger / auto x no garbage / 80/20 / 50/50, plus depth 2 beam 4 for the
 # base; rule-token recovery and a blob viewer page for the base. Resumable; one copy at a time.
 DIR=$(cd "$(dirname "$0")" && pwd)
-PYG="$DIR/.venv/Scripts/python.exe"
-PYC="$DIR/../external/tetrisbattle/.venv/Scripts/python.exe"
+ATT="$DIR"; . "$ATT/plat.sh"
+PYG="$DIR/.venv/$VPY"
+PYC="$CPUPY"
 V51="$DIR/data/v51"
 D="$DIR/data/tome_v41"
-WD=$(cygpath -m "$D")
+WD=$(wpath "$D")
 OUT="$DIR/results_tome_v41.txt"
 mkdir "$DIR/.tome_v41.lock" 2>/dev/null || { echo "tome_v41.sh is already running (remove $DIR/.tome_v41.lock if not)"; exit 1; }
 trap 'rmdir "$DIR/.tome_v41.lock"' EXIT
@@ -40,7 +41,7 @@ play() {   # model style tag flags...
     f="$D/${m}_${s}_$tag.games"
     [ -f "$f" ] && grep -q "^AtTenTris" "$f" && return
     rm -f "$f"
-    echo "$m $s $tag: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --games 64 --style $s "$@" --out "$(cygpath -m "$f")" \
+    echo "$m $s $tag: $("$PYC" "$DIR/play.py" --model "$DIR/data/model_$m.pt" --games 64 --style $s "$@" --out "$(wpath "$f")" \
         | grep "^AtTenTris" | sed 's/.*: APP/APP/' | cut -c1-200)" | tee -a "$OUT"
 }
 play tome_v41 normal d1 --depth 1
@@ -55,7 +56,7 @@ done
 args=""
 for x in tome_v41_normal_d1 tome_v41_normal_d2 tome_v41_normal_g20 tome_v41_normal_g50; do args="$args $x=$WD/$x.games"; done
 for s in normal danger auto; do for t in d1 g20 g50; do args="$args tome_v41_dagger3_ft_${s}_$t=$WD/tome_v41_dagger3_ft_${s}_$t.games"; done; done
-E=$(cygpath -m "$DIR/data/dagger3_eval")
+E=$(wpath "$DIR/data/dagger3_eval")
 for s in normal danger auto; do for t in none g20 g50; do args="$args tome_v4_dagger3_ft_${s}_$t=$E/tome_v4_dagger3_ft_${s}_$t.games"; done; done
 "$PYC" "$DIR/vs_score.py" $args | tee -a "$OUT"
 echo "tome v41 done"
