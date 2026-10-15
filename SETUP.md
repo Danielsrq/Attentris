@@ -28,14 +28,45 @@ Push soon: this worktree lives under `.claude\worktrees\`, and once the commits 
 | `labels` | labelled jsonl (`raw*`, `dagger2..5all`, state dumps) | 7.3 GB | re-tokenising / re-packing |
 | `old` | v3 / v5 datasets, `structure_study`, `audit`, scaling-curve checkpoints | 2.3 GB | history only |
 
+The **bundle folder** is a local copy of one Drive folder (say `attentris_bundle`). Keep it on D: on Windows: C: is nearly full.
+
+First upload (Windows, about 4 GB of zips):
+
 ```powershell
 .\attentris\.venv\Scripts\python attentris\data_bundle.py list
-.\attentris\.venv\Scripts\python attentris\data_bundle.py pack --tier all --out bundle    # bundle\ is gitignored
-.\attentris\.venv\Scripts\python attentris\data_bundle.py verify bundle\attentris_data_core.zip bundle\attentris_data_labels.zip bundle\attentris_data_old.zip
+.\attentris\.venv\Scripts\python attentris\data_bundle.py pack --tier all --out D:\attentris_bundle
+.\attentris\.venv\Scripts\python attentris\data_bundle.py verify D:\attentris_bundle\attentris_data_core.zip D:\attentris_bundle\attentris_data_labels.zip D:\attentris_bundle\attentris_data_old.zip
 ```
 
-Upload the zips in `bundle\` to a Drive folder. The free tier's 15 GB holds them; `core` alone is enough to keep working.
-After training new models on either machine, re-pack and re-upload `core`. Models are not in git.
+Upload the three zips to the Drive folder. The free tier's 15 GB holds them; `core` alone is enough to keep working.
+
+### New data on either machine (models, DAgger rounds)
+
+Models and datasets are not in git, so each machine ships what it made as a **delta zip**. A delta holds only the new or changed files and is named by time and machine, e.g. `attentris_data_delta_20261020-153000_ubuntu.zip`.
+
+```bash
+# on the machine that made the data (bundle folder = everything from Drive so far)
+python attentris/data_bundle.py status BUNDLE          # new / changed / unchanged / only in the bundle
+python attentris/data_bundle.py pack --delta --out BUNDLE
+# -> upload the new attentris_data_delta_*.zip to the Drive folder
+
+# on the other machine: download the new zip(s) into its bundle folder, then
+python attentris/data_bundle.py unpack "BUNDLE/attentris_data_*.zip"
+```
+
+How `unpack` decides:
+- It applies zips oldest-first (by their creation time), so the newest copy of a file wins.
+- It skips files whose content is already identical (size + CRC), so re-running it is cheap.
+- It restores file times.
+- It never overwrites a local file that is newer than the zipped copy, so unshipped work isn't lost. It lists those files instead; `--force` overrides.
+
+A retrained model with the same name and size is still detected as changed.
+
+To move files between Drive and the bundle folder:
+- **Windows:** the Drive website.
+- **Ubuntu:** the website, or rclone: `sudo apt install rclone`, then `rclone config` (add a Google Drive remote, say `gdrive`). After that, `rclone copy gdrive:attentris_bundle ~/attentris_bundle` downloads, and `rclone copy ~/attentris_bundle gdrive:attentris_bundle` uploads only the files that are new.
+
+After many deltas, repack the full tiers (`pack --tier all`) and delete the old deltas from Drive.
 
 ## 3. Ubuntu machine
 
@@ -49,8 +80,8 @@ git clone https://github.com/Danielsrq/Attentris.git && cd Attentris
 python3 -m venv attentris/.venv
 attentris/.venv/bin/python -m pip install -r attentris/requirements.txt --extra-index-url https://download.pytorch.org/whl/cu126
 
-# data: download the zips from Drive into bundle/, then
-attentris/.venv/bin/python attentris/data_bundle.py unpack "bundle/attentris_data_*.zip"
+# data: download the zips from Drive into ~/attentris_bundle (website or rclone, see section 2), then
+attentris/.venv/bin/python attentris/data_bundle.py unpack "$HOME/attentris_bundle/attentris_data_*.zip"
 
 sh attentris/plat_check.sh      # platform, CPU pinning, torch + CUDA, 2 games with d128 dagger5b-ft
 ```
@@ -77,7 +108,7 @@ git clone https://github.com/Danielsrq/Attentris.git; cd Attentris
 cd bot; cargo build --release; cd ..
 python -m venv attentris\.venv
 .\attentris\.venv\Scripts\python -m pip install -r attentris\requirements.txt --extra-index-url https://download.pytorch.org/whl/cu126
-.\attentris\.venv\Scripts\python attentris\data_bundle.py unpack "bundle\attentris_data_*.zip"
+.\attentris\.venv\Scripts\python attentris\data_bundle.py unpack "D:\attentris_bundle\attentris_data_*.zip"
 ```
 
 Optional, for play / versus as on the original machine: copy the TetrisBattle folder to `external\tetrisbattle`, then:
