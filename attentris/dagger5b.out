@@ -1,0 +1,42 @@
+== dagger5b (more deaths) 16:44
+collect danger g50: APP 0.512 (APPfull 0.341), died 133/200, pieces 333 avg, TSD 2005, TST 15, quads 2647, max height 23, illegal 0, 14.6 ms/move (p90 16.7) + s
+collect normal g50: APP 0.519 (APPfull 0.224), died 185/200, pieces 216 avg, TSD 1263, TST 8, quads 1739, max height 23, illegal 0, 14.7 ms/move (p90 16.9) + se
+400 games, 109645 states, 318 deaths
+selected 50690 of 109645 states (46.2%) -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/data/dagger5b/selected.jsonl
+reasons (a state can have several): danger 33776, death 19013, holes_up 12641, unsure 4592, duplicate (dropped) 7
+routed: 50690 danger records, 21695 hot normal-style positions copied as normal, 2817 calm normal-style states for normal.txt
+dagger5b records: 75202 (danger 50690, normal 24512)
+train 136507, held out 14587
+dagger5all: 136507 positions (normal 45626, gate4 0), 0 lost positions left out, 0 candidates over NC dropped -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/data/v51\dagger5all.npz
+val_dagger5all: 14587 positions (normal 4755, gate4 0), 0 lost positions left out, 0 candidates over NC dropped -> C:/Users/Admin/Documents/tetris/.claude/worktrees/burst/attentris/data/v51\val_dagger5all.npz
+mix: existing files at 0.6155 each per epoch, all of danger + dagger4 + dagger5all
+== v51_d128_dagger5b_ft
+epoch 3: train loss 2.238 | val normal top1 0.645 top3 0.866 | val gate4 top1 0.629 top3 0.858 | | 237s
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.483 top3 0.745 loss 2.516 | argmax Qs top1 0.458 | MAE Qs 7.45
+v51_d128_dagger5b_ft normal none: APP 0.739 (APPfull 0.739), died 0/256, pieces 500 avg, TSD 6788, TST 55, quads 3584, max height 16, illegal 0, 16.5 ms/move (p90 19.0) + search 17.0 ms, 143s
+v51_d128_dagger5b_ft normal d2: APP 0.832 (APPfull 0.832), died 0/64, pieces 500 avg, TSD 1822, TST 15, quads 900, max height 15, illegal 0, 68.3 ms/move (p90 77.2) + search 68.8 ms, 142s
+v51_d128_dagger5b_ft normal g20: APP 0.785 (APPfull 0.650), died 18/64, pieces 414 avg, TSD 1022, TST 6, quads 1959, max height 21, illegal 0, 15.0 ms/move (p90 17.5) + search 15.5 ms, 35s
+v51_d128_dagger5b_ft normal g50: APP 0.555 (APPfull 0.338), died 44/64, pieces 305 avg, TSD 627, TST 1, quads 876, max height 22, illegal 0, 14.9 ms/move (p90 17.3) + search 15.4 ms, 25s
+v51_d128_dagger5b_ft danger g20: APP 0.733 (APPfull 0.718), died 4/64, pieces 490 avg, TSD 1248, TST 11, quads 2235, max height 20, illegal 0, 16.0 ms/move (p90 18.7) + search 16.5 ms, 40s
+v51_d128_dagger5b_ft danger g50: APP 0.520 (APPfull 0.421), died 25/64, pieces 404 avg, TSD 785, TST 6, quads 1092, max height 21, illegal 0, 15.3 ms/move (p90 17.9) + search 15.7 ms, 32s
+== APP / VS: d=128 dagger3-ft vs dagger5-ft (round 5, 50k) vs dagger5b-ft (round 5 + extension, more deaths)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_dagger3_ft_normal_none      0/256      500   0.724    0.724   0.724    0.724         -
+v51_d128_dagger3_ft_normal_d2        0/64      500   0.827    0.827   0.827    0.827         -
+v51_d128_dagger3_ft_normal_g20      32/64      381   0.757    0.577   1.077    0.821 7800/8469
+v51_d128_dagger3_ft_normal_g50      55/64      244   0.538    0.263   0.823    0.402 4444/5436
+v51_d128_dagger3_ft_danger_g20       9/64      477   0.742    0.707   1.078    1.028 10262/10542
+v51_d128_dagger3_ft_danger_g50      43/64      320   0.511    0.327   0.819    0.523 6282/7116
+v51_d128_dagger5_ft_normal_none      0/256      500   0.739    0.739   0.739    0.739         -
+v51_d128_dagger5_ft_normal_d2        0/64      500   0.856    0.856   0.856    0.856         -
+v51_d128_dagger5_ft_normal_g20      27/64      410   0.795    0.652   1.119    0.919 8527/9119
+v51_d128_dagger5_ft_normal_g50      59/64      242   0.559    0.271   0.843    0.409 4404/5426
+v51_d128_dagger5_ft_danger_g20       6/64      482   0.730    0.704   1.068    1.030 10420/10657
+v51_d128_dagger5_ft_danger_g50      24/64      409   0.511    0.418   0.833    0.681 8434/9076
+v51_d128_dagger5b_ft_normal_none     0/256      500   0.739    0.739   0.739    0.739         -
+v51_d128_dagger5b_ft_normal_d2       0/64      500   0.832    0.832   0.832    0.832         -
+v51_d128_dagger5b_ft_normal_g20     18/64      414   0.785    0.650   1.112    0.921 8653/9162
+v51_d128_dagger5b_ft_normal_g50     44/64      305   0.555    0.338   0.859    0.523 5917/6780
+v51_d128_dagger5b_ft_danger_g20      4/64      490   0.733    0.718   1.071    1.049 10608/10806
+v51_d128_dagger5b_ft_danger_g50     25/64      404   0.520    0.421   0.844    0.683 8378/8978
+dagger5b done
