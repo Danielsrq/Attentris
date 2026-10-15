@@ -9,9 +9,9 @@ Git does not hold `attentris/data/` (models and datasets, about 11 GB), the venv
 Create an empty **private** repo `Attentris` on GitHub (no README or licence). Then in PowerShell, from this worktree (`C:\Users\Admin\Documents\tetris\.claude\worktrees\burst`):
 
 ```powershell
-git remote add attentris https://github.com/<you>/Attentris.git
-git config remote.attentris.push refs/heads/worktree-burst:refs/heads/main   # plain "git push" maps worktree-burst -> main
-git push -u attentris worktree-burst:main
+git remote add origin https://github.com/Danielsrq/Attentris.git        # once; "already exists" is fine
+git config remote.origin.push refs/heads/worktree-burst:refs/heads/main     # plain "git push" maps worktree-burst -> main
+git push -u origin worktree-burst:main
 ```
 
 After that, in this worktree only: `git push` sends new commits, and `git pull` brings in commits made on the other machine.
@@ -43,7 +43,7 @@ After training new models on either machine, re-pack and re-upload `core`. Model
 sudo apt install build-essential python3-venv git curl          # C linker for Rust, venv support
 curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.94.1 && . ~/.cargo/env
 
-git clone https://github.com/<you>/Attentris.git && cd Attentris
+git clone https://github.com/Danielsrq/Attentris.git && cd Attentris
 (cd bot && cargo build --release)                               # bot/target/release/bot
 
 python3 -m venv attentris/.venv
@@ -73,7 +73,7 @@ If they are wanted on Linux: `git clone https://github.com/MinusKelvin/cold-clea
 Python 3.10, Rust (cargo 1.94) and Git. In PowerShell, start local programs with `.\`: without it, PowerShell reads `external\...` as a module name ("the module external could not be loaded"). The `.sh` scripts run in Git Bash.
 
 ```powershell
-git clone https://github.com/<you>/Attentris.git; cd Attentris
+git clone https://github.com/Danielsrq/Attentris.git; cd Attentris
 cd bot; cargo build --release; cd ..
 python -m venv attentris\.venv
 .\attentris\.venv\Scripts\python -m pip install -r attentris\requirements.txt --extra-index-url https://download.pytorch.org/whl/cu126
