@@ -18,3 +18,6 @@ external/cold-clear-2/
 
 # Data bundles for Google Drive (attentris/data_bundle.py pack --out bundle)
 /bundle/
+
+# Python bytecode
+__pycache__/
