@@ -5,6 +5,8 @@
 # move-1 loss; plan targets = the teacher's planned line (plan_label.sh, pack_plan.py).
 #   VARIANT=autoreg N=2 sh attentris/plan_ft.sh   -> data/model_v51_d128_autoreg2_ft.pt
 #   VARIANT=plan    N=2 sh attentris/plan_ft.sh   -> data/model_v51_d128_plan2_ft.pt
+#   VARIANT=pieces  N=6 sh attentris/plan_ft.sh   -> data/model_v51_d128_pieces6_ft.pt (piece queries)
+#   NEW_LR=1.5e-3: the new plan branch's peak lr (train.py --new-lr), the pretrained parts keep 3e-4
 #   VARIANT=none        sh attentris/plan_ft.sh   -> data/model_v51_d128_ctrl_ft.pt (control: the same
 #                                                    3 epochs without a plan loss)
 # Then the standard play block (depth 1: none 256 games, d2 64, normal / danger x 80/20, 50/50 at 64),
@@ -21,8 +23,8 @@ W_PLAN=${W_PLAN:-1.0}
 BASE=v51_d128_dagger5b_ft
 case $VARIANT in
     none) NAME=v51_d128_ctrl_ft; PLAN="" ;;
-    autoreg|plan) NAME=v51_d128_${VARIANT}${N}_ft; PLAN="--plan-variant $VARIANT --plan-steps $N --w-plan $W_PLAN" ;;
-    *) echo "VARIANT = autoreg | plan | none"; exit 1 ;;
+    autoreg|plan|pieces) NAME=v51_d128_${VARIANT}${N}_ft; PLAN="--plan-variant $VARIANT --plan-steps $N --w-plan $W_PLAN${NEW_LR:+ --new-lr $NEW_LR}" ;;
+    *) echo "VARIANT = autoreg | plan | pieces | none"; exit 1 ;;
 esac
 OUT="$DIR/results_plan.txt"
 m() { wpath "$1"; }

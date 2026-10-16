@@ -103,6 +103,7 @@ class Player:
                           cross_layers=ck["args"].get("cross_layers", 1), cross_loops=ck["args"].get("cross_loops", 1),
                           n_teachers=ck["model"]["style.weight"].shape[0])
             self.n_styles = ck["model"]["style.weight"].shape[0]
+        self.variant = ck["args"].get("plan_variant", "")
         missing = self.net.load_state_dict(ck["model"], strict=False).missing_keys
         if policy != "logit" and any(k.startswith(policy + ".") for k in missing):
             raise SystemExit("%s has no %s head (a v1 checkpoint?)" % (model_path, policy))
@@ -116,9 +117,8 @@ class Player:
         self.qscale = M.Q_SCALE
         self.torch = torch
         self.depth, self.beam, self.teacher = depth, beam, teacher
-        self.checks = self.kept = 0           # --plan-check
-        self.pending = None
         self.n_committed = 0                  # --commit 2: moves played from the previous decision
+        self.n_illegal = self.n_plan_off = 0  # --commit 2, pieces: step 2 not legal / step 1 not the move played
         self.committed = None
         # expand_args: more rule flags for `bot expand` (bot/tools/versus.py: --no-180)
         self.ex = subprocess.Popen([BOT, "expand", "--mode", mode, *expand_args], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -215,37 +215,42 @@ class Player:
                 break
         return best_line[1]
 
-    def plan_check(self, st, root, c):
-        """attentris-autoreg plan consistency, as the bot's plan_kept / plan_checks: score this move
-        against the move 2 predicted one move earlier (skipped when the board is not the one
-        predicted: garbage arrived), then predict move 2 from here: the board after our move
-        (bot expand), its legal moves mapped into this board's frame, one more cross pass."""
+    def plan_window(self, st, root, c, K):
+        """attentris-autoreg, --plan-check K: the model's own plan from here, steps 2..K, each step
+        chained on the previous predicted move (its legal moves from Rust, mapped into this board's
+        frame through the earlier planned clears). Returns [(hold, sorted cells)] for steps 2..K
+        (shorter when the chain cannot go on: the known queue runs out)."""
         import torch
-        pend, self.pending = getattr(self, "pending", None), None
-        if pend is not None and pend["n"] == st["n"] and pend["rows"] == st["rows"] and pend["hold"] == st["hold"] \
-                and pend["piece"] == st["piece"]:
-            self.checks += 1
-            self.kept += pend["move"] == (c["hold"], sorted(zip(c["cells"][0::2], c["cells"][1::2])))
-        step2 = self.step2(st, c)
-        if step2 is None:
-            return
-        nxt, cands2, pc = step2
         a = arrays([(st, root)], self.teacher, self.tok_version, self.drop)
-        a.update(pc, chosen=torch.tensor([root["cands"].index(c)]))
+        i = root["cands"].index(c)
+        preds, pcs = [], []
         with torch.inference_mode():
-            out = self.net(a, heads=True, n_steps=2)
-        m = cands2[int(out["step_logits"][0, 0, :len(cands2)].argmax())]
-        self.pending = {"n": st["n"] + 1, "rows": c["rows"], "hold": nxt["hold"], "piece": nxt["piece"],
-                        "move": (m["hold"], sorted(zip(m["cells"][0::2], m["cells"][1::2])))}
+            _, enc, _ = self.net.move1(a)
+            prev = [(a["cand_cells"][:, i], a["cand_meta"][:, i].clamp(min=0))]
+            state, move, origin = st, c, list(range(40))
+            for k in range(2, K + 1):
+                s2 = self.step2(state, move, origin)
+                if s2 is None:
+                    break
+                nxt, cands2, pc, origin = s2
+                pcs.append(pc)
+                b = {key: torch.cat([q[key] for q in pcs], 1) for key in pc}
+                logits, _ = self.net.autoreg_steps(b, enc, a["teacher"], k, prev)
+                j = int(logits[0, -1, :len(cands2)].argmax())
+                m = cands2[j]
+                preds.append((m["hold"], sorted(zip(m["cells"][0::2], m["cells"][1::2]))))
+                prev.append((pc["pc_cells"][:, 0, j], pc["pc_meta"][:, 0, j].clamp(min=0)))
+                state, move = nxt, m
+        return preds
 
-    def step2(self, st, c):
+    def step2(self, st, c, origin0=None):
         """After our move c at st: the next state, its legal moves (bot expand) and those moves as
         plan-step inputs in st's frame (pc_cells / pc_meta / pc_n / pc_target, as pack_plan.py).
         None when the next state cannot be predicted (queue too short, or a rule the replay below
         does not model)."""
         import torch
         used, queue = c["used"], st["queue"]
-        if len(queue) < used + 1:
+        if len(queue) < used:                  # the next piece is not known
             return None
         nxt = {"rows": c["rows"], "piece": queue[used - 1], "queue": queue[used:], "hold": c["hold_after"], "b2b": c["b2b"]}
         # this board's rows after our move: placed, full rows cleared; origin[y] = the row it came from
@@ -257,6 +262,8 @@ class Player:
         if [0] * len(full) + [rows[y] for y in kept_rows] != list(c["rows"]):
             return None
         origin = [-(len(full) - i) for i in range(len(full))] + kept_rows
+        if origin0 is not None:     # st is itself a planned state: map on into the root's frame
+            origin = [origin0[o] if o >= 0 else o - 1000 for o in origin]
         cands2 = self.expand(nxt)["cands"][:P.NC]
         if not cands2:
             return None
@@ -268,7 +275,69 @@ class Player:
             cm[0, 0, j] = (P.PIECE_ID[m["piece"]], m["hold"], m["spin"], m["lines"], max(0, min(m["attack"], 127)))
         pc = {"pc_cells": torch.from_numpy(cc), "pc_meta": torch.from_numpy(cm),
               "pc_n": torch.tensor([[len(cands2)]]), "pc_target": torch.tensor([[-1]])}
-        return nxt, cands2, pc
+        return nxt, cands2, pc, origin
+
+    def rot_table(self):
+        """(piece, normalised shape) -> rotation class, as pack_plan.py derives it (O 0, I / S / Z
+        rot % 2, T / L / J rot), read from the plan labels until all 19 shapes are seen."""
+        if getattr(self, "_rot", None) is None:
+            import glob
+            import pack_plan as PP
+            self._rot = {}
+            for f in sorted(glob.glob(os.path.join(HERE, "data", "plan", "raw", "*.jsonl"))):
+                for line in open(f):
+                    for h, pc, rot, cl in json.loads(line)["plan"]:
+                        xy = [(cl[2 * q], 39 - cl[2 * q + 1]) for q in range(4)]
+                        self._rot[(pc, PP.shape(xy))] = PP.rot_class(pc, rot)
+                if len(self._rot) >= 19:
+                    break
+        return self._rot
+
+    def place_of(self, m):
+        """A legal move's 880-way placement (pack_plan.py coord without the hold bit), or -1."""
+        import pack_plan as PP
+        xy = [(m["cells"][2 * q], 39 - m["cells"][2 * q + 1]) for q in range(4)]
+        rc = self.rot_table().get((m["piece"], PP.shape(xy)))
+        c = -1 if rc is None else PP.coord(0, rc, xy)
+        return c
+
+    def decide_commit_pieces(self, st):
+        """attentris-plan (pieces), --commit 2: move 1 from the policy; the pieces heads' step 2 (the
+        piece most likely placed at step 2, at its most likely place) is played at X+1 without a new
+        decision when (a) their step 1 is the move just played, (b) the board is the predicted one
+        (no garbage), and (c) that placement is a legal move at X+1; else a normal decision there
+        ((c) failing counts as illegal)."""
+        import torch
+        kept, self.committed = getattr(self, "committed", None), None
+        if kept is not None and kept["n"] == st["n"] and kept["rows"] == st["rows"] and kept["hold"] == st["hold"] \
+                and kept["piece"] == st["piece"]:
+            root = self.expand(st)
+            hit = [m for m in root["cands"] if m["piece"] == kept["piece_type"] and self.place_of(m) == kept["place"]]
+            if hit:
+                self.n_committed += 1
+                return hit[0]
+            self.n_illegal += 1
+        root = self.expand(st)
+        self.last_root = root
+        if not root["cands"]:
+            return None
+        n = min(len(root["cands"]), P.NC)
+        a = arrays([(st, root)], self.teacher, self.tok_version, self.drop)
+        with torch.inference_mode():
+            out = self.net(a, heads=True, n_steps=6)
+        c = root["cands"][int(out["logit"][0, :n].argmax())]
+        when = out["when_logits"][0].log_softmax(-1)        # (7 slots, 7 classes)
+        where = out["where_logits"][0].argmax(-1)           # (7,)
+        slot1, slot2 = int(when[:, 1].argmax()), int(when[:, 2].argmax())
+        pieces = [st["piece"], st["hold"]] + list(st["queue"])
+        if slot1 != slot2 and int(where[slot1]) == self.place_of(c) and pieces[slot1] == c["piece"] and slot2 < len(pieces) and pieces[slot2]:
+            used, queue = c["used"], st["queue"]
+            if len(queue) >= used:
+                self.committed = {"n": st["n"] + 1, "rows": c["rows"], "hold": c["hold_after"], "piece": queue[used - 1],
+                                  "piece_type": pieces[slot2], "place": int(where[slot2])}
+        else:
+            self.n_plan_off += 1
+        return c
 
     def decide_autoreg_beam(self, st):
         """attentris-autoreg, --depth 2 --autoreg-beam: the depth-2 policy beam (decide()'s: the
@@ -330,7 +399,7 @@ class Player:
             c = root["cands"][i]
             step2 = self.step2(st, c)
             if step2 is not None:
-                nxt, cands2, pc = step2
+                nxt, cands2, pc = step2[:3]
                 a.update(pc)
                 prev = [(a["cand_cells"][:, i], a["cand_meta"][:, i].clamp(min=0))]
                 logits, _ = self.net.autoreg_steps(a, enc, a["teacher"], 2, prev)
@@ -374,6 +443,7 @@ def play_game(args, seed):
     game = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=open(os.path.join(args.bot_log, "game_s%d.err" % seed), "w") if args.bot_log else subprocess.DEVNULL, text=True, bufsize=1)
     times = []
     states = []
+    windows, played = {}, {}      # --plan-check: the plan made at move n; the move played at n
     danger_moves = 0
     while True:
         st = readjson(game)
@@ -408,13 +478,15 @@ def play_game(args, seed):
             c = pl.decide_autoreg_beam(st)
             move = {"hold": c["hold"], "cells": c["cells"]} if c else {"hold": 0, "cells": []}
         elif args.commit > 1:
-            c = pl.decide_commit(st)
+            c = pl.decide_commit_pieces(st) if pl.variant == "pieces" else pl.decide_commit(st)
             move = {"hold": c["hold"], "cells": c["cells"]} if c else {"hold": 0, "cells": []}
         else:
             c = pl.decide(st)
             move = {"hold": c["hold"], "cells": c["cells"]} if c else {"hold": 0, "cells": []}
             if args.plan_check and c:
-                pl.plan_check(st, pl.last_root, c)
+                windows[st["n"]] = pl.plan_window(st, pl.last_root, c, args.plan_check)
+            if c:
+                played[st["n"]] = (c["hold"], sorted(zip(c["cells"][0::2], c["cells"][1::2])))
             if args.dump and pl.last_entropy is not None:
                 dumped["entropy"] = round(pl.last_entropy, 4)
         times.append(time.perf_counter() - t0)
@@ -423,8 +495,28 @@ def play_game(args, seed):
     game.wait()
     pl.close()
     st["danger_moves"] = danger_moves
-    st["plan_checks"], st["plan_kept"] = getattr(pl, "checks", 0), getattr(pl, "kept", 0)
+    if args.plan_check:
+        # windows X..X+K-1 with every move played and no garbage arriving inside (game.rs: a batch
+        # lands before move n when n % every == 0), as plan_consistency_cem.py counts the teacher
+        K = args.plan_check
+        every = int(args.garbage.split(",")[0]) if args.garbage else 0
+        alone, prefix, n_win, short = np.zeros(K + 1), np.zeros(K + 1), 0, 0
+        for x, preds in windows.items():
+            if any(x + j not in played for j in range(K)) or (every and any((x + j) % every == 0 for j in range(1, K))):
+                continue
+            if len(preds) < K - 1:
+                short += 1
+                continue
+            n_win += 1
+            ok = True
+            for k in range(2, K + 1):
+                hit = preds[k - 2] == played[x + k - 1]
+                ok = ok and hit
+                alone[k] += hit
+                prefix[k] += ok
+        st["plan_win"], st["plan_alone"], st["plan_prefix"], st["plan_short"] = n_win, alone.tolist(), prefix.tolist(), short
     st["committed"] = getattr(pl, "n_committed", 0)
+    st["commit_illegal"], st["commit_plan_off"] = getattr(pl, "n_illegal", 0), getattr(pl, "n_plan_off", 0)
     st["ms_per_move"] = 1000 * float(np.mean(times)) if times else 0.0
     st["ms_p90"] = 1000 * float(np.percentile(times, 90)) if times else 0.0
     st["states"] = states
@@ -468,8 +560,9 @@ def main():
                     "of its tokens instead of its schedule / budget step (e.g. 6:0.30)")
     ap.add_argument("--merge", default="", help="ToMe: play with this merge schedule (per layer, e.g. 0,0.17,0.25,0.25) "
                                                 "instead of the one it was trained with; no retraining")
-    ap.add_argument("--plan-check", action="store_true", help="attentris-autoreg: plan consistency, how often the move "
-                    "played at X+1 is the move 2 the model predicted at X (as the bot's plan_kept / plan_checks)")
+    ap.add_argument("--plan-check", type=int, default=0, help="attentris-autoreg, K >= 2: plan consistency, the model's "
+                    "own plan of steps 2..K at every move X vs the moves it then plays at X+1..X+K-1 (step alone and all "
+                    "steps so far; windows with garbage inside skipped), as plan_consistency_cem.py for the teacher")
     ap.add_argument("--autoreg-beam", action="store_true", help="attentris-autoreg, --depth 2: the policy beam with move 2 "
                     "from the step-2 pass over the root's encoding (children expanded, never re-encoded)")
     ap.add_argument("--commit", type=int, default=1, help="attentris-autoreg: moves played per decision (2: move 2 "
@@ -496,9 +589,15 @@ def main():
         line += ", move 2 from the autoreg step-2 pass (children not encoded)"
     if args.commit > 1:
         line += ", %.1f%% of moves committed" % (100 * sum(r["committed"] for r in res) / max(1, pieces))
+        if sum(r["commit_illegal"] + r["commit_plan_off"] for r in res):
+            line += " (pieces: step 2 illegal %d, step 1 not the policy's move %d)" % (
+                sum(r["commit_illegal"] for r in res), sum(r["commit_plan_off"] for r in res))
     if args.plan_check:
-        pc, pk = sum(r["plan_checks"] for r in res), sum(r["plan_kept"] for r in res)
-        line += ", plan kept %d / %d (%.1f%%)" % (pk, pc, 100 * pk / max(1, pc))
+        nw = sum(r["plan_win"] for r in res)
+        al, pr = np.sum([r["plan_alone"] for r in res], 0), np.sum([r["plan_prefix"] for r in res], 0)
+        line += ", plan check over %d windows (%d plans cut short): step k alone %s; steps 2..k all %s" % (
+            nw, sum(r["plan_short"] for r in res), " ".join("%d:%.1f%%" % (k, 100 * al[k] / max(1, nw)) for k in range(2, args.plan_check + 1)),
+            " ".join("%d:%.1f%%" % (k, 100 * pr[k] / max(1, nw)) for k in range(2, args.plan_check + 1)))
     if args.style == "auto":
         line += ", danger style on %.1f%% of moves (height >= %d or holes >= %d)" % (
             100 * sum(r["danger_moves"] for r in res) / max(1, pieces), args.auto_height, args.auto_holes)

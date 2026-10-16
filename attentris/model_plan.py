@@ -19,6 +19,13 @@ embeddings start at zero). Plan steps are k = 1..N, N <= MAX_STEPS = 6 (the curr
            self-attention block over the N step tokens (a coherent plan), and a shared
            1760-way coordinate head: hold 2 x rotation class 4 x column 10 x lowest row 22
            (pack_plan.py's coord). A step's prediction can be illegal; play checks it with Rust.
+  pieces   attentris-plan with piece queries ("option A"): one query per KNOWN piece (current, hold,
+           preview 1..5), started from that piece's encoded board token (+ a learned vector per
+           slot), not from a blank step token. Same cross block (to the board) + self-attention
+           (among the 7 pieces); two heads per piece: WHEN it is placed (step 1..6, or 0 = not in
+           the 6-step plan: it stays in hold / is not reached) and WHERE (rotation class x column
+           x lowest row = 880, on its step's own board). Hold needs no special case: a swap only
+           changes which step a piece gets. Targets: pack_plan.py piece_step / piece_place.
 
 Batch keys added to model.AtTenTris's (B = batch, K = MAX_STEPS - 1 steps after the first):
   autoreg: pc_cells (B, K, NC, 4) long, pc_meta (B, K, NC, 5) long, pc_n (B, K) long (legal
@@ -32,12 +39,15 @@ import model as M
 
 MAX_STEPS = 6
 N_COORD = 2 * 4 * 10 * 22
+N_PLACE = 4 * 10 * 22                 # pieces: rotation class x column x lowest row (no hold bit)
+N_SLOTS = 7                           # pieces: current, hold, preview1..5
+PIECE_KIND_IDS = (20, 21, 22, 23, 24, 25, 26)   # pack.KIND_ID of tokenizer.PIECE_KINDS (asserted by train.py)
 
 
 class AtTenTrisPlan(M.AtTenTris):
     def __init__(self, *args, variant="autoreg", max_steps=MAX_STEPS, **kw):
         super().__init__(*args, **kw)
-        assert variant in ("autoreg", "plan")
+        assert variant in ("autoreg", "plan", "pieces")
         d = self.d
         self.variant, self.max_steps = variant, max_steps
         self.step = nn.Embedding(max_steps, d)                  # step k's embedding (row k-1); zero init:
@@ -45,6 +55,15 @@ class AtTenTrisPlan(M.AtTenTris):
         heads = self.cross.att.h
         if variant == "autoreg":
             self.prev_move = nn.Parameter(torch.zeros(d))       # marks the earlier-move key/value tokens
+        elif variant == "pieces":
+            self.plan_query = nn.Embedding(N_SLOTS, d)            # per piece slot, added to its board token
+            nn.init.normal_(self.plan_query.weight, std=0.02)
+            self.plan_cross = M.Block(d, heads)
+            self.plan_c_bias = M.Bias(heads)
+            self.plan_self = M.Block(d, heads)
+            self.plan_norm = nn.LayerNorm(d)
+            self.when_head = nn.Linear(d, max_steps + 1)        # 0 = not placed, 1..6
+            self.where_head = nn.Linear(d, N_PLACE)
         else:
             self.plan_query = nn.Embedding(max_steps, d)
             nn.init.normal_(self.plan_query.weight, std=0.02)
@@ -57,7 +76,7 @@ class AtTenTrisPlan(M.AtTenTris):
     def init_from_base(self):
         """After loading a base (single-move) checkpoint: start attentris-plan's step queries'
         cross block from the trained cross block (and its FLAT-2D bias)."""
-        if self.variant == "plan":
+        if self.variant in ("plan", "pieces"):
             self.plan_cross.load_state_dict(self.cross.state_dict())
             self.plan_c_bias.load_state_dict(self.c_bias.state_dict())
 
@@ -137,6 +156,8 @@ class AtTenTrisPlan(M.AtTenTris):
             out["step_logits"], attn["step_cross"] = self.autoreg_steps(batch, enc, teacher, n_steps, prev)
         if n_steps > 1 and self.variant == "plan":
             out["coord_logits"], attn["plan_cross"] = self.plan_steps(enc, teacher, n_steps)
+        if n_steps > 1 and self.variant == "pieces":
+            out["when_logits"], out["where_logits"], attn["plan_cross"] = self.piece_plan(batch, enc, teacher)
         if not heads and not (n_steps > 1):
             out = out["logit"]
         if return_attn:
@@ -190,6 +211,26 @@ class AtTenTrisPlan(M.AtTenTris):
         no_pad = torch.zeros(B, n_steps, dtype=torch.bool, device=teacher.device)
         q, _ = self.plan_self(q, 0.0, no_pad)
         return self.coord_head(self.plan_norm(q)), ca
+
+
+def _piece_plan(self, batch, enc, teacher):
+    """The 7 piece queries (board tokens of kinds current, hold, preview1..5), one cross pass to the
+    board, self-attention among them, then when (B, 7, 7) and where (B, 7, 880) logits."""
+    kind = batch["tok_kind"]
+    B = kind.shape[0]
+    idx = torch.stack([(kind == k).float().argmax(1) for k in PIECE_KIND_IDS], 1)      # (B, 7) token index
+    q = torch.gather(enc["hb"], 1, idx.unsqueeze(-1).expand(-1, -1, self.d)) + self.plan_query.weight.unsqueeze(0)
+    qbox = torch.full((B, N_SLOTS, 4), -1, dtype=torch.long, device=kind.device)
+    qmask = torch.zeros(B, N_SLOTS, 200, device=kind.device)
+    feats, both = M.pair_features(qbox, enc["box"], qmask, enc["maskf"])
+    q, ca = self.plan_cross(q, self.plan_c_bias(feats, both), enc["pad"], ctx=enc["hb"], ctx_norm=self.c_norm)
+    no_pad = torch.zeros(B, N_SLOTS, dtype=torch.bool, device=kind.device)
+    q, _ = self.plan_self(q, 0.0, no_pad)
+    q = self.plan_norm(q)
+    return self.when_head(q), self.where_head(q), ca
+
+
+AtTenTrisPlan.piece_plan = _piece_plan
 
 
 def load(path, variant=None, device="cpu"):

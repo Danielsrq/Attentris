@@ -31,6 +31,7 @@ import tokenizer as T
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 assert len(T.KINDS) <= M.N_KINDS
+assert tuple(T.KINDS.index(k) for k in T.PIECE_KINDS) == MP.PIECE_KIND_IDS
 TEACH = ("normal", "gate4", "danger")      # pack.TEACHERS
 
 
@@ -44,6 +45,8 @@ def load(path, plan_steps=0, pc=False):
         base = path[:-len(".npz")]
         with np.load(base + ".plan.npz") as p:
             out["plan_len"], out["coord"] = p["plan_len"], p["coord"][:, :plan_steps]
+            if "piece_step" in p.files:
+                out["piece_step"], out["piece_place"] = p["piece_step"], p["piece_place"]
         if pc:
             big = os.path.join(os.path.dirname(os.path.dirname(base)), "v51plan", os.path.basename(base) + ".pc.npy")
             out["pc"] = np.ascontiguousarray(np.load(big, mmap_mode="r")[:, :plan_steps - 1])
@@ -127,6 +130,13 @@ def plan_ce(out, d, idx, args, device):
     plan's move among that step's legal moves), plan over steps 1..N (the 1760-way coordinate).
     A step counts while it is within the position's plan (plan_len) and has a target."""
     plan_len = torch.from_numpy(d["plan_len"][idx].astype(np.int64)).to(device)
+    if args.plan_variant == "pieces":     # per piece: when (step 1..6 / 0 not placed) and where (880)
+        when = torch.from_numpy(d["piece_step"][idx].astype(np.int64)).to(device)          # (B, 7), -1 unknown
+        where = torch.from_numpy(d["piece_place"][idx].astype(np.int64)).to(device)
+        ok_w, ok_p = when >= 0, where >= 0
+        ce_w = -out["when_logits"].log_softmax(-1).gather(-1, when.clamp(min=0).unsqueeze(-1)).squeeze(-1)
+        ce_p = -out["where_logits"].log_softmax(-1).gather(-1, where.clamp(min=0).unsqueeze(-1)).squeeze(-1)
+        return torch.cat([ce_w * ok_w, ce_p * ok_p], 1), torch.cat([ok_w, ok_p], 1).float()
     if args.plan_variant == "autoreg":
         logits = out["step_logits"]                                        # (B, N-1, NC)
         tgt = torch.from_numpy(d["pc"]["target"][idx].astype(np.int64)).to(device)
@@ -147,14 +157,24 @@ def evaluate(net, d, batch, args, device="cpu"):
     keys = ("n", "top1", "top3", "loss", "q1_top1", "qs_top1", "q1_err", "q1_cnt", "qs_err", "qs_cnt")
     stats = {t: dict.fromkeys(keys, 0.0) for t in range(len(TEACH))}
     planning = getattr(args, "plan_variant", "") and args.plan_steps > 1
-    if planning:      # top-1 against the plan per step (autoreg: steps 2..N; plan: 1..N), all teachers
+    if planning:      # top-1 against the plan per step (autoreg: steps 2..N; plan / pieces: 1..N), all teachers
         n_s = args.plan_steps - 1 if args.plan_variant == "autoreg" else args.plan_steps
         p_hit, p_cnt = np.zeros(n_s), np.zeros(n_s)
     with torch.no_grad():
         for s in range(0, n, batch):
             idx = np.arange(s, min(n, s + batch))
             out = net(batch_of(d, idx, device), heads=True, **({"n_steps": args.plan_steps} if planning else {}))
-            if planning:
+            if planning and args.plan_variant == "pieces":
+                # step k right: the piece the plan places at step k is predicted at step k, at its place
+                when = d["piece_step"][idx]
+                where = d["piece_place"][idx]
+                pw = out["when_logits"].argmax(-1).cpu().numpy()
+                pp = out["where_logits"].argmax(-1).cpu().numpy()
+                for k in range(1, args.plan_steps + 1):
+                    m = when == k
+                    p_cnt[k - 1] += m.sum()
+                    p_hit[k - 1] += (m & (pw == k) & (pp == where)).sum()
+            elif planning:
                 lg = out["step_logits"] if args.plan_variant == "autoreg" else out["coord_logits"]
                 tgt = torch.from_numpy((d["pc"]["target"] if args.plan_variant == "autoreg" else d["coord"])[idx].astype(np.int64)).to(device)
                 _, ok = plan_ce(out, d, idx, args, device)
@@ -239,12 +259,16 @@ def main():
     ap.add_argument("--w-q", type=float, default=0.0, help="weight of both value-head regressions (v2: 1.0)")
     ap.add_argument("--w-q1", type=float, default=None, help="weight of the Q1 regression (default --w-q)")
     ap.add_argument("--w-qs", type=float, default=None, help="weight of the Qs regression (default --w-q)")
-    ap.add_argument("--plan-variant", default="", choices=("", "autoreg", "plan"),
+    ap.add_argument("--plan-variant", default="", choices=("", "autoreg", "plan", "pieces"),
                     help="multi-move AtTenTris (model_plan.py): attentris-autoreg or attentris-plan")
+    ap.add_argument("--new-lr", type=float, default=0.0, help="with --init: peak lr of the parameters the init checkpoint "
+                    "lacks (a new plan branch); the rest use --lr (0 = all at --lr)")
     ap.add_argument("--plan-steps", type=int, default=2, help="plan length N trained (2..6; move 1 included)")
     ap.add_argument("--w-plan", type=float, default=1.0, help="weight of the plan loss (mean over a position's plan steps)")
     args = ap.parse_args()
     ps = args.plan_steps if args.plan_variant else 0
+    if args.plan_variant == "pieces" and args.plan_steps != 6:
+        raise SystemExit("--plan-variant pieces: --plan-steps 6 (its targets are 6-step plans)")
     use_pc = args.plan_variant == "autoreg"
     n_p = pcores.pin()
     torch.set_num_threads(args.threads or n_p or 8)
@@ -319,9 +343,19 @@ def main():
         net = M.AtTenTris(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops,
                           n_teachers=args.n_teachers).to(args.device)
     print("device", args.device, torch.cuda.get_device_name(0) if args.device == "cuda" else "", flush=True)
-    opt = torch.optim.AdamW(net.parameters(), lr=args.lr, weight_decay=0.01)
+    groups, lrs = [list(net.parameters())], [args.lr]
+    if args.new_lr and args.init:
+        # parameters the --init checkpoint does not have (a new plan branch) learn at --new-lr, the
+        # pretrained ones at --lr: fast for the random new parts, gentle on the trained backbone
+        have = set(torch.load(args.init, map_location="cpu", weights_only=False)["model"])
+        named = list(net.named_parameters())
+        groups = [[p_ for n_, p_ in named if n_ in have], [p_ for n_, p_ in named if n_ not in have]]
+        lrs = [args.lr, args.new_lr]
+        print("learning rates: %d pretrained tensors at %g, %d new at %g" % (
+            sum(n_ in have for n_, _ in named), args.lr, sum(n_ not in have for n_, _ in named), args.new_lr), flush=True)
+    opt = torch.optim.AdamW([{"params": g, "lr": lr} for g, lr in zip(groups, lrs)], weight_decay=0.01)
     steps = args.epochs * math.ceil(m / args.batch)
-    sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=args.lr, total_steps=steps, pct_start=0.05)
+    sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=lrs, total_steps=steps, pct_start=0.05)
     start, log = 0, []
     start_batch, perm0, tot0, cnt0 = 0, None, 0.0, 0
     if args.init:

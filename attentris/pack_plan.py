@@ -12,6 +12,12 @@ this writes, per packed set NAME (data/v51/NAME.npz):
                                (1760 classes), on that step's own board; rot = the shape class
                                (O: 0, I / S / Z: 0-1, T / L / J: 0-3), x = leftmost column,
                                y = lowest row (0 = bottom); -1 when no step or y > 21
+      piece_step  (M, 7) int8   per known piece (current, hold, preview 1..5): the plan step that places it
+                                (1..6), 0 = not placed in a full 6-step plan (it stays in hold, or the
+                                plan does not reach it), -1 = unknown (a shorter plan) or no piece (hold
+                                empty); replayed from the plan's hold choices over the queue
+      piece_place (M, 7) int16  its placement on its step's own board: rot*220 + x*22 + y (880 classes,
+                                coord without the hold bit), -1 when not placed / unknown
   data/v51plan/NAME.pc.npy    large (~6 kB a position), rebuilt here, NOT shipped (data_bundle skips it)
       (M, 5) records of bot plan-cands for plan steps 2..6: legal moves in the root's frame,
       their meta, the planned move's index (attentris-autoreg's queries and target)
@@ -22,6 +28,7 @@ move 1 = the label, the plan lengths, and that every planned cell (root frame) i
 root board.
 
     python attentris/pack_plan.py [--names train,val,...] [--jobs 64]
+    python attentris/pack_plan.py --pieces-only     # only (re)compute piece_step / piece_place, keep the rest
 """
 import argparse
 import glob
@@ -96,6 +103,32 @@ def plan_cands(job):
     os.replace(tmp, out)
 
 
+def piece_targets(hold_empty, plan_len, holds, coords):
+    """Which known piece each plan step places: slots 0 = current, 1 = hold, 2..6 = previews 1..5.
+    holds[k] = step k+1's hold flag. Returns (step per slot (7,), placement per slot (7,))."""
+    step = np.full(7, -1, np.int8)
+    place = np.full(7, -1, np.int16)
+    cur, held, nxt = 0, (None if hold_empty else 1), 2
+    done = 0
+    for k in range(plan_len):
+        if not holds[k]:
+            slot, cur, nxt = cur, nxt, nxt + 1
+        elif held is None:                          # hold empty: the next piece is played, current held
+            slot, held, cur, nxt = nxt, cur, nxt + 1, nxt + 2
+        else:
+            slot, held, cur, nxt = held, cur, nxt, nxt + 1
+        if slot > 6:                                # a piece not yet visible: stop here
+            break
+        step[slot] = k + 1
+        place[slot] = coords[k] % 880 if coords[k] >= 0 else -1
+        done = k + 1
+    if done == K + 1:                               # a full plan: every other known piece is not placed
+        step[(step < 0)] = 0
+        if hold_empty:
+            step[1] = -1
+    return step, place
+
+
 def read_file(job):
     """Per record of one raw file: its key, and the plan's steps (hold, piece, rot, cells)."""
     src, plan = job
@@ -104,15 +137,41 @@ def read_file(job):
         for i, (ls, lp) in enumerate(zip(fs, fp)):
             r, p = json.loads(ls), json.loads(lp)
             assert p["i"] == i
-            keys.append((TEACHERS.index(r["teacher"]), r["seed"], r["n"], visible_board(r["rows"]).tobytes()))
+            keys.append((TEACHERS.index(r["teacher"]), r["seed"], r["n"], visible_board(r["rows"]).tobytes(), r["hold"] is None))
             plans.append([(s[0], s[1], s[2], [(s[3][2 * q], 39 - s[3][2 * q + 1]) for q in range(4)]) for s in p["plan"]])
     return keys, plans
+
+
+def write_pieces(name, z, rows, plans, hold_empty, plan_len, coords):
+    """NAME.plan.npz: plan_len, coord, and the piece targets (piece_targets) of every row."""
+    m = len(rows)
+    ps, pp = np.full((m, 7), -1, np.int8), np.full((m, 7), -1, np.int16)
+    for i in range(m):
+        j = rows[i]
+        holds = [int(z["cand_meta"][i, z["chosen"][i], 1])] + [s[0] for s in plans[j][1:]]
+        ps[i], pp[i] = piece_targets(bool(hold_empty[j]), int(plan_len[i]), holds, coords[i])
+    # check: the piece token each step was assigned is the piece the plan places there
+    kinds = np.arange(20, 27)                 # current, hold, preview1..5 (pack.KIND_ID)
+    slot_piece = np.stack([z["tok_piece"][np.arange(m), np.argmax(z["tok_kind"] == k, 1)] for k in kinds], 1)
+    bad = tot = 0
+    for i in range(m):
+        pl = plans[rows[i]]
+        for slot in range(7):
+            k = ps[i, slot]
+            if k >= 2:                       # steps 2.. come from the plan (step 1 = the label)
+                tot += 1
+                bad += PIECES.index(pl[k - 1][1]) != slot_piece[i, slot]
+    print("    %s: %d plan steps assigned to piece tokens, %d of a different piece type" % (name, tot, bad), flush=True)
+    tmp = os.path.join(V51, name + ".plan.tmp.npz")
+    np.savez(tmp, plan_len=plan_len, coord=coords, piece_step=ps, piece_place=pp)
+    os.replace(tmp, os.path.join(V51, name + ".plan.npz"))
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--names", default=",".join(SOURCES))
     ap.add_argument("--jobs", type=int, default=os.cpu_count())
+    ap.add_argument("--pieces-only", action="store_true", help="only add piece_step / piece_place to the existing NAME.plan.npz")
     args = ap.parse_args()
     names = args.names.split(",")
     os.makedirs(OUT_BIG, exist_ok=True)
@@ -128,13 +187,16 @@ def main():
         bindir = os.path.join(OUT_BIG, "bin", src_set)
         os.makedirs(bindir, exist_ok=True)
         bins = [os.path.join(bindir, os.path.basename(f)[:-6] + ".bin") for f in files]
-        pool.map(plan_cands, [(s, p, b) for (s, p), b in zip(pairs, bins)], chunksize=1)
+        if not args.pieces_only:
+            pool.map(plan_cands, [(s, p, b) for (s, p), b in zip(pairs, bins)], chunksize=1)
         parts = pool.map(read_file, pairs, chunksize=4)
         keys = [k for ks, _ in parts for k in ks]
         plans = [p for _, ps in parts for p in ps]
-        pc = np.concatenate([np.fromfile(b, PC).reshape(-1, K) for b in bins])
-        assert len(pc) == len(keys), (src_set, len(pc), len(keys))
-        index = {k: i for i, k in enumerate(keys)}
+        if not args.pieces_only:
+            pc = np.concatenate([np.fromfile(b, PC).reshape(-1, K) for b in bins])
+            assert len(pc) == len(keys), (src_set, len(pc), len(keys))
+        hold_empty = np.array([k[4] for k in keys])
+        index = {k[:4]: i for i, k in enumerate(keys)}
         # the rotation class of each (piece, shape), from the plans; must be one class per shape
         rclass = {}
         for pl in plans:
@@ -145,13 +207,19 @@ def main():
 
         for name in set_names:
             with np.load(os.path.join(V51, name + ".npz")) as f:
-                z = {k: f[k] for k in ("teacher", "seed", "n", "cells", "cand_cells", "cand_meta", "chosen")}
+                z = {k: f[k] for k in ("teacher", "seed", "n", "cells", "cand_cells", "cand_meta", "chosen", "tok_kind", "tok_piece")}
             m = len(z["n"])
             rows = np.array([index.get((int(t), int(s), int(n), c.tobytes()), -1)
                              for t, s, n, c in zip(z["teacher"], z["seed"], z["n"], z["cells"])])
             missing = int((rows < 0).sum())
             if missing:
                 raise SystemExit("%s: %d of %d rows have no raw record" % (name, missing, m))
+            if args.pieces_only:
+                with np.load(os.path.join(V51, name + ".plan.npz")) as f:
+                    plan_len, coords = f["plan_len"], f["coord"]
+                write_pieces(name, z, rows, plans, hold_empty, plan_len, coords)
+                print("  %-15s %8d rows: piece targets (%.0fs)" % (name, m, time.time() - t0), flush=True)
+                continue
             plan_len = np.ones(m, np.int8)
             coords = np.full((m, K + 1), -1, np.int16)
             same1 = 0
@@ -181,8 +249,7 @@ def main():
                     t = rec["cells"][rec["target"]]
                     occupied += int(z["cells"][i][t[t >= 0]].any())
                     plan_len[i] = k + 1
-            np.savez(os.path.join(V51, name + ".plan.tmp.npz"), plan_len=plan_len, coord=coords)
-            os.replace(os.path.join(V51, name + ".plan.tmp.npz"), os.path.join(V51, name + ".plan.npz"))
+            write_pieces(name, z, rows, plans, hold_empty, plan_len, coords)
             big = np.lib.format.open_memmap(os.path.join(OUT_BIG, name + ".pc.tmp.npy"), mode="w+", dtype=PC, shape=(m, K))
             for s in range(0, m, 100_000):
                 big[s:s + 100_000] = pc[rows[s:s + 100_000]]
