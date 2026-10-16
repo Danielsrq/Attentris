@@ -1519,6 +1519,12 @@ cashed {} (followed by a TSD {}); vertical T-spin doubles/triples {}, {} of them
             println!("phantom spins (believed spins scored as plain clears): {:.2} per 100 pieces", per(t.phantom_spins));
         }
     }
+    let committed: u64 = st.iter().map(|s| s.committed).sum();
+    let played: u64 = st.iter().map(|s| s.pieces as u64).sum();
+    if committed > 0 {
+        println!("commit: {:.1}% of moves played from the previous search's plan without a search ({} / {})",
+            100.0 * committed as f64 / played.max(1) as f64, committed, played);
+    }
     let (checks, kept) = st.iter().fold((0, 0), |(c, k), s| (c + s.plan_checks, k + s.plan_kept));
     if checks > 0 {
         println!("plan stability: {:.1}% of moves were exactly what the previous search planned ({} / {})",
@@ -1596,6 +1602,7 @@ fn main() {
     unsafe {
         THREADS = t;
     }
+    game::COMMIT.store(a.get("commit", 1usize).max(1), std::sync::atomic::Ordering::Relaxed);
     match argv[0].as_str() {
         "play" => cmd_play(&a),
         "bench" => cmd_bench(&a),

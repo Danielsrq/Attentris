@@ -306,3 +306,24 @@ v51_d128_pieces6_ft_normal_c2g20    52/64      270   0.617    0.334   0.913    0
 v51_d128_pieces6_ft_normal_c2g50    63/64      156   0.430    0.134   0.673    0.210 2435/3489
 v51_d128_pieces6_ft_danger_c2g20    35/64      347   0.590    0.410   0.907    0.629 7038/7712
 v51_d128_pieces6_ft_danger_c2g50    57/64      240   0.407    0.195   0.691    0.331 4362/5361
+== CEM teacher commit K (bot play --commit K; depth 6 beam 64), 64 games 16:48
+normal none commit 1: APP 1.204, died 0/64, APPfull 1.204, think 83.3 ms/move
+normal none commit 2: APP 1.199, died 0/64, APPfull 1.199, think 41.8 ms/move
+normal none commit 3: APP 1.138, died 0/64, APPfull 1.138, think 27.9 ms/move
+normal none commit 6: APP 1.020, died 0/64, APPfull 1.020, think 14.0 ms/move
+normal g20 commit 1: APP 1.147, died 18/64, APPfull 0.974, think 72.0 ms/move
+normal g20 commit 2: APP 1.072, died 24/64, APPfull 0.915, think 36.0 ms/move
+normal g20 commit 3: APP 1.049, died 26/64, APPfull 0.811, think 27.3 ms/move
+normal g20 commit 6: APP 0.950, died 32/64, APPfull 0.749, think 13.7 ms/move
+normal g50 commit 1: APP 0.833, died 33/64, APPfull 0.600, think 65.6 ms/move
+normal g50 commit 2: APP 0.800, died 31/64, APPfull 0.589, think 32.5 ms/move
+normal g50 commit 3: APP 0.771, died 24/64, APPfull 0.598, think 26.4 ms/move
+normal g50 commit 6: APP 0.701, died 38/64, APPfull 0.478, think 12.7 ms/move
+survive g20 commit 1: APP 1.049, died 0/64, APPfull 1.049, think 78.8 ms/move
+survive g20 commit 2: APP 1.012, died 0/64, APPfull 1.012, think 39.5 ms/move
+survive g20 commit 3: APP 0.990, died 0/64, APPfull 0.990, think 31.6 ms/move
+survive g20 commit 6: APP 0.929, died 0/64, APPfull 0.929, think 15.8 ms/move
+survive g50 commit 1: APP 0.816, died 0/64, APPfull 0.816, think 79.0 ms/move
+survive g50 commit 2: APP 0.793, died 0/64, APPfull 0.793, think 39.6 ms/move
+survive g50 commit 3: APP 0.769, died 0/64, APPfull 0.769, think 31.7 ms/move
+survive g50 commit 6: APP 0.714, died 0/64, APPfull 0.714, think 16.0 ms/move

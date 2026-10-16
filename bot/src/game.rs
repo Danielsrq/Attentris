@@ -137,6 +137,8 @@ pub struct Stats {
     /// Moves where the previous search had a prediction, and how many it got right.
     pub plan_checks: u64,
     pub plan_kept: u64,
+    /// `bot play --commit K`: moves played from the previous search's plan, without a search.
+    pub committed: u64,
     /// All-spin mode: clears that repeated the previous type, and the most wound
     /// lines live at once.
     pub repeats: u64,
@@ -187,6 +189,7 @@ impl Stats {
         self.think_us.extend_from_slice(&o.think_us);
         self.plan_checks += o.plan_checks;
         self.plan_kept += o.plan_kept;
+        self.committed += o.committed;
         self.repeats += o.repeats;
         self.max_wounds = self.max_wounds.max(o.max_wounds);
         self.phantom_spins += o.phantom_spins;
@@ -270,6 +273,9 @@ fn check_colors(c: &Colors, b: &Board) {
         }
     }
 }
+
+/// `bot play --commit K`: moves per search (1 = search every move).
+pub static COMMIT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
 
 pub struct GameConfig {
     pub pieces: usize,
@@ -368,6 +374,9 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         Searcher::new(crate::search::SearchConfig { root_keep: cfg.all_roots, ..searcher.cfg.clone() }, searcher.weights.clone(), searcher.rules)
     });
     let mut expected: Option<(Piece, [(i32, i32); 4])> = None;
+    // `--commit K` (COMMIT): after a search, its plan's next K-1 moves are played without searching
+    let commit = COMMIT.load(std::sync::atomic::Ordering::Relaxed);
+    let mut committed: Vec<crate::search::Step> = Vec::new();
     let counts_at_start = crate::eval::template_counts();
     let mut followup_left = 0u8;
     let mut incoming: Vec<(usize, i32)> = Vec::new();
@@ -426,12 +435,37 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         }
         let nodes_before = searcher.nodes;
         let t0 = std::time::Instant::now();
-        let mut d = match searcher.search(&board, &queue, hold, b2b, &bag_next) {
-            Some(d) => d,
-            None => {
-                stats.died = true;
-                break;
+        // A committed move is played when nothing changed the board since the search that planned
+        // it (no garbage this turn) and its piece is the one the plan expected (current or hold).
+        let garbage_now = cfg.garbage.every > 0 && n > 0 && n % cfg.garbage.every == 0;
+        let next_committed = if commit > 1 && !committed.is_empty() && !garbage_now && !cfg.external && !cfg.shortlist && !cfg.dataset {
+            let s = committed.remove(0);
+            let expect = if !s.use_hold { Some(spawned) } else if hold.is_some() { hold } else { Some(queue[1]) };
+            if expect == Some(s.placement.piece) { Some(s) } else { None }
+        } else {
+            None
+        };
+        if next_committed.is_none() {
+            committed.clear();
+        }
+        let mut d = match next_committed {
+            Some(s) => {
+                stats.committed += 1;
+                crate::search::Decision { use_hold: s.use_hold, placement: s.placement, plan: committed.iter().copied().collect(),
+                                          roots: Vec::new(), chosen_root: 0 }
             }
+            None => match searcher.search(&board, &queue, hold, b2b, &bag_next) {
+                Some(d) => {
+                    if commit > 1 {
+                        committed = d.plan.iter().skip(1).take(commit - 1).copied().collect();
+                    }
+                    d
+                }
+                None => {
+                    stats.died = true;
+                    break;
+                }
+            },
         };
         if cfg.external && !external_move(&mut d, n, &board, spawned, &queue[1..], hold, b2b, &bag_next, &shapes, &mut stats) {
             // the other process resigned (it sees no legal move: Cold Clear 2 topped out)
