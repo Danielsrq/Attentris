@@ -381,3 +381,13 @@ v51_d128_pieces6L2_ft normal c2g20: APP 0.630 (APPfull 0.335), died 56/64 | 21.6
 v51_d128_pieces6L2_ft normal c2g50: APP 0.418 (APPfull 0.124), died 64/64 | 21.5% of moves committed (pieces: step 2 illegal 1572, step 1 not the policy's move 3451)
 v51_d128_pieces6L2_ft danger c2g20: APP 0.596 (APPfull 0.455), died 30/64 | 22.4% of moves committed (pieces: step 2 illegal 3908, step 1 not the policy's move 8542)
 v51_d128_pieces6L2_ft danger c2g50: APP 0.409 (APPfull 0.198), died 57/64 | 22.1% of moves committed (pieces: step 2 illegal 2683, step 1 not the policy's move 5325)
+epoch 10: train loss 4.113 | val normal top1 0.646 top3 0.866 | val gate4 top1 0.628 top3 0.859 | | 114s
+epoch 10: val plan top1 step1 0.625 step2 0.379 step3 0.260 step4 0.186 step5 0.149 step6 0.117
+epoch 10: val2 plan top1 step1 0.463 step2 0.292 step3 0.201 step4 0.163 step5 0.146 step6 0.138
+epoch 10: val2 (val_dagger5all.npz, 9832) top1 0.483 top3 0.745 loss 4.529 | argmax Qs top1 0.459 | MAE Qs 7.45
+== v51_d128_pieces6L2fze10_ft commit 2 17:44
+v51_d128_pieces6L2fze10_ft normal c2none: APP 0.481 (APPfull 0.481), died 0/256 | 22.4% of moves committed (pieces: step 2 illegal 18846, step 1 not the policy's move 51696)
+v51_d128_pieces6L2fze10_ft normal c2g20: APP 0.620 (APPfull 0.361), died 48/64 | 22.9% of moves committed (pieces: step 2 illegal 2872, step 1 not the policy's move 6485)
+v51_d128_pieces6L2fze10_ft normal c2g50: APP 0.431 (APPfull 0.145), died 63/64 | 21.9% of moves committed (pieces: step 2 illegal 1727, step 1 not the policy's move 3852)
+v51_d128_pieces6L2fze10_ft danger c2g20: APP 0.589 (APPfull 0.465), died 31/64 | 23.5% of moves committed (pieces: step 2 illegal 3925, step 1 not the policy's move 8484)
+v51_d128_pieces6L2fze10_ft danger c2g50: APP 0.394 (APPfull 0.165), died 59/64 | 22.9% of moves committed (pieces: step 2 illegal 2272, step 1 not the policy's move 4457)

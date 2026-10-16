@@ -1,0 +1,6 @@
+== v51_d128_pieces6L2fze10_ft (from v51_d128_dagger5b_ft; pieces, N=6, w_plan 1.0) 2026-10-16 17:16
+epoch 10: train loss 4.113 | val normal top1 0.646 top3 0.866 | val gate4 top1 0.628 top3 0.859 | | 114s
+epoch 10: val plan top1 step1 0.625 step2 0.379 step3 0.260 step4 0.186 step5 0.149 step6 0.117
+epoch 10: val2 plan top1 step1 0.463 step2 0.292 step3 0.201 step4 0.163 step5 0.146 step6 0.138
+epoch 10: val2 (val_dagger5all.npz, 9832) top1 0.483 top3 0.745 loss 4.529 | argmax Qs top1 0.459 | MAE Qs 7.45
+v51_d128_pieces6L2fze10_ft trained (PLAY=0: no play block)

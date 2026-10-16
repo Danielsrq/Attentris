@@ -250,7 +250,7 @@ The plan loss cost 0.045 depth-1 APP from scratch (val step-2 top-1 0.626).
 | plan2-ft | 0.435 | 0.260 | | | | |
 | pieces6-ft (all steps at once) | 0.582 | 0.338 | 0.219 | 0.166 | 0.129 | 0.104 |
 | pieces6L2-ft (2 rounds of cross + self) | 0.612 | 0.353 | 0.238 | 0.172 | 0.137 | 0.108 |
-| pieces6L2fze10-ft | PENDING | | | | | |
+| pieces6L2fze10-ft (backbone frozen, 10 epochs; plateau from epoch 8) | 0.625 | 0.379 | 0.260 | 0.186 | 0.149 | 0.117 |
 
 Teacher-forced = given the teacher's true earlier moves; the pieces numbers are not (all steps from one pass), so they compound like free-running plans.
 
@@ -278,6 +278,7 @@ With garbage, autoreg6-ft is a little higher (step 2 64.6-66.4%, step 6 10.4-13.
 
 pieces6-ft commit 2: APP 0.511 (256); 80/20 0.494 (52), 50/50 0.210 (63); danger 0.629 (35), 0.331 (57). Only 19% of moves committed: its step 1 is not the policy's move in 55% of decisions, and 48% of its step-2 placements are illegal.
 pieces6L2-ft (2 rounds of cross + self, 3 epochs): depth 1 APP 0.731 (256), 80/20 0.999 (17), 50/50 0.484 (51), danger 1.064 (3), 0.774 (16); depth 2 0.864, 1.044 (16), 0.669 (35), 1.110 (2), 0.861 (9). Commit 2: APP 0.494 (256); 80/20 0.335 APPfull (56), 50/50 0.124 (64); danger 0.455 (30), 0.198 (57); 21% of moves committed, step 1 not the policy's move in 53%, 43% of step-2 placements illegal. The second round did not make the plan playable.
+pieces6L2fze10-ft (frozen backbone, 10 epochs: move 1 = dagger5b-ft exactly): commit 2 APP 0.481 (256); 80/20 0.361 APPfull (48), 50/50 0.145 (63); danger 0.465 (31), 0.165 (59); 22% committed, step 1 not the policy's move in 52%, 40% of step-2 placements illegal. More training (step 2 0.353 -> 0.379) did not help either: the parallel plan head plateaus far below what committing needs.
 Commit 2 saved no time for the networks: the committed move still needs `bot expand` at X+1 (~6 ms with structure tokens), as much as the skipped encoder pass.
 
 **CEM teacher commit K** (`bot play --commit K`, depth 6 beam 64; APP; time relative to commit 1):
@@ -306,7 +307,7 @@ A versus smoke test (4 matches, turn-based): CEM-survival commit 6 thought 23.9 
 
 1. **Versus blitz:** CEM-survival `cem:bot/results/survive/survive.txt:6:64:commit6` (and commit 2 / 3) vs CC2, (a) uncapped and (b) at a fixed PPS. Uncapped, ~6x the PPS at -12% APP should cancel most incoming garbage. Fixed PPS is the fair-time check.
 2. **Equal-time check:** CEM commit 2 vs a plain search with half the budget (e.g. beam 32): commit only helps if it beats a cheaper search at equal time.
-3. **pieces:** read the PENDING rows. If pieces6L2fze10 (frozen backbone, 10 epochs) is still far from the teacher at step 2, the parallel plan head is not worth more effort; else more epochs / rounds, plus a cheap Rust single-placement legality check so committed moves cost ~0.
+3. **pieces:** the parallel head plateaus (step 2 ~0.38; commit 2 APP ~0.48-0.51). Next idea: condition it on the ACTUAL move 1 (a move-1 token for the piece queries, as autoreg does), so step 2 is predicted given the move played, still as a coordinate (no move generation; a cheap Rust single-placement legality check). If step 2 reaches ~0.55-0.6 and commit 2 costs little, scale data (plan-only teacher labels: ~45 ms a position, 5M positions ~2 h on the Ubuntu box) and model size (d192 / d256).
 4. A lean `bot expand` (legal moves only, no structure tokens) for any NN mode that needs move lists at later steps.
 5. On a new machine: `cargo build --release` (new `bot label --plan`, `plan-cands`, `play --commit`), unpack the delta, `python attentris/pack_plan.py` if training autoreg (rebuilds `data/v51plan`).
 
