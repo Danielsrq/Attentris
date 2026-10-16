@@ -337,6 +337,7 @@ A versus smoke test (4 matches, turn-based): CEM-survival commit 6 thought 23.9 
 |---|---|---|---|---|
 | blitz d6 b64 vs CC2 40 ms | **64 - 0** | 181 / 25 | 0.619 / 0.190 | 0.22 s |
 | plain d6 b64 (commit 1) vs CC2 40 ms (control) | 54 - 10 | 27 / 25 | 0.874 / 0.796 | 2.31 s |
+| plain d6 b64 vs CC2 40 ms, both at least 40 ms per piece (`--min-ms 40`, matched speed) | 47 - 17 | 23 / 24 | 0.888 / 0.809 | 3.29 s |
 | blitz d6 b64 vs plain d6 b64 | **64 - 0** | 193 / 38 | 0.633 / 0.477 | 0.25 s |
 | blitz d6 b64 vs CC2 10 ms | 40 - 24 | 116 / 96 | 0.725 / 0.736 | 0.44 s |
 | blitz d6 b64 vs CC2 5 ms | 3 - **61** | 98 / 184 | 0.657 / 0.676 | 0.26 s |
