@@ -116,6 +116,10 @@ class Player:
         self.qscale = M.Q_SCALE
         self.torch = torch
         self.depth, self.beam, self.teacher = depth, beam, teacher
+        self.checks = self.kept = 0           # --plan-check
+        self.pending = None
+        self.n_committed = 0                  # --commit 2: moves played from the previous decision
+        self.committed = None
         # expand_args: more rule flags for `bot expand` (bot/tools/versus.py: --no-180)
         self.ex = subprocess.Popen([BOT, "expand", "--mode", mode, *expand_args], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                    stderr=subprocess.DEVNULL, text=True, bufsize=1)
@@ -158,6 +162,7 @@ class Player:
 
     def decide(self, st):
         root = self.expand(st)
+        self.last_root = root
         if not root["cands"]:
             return None
         n = len(root["cands"])
@@ -210,6 +215,130 @@ class Player:
                 break
         return best_line[1]
 
+    def plan_check(self, st, root, c):
+        """attentris-autoreg plan consistency, as the bot's plan_kept / plan_checks: score this move
+        against the move 2 predicted one move earlier (skipped when the board is not the one
+        predicted: garbage arrived), then predict move 2 from here: the board after our move
+        (bot expand), its legal moves mapped into this board's frame, one more cross pass."""
+        import torch
+        pend, self.pending = getattr(self, "pending", None), None
+        if pend is not None and pend["n"] == st["n"] and pend["rows"] == st["rows"] and pend["hold"] == st["hold"] \
+                and pend["piece"] == st["piece"]:
+            self.checks += 1
+            self.kept += pend["move"] == (c["hold"], sorted(zip(c["cells"][0::2], c["cells"][1::2])))
+        step2 = self.step2(st, c)
+        if step2 is None:
+            return
+        nxt, cands2, pc = step2
+        a = arrays([(st, root)], self.teacher, self.tok_version, self.drop)
+        a.update(pc, chosen=torch.tensor([root["cands"].index(c)]))
+        with torch.inference_mode():
+            out = self.net(a, heads=True, n_steps=2)
+        m = cands2[int(out["step_logits"][0, 0, :len(cands2)].argmax())]
+        self.pending = {"n": st["n"] + 1, "rows": c["rows"], "hold": nxt["hold"], "piece": nxt["piece"],
+                        "move": (m["hold"], sorted(zip(m["cells"][0::2], m["cells"][1::2])))}
+
+    def step2(self, st, c):
+        """After our move c at st: the next state, its legal moves (bot expand) and those moves as
+        plan-step inputs in st's frame (pc_cells / pc_meta / pc_n / pc_target, as pack_plan.py).
+        None when the next state cannot be predicted (queue too short, or a rule the replay below
+        does not model)."""
+        import torch
+        used, queue = c["used"], st["queue"]
+        if len(queue) < used + 1:
+            return None
+        nxt = {"rows": c["rows"], "piece": queue[used - 1], "queue": queue[used:], "hold": c["hold_after"], "b2b": c["b2b"]}
+        # this board's rows after our move: placed, full rows cleared; origin[y] = the row it came from
+        rows = list(st["rows"])
+        for q in range(4):
+            rows[c["cells"][2 * q + 1]] |= 1 << c["cells"][2 * q]
+        full = [y for y in range(40) if rows[y] == 1023]
+        kept_rows = [y for y in range(40) if rows[y] != 1023]
+        if [0] * len(full) + [rows[y] for y in kept_rows] != list(c["rows"]):
+            return None
+        origin = [-(len(full) - i) for i in range(len(full))] + kept_rows
+        cands2 = self.expand(nxt)["cands"][:P.NC]
+        if not cands2:
+            return None
+        cc = np.full((1, 1, P.NC, 4), -1, np.int64)
+        cm = np.zeros((1, 1, P.NC, 5), np.int64)
+        for j, m in enumerate(cands2):
+            cl = m["cells"]
+            cc[0, 0, j] = [(39 - origin[cl[2 * q + 1]]) * 10 + cl[2 * q] if 0 <= 39 - origin[cl[2 * q + 1]] < 20 else -2 for q in range(4)]
+            cm[0, 0, j] = (P.PIECE_ID[m["piece"]], m["hold"], m["spin"], m["lines"], max(0, min(m["attack"], 127)))
+        pc = {"pc_cells": torch.from_numpy(cc), "pc_meta": torch.from_numpy(cm),
+              "pc_n": torch.tensor([[len(cands2)]]), "pc_target": torch.tensor([[-1]])}
+        return nxt, cands2, pc
+
+    def decide_autoreg_beam(self, st):
+        """attentris-autoreg, --depth 2 --autoreg-beam: the depth-2 policy beam (decide()'s: the
+        policy's top --beam first moves, line = log p(move 1) + log p(move 2), play the best line's
+        first move), but move 2's probabilities come from the step-2 cross pass over the ROOT's
+        encoding: the children are expanded (their legal moves) but never tokenized or encoded."""
+        import torch
+        root = self.expand(st)
+        self.last_root = root
+        if not root["cands"]:
+            return None
+        n = min(len(root["cands"]), P.NC)
+        a = arrays([(st, root)], self.teacher, self.tok_version, self.drop)
+        with torch.inference_mode():
+            out, enc, _ = self.net.move1(a)
+            lp1 = out["logit"][0, :n].log_softmax(-1)
+            top = [int(i) for i in lp1.argsort(descending=True)[:self.beam]]
+            kids = []
+            for i in top:
+                s2 = self.step2(st, root["cands"][i])
+                if s2 is not None:
+                    kids.append((i, s2))
+            if not kids:
+                return root["cands"][top[0]]
+            B = len(kids)
+            rep_enc = {k: (v.expand(B, *v.shape[1:]) if torch.is_tensor(v) else v) for k, v in enc.items()}
+            b = {"pc_cells": torch.cat([s2[2]["pc_cells"] for _, s2 in kids]), "pc_meta": torch.cat([s2[2]["pc_meta"] for _, s2 in kids]),
+                 "pc_n": torch.cat([s2[2]["pc_n"] for _, s2 in kids]), "pc_target": torch.cat([s2[2]["pc_target"] for _, s2 in kids])}
+            ids = torch.tensor([i for i, _ in kids])
+            prev = [(a["cand_cells"][0, ids], a["cand_meta"][0, ids].clamp(min=0))]
+            logits, _ = self.net.autoreg_steps(b, rep_enc, a["teacher"].expand(B), 2, prev)
+            best, best_i = -1e30, kids[0][0]
+            for r, (i, (_, cands2, _)) in enumerate(kids):
+                line = float(lp1[i]) + float(logits[r, 0, :len(cands2)].log_softmax(-1).max())
+                if line > best:
+                    best, best_i = line, i
+        return root["cands"][best_i]
+
+    def decide_commit(self, st):
+        """attentris-autoreg, --commit 2: two moves per encoder pass. At X: move 1 by the policy, then
+        move 2 from the same board encoding (one more cross pass over the next state's legal moves),
+        kept for X+1. At X+1 the kept move is played without a new decision when the state is the one
+        predicted (no garbage arrived; else a normal decision)."""
+        import torch
+        kept, self.committed = getattr(self, "committed", None), None
+        if kept is not None and kept["n"] == st["n"] and kept["rows"] == st["rows"] and kept["hold"] == st["hold"] \
+                and kept["piece"] == st["piece"] and kept["queue"] == st["queue"][:len(kept["queue"])]:
+            self.n_committed += 1
+            return kept["move"]
+        root = self.expand(st)
+        self.last_root = root
+        if not root["cands"]:
+            return None
+        n = len(root["cands"])
+        a = arrays([(st, root)], self.teacher, self.tok_version, self.drop)
+        with torch.inference_mode():
+            out, enc, _ = self.net.move1(a)
+            i = int(out["logit"][0, :min(n, P.NC)].argmax())
+            c = root["cands"][i]
+            step2 = self.step2(st, c)
+            if step2 is not None:
+                nxt, cands2, pc = step2
+                a.update(pc)
+                prev = [(a["cand_cells"][:, i], a["cand_meta"][:, i].clamp(min=0))]
+                logits, _ = self.net.autoreg_steps(a, enc, a["teacher"], 2, prev)
+                m = cands2[int(logits[0, 0, :len(cands2)].argmax())]
+                self.committed = {"n": st["n"] + 1, "rows": c["rows"], "hold": nxt["hold"], "piece": nxt["piece"],
+                                  "queue": nxt["queue"], "move": m}
+        return c
+
     def close(self):
         self.ex.stdin.close()
         self.ex.wait()
@@ -219,6 +348,12 @@ def play_game(args, seed):
     pcores.pin(verbose=False)
     auto = args.style == "auto"
     rule_args = ("--no-180",) if args.no_180 else ()
+    if (args.plan_check or args.commit > 1) and (args.depth > 1 or args.style == "auto"):
+        raise SystemExit("--plan-check / --commit: depth 1, one style")
+    if args.autoreg_beam and (args.depth != 2 or args.style == "auto"):
+        raise SystemExit("--autoreg-beam: --depth 2 (an N = 2 attentris-autoreg model), one style")
+    if args.commit > 2:
+        raise SystemExit("--commit: 2 for now (an N = 2 model)")
     pl = Player(args.model, args.depth, args.beam, STYLES["normal" if auto else args.style], args.mode, args.policy, args.propose,
                 temp=args.temp, seed=seed, merge=args.merge, merge_override=args.merge_override, expand_args=rule_args)
     cmd = [BOT, "play-ext", "--mode", args.mode, *rule_args, "--pieces", str(args.pieces), "--seed", str(seed)]
@@ -269,9 +404,17 @@ def play_game(args, seed):
         elif args.shortlist:
             moves = pl.shortlist(st, args.shortlist)
             move = {"moves": [{"hold": c["hold"], "cells": c["cells"]} for c in moves]}
+        elif args.autoreg_beam:
+            c = pl.decide_autoreg_beam(st)
+            move = {"hold": c["hold"], "cells": c["cells"]} if c else {"hold": 0, "cells": []}
+        elif args.commit > 1:
+            c = pl.decide_commit(st)
+            move = {"hold": c["hold"], "cells": c["cells"]} if c else {"hold": 0, "cells": []}
         else:
             c = pl.decide(st)
             move = {"hold": c["hold"], "cells": c["cells"]} if c else {"hold": 0, "cells": []}
+            if args.plan_check and c:
+                pl.plan_check(st, pl.last_root, c)
             if args.dump and pl.last_entropy is not None:
                 dumped["entropy"] = round(pl.last_entropy, 4)
         times.append(time.perf_counter() - t0)
@@ -280,6 +423,8 @@ def play_game(args, seed):
     game.wait()
     pl.close()
     st["danger_moves"] = danger_moves
+    st["plan_checks"], st["plan_kept"] = getattr(pl, "checks", 0), getattr(pl, "kept", 0)
+    st["committed"] = getattr(pl, "n_committed", 0)
     st["ms_per_move"] = 1000 * float(np.mean(times)) if times else 0.0
     st["ms_p90"] = 1000 * float(np.percentile(times, 90)) if times else 0.0
     st["states"] = states
@@ -323,6 +468,12 @@ def main():
                     "of its tokens instead of its schedule / budget step (e.g. 6:0.30)")
     ap.add_argument("--merge", default="", help="ToMe: play with this merge schedule (per layer, e.g. 0,0.17,0.25,0.25) "
                                                 "instead of the one it was trained with; no retraining")
+    ap.add_argument("--plan-check", action="store_true", help="attentris-autoreg: plan consistency, how often the move "
+                    "played at X+1 is the move 2 the model predicted at X (as the bot's plan_kept / plan_checks)")
+    ap.add_argument("--autoreg-beam", action="store_true", help="attentris-autoreg, --depth 2: the policy beam with move 2 "
+                    "from the step-2 pass over the root's encoding (children expanded, never re-encoded)")
+    ap.add_argument("--commit", type=int, default=1, help="attentris-autoreg: moves played per decision (2: move 2 "
+                    "comes from the same encoder pass as move 1, unless garbage changed the board)")
     ap.add_argument("--dump", default="", help="write every state reached (seed, n, rows, b2b) to this JSONL")
     args = ap.parse_args()
     n_p = pcores.pin() or 8
@@ -341,6 +492,13 @@ def main():
         max(r["max_height"] for r in res), sum(r["illegal"] for r in res),
         float(np.mean([r["ms_per_move"] for r in res])), float(np.mean([r["ms_p90"] for r in res])),
         float(np.mean([r.get("search_ms", 0.0) for r in res])), time.time() - t0)
+    if args.autoreg_beam:
+        line += ", move 2 from the autoreg step-2 pass (children not encoded)"
+    if args.commit > 1:
+        line += ", %.1f%% of moves committed" % (100 * sum(r["committed"] for r in res) / max(1, pieces))
+    if args.plan_check:
+        pc, pk = sum(r["plan_checks"] for r in res), sum(r["plan_kept"] for r in res)
+        line += ", plan kept %d / %d (%.1f%%)" % (pk, pc, 100 * pk / max(1, pc))
     if args.style == "auto":
         line += ", danger style on %.1f%% of moves (height >= %d or holes >= %d)" % (
             100 * sum(r["danger_moves"] for r in res) / max(1, pieces), args.auto_height, args.auto_holes)

@@ -48,3 +48,85 @@ v51_d128_plan2_ft_normal_g20        15/64      451   0.772    0.697   1.102    0
 v51_d128_plan2_ft_normal_g50        53/64      282   0.524    0.295   0.819    0.462 5324/6292
 v51_d128_plan2_ft_danger_g20         3/64      490   0.726    0.712   1.064    1.043 10605/10821
 v51_d128_plan2_ft_danger_g50        26/64      416   0.520    0.433   0.844    0.702 8609/9234
+== v51_d128_autoreg2 from scratch (the v51_d128 recipe + autoreg plan loss, N=2, w_plan 1.0) 2026-10-16 13:58
+epoch 8: train loss 3.145 | val normal top1 0.634 top3 0.864 | val gate4 top1 0.626 top3 0.844 | | 237s
+epoch 8: val plan top1 step2 0.626
+base: /home/sruiqi/Desktop/LLMplayground/Attentris/attentris/capacity_d128.out:epoch 8: train loss 2.053 | val normal top1 0.640 top3 0.865 | val gate4 top1 0.626 top3 0.854 | | 256s
+v51_d128 normal d2: APP 0.770 (APPfull 0.770), died 0/64, pieces 500 avg, TSD 1793, TST 14, quads 775, max height 19, illegal 0, 147.0 ms/move (p90 179.6) + search 147.8 ms, 84s
+v51_d128 normal g20: APP 0.717 (APPfull 0.286), died 62/64, pieces 199 avg, TSD 464, TST 5, quads 852, max height 23, illegal 0, 25.6 ms/move (p90 36.3) + search 26.3 ms, 14s
+v51_d128 normal g50: APP 0.526 (APPfull 0.110), died 64/64, pieces 105 avg, TSD 223, TST 1, quads 271, max height 23, illegal 0, 27.3 ms/move (p90 37.4) + search 27.9 ms, 9s
+v51_d128_autoreg2 normal none: APP 0.606 (APPfull 0.605), died 2/256, pieces 500 avg, TSD 5979, TST 49, quads 2888, max height 22, illegal 0, 36.5 ms/move (p90 43.5) + search 37.4 ms, 84s
+v51_d128_autoreg2 normal d2: APP 0.775 (APPfull 0.775), died 0/64, pieces 500 avg, TSD 1788, TST 13, quads 840, max height 18, illegal 0, 146.0 ms/move (p90 179.8) + search 146.9 ms, 84s
+v51_d128_autoreg2 normal g20: APP 0.682 (APPfull 0.265), died 61/64, pieces 194 avg, TSD 442, TST 2, quads 802, max height 22, illegal 0, 25.3 ms/move (p90 36.4) + search 25.9 ms, 13s
+v51_d128_autoreg2 normal g50: APP 0.518 (APPfull 0.105), died 64/64, pieces 102 avg, TSD 210, TST 2, quads 252, max height 22, illegal 0, 27.5 ms/move (p90 38.0) + search 28.2 ms, 9s
+== APP / VS: v51_d128 vs v51_d128_autoreg2 (both from scratch, same recipe)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_normal_none                 4/256      497   0.651    0.647   0.651    0.647         -
+v51_d128_normal_d2                   0/64      500   0.770    0.770   0.770    0.770         -
+v51_d128_normal_g20                 62/64      199   0.717    0.286   0.989    0.394 3468/4481
+v51_d128_normal_g50                 64/64      105   0.526    0.110   0.721    0.151 1307/2344
+v51_d128_autoreg2_normal_none        2/256      500   0.606    0.605   0.606    0.605         -
+v51_d128_autoreg2_normal_d2          0/64      500   0.775    0.775   0.775    0.775         -
+v51_d128_autoreg2_normal_g20        61/64      194   0.682    0.265   0.954    0.371 3381/4347
+v51_d128_autoreg2_normal_g50        64/64      102   0.518    0.105   0.710    0.144 1247/2263
+== plan modes: v51_d128_autoreg2_ft (depth 1 / commit 2 / depth 2 / depth 2 autoreg beam / plan check) 2026-10-16 14:36
+v51_d128_autoreg2_ft normal c2none: APP 0.512 (APPfull 0.512), died 0/256, pieces 500 avg, TSD 4767, TST 57, quads 3062, max height 17, illegal 0, 27.8 ms/move (p90 62.0) + search 28.4 ms, 66s, 50.0% of moves committed
+v51_d128_autoreg2_ft normal arnone: APP 0.766 (APPfull 0.766), died 0/64, pieces 500 avg, TSD 1784, TST 8, quads 827, max height 16, illegal 0, 105.2 ms/move (p90 131.4) + search 106.1 ms, 63s, move 2 from the autoreg step-2 pass (children not encoded)
+v51_d128_autoreg2_ft normal pcnone: APP 0.734 (APPfull 0.734), died 0/64, pieces 500 avg, TSD 1719, TST 14, quads 879, max height 15, illegal 0, 79.0 ms/move (p90 101.5) + search 79.9 ms, 48s, plan kept 20098 / 31936 (62.9%)
+v51_d128_autoreg2_ft normal c2g20: APP 0.621 (APPfull 0.345), died 48/64, pieces 277 avg, TSD 448, TST 5, quads 1156, max height 22, illegal 0, 18.7 ms/move (p90 46.1) + search 19.2 ms, 13s, 50.0% of moves committed
+v51_d128_autoreg2_ft normal c2g50: APP 0.428 (APPfull 0.133), died 63/64, pieces 155 avg, TSD 193, TST 1, quads 347, max height 22, illegal 0, 19.1 ms/move (p90 48.8) + search 19.6 ms, 12s, 50.0% of moves committed
+v51_d128_autoreg2_ft normal d2g20: APP 0.854 (APPfull 0.806), died 11/64, pieces 472 avg, TSD 1312, TST 12, quads 2395, max height 22, illegal 0, 146.6 ms/move (p90 185.2) + search 147.4 ms, 81s
+v51_d128_autoreg2_ft normal d2g50: APP 0.594 (APPfull 0.464), died 25/64, pieces 391 avg, TSD 836, TST 7, quads 1258, max height 23, illegal 0, 123.7 ms/move (p90 171.2) + search 124.5 ms, 63s
+v51_d128_autoreg2_ft normal arg20: APP 0.811 (APPfull 0.699), died 18/64, pieces 431 avg, TSD 1037, TST 8, quads 2162, max height 22, illegal 0, 96.8 ms/move (p90 126.0) + search 97.7 ms, 54s, move 2 from the autoreg step-2 pass (children not encoded)
+v51_d128_autoreg2_ft normal arg50: APP 0.551 (APPfull 0.319), died 49/64, pieces 289 avg, TSD 549, TST 8, quads 897, max height 22, illegal 0, 87.3 ms/move (p90 123.7) + search 88.1 ms, 41s, move 2 from the autoreg step-2 pass (children not encoded)
+v51_d128_autoreg2_ft normal pcg20: APP 0.783 (APPfull 0.676), died 19/64, pieces 431 avg, TSD 1040, TST 8, quads 2098, max height 22, illegal 0, 74.2 ms/move (p90 99.1) + search 75.0 ms, 43s, plan kept 16114 / 24849 (64.8%)
+v51_d128_autoreg2_ft normal pcg50: APP 0.556 (APPfull 0.332), died 48/64, pieces 299 avg, TSD 612, TST 4, quads 878, max height 22, illegal 0, 66.4 ms/move (p90 94.6) + search 67.1 ms, 31s, plan kept 11029 / 17200 (64.1%)
+v51_d128_dagger5b_ft normal d2g20: APP 0.846 (APPfull 0.795), died 10/64, pieces 470 avg, TSD 1256, TST 10, quads 2398, max height 21, illegal 0, 148.1 ms/move (p90 188.0) + search 149.0 ms, 82s
+v51_d128_dagger5b_ft normal d2g50: APP 0.610 (APPfull 0.394), died 45/64, pieces 323 avg, TSD 733, TST 6, quads 1044, max height 22, illegal 0, 123.4 ms/move (p90 173.7) + search 124.2 ms, 56s
+v51_d128_autoreg2_ft danger c2g20: APP 0.597 (APPfull 0.539), died 17/64, pieces 451 avg, TSD 805, TST 3, quads 1794, max height 22, illegal 0, 23.8 ms/move (p90 57.6) + search 24.3 ms, 18s, 50.0% of moves committed
+v51_d128_autoreg2_ft danger c2g50: APP 0.404 (APPfull 0.239), died 48/64, pieces 296 avg, TSD 341, TST 1, quads 655, max height 22, illegal 0, 20.8 ms/move (p90 53.4) + search 21.3 ms, 14s, 50.0% of moves committed
+v51_d128_autoreg2_ft danger d2g20: APP 0.783 (APPfull 0.783), died 0/64, pieces 500 avg, TSD 1456, TST 9, quads 2357, max height 19, illegal 0, 149.7 ms/move (p90 186.0) + search 150.6 ms, 86s
+v51_d128_autoreg2_ft danger d2g50: APP 0.581 (APPfull 0.565), died 4/64, pieces 486 avg, TSD 1128, TST 3, quads 1450, max height 21, illegal 0, 145.7 ms/move (p90 181.0) + search 146.5 ms, 82s
+v51_d128_autoreg2_ft danger arg20: APP 0.744 (APPfull 0.735), died 2/64, pieces 494 avg, TSD 1272, TST 7, quads 2269, max height 20, illegal 0, 105.0 ms/move (p90 132.0) + search 105.9 ms, 62s, move 2 from the autoreg step-2 pass (children not encoded)
+v51_d128_autoreg2_ft danger arg50: APP 0.543 (APPfull 0.486), died 16/64, pieces 447 avg, TSD 891, TST 7, quads 1266, max height 21, illegal 0, 96.7 ms/move (p90 126.2) + search 97.5 ms, 55s, move 2 from the autoreg step-2 pass (children not encoded)
+v51_d128_autoreg2_ft danger pcg20: APP 0.734 (APPfull 0.715), died 3/64, pieces 487 avg, TSD 1283, TST 6, quads 2189, max height 21, illegal 0, 78.2 ms/move (p90 99.3) + search 79.0 ms, 47s, plan kept 18393 / 28044 (65.6%)
+v51_d128_autoreg2_ft danger pcg50: APP 0.528 (APPfull 0.459), died 16/64, pieces 434 avg, TSD 852, TST 8, quads 1204, max height 20, illegal 0, 71.0 ms/move (p90 94.7) + search 71.8 ms, 41s, plan kept 16437 / 25002 (65.7%)
+v51_d128_dagger5b_ft danger d2g20: APP 0.793 (APPfull 0.781), died 2/64, pieces 493 avg, TSD 1422, TST 6, quads 2316, max height 21, illegal 0, 147.6 ms/move (p90 182.0) + search 148.5 ms, 85s
+v51_d128_dagger5b_ft danger d2g50: APP 0.587 (APPfull 0.542), died 11/64, pieces 461 avg, TSD 1081, TST 8, quads 1353, max height 22, illegal 0, 141.3 ms/move (p90 180.3) + search 142.2 ms, 78s
+== APP / VS: v51_d128_dagger5b_ft vs v51_d128_autoreg2_ft modes (d2 = depth 2 beam 4, c2 = commit 2, ar = depth 2 beam 4 autoreg)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_dagger5b_ft_normal_none     0/256      500   0.739    0.739   0.739    0.739         -
+v51_d128_dagger5b_ft_normal_d2       0/64      500   0.832    0.832   0.832    0.832         -
+v51_d128_dagger5b_ft_normal_g20     18/64      414   0.785    0.650   1.112    0.921 8653/9162
+v51_d128_dagger5b_ft_normal_g50     44/64      305   0.555    0.338   0.859    0.523 5917/6780
+v51_d128_dagger5b_ft_danger_g20      4/64      490   0.733    0.718   1.071    1.049 10608/10806
+v51_d128_dagger5b_ft_danger_g50     25/64      404   0.520    0.421   0.844    0.683 8378/8978
+v51_d128_dagger5b_ft_normal_d2g20   10/64      470   0.846    0.795   1.180    1.109 10044/10398
+v51_d128_dagger5b_ft_normal_d2g50   45/64      323   0.610    0.394   0.917    0.593 6360/7232
+v51_d128_dagger5b_ft_danger_d2g20    2/64      493   0.793    0.781   1.132    1.116 10701/10882
+v51_d128_dagger5b_ft_danger_d2g50   11/64      461   0.587    0.542   0.919    0.848 9788/10199
+v51_d128_autoreg2_ft_normal_none     0/256      500   0.733    0.733   0.733    0.733         -
+v51_d128_autoreg2_ft_normal_d2       0/64      500   0.864    0.864   0.864    0.864         -
+v51_d128_autoreg2_ft_normal_g20     19/64      431   0.783    0.676   1.111    0.959 9066/9564
+v51_d128_autoreg2_ft_normal_g50     48/64      299   0.556    0.332   0.856    0.512 5742/6674
+v51_d128_autoreg2_ft_danger_g20      3/64      487   0.734    0.715   1.072    1.044 10537/10739
+v51_d128_autoreg2_ft_danger_g50     16/64      434   0.528    0.459   0.857    0.744 9133/9600
+v51_d128_autoreg2_ft_normal_d2g20   11/64      472   0.854    0.806   1.186    1.120 10046/10447
+v51_d128_autoreg2_ft_normal_d2g50   25/64      391   0.594    0.464   0.912    0.713 7967/8671
+v51_d128_autoreg2_ft_danger_d2g20    0/64      500   0.783    0.783   1.122    1.122 10871/11029
+v51_d128_autoreg2_ft_danger_d2g50    4/64      486   0.581    0.565   0.917    0.892 10453/10746
+v51_d128_autoreg2_ft_normal_c2none   0/256      500   0.512    0.512   0.512    0.512         -
+v51_d128_autoreg2_ft_normal_c2g20   48/64      277   0.621    0.345   0.920    0.511 5311/6166
+v51_d128_autoreg2_ft_normal_c2g50   63/64      155   0.428    0.133   0.671    0.208 2412/3467
+v51_d128_autoreg2_ft_danger_c2g20   17/64      451   0.597    0.539   0.928    0.837 9553/9983
+v51_d128_autoreg2_ft_danger_c2g50   48/64      296   0.404    0.239   0.704    0.416 5672/6577
+v51_d128_autoreg2_ft_normal_arnone   0/64      500   0.766    0.766   0.766    0.766         -
+v51_d128_autoreg2_ft_normal_arg20   18/64      431   0.811    0.699   1.140    0.983 9083/9558
+v51_d128_autoreg2_ft_normal_arg50   49/64      289   0.551    0.319   0.851    0.493 5553/6476
+v51_d128_autoreg2_ft_danger_arg20    2/64      494   0.744    0.735   1.084    1.070 10717/10902
+v51_d128_autoreg2_ft_danger_arg50   16/64      447   0.543    0.486   0.871    0.779 9397/9907
+== clean timing: 8 games at a time, no garbage
+v51_d128_autoreg2_ft d1 timing: APP 0.746 (APPfull 0.746), died 0/8, pieces 500 avg, TSD 207, TST 3, quads 121, max height 15, illegal 0, 13.1 ms/move (p90 16.8) + search 13.5 ms, 9s
+v51_d128_autoreg2_ft c2 timing: APP 0.510 (APPfull 0.510), died 0/8, pieces 500 avg, TSD 140, TST 3, quads 106, max height 15, illegal 0, 13.4 ms/move (p90 30.6) + search 13.8 ms, 9s, 50.0% of moves committed
+v51_d128_autoreg2_ft d2 timing: APP 0.824 (APPfull 0.824), died 0/8, pieces 500 avg, TSD 237, TST 1, quads 107, max height 15, illegal 0, 66.0 ms/move (p90 86.5) + search 66.4 ms, 37s
+v51_d128_autoreg2_ft ar timing: APP 0.752 (APPfull 0.752), died 0/8, pieces 500 avg, TSD 216, TST 1, quads 98, max height 15, illegal 0, 50.1 ms/move (p90 63.0) + search 50.5 ms, 29s, move 2 from the autoreg step-2 pass (children no

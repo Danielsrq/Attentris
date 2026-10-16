@@ -1,0 +1,22 @@
+== v51_d128_autoreg2 from scratch (the v51_d128 recipe + autoreg plan loss, N=2, w_plan 1.0) 2026-10-16 13:58
+epoch 8: train loss 3.145 | val normal top1 0.634 top3 0.864 | val gate4 top1 0.626 top3 0.844 | | 237s
+epoch 8: val plan top1 step2 0.626
+base: /home/sruiqi/Desktop/LLMplayground/Attentris/attentris/capacity_d128.out:epoch 8: train loss 2.053 | val normal top1 0.640 top3 0.865 | val gate4 top1 0.626 top3 0.854 | | 256s
+v51_d128 normal d2: APP 0.770 (APPfull 0.770), died 0/64, pieces 500 avg, TSD 1793, TST 14, quads 775, max height 19, illegal 0, 147.0 ms/move (p90 179.6) + search 147.8 ms, 84s
+v51_d128 normal g20: APP 0.717 (APPfull 0.286), died 62/64, pieces 199 avg, TSD 464, TST 5, quads 852, max height 23, illegal 0, 25.6 ms/move (p90 36.3) + search 26.3 ms, 14s
+v51_d128 normal g50: APP 0.526 (APPfull 0.110), died 64/64, pieces 105 avg, TSD 223, TST 1, quads 271, max height 23, illegal 0, 27.3 ms/move (p90 37.4) + search 27.9 ms, 9s
+v51_d128_autoreg2 normal none: APP 0.606 (APPfull 0.605), died 2/256, pieces 500 avg, TSD 5979, TST 49, quads 2888, max height 22, illegal 0, 36.5 ms/move (p90 43.5) + search 37.4 ms, 84s
+v51_d128_autoreg2 normal d2: APP 0.775 (APPfull 0.775), died 0/64, pieces 500 avg, TSD 1788, TST 13, quads 840, max height 18, illegal 0, 146.0 ms/move (p90 179.8) + search 146.9 ms, 84s
+v51_d128_autoreg2 normal g20: APP 0.682 (APPfull 0.265), died 61/64, pieces 194 avg, TSD 442, TST 2, quads 802, max height 22, illegal 0, 25.3 ms/move (p90 36.4) + search 25.9 ms, 13s
+v51_d128_autoreg2 normal g50: APP 0.518 (APPfull 0.105), died 64/64, pieces 102 avg, TSD 210, TST 2, quads 252, max height 22, illegal 0, 27.5 ms/move (p90 38.0) + search 28.2 ms, 9s
+== APP / VS: v51_d128 vs v51_d128_autoreg2 (both from scratch, same recipe)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_normal_none                 4/256      497   0.651    0.647   0.651    0.647         -
+v51_d128_normal_d2                   0/64      500   0.770    0.770   0.770    0.770         -
+v51_d128_normal_g20                 62/64      199   0.717    0.286   0.989    0.394 3468/4481
+v51_d128_normal_g50                 64/64      105   0.526    0.110   0.721    0.151 1307/2344
+v51_d128_autoreg2_normal_none        2/256      500   0.606    0.605   0.606    0.605         -
+v51_d128_autoreg2_normal_d2          0/64      500   0.775    0.775   0.775    0.775         -
+v51_d128_autoreg2_normal_g20        61/64      194   0.682    0.265   0.954    0.371 3381/4347
+v51_d128_autoreg2_normal_g50        64/64      102   0.518    0.105   0.710    0.144 1247/2263
+v51_d128_autoreg2 done

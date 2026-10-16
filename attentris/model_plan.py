@@ -130,13 +130,8 @@ class AtTenTrisPlan(M.AtTenTris):
         step's legal moves (batch pc_*), the earlier moves teacher-forced from batch["chosen"] and
         pc_target, or given by prev = list of (cells (B, 4), meta (B, 5)) for moves 1..n_steps-1;
         plan -> "coord_logits" (B, n_steps, 1760), steps 1..n_steps."""
-        enc = self.encode(batch)
+        out, enc, ca = self.move1(batch)
         teacher = batch["teacher"]
-        y, cbox, cmask, cpad = self.embed_moves(enc["phi"], batch["cand_cells"], batch["cand_meta"], teacher)
-        y = y + self.step.weight[0]
-        y, ca = self.cross_pass(y, cbox, cmask, enc)
-        logit = self.head(y).squeeze(-1).masked_fill(cpad, float("-inf"))
-        out = {"logit": logit, "q1": self.q1(y).squeeze(-1), "qs": self.qs(y).squeeze(-1)}
         attn = {"self": enc["attn"], "cross": ca, "pool": enc["pool"]}
         if n_steps > 1 and self.variant == "autoreg":
             out["step_logits"], attn["step_cross"] = self.autoreg_steps(batch, enc, teacher, n_steps, prev)
@@ -147,6 +142,16 @@ class AtTenTrisPlan(M.AtTenTris):
         if return_attn:
             return out, attn
         return out
+
+    def move1(self, batch):
+        """Move 1 (logit / q1 / qs over batch's candidates) and the board encoding, which later
+        plan steps reuse (autoreg_steps with prev given: play.py --commit)."""
+        enc = self.encode(batch)
+        y, cbox, cmask, cpad = self.embed_moves(enc["phi"], batch["cand_cells"], batch["cand_meta"], batch["teacher"])
+        y = y + self.step.weight[0]
+        y, ca = self.cross_pass(y, cbox, cmask, enc)
+        logit = self.head(y).squeeze(-1).masked_fill(cpad, float("-inf"))
+        return {"logit": logit, "q1": self.q1(y).squeeze(-1), "qs": self.qs(y).squeeze(-1)}, enc, ca
 
     def autoreg_steps(self, batch, enc, teacher, n_steps, prev):
         B = teacher.shape[0]

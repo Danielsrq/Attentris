@@ -35,7 +35,7 @@ print('%.4f' % (7 / 3 * new / rest))")
 LOG="$DIR/train_$NAME.out"
 if ! grep -q "^epoch 3: val2 (" "$LOG" 2>/dev/null; then
     R=""; [ -f "$DIR/data/model_$NAME.pt" ] && R="--resume"
-    "$PYG" "$DIR/train.py" --data "$(m "$V51")" --batch 512 --device cuda --w-dense 0 --w-q1 0 --w-qs 1 --seed 0 --d 128 --micro 2 \
+    "$PYG" "$DIR/train.py" --data "$(m "$V51")" --batch 512 --threads 8 --device cuda --w-dense 0 --w-q1 0 --w-qs 1 --seed 0 --d 128 --micro 2 \
         --val2 val_dagger5all.npz --train train.npz@$F,dagger1.npz@$F,train1m.npz@$F,dagger2.npz@$F,danger.npz,dagger4.npz,dagger5all.npz \
         --epochs 3 --lr 3e-4 --n-teachers 3 $PLAN --init "$(m "$DIR/data/model_$BASE.pt")" --out "$(m "$DIR/data/model_$NAME.pt")" $R >> "$LOG" 2>&1
 fi
