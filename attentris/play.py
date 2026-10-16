@@ -92,6 +92,12 @@ class Player:
                                         budget=MT.budget_of(ck["args"].get("tome_budget", "")), split=ck["args"].get("tome_split", "token"), pure=ck["args"].get("tome_pure", False))
             self.net.frac_override = MT.override_of(merge_override)
             self.n_styles = ck["model"]["style.weight"].shape[0]
+        elif ck["args"].get("plan_variant"):     # attentris-autoreg / -plan: move 1 includes the step-1 embedding
+            import model_plan as MP
+            self.net = MP.AtTenTrisPlan(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0],
+                                        cross_layers=ck["args"].get("cross_layers", 1), cross_loops=ck["args"].get("cross_loops", 1),
+                                        n_teachers=ck["model"]["style.weight"].shape[0], variant=ck["args"]["plan_variant"])
+            self.n_styles = ck["model"]["style.weight"].shape[0]
         else:
             self.net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0],
                           cross_layers=ck["args"].get("cross_layers", 1), cross_loops=ck["args"].get("cross_loops", 1),

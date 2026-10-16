@@ -24,6 +24,7 @@ import torch.nn.functional as F
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import model as M
+import model_plan as MP
 import model_tome as MT
 import pcores
 import tokenizer as T
@@ -33,9 +34,20 @@ assert len(T.KINDS) <= M.N_KINDS
 TEACH = ("normal", "gate4", "danger")      # pack.TEACHERS
 
 
-def load(path):
+def load(path, plan_steps=0, pc=False):
+    """A packed set; with plan_steps > 1 also its plan targets (pack_plan.py): plan_len and
+    coord from NAME.plan.npz, and with pc the legal moves of plan steps 2..plan_steps
+    (data/v51plan/NAME.pc.npy, attentris-autoreg)."""
     d = np.load(path)
-    return {k: d[k] for k in d.files}
+    out = {k: d[k] for k in d.files}
+    if plan_steps > 1:
+        base = path[:-len(".npz")]
+        with np.load(base + ".plan.npz") as p:
+            out["plan_len"], out["coord"] = p["plan_len"], p["coord"][:, :plan_steps]
+        if pc:
+            big = os.path.join(os.path.dirname(os.path.dirname(base)), "v51plan", os.path.basename(base) + ".pc.npy")
+            out["pc"] = np.ascontiguousarray(np.load(big, mmap_mode="r")[:, :plan_steps - 1])
+    return out
 
 
 def batch_of(d, idx, device="cpu"):
@@ -52,6 +64,14 @@ def batch_of(d, idx, device="cpu"):
     }
     if "pretok" in d:
         b["pretok"] = torch.from_numpy(d["pretok"][idx].astype(np.int64))
+    if "plan_len" in d:
+        b["chosen"] = torch.from_numpy(d["chosen"][idx].astype(np.int64))
+    if "pc" in d:
+        pc = d["pc"][idx]
+        b["pc_cells"] = torch.from_numpy(pc["cells"].astype(np.int64))
+        b["pc_meta"] = torch.from_numpy(pc["meta"].astype(np.int64)).clamp(min=0)
+        b["pc_n"] = torch.from_numpy(pc["n"].astype(np.int64))
+        b["pc_target"] = torch.from_numpy(pc["target"].astype(np.int64))
     if device != "cpu":
         b = {k: v.to(device, non_blocking=True) for k, v in b.items()}
     return b
@@ -95,7 +115,30 @@ def compute_loss(out, d, idx, args, device):
         ts = (best.nan_to_num(0.0) / M.Q_SCALE).clamp(lo, hi)
         es = (F.smooth_l1_loss(out["qs"], ts, reduction="none") * ms).sum(-1) / ms.sum(-1).clamp(min=1)
         loss = loss + w_q1 * e1 + w_qs * es
+    if getattr(args, "plan_variant", "") and args.plan_steps > 1:
+        ce, ok = plan_ce(out, d, idx, args, device)
+        per = (ce * ok).sum(-1) / ok.sum(-1).clamp(min=1)      # mean over this position's plan steps
+        loss = loss + args.w_plan * per
     return loss, chosen, ply1, best, real
+
+
+def plan_ce(out, d, idx, args, device):
+    """Cross-entropy per plan step (B, S) and which steps count: autoreg over steps 2..N (the
+    plan's move among that step's legal moves), plan over steps 1..N (the 1760-way coordinate).
+    A step counts while it is within the position's plan (plan_len) and has a target."""
+    plan_len = torch.from_numpy(d["plan_len"][idx].astype(np.int64)).to(device)
+    if args.plan_variant == "autoreg":
+        logits = out["step_logits"]                                        # (B, N-1, NC)
+        tgt = torch.from_numpy(d["pc"]["target"][idx].astype(np.int64)).to(device)
+        step = torch.arange(2, args.plan_steps + 1, device=device)
+    else:
+        logits = out["coord_logits"]                                       # (B, N, 1760)
+        tgt = torch.from_numpy(d["coord"][idx].astype(np.int64)).to(device)
+        step = torch.arange(1, args.plan_steps + 1, device=device)
+    ok = (tgt >= 0) & (step.unsqueeze(0) <= plan_len.unsqueeze(1))
+    logp = logits.log_softmax(-1)
+    ce = -logp.gather(-1, tgt.clamp(min=0).unsqueeze(-1)).squeeze(-1).nan_to_num(0.0, posinf=0.0, neginf=0.0)
+    return ce * ok, ok.float()
 
 
 def evaluate(net, d, batch, args, device="cpu"):
@@ -103,10 +146,20 @@ def evaluate(net, d, batch, args, device="cpu"):
     n = len(d["chosen"])
     keys = ("n", "top1", "top3", "loss", "q1_top1", "qs_top1", "q1_err", "q1_cnt", "qs_err", "qs_cnt")
     stats = {t: dict.fromkeys(keys, 0.0) for t in range(len(TEACH))}
+    planning = getattr(args, "plan_variant", "") and args.plan_steps > 1
+    if planning:      # top-1 against the plan per step (autoreg: steps 2..N; plan: 1..N), all teachers
+        n_s = args.plan_steps - 1 if args.plan_variant == "autoreg" else args.plan_steps
+        p_hit, p_cnt = np.zeros(n_s), np.zeros(n_s)
     with torch.no_grad():
         for s in range(0, n, batch):
             idx = np.arange(s, min(n, s + batch))
-            out = net(batch_of(d, idx, device), heads=True)
+            out = net(batch_of(d, idx, device), heads=True, **({"n_steps": args.plan_steps} if planning else {}))
+            if planning:
+                lg = out["step_logits"] if args.plan_variant == "autoreg" else out["coord_logits"]
+                tgt = torch.from_numpy((d["pc"]["target"] if args.plan_variant == "autoreg" else d["coord"])[idx].astype(np.int64)).to(device)
+                _, ok = plan_ce(out, d, idx, args, device)
+                hit = (lg.argmax(-1) == tgt).float() * ok
+                p_hit += hit.sum(0).cpu().numpy(); p_cnt += ok.sum(0).cpu().numpy()
             loss, chosen, ply1, best, real = compute_loss(out, d, idx, args, device)
             logit = out["logit"]
             q1 = out["q1"].masked_fill(~real, float("-inf"))
@@ -134,6 +187,9 @@ def evaluate(net, d, batch, args, device="cpu"):
         res[name] = {"top1": st["top1"] / p, "top3": st["top3"] / p, "loss": st["loss"] / p, "n": st["n"],
                      "q1_top1": st["q1_top1"] / p, "qs_top1": st["qs_top1"] / p,
                      "q1_mae": st["q1_err"] / max(1, st["q1_cnt"]), "qs_mae": st["qs_err"] / max(1, st["qs_cnt"])}
+    if planning:
+        first = 2 if args.plan_variant == "autoreg" else 1
+        res["plan_top1"] = {"step%d" % (first + k): p_hit[k] / max(1, p_cnt[k]) for k in range(len(p_hit))}
     return res
 
 
@@ -183,7 +239,13 @@ def main():
     ap.add_argument("--w-q", type=float, default=0.0, help="weight of both value-head regressions (v2: 1.0)")
     ap.add_argument("--w-q1", type=float, default=None, help="weight of the Q1 regression (default --w-q)")
     ap.add_argument("--w-qs", type=float, default=None, help="weight of the Qs regression (default --w-q)")
+    ap.add_argument("--plan-variant", default="", choices=("", "autoreg", "plan"),
+                    help="multi-move AtTenTris (model_plan.py): attentris-autoreg or attentris-plan")
+    ap.add_argument("--plan-steps", type=int, default=2, help="plan length N trained (2..6; move 1 included)")
+    ap.add_argument("--w-plan", type=float, default=1.0, help="weight of the plan loss (mean over a position's plan steps)")
     args = ap.parse_args()
+    ps = args.plan_steps if args.plan_variant else 0
+    use_pc = args.plan_variant == "autoreg"
     n_p = pcores.pin()
     torch.set_num_threads(args.threads or n_p or 8)
     if args.device == "cuda" and args.gpu_mem_frac > 0:
@@ -199,7 +261,7 @@ def main():
             raise SystemExit("%s holds a %s checkpoint; refusing to overwrite it with %s (pick another --out)" % (out, prev, args.arch))
 
     specs = [(f.split("@")[0], float(f.split("@")[1]) if "@" in f else 1.0) for f in args.train.split(",")]
-    parts = [load(os.path.join(args.data, f)) for f, _ in specs]
+    parts = [load(os.path.join(args.data, f), ps, use_pc) for f, _ in specs]
     if args.tome_pretok:
         for p, (f, _) in zip(parts, specs):
             p["pretok"] = np.load(os.path.join(args.data, f.replace(".npz", ".pretok.npy")))
@@ -208,8 +270,8 @@ def main():
     for k in list(parts[0]):          # one array at a time, each file's copy freed as it is merged (peak ~1x the data, not 2x)
         tr[k] = np.concatenate([p.pop(k) for p in parts])
     del parts
-    va = load(os.path.join(args.data, "val.npz"))
-    va2 = load(os.path.join(args.data, args.val2)) if args.val2 else None
+    va = load(os.path.join(args.data, "val.npz"), ps, use_pc)
+    va2 = load(os.path.join(args.data, args.val2), ps, use_pc) if args.val2 else None
     if va2 is not None and args.tome_pretok:
         va2["pretok"] = np.load(os.path.join(args.data, args.val2.replace(".npz", ".pretok.npy")))
     if args.tome_pretok:
@@ -250,6 +312,9 @@ def main():
         net = MT.AtTenTrisToMe(d=args.d, layers=args.layers, merge=[float(f) for f in args.merge.split(",")],
                                sky=args.tome_sky, pretok=args.tome_pretok, flat_bias=args.tome_flat,
                                streams=args.tome_streams, n_teachers=args.n_teachers, budget=MT.budget_of(args.tome_budget), split=args.tome_split, pure=args.tome_pure).to(args.device)
+    elif args.plan_variant:
+        net = MP.AtTenTrisPlan(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops,
+                               n_teachers=args.n_teachers, variant=args.plan_variant).to(args.device)
     else:
         net = M.AtTenTris(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops,
                           n_teachers=args.n_teachers).to(args.device)
@@ -265,7 +330,13 @@ def main():
         if sw is not None and sw.shape[0] < args.n_teachers:   # a new style: starts as a copy of normal's
             ck0["model"]["style.weight"] = torch.cat([sw, sw[:1].repeat(args.n_teachers - sw.shape[0], 1)])
             print("style table grown %d -> %d rows (new rows = normal)" % (sw.shape[0], args.n_teachers), flush=True)
-        net.load_state_dict(ck0["model"])
+        if args.plan_variant and not ck0["args"].get("plan_variant"):
+            # a single-move checkpoint starts a plan model: move 1 exactly as before, new parts fresh
+            missing = net.load_state_dict(ck0["model"], strict=False).missing_keys
+            net.init_from_base()
+            print("plan model (%s) from a single-move checkpoint: %d new tensors" % (args.plan_variant, len(missing)), flush=True)
+        else:
+            net.load_state_dict(ck0["model"])
         print("warm start from %s (%d epochs)" % (args.init, len(ck0.get("log", []))), flush=True)
     if args.resume and os.path.exists(out):
         ck = torch.load(out, map_location=args.device, weights_only=False)
@@ -324,7 +395,7 @@ def main():
             opt.zero_grad()
             loss = 0.0
             for part in np.array_split(idx, args.micro):        # same batch, less memory: gradients add up
-                o = net(batch_of(tr, part, args.device), heads=True)
+                o = net(batch_of(tr, part, args.device), heads=True, **({"n_steps": args.plan_steps} if args.plan_variant else {}))
                 lp = compute_loss(o, tr, part, args, args.device)[0].sum() / len(idx)
                 lp.backward()
                 loss = loss + lp.detach()
@@ -350,8 +421,12 @@ def main():
             ev["normal"]["qs_top1"], ev["gate4"]["qs_top1"], ev["normal"]["q1_top1"], ev["gate4"]["q1_top1"],
             (ev["normal"]["q1_mae"] + ev["gate4"]["q1_mae"]) / 2, (ev["normal"]["qs_mae"] + ev["gate4"]["qs_mae"]) / 2,
             time.time() - t0), flush=True)
+        if args.plan_variant:
+            for nm in ("val", "val2"):
+                if nm in rec:
+                    print("epoch %d: %s plan top1 %s" % (ep + 1, nm, " ".join("%s %.3f" % kv for kv in rec[nm]["plan_top1"].items())), flush=True)
         if va2 is not None:
-            v2 = max(rec["val2"].values(), key=lambda v: v["n"])     # the teacher the val2 set is labelled by
+            v2 = max((v for k, v in rec["val2"].items() if k != "plan_top1"), key=lambda v: v["n"])     # the teacher the val2 set is labelled by
             print("epoch %d: val2 (%s, %d) top1 %.3f top3 %.3f loss %.3f | argmax Qs top1 %.3f | MAE Qs %.2f" % (
                 ep + 1, args.val2, v2["n"], v2["top1"], v2["top3"], v2["loss"], v2["qs_top1"], v2["qs_mae"]), flush=True)
         save(out, ep, {"batch": None})

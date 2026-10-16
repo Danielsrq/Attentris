@@ -34,8 +34,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, "data")
 TIERS = ("core", "labels", "old")
 LABELS = ["raw", "raw_1m", "raw_dagger1", "raw_dagger2", "raw_dagger2_tr", "raw_dagger2_val",
-          "dagger2", "dagger3", "dagger4", "dagger5", "dagger5b", "dagger5all", "*.jsonl"]
+          "dagger2", "dagger3", "dagger4", "dagger5", "dagger5b", "dagger5all", "plan", "*.jsonl"]
 OLD = ["v3", "v5", "raw_v3", "raw_dagger1_v3", "structure_study", "audit", "curve*"]
+# derived data rebuilt on each machine, never bundled: v51plan = attentris-autoreg's legal moves
+# along every plan (~10 GB), rebuilt from data/plan by pack_plan.py in a few minutes
+SKIP = ["v51plan"]
 STORED = (".npz", ".npy", ".pt", ".zip", ".png")
 MANIFEST = "MANIFEST.json"
 
@@ -52,6 +55,8 @@ def tier_of(top):
 def files(tier=None):
     out = []
     for top in sorted(os.listdir(DATA)):
+        if any(fnmatch.fnmatch(top, p) for p in SKIP):
+            continue
         if tier is not None and tier_of(top) != tier:
             continue
         p = os.path.join(DATA, top)

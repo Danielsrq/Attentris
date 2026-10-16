@@ -657,6 +657,9 @@ fn structures_json(b: &board::Board) -> String {
 /// pieces for the chance ply. States with no legal move are skipped.
 fn cmd_label(a: &Args) {
     use std::io::BufRead;
+    if a.has("plan") {
+        return cmd_label_plan(a);
+    }
     let r = rules(a);
     let sc = SearchConfig { roots: true, ..search_config(a) };
     let w = weights(a);
@@ -723,6 +726,275 @@ fn cmd_label(a: &Args) {
     });
     std::fs::write(&out_path, parts.concat()).expect("write --out");
     eprintln!("labelled {} states -> {} ({:.0}s)", total, out_path, t0.elapsed().as_secs_f64());
+}
+
+/// `bot label --plan`: the search's planned line for each state on stdin (the move it plays,
+/// then the moves it expects to play next; depth 6 = the current piece and 5 previews), one
+/// record per input line, in input order:
+///   {"i": input line, "teacher", "seed", "n", "plan": [[hold, "P", rot, [x,y,...]], ...]}
+/// Cells as in the dataset records: each step on its own board (earlier steps' clears applied).
+/// "plan" is empty when the search finds no move. One plain search per state, no root scores.
+/// The weights: --weights, or per record with --teacher-weights normal=A.txt,danger=B.txt
+/// keyed by the record's "w" field when present, else its "teacher" field.
+fn cmd_label_plan(a: &Args) {
+    use std::io::BufRead;
+    use std::fmt::Write;
+    let r = rules(a);
+    let sc = SearchConfig { roots: false, ..search_config(a) };
+    let mut table: Vec<(String, Weights)> = Vec::new();
+    if let Some(spec) = a.str("teacher-weights") {
+        for kv in spec.split(',').filter(|x| !x.is_empty()) {
+            let (k, p) = kv.split_once('=').unwrap_or_else(|| panic!("--teacher-weights: {} is not NAME=FILE", kv));
+            let t = std::fs::read_to_string(p).unwrap_or_else(|e| panic!("{}: {}", p, e));
+            table.push((k.to_string(), Weights::parse(&t).unwrap_or_else(|e| panic!("{}: {}", p, e))));
+        }
+    } else {
+        table.push((String::new(), weights(a)));
+    }
+    let out_path = a.str("out").expect("--out FILE").to_string();
+    let lines: Vec<String> = std::io::stdin().lock().lines().filter_map(|l| l.ok()).collect();
+    let threads = a.get("threads", std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4)).max(1);
+    let t0 = Instant::now();
+    let mut recs: Vec<(usize, String)> = std::thread::scope(|s| {
+        let hs: Vec<_> = (0..threads).map(|t| {
+            let (sc, table, lines) = (sc.clone(), &table, &lines);
+            s.spawn(move || {
+                let mut searchers: Vec<Searcher> = table.iter().map(|(_, w)| Searcher::new(sc.clone(), w.clone(), r)).collect();
+                let shapes = rules::Shapes::for_rules(&r);
+                let letter = |v: &serde_json::Value| v.as_str().and_then(|s| s.chars().next()).and_then(rules::Piece::from_letter);
+                let mut out = Vec::new();
+                for (i, line) in lines.iter().enumerate().skip(t).step_by(threads) {
+                    if line.trim().is_empty() {
+                        continue;
+                    }
+                    let v: serde_json::Value = serde_json::from_str(line).unwrap_or_else(|e| panic!("line {}: {}", i, e));
+                    let teacher = v["teacher"].as_str().unwrap_or("");
+                    let key = v["w"].as_str().unwrap_or(teacher);
+                    let k = if table.len() == 1 && table[0].0.is_empty() { 0 } else {
+                        table.iter().position(|(n, _)| n == key).unwrap_or_else(|| panic!("line {}: no --teacher-weights for {:?}", i, key))
+                    };
+                    let mut b = board::Board::default();
+                    for (y, n) in v["rows"].as_array().map(|a| a.as_slice()).unwrap_or(&[]).iter().enumerate().take(rules::H as usize) {
+                        b.rows[y] = n.as_u64().unwrap_or(0) as u16;
+                    }
+                    let piece = letter(&v["piece"]).unwrap_or_else(|| panic!("line {}: no piece", i));
+                    let mut queue = vec![piece];
+                    queue.extend(v["queue"].as_array().map(|a| a.iter().filter_map(letter).collect::<Vec<_>>()).unwrap_or_default());
+                    let hold = letter(&v["hold"]);
+                    let b2b = v["b2b"].as_i64().unwrap_or(-1) as i32;
+                    let steps: Vec<String> = match searchers[k].search(&b, &queue, hold, b2b, &rules::ALL_PIECES) {
+                        Some(d) => d.plan.iter().map(|st| {
+                            let p = &st.placement;
+                            let mut c = p.abs_cells(&shapes);
+                            c.sort();
+                            format!("[{},\"{}\",{},[{}]]", st.use_hold as u8, p.piece.letter().to_ascii_uppercase(), p.rot,
+                                c.iter().map(|(x, y)| format!("{},{}", x, y)).collect::<Vec<_>>().join(","))
+                        }).collect(),
+                        None => Vec::new(),
+                    };
+                    let mut rec = String::new();
+                    let _ = write!(rec, "{{\"i\":{},\"teacher\":\"{}\",\"seed\":{},\"n\":{},\"plan\":[{}]}}",
+                        i, teacher, v["seed"].as_u64().unwrap_or(0), v["n"].as_u64().unwrap_or(0), steps.join(","));
+                    out.push((i, rec));
+                }
+                out
+            })
+        }).collect();
+        hs.into_iter().flat_map(|h| h.join().unwrap()).collect()
+    });
+    recs.sort_by_key(|x| x.0);
+    let body: String = recs.iter().map(|(_, l)| format!("{}\n", l)).collect();
+    std::fs::write(&out_path, body).expect("write --out");
+    eprintln!("planned {} states -> {} ({:.0}s)", recs.len(), out_path, t0.elapsed().as_secs_f64());
+}
+
+/// `bot plan-cands --states RAW.jsonl --plans PLAN.jsonl --out OUT.bin [--k 5] [--nc 96]`: the
+/// legal moves along each state's planned line (bot label --plan; record i = line i of RAW), for
+/// attentris-autoreg. The plan is replayed on the real board (clears, B2B, hold and queue), and
+/// at plan steps 2..k+1 the legal moves are generated as `bot expand` does (both hold choices,
+/// lock-outs dropped, twins merged keeping the higher attack). Fixed-size little-endian records,
+/// k per state, numpy dtype
+///   [("n", i2), ("target", i2), ("rot", i2), ("own", i2, 8), ("cells", i2, (nc, 4)), ("meta", i1, (nc, 5))]
+///   n       legal moves at this step (0 = no step: the plan ended, or its move was not found)
+///   target  index of the planned move among them
+///   rot     the plan's rotation; own = its cells (x, y) on its own board (rows top to bottom, 40)
+///   cells   each move's cells in the ROOT state's frame, as pack.py: r*10+c with r = 39 - y the
+///           visible row (0 = bottom), -2 off the visible board (above it, or a row that does not
+///           exist at the root), -1 pad; a planned clear shifts later rows, mapped back as
+///           plan_to_json does
+///   meta    piece (IOTSZJL = 0..6), hold, spin (0 none / 1 mini / 2 full), lines, min(attack, 127)
+/// Moves beyond nc are cut (the target kept); with fewer than nc the rest is padding.
+fn cmd_plan_cands(a: &Args) {
+    use std::io::{BufRead, Write};
+    let r = rules(a);
+    let shapes = rules::Shapes::for_rules(&r);
+    let mut mg = movegen::MoveGen::new();
+    mg.all_spin = r.all_spin;
+    mg.battle = r.battle;
+    mg.no_180 = r.no_180;
+    let k_steps = a.get("k", 5usize);
+    let nc = a.get("nc", 96usize);
+    let read = |p: &str| -> Vec<String> {
+        let f = std::fs::File::open(p).unwrap_or_else(|e| panic!("{}: {}", p, e));
+        std::io::BufReader::new(f).lines().map(|l| l.unwrap()).filter(|l| !l.trim().is_empty()).collect()
+    };
+    let states = read(a.str("states").expect("--states RAW.jsonl"));
+    let plans = read(a.str("plans").expect("--plans PLAN.jsonl"));
+    assert_eq!(states.len(), plans.len(), "states and plans differ in length");
+    let out_path = a.str("out").expect("--out FILE.bin").to_string();
+    let letter = |v: &serde_json::Value| v.as_str().and_then(|s| s.chars().next()).and_then(rules::Piece::from_letter);
+    let rec_size = 2 + 2 + 2 + 16 + nc * 8 + nc * 5;
+    let mut out = Vec::with_capacity(states.len() * k_steps * rec_size);
+    let mut buf = Vec::new();
+    let (mut found, mut missing) = (0u64, 0u64);
+    for (i, (sl, pl)) in states.iter().zip(plans.iter()).enumerate() {
+        let v: serde_json::Value = serde_json::from_str(sl).unwrap_or_else(|e| panic!("state {}: {}", i, e));
+        let p: serde_json::Value = serde_json::from_str(pl).unwrap_or_else(|e| panic!("plan {}: {}", i, e));
+        assert_eq!(p["i"].as_u64(), Some(i as u64), "plan record {} is not line {}", p["i"], i);
+        let mut b = board::Board::default();
+        for (y, n) in v["rows"].as_array().map(|a| a.as_slice()).unwrap_or(&[]).iter().enumerate().take(rules::H as usize) {
+            b.rows[y] = n.as_u64().unwrap_or(0) as u16;
+        }
+        let mut b2b = v["b2b"].as_i64().unwrap_or(-1) as i32;
+        let mut cur = letter(&v["piece"]);
+        let mut queue: std::collections::VecDeque<rules::Piece> =
+            v["queue"].as_array().map(|a| a.iter().filter_map(letter).collect()).unwrap_or_default();
+        let mut hold = letter(&v["hold"]);
+        let steps: Vec<(bool, Vec<(i32, i32)>, i64)> = p["plan"].as_array().map(|a| a.iter().map(|s| {
+            let c: Vec<i64> = s[3].as_array().unwrap().iter().map(|x| x.as_i64().unwrap()).collect();
+            let mut cells: Vec<(i32, i32)> = c.chunks(2).map(|q| (q[0] as i32, q[1] as i32)).collect();
+            cells.sort();
+            (s[0].as_u64() == Some(1), cells, s[2].as_i64().unwrap_or(0))
+        }).collect()).unwrap_or_default();
+        // origin[y] = the root-board row that row y of the current (simulated) board came from
+        let mut origin: Vec<i32> = (0..rules::H).collect();
+        let mut alive = true;
+        for step in 0..=k_steps {
+            // the legal moves here, as bot expand lists them
+            let mut keys: Vec<(bool, [(i32, i32); 4])> = Vec::new();
+            let mut moves: Vec<(board::Placement, bool, i32, u32, i32)> = Vec::new();   // placement, hold, spin, lines, attack
+            let mut target = None;
+            if alive && step < steps.len() {
+                if let Some(c) = cur {
+                    let mut choices = vec![(c, false)];
+                    match hold {
+                        Some(h) if h != c => choices.push((h, true)),
+                        None if !queue.is_empty() => choices.push((queue[0], true)),
+                        _ => {}
+                    }
+                    for (pc, uh) in choices {
+                        mg.generate(&b, pc, &shapes, &mut buf);
+                        for plc in &buf {
+                            let o = search::apply(&b, plc, b2b, &r, &shapes);
+                            if o.lock_out {
+                                continue;
+                            }
+                            let mut cells = plc.abs_cells(&shapes);
+                            cells.sort();
+                            let spin = match plc.spin { rules::Spin::None => 0, rules::Spin::Mini => 1, _ => 2 };
+                            match keys.iter().position(|q| *q == (uh, cells)) {
+                                Some(j) if o.attack > moves[j].4 => moves[j] = (*plc, uh, spin, o.lines, o.attack),
+                                Some(_) => {}
+                                None => {
+                                    keys.push((uh, cells));
+                                    moves.push((*plc, uh, spin, o.lines, o.attack));
+                                }
+                            }
+                        }
+                    }
+                    let (uh, ref cells, _) = steps[step];
+                    target = keys.iter().position(|q| q.0 == uh && q.1.as_slice() == cells.as_slice());
+                }
+            }
+            if step > 0 {
+                // the record for plan step `step + 1` (step 0 is the root, already in the dataset)
+                let n_keep = moves.len().min(nc);
+                let (mut order, t): (Vec<usize>, i16) = match target {
+                    Some(t) if alive => {
+                        found += 1;
+                        let mut o: Vec<usize> = (0..moves.len()).filter(|&j| j != t).take(nc - 1).collect();
+                        let pos = t.min(o.len());
+                        o.insert(pos, t);
+                        (o, pos as i16)
+                    }
+                    _ => {
+                        if alive && step < steps.len() {
+                            missing += 1;
+                        }
+                        (Vec::new(), -1)
+                    }
+                };
+                order.truncate(n_keep);
+                let mut rec = Vec::with_capacity(rec_size);
+                rec.extend_from_slice(&(order.len() as i16).to_le_bytes());
+                rec.extend_from_slice(&t.to_le_bytes());
+                let (rot, own) = if t >= 0 { (steps[step].2 as i16, steps[step].1.clone()) } else { (-1, Vec::new()) };
+                rec.extend_from_slice(&rot.to_le_bytes());
+                for q in 0..4 {
+                    let (x, y) = own.get(q).copied().unwrap_or((-1, -1));
+                    rec.extend_from_slice(&(x as i16).to_le_bytes());
+                    rec.extend_from_slice(&(y as i16).to_le_bytes());
+                }
+                for j in 0..nc {
+                    for q in 0..4 {
+                        let idx: i16 = match order.get(j) {
+                            None => -1,
+                            Some(&m) => {
+                                let (x, y) = keys[m].1[q];
+                                let ry = 39 - origin[y as usize];
+                                if (0..20).contains(&ry) { (ry * 10 + x) as i16 } else { -2 }
+                            }
+                        };
+                        rec.extend_from_slice(&idx.to_le_bytes());
+                    }
+                }
+                for j in 0..nc {
+                    let m = match order.get(j) {
+                        None => [0i8; 5],
+                        Some(&m) => {
+                            let (plc, uh, spin, lines, attack) = moves[m];
+                            [plc.piece as i8, uh as i8, spin as i8, lines as i8, attack.min(127) as i8]
+                        }
+                    };
+                    rec.extend(m.iter().map(|&x| x as u8));
+                }
+                out.extend_from_slice(&rec);
+            }
+            if step == k_steps {
+                break;
+            }
+            // play the planned move and advance board, B2B, hold and queue
+            match target {
+                Some(t) if alive => {
+                    let (plc, uh, _, _, _) = moves[t];
+                    let o = search::apply(&b, &plc, b2b, &r, &shapes);
+                    if o.cleared != 0 {
+                        let top = *origin.iter().min().unwrap();
+                        let kept: Vec<i32> = (0..rules::H as usize).filter(|&y| o.cleared >> y & 1 == 0).map(|y| origin[y]).collect();
+                        let n = rules::H as usize - kept.len();
+                        origin = (0..n).map(|q| top - (n - q) as i32).chain(kept).collect();
+                    }
+                    if o.repeat {
+                        origin.remove(0);
+                        origin.push(rules::H);
+                    }
+                    b = o.board;
+                    b2b = o.b2b;
+                    let c = cur.unwrap();
+                    if uh {
+                        if hold.is_none() {
+                            queue.pop_front();   // the next piece was played from the queue
+                        }
+                        hold = Some(c);
+                    }
+                    cur = queue.pop_front();
+                }
+                _ => alive = false,
+            }
+        }
+    }
+    std::fs::write(&out_path, &out).expect("write --out");
+    let _ = writeln!(std::io::stderr(), "plan-cands: {} states, {} steps found, {} planned moves not found -> {}", states.len(), found, missing, out_path);
 }
 
 /// `bot value --weights W [--mode]`: V of each state on stdin ({"rows": [40 bitmask rows, top
@@ -1377,6 +1649,7 @@ fn main() {
         "expand" => cmd_expand(&a),
         "value" => cmd_value(&a),
         "label" => cmd_label(&a),
+        "plan-cands" => cmd_plan_cands(&a),
         "play-ext" => cmd_play_ext(&a),
         "versus" => cmd_versus(&a),
         "structures" => cmd_structures(),

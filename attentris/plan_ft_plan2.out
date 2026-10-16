@@ -1,0 +1,26 @@
+== v51_d128_plan2_ft (from v51_d128_dagger5b_ft; plan, N=2, w_plan 1.0) 2026-10-16 12:53
+epoch 3: train loss 5.713 | val normal top1 0.634 top3 0.863 | val gate4 top1 0.622 top3 0.853 | | 157s
+epoch 3: val plan top1 step1 0.435 step2 0.260
+epoch 3: val2 plan top1 step1 0.310 step2 0.205
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.487 top3 0.741 loss 6.341 | argmax Qs top1 0.455 | MAE Qs 7.48
+v51_d128_plan2_ft normal none: APP 0.719 (APPfull 0.719), died 0/256, pieces 500 avg, TSD 6509, TST 53, quads 3749, max height 16, illegal 0, 33.9 ms/move (p90 40.9) + search 34.6 ms, 80s
+v51_d128_plan2_ft normal d2: APP 0.805 (APPfull 0.805), died 0/64, pieces 500 avg, TSD 1834, TST 17, quads 916, max height 15, illegal 0, 148.1 ms/move (p90 182.6) + search 148.9 ms, 85s
+v51_d128_plan2_ft normal g20: APP 0.772 (APPfull 0.697), died 15/64, pieces 451 avg, TSD 1065, TST 5, quads 2159, max height 21, illegal 0, 30.7 ms/move (p90 40.4) + search 31.5 ms, 21s
+v51_d128_plan2_ft normal g50: APP 0.524 (APPfull 0.295), died 53/64, pieces 282 avg, TSD 521, TST 3, quads 779, max height 23, illegal 0, 26.0 ms/move (p90 37.8) + search 26.7 ms, 15s
+v51_d128_plan2_ft danger g20: APP 0.726 (APPfull 0.712), died 3/64, pieces 490 avg, TSD 1212, TST 7, quads 2213, max height 20, illegal 0, 31.7 ms/move (p90 40.5) + search 32.5 ms, 23s
+v51_d128_plan2_ft danger g50: APP 0.520 (APPfull 0.433), died 26/64, pieces 416 avg, TSD 756, TST 5, quads 1124, max height 22, illegal 0, 29.1 ms/move (p90 39.6) + search 29.8 ms, 19s
+== APP / VS: v51_d128_dagger5b_ft vs v51_d128_plan2_ft
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_dagger5b_ft_normal_none     0/256      500   0.739    0.739   0.739    0.739         -
+v51_d128_dagger5b_ft_normal_d2       0/64      500   0.832    0.832   0.832    0.832         -
+v51_d128_dagger5b_ft_normal_g20     18/64      414   0.785    0.650   1.112    0.921 8653/9162
+v51_d128_dagger5b_ft_normal_g50     44/64      305   0.555    0.338   0.859    0.523 5917/6780
+v51_d128_dagger5b_ft_danger_g20      4/64      490   0.733    0.718   1.071    1.049 10608/10806
+v51_d128_dagger5b_ft_danger_g50     25/64      404   0.520    0.421   0.844    0.683 8378/8978
+v51_d128_plan2_ft_normal_none        0/256      500   0.719    0.719   0.719    0.719         -
+v51_d128_plan2_ft_normal_d2          0/64      500   0.805    0.805   0.805    0.805         -
+v51_d128_plan2_ft_normal_g20        15/64      451   0.772    0.697   1.102    0.994 9514/9974
+v51_d128_plan2_ft_normal_g50        53/64      282   0.524    0.295   0.819    0.462 5324/6292
+v51_d128_plan2_ft_danger_g20         3/64      490   0.726    0.712   1.064    1.043 10605/10821
+v51_d128_plan2_ft_danger_g50        26/64      416   0.520    0.433   0.844    0.702 8609/9234
+v51_d128_plan2_ft done
