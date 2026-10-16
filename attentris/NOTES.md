@@ -346,6 +346,17 @@ A versus smoke test (4 matches, turn-based): CEM-survival commit 6 thought 23.9 
 | blitz d6 b64 vs CC2 40 ms, garbage delay 333 ms | 64 - 0 | 189 / 25 | 0.684 / 0.413 | 0.57 s |
 | blitz d6 b64 vs CC2 5 ms, garbage delay 333 ms | 11 - **53** | 185 / 185 | 0.718 / 0.725 | 12.66 s |
 
+**CC2 think-time sweep vs plain CEM-survival d6 b64** (CEM at its own ~24-27 PPS; `bot/tools/versus_realtime_sweep.sh`, `THINK=...`):
+
+| CC2 ms / move | 5 | 10 | 15 | 20 | 25 | 30 | 33 | 36 | 40 |
+|---|---|---|---|---|---|---|---|---|---|
+| CC2 PPS | 184 | 97 | 65 | 49 | 39 | 33 | 30 | 27 | 25 |
+| CEM wins - CC2 wins | 0-64 | 0-64 | 2-62 | 5-59 | 12-52 | 25-39 | **30-34** | 47-17 | 54-10 |
+| CC2 APP (CEM APP ~0.85-0.94 from 15 ms on) | 0.61 | 0.66 | 0.71 | 0.74 | 0.77 | 0.80 | 0.82 | 0.82 | 0.80 |
+
+The two draw level at CC2 ≈ 33-34 ms per move: CC2 has to play ~25% faster (30 vs 24 PPS) to make up for its lower APP (0.82 vs 0.93).
+CC2's quality saturates early: from 33 to 15 ms it loses only 0.11 APP while doubling its speed, which is why a fast CC2 wins uncapped. The crossover is steep: 0.39 at 30 ms, 0.73 at 36 ms.
+
 Findings:
 - **Uncapped, the faster bot wins** almost regardless of quality: matches are decided in well under a second of game time. Blitz turns CEM-survival's 54-10 into 64-0 against the same CC2.
 - **It doesn't beat every bot:** CC2 is an anytime search and can play just as fast. At 5 ms per move (184 PPS) it beats the d6 b64 blitz 61-3, because its garbage cancels the blitz plans and forces new searches (98 PPS instead of 181).

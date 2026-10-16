@@ -1,0 +1,35 @@
+== plain_vs_cc2_5 22:51
+cem:bot/results/survive/survive.txt:6:64 vs cc2:5 (coldclear, realtime, 64 matches): a wins 0, b wins 64, draws 0 (a score 0.000), mean 0.26 s game time
+  a: APP 0.471, VS 0.798, sent 0.2/match, 37.5 ms/move, illegal 0, 28.9 PPS
+  b: APP 0.614, VS 0.615, sent 29.1/match, 5.2 ms/move, illegal 0, 184.2 PPS
+== plain_vs_cc2_10 22:51
+cem:bot/results/survive/survive.txt:6:64 vs cc2:10 (coldclear, realtime, 64 matches): a wins 0, b wins 64, draws 0 (a score 0.000), mean 0.50 s game time
+  a: APP 0.624, VS 0.981, sent 2.7/match, 37.7 ms/move, illegal 0, 27.9 PPS
+  b: APP 0.660, VS 0.690, sent 30.6/match, 10.1 ms/move, illegal 0, 96.9 PPS
+== plain_vs_cc2_15 22:51
+cem:bot/results/survive/survive.txt:6:64 vs cc2:15 (coldclear, realtime, 64 matches): a wins 2, b wins 62, draws 0 (a score 0.031), mean 1.02 s game time
+  a: APP 0.851, VS 1.322, sent 10.3/match, 38.8 ms/move, illegal 0, 26.5 PPS
+  b: APP 0.706, VS 0.799, sent 43.9/match, 15.2 ms/move, illegal 0, 65.0 PPS
+== plain_vs_cc2_20 22:52
+cem:bot/results/survive/survive.txt:6:64 vs cc2:20 (coldclear, realtime, 64 matches): a wins 5, b wins 59, draws 0 (a score 0.078), mean 1.34 s game time
+  a: APP 0.831, VS 1.285, sent 17.0/match, 40.7 ms/move, illegal 0, 25.3 PPS
+  b: APP 0.736, VS 0.896, sent 43.8/match, 20.2 ms/move, illegal 1, 49.0 PPS
+== plain_vs_cc2_25 22:52
+cem:bot/results/survive/survive.txt:6:64 vs cc2:25 (coldclear, realtime, 64 matches): a wins 12, b wins 52, draws 0 (a score 0.188), mean 2.23 s game time
+  a: APP 0.913, VS 1.375, sent 31.4/match, 41.4 ms/move, illegal 0, 24.8 PPS
+  b: APP 0.769, VS 0.989, sent 59.9/match, 25.3 ms/move, illegal 1, 39.2 PPS
+== plain_vs_cc2_30 22:54
+cem:bot/results/survive/survive.txt:6:64 vs cc2:30 (coldclear, realtime, 64 matches): a wins 25, b wins 39, draws 0 (a score 0.391), mean 2.65 s game time
+  a: APP 0.938, VS 1.381, sent 43.0/match, 40.8 ms/move, illegal 0, 24.7 PPS
+  b: APP 0.797, VS 1.080, sent 59.4/match, 30.3 ms/move, illegal 6, 32.8 PPS
+sweep done
+exit 0
+== plain_vs_cc2_33 22:55
+cem:bot/results/survive/survive.txt:6:64 vs cc2:33 (coldclear, realtime, 64 matches): a wins 30, b wins 34, draws 0 (a score 0.469), mean 3.24 s game time
+  a: APP 0.926, VS 1.383, sent 51.1/match, 41.5 ms/move, illegal 0, 24.0 PPS
+  b: APP 0.820, VS 1.132, sent 66.9/match, 33.3 ms/move, illegal 3, 29.7 PPS
+== plain_vs_cc2_36 22:57
+cem:bot/results/survive/survive.txt:6:64 vs cc2:36 (coldclear, realtime, 64 matches): a wins 47, b wins 17, draws 0 (a score 0.734), mean 3.39 s game time
+  a: APP 0.930, VS 1.350, sent 57.7/match, 40.8 ms/move, illegal 0, 24.4 PPS
+  b: APP 0.818, VS 1.147, sent 60.7/match, 36.3 ms/move, illegal 9, 27.3 PPS
+sweep done
