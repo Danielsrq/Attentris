@@ -327,3 +327,13 @@ survive g50 commit 1: APP 0.816, died 0/64, APPfull 0.816, think 79.0 ms/move
 survive g50 commit 2: APP 0.793, died 0/64, APPfull 0.793, think 39.6 ms/move
 survive g50 commit 3: APP 0.769, died 0/64, APPfull 0.769, think 31.7 ms/move
 survive g50 commit 6: APP 0.714, died 0/64, APPfull 0.714, think 16.0 ms/move
+== v51_d128_pieces6L2_ft (from v51_d128_dagger5b_ft; pieces, N=6, w_plan 1.0) 2026-10-16 17:06
+epoch 3: train loss 4.203 | val normal top1 0.645 top3 0.866 | val gate4 top1 0.629 top3 0.854 | | 176s
+epoch 3: val plan top1 step1 0.612 step2 0.353 step3 0.238 step4 0.172 step5 0.137 step6 0.108
+epoch 3: val2 plan top1 step1 0.451 step2 0.285 step3 0.193 step4 0.162 step5 0.139 step6 0.131
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.490 top3 0.746 loss 4.564 | argmax Qs top1 0.461 | MAE Qs 7.37
+== v51_d128_pieces6L2fze10_ft (from v51_d128_dagger5b_ft; pieces, N=6, w_plan 1.0) 2026-10-16 17:16
+v51_d128_pieces6L2_ft normal none: APP 0.731 (APPfull 0.731), died 0/256, pieces 500 avg, TSD 6702, TST 63, quads 3597, max height 16, illegal 0, 36.7 ms/move (p90 45.1) + search 37.6 ms, 86s
+v51_d128_pieces6L2_ft normal d2: APP 0.864 (APPfull 0.864), died 0/64, pieces 500 avg, TSD 1932, TST 15, quads 945, max height 16, illegal 0, 158.9 ms/move (p90 201.5) + search 159.9 ms, 91s
+v51_d128_pieces6L2_ft normal g20: APP 0.793 (APPfull 0.706), died 17/64, pieces 445 avg, TSD 1091, TST 7, quads 2171, max height 21, illegal 0, 34.3 ms/move (p90 45.6) + search 35.1 ms, 23s
+v51_d128_pieces6L2_ft normal g50: APP 0.551 (APPfull 0.314), died 51/64, pieces 285 avg, TSD 546, TST 6, quads 817, max height 21, illegal 0, 28.7 ms/move (p90 41.4) + search 29.5 ms, 16s
