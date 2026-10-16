@@ -77,7 +77,7 @@ def arrays(states, teacher, version=T.TOK_VERSION, drop=()):
 
 class Player:
     def __init__(self, model_path, depth, beam, teacher, mode, policy="logit", propose=0, temp=0.0, seed=0, merge="", merge_override="",
-                 expand_args=()):
+                 expand_args=(), cross_loops=0):
         import torch
         import model as M
         torch.set_num_threads(1)
@@ -95,13 +95,13 @@ class Player:
         elif ck["args"].get("plan_variant"):     # attentris-autoreg / -plan: move 1 includes the step-1 embedding
             import model_plan as MP
             self.net = MP.AtTenTrisPlan(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0],
-                                        cross_layers=ck["args"].get("cross_layers", 1), cross_loops=ck["args"].get("cross_loops", 1),
+                                        cross_layers=ck["args"].get("cross_layers", 1), cross_loops=cross_loops or ck["args"].get("cross_loops", 1),
                                         n_teachers=ck["model"]["style.weight"].shape[0], variant=ck["args"]["plan_variant"],
                                         plan_layers=ck["args"].get("plan_layers", 1))
             self.n_styles = ck["model"]["style.weight"].shape[0]
         else:
             self.net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0],
-                          cross_layers=ck["args"].get("cross_layers", 1), cross_loops=ck["args"].get("cross_loops", 1),
+                          cross_layers=ck["args"].get("cross_layers", 1), cross_loops=cross_loops or ck["args"].get("cross_loops", 1),
                           n_teachers=ck["model"]["style.weight"].shape[0])
             self.n_styles = ck["model"]["style.weight"].shape[0]
         self.variant = ck["args"].get("plan_variant", "")
@@ -425,7 +425,8 @@ def play_game(args, seed):
     if args.commit > 2:
         raise SystemExit("--commit: 2 for now (an N = 2 model)")
     pl = Player(args.model, args.depth, args.beam, STYLES["normal" if auto else args.style], args.mode, args.policy, args.propose,
-                temp=args.temp, seed=seed, merge=args.merge, merge_override=args.merge_override, expand_args=rule_args)
+                temp=args.temp, seed=seed, merge=args.merge, merge_override=args.merge_override, expand_args=rule_args,
+                cross_loops=args.cross_loops)
     cmd = [BOT, "play-ext", "--mode", args.mode, *rule_args, "--pieces", str(args.pieces), "--seed", str(seed)]
     if auto and getattr(pl, "n_styles", 2) < 3:
         raise SystemExit("--style auto needs a model with a danger style (3 style rows)")
@@ -566,6 +567,8 @@ def main():
                     "steps so far; windows with garbage inside skipped), as plan_consistency_cem.py for the teacher")
     ap.add_argument("--autoreg-beam", action="store_true", help="attentris-autoreg, --depth 2: the policy beam with move 2 "
                     "from the step-2 pass over the root's encoding (children expanded, never re-encoded)")
+    ap.add_argument("--cross-loops", type=int, default=0, help="a weight-tied (loop) checkpoint: apply its cross block "
+                    "this many times instead of the trained count (0 = as trained)")
     ap.add_argument("--commit", type=int, default=1, help="attentris-autoreg: moves played per decision (2: move 2 "
                     "comes from the same encoder pass as move 1, unless garbage changed the board)")
     ap.add_argument("--dump", default="", help="write every state reached (seed, n, rows, b2b) to this JSONL")
