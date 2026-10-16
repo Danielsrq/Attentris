@@ -54,7 +54,7 @@ Details and the full diagram are in `DESIGN.md` ("Architecture as implemented").
 - **Sizes:** d = 64 has 274.5k params; **d = 128 has 1.06M params** (4 heads, 4 layers, FF 4d). Forward pass (pinned, 1 thread): d64 3.1 ms, d96 3.5 ms, d128 4.0 ms. A depth-1 move costs ~8 ms in total.
 - **Tokenizer version v5:** open + covered piece slots, hang cells, `setup_X` tokens. `tok_version` is saved in every checkpoint.
 - **Variants tried:**
-  - v5.2: 2 cross passes, loop or untied; no gain.
+  - v5.2: 2 cross passes, untied (`--cross-layers 2`, +199k params, 1.26M at d128) or loop (`--cross-loops 2`, the same block twice, no new params). At d64: no gain. **At d128 through the full lineage, untied beats v5.1** (see "v5.2 at d = 128" under Latest results); loop is in between.
   - ToMe v4.x (learned merges with streams): better structure recovery, weaker play.
   - Ablations: no setup tokens, no fit tokens, no T tokens (`results_setup_ablation.txt`, `results_fit_ablation.txt`).
   - Capacity: d64 / d96 / d128 (`results_capacity.txt`). d128 shows a val gap of 0.035, so memorisation is starting.
@@ -110,7 +110,7 @@ Labelling: `bot label --all-roots 1 --beam 128` gives a search score for every r
 `v51` (d64) -> `v51_dagger_ft` (DAgger 2) -> `v51_dagger3_ft`; the same lineage at `v51_d96*` and `v51_d128*`.
 **Best: `v51_d128_dagger5b_ft`**: d128 base -> dagger_ft -> dagger3_ft -> dagger5b_ft (rounds 4 + 5 + extension).
 
-Other checkpoints: `v51_d128_dagger5_ft`, ToMe `tome_v41*` / `tome_v42_{l4h,l4g,l6g}*`, `v52_{loop,untied}*`, ablations `v51_{nosetup,nofitx,not}*`.
+Other checkpoints: `v51_d128_dagger5_ft`, ToMe `tome_v41*` / `tome_v42_{l4h,l4g,l6g}*`, `v52_{loop,untied}*` (d64), `v52_d128_{untied,loop}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage), ablations `v51_{nosetup,nofitx,not}*`.
 Plan models (2026-10-16, all d128; "-ft" = fine-tuned from `v51_d128_dagger5b_ft` with the dagger5b recipe, 3 epochs):
 `v51_d128_ctrl_ft` (the control: the same 3 epochs, no plan loss), `v51_d128_autoreg2_ft`, `v51_d128_autoreg6_ft`, `v51_d128_plan2_ft`,
 `v51_d128_pieces6_ft`, `v51_d128_pieces6L2_ft`, `v51_d128_pieces6L2fze10_ft`; `v51_d128_autoreg2` = trained from scratch with the `v51_d128` recipe.
@@ -164,6 +164,26 @@ The same dagger5b-ft numbers reproduce exactly on Linux (WSL Ubuntu 24.04).
 - Fixed time: CEM beats Cold Clear 2 43-21 / 39-25, CEM-survival beats CC2 56-8 / 56-8, NN depth 1 loses to CC2 9-55 / 12-52.
 - At 2 PPS: NN d6 b20 vs CC2 17-47 / 23-41, and NN d4 b32 vs CC2 25-39 / 15-49.
 - Cold Clear 2 is run unmodified over TBP (`bot/tools/cc2_play.py`, `--mode standard --no-180`).
+
+**v5.2 at d = 128, full lineage** (`v52_d128.sh`, `results_v52_d128.txt`; dagger5b-ft of each, same recipe and seeds as v5.1; deaths / 64, VSfull in brackets):
+
+| model | APP none (256) | APP d2 | normal 80/20 | normal 50/50 | danger 80/20 | danger 50/50 |
+|---|---|---|---|---|---|---|
+| v5.1 dagger5b-ft | 0.739 | 0.832 | 18 (0.921) | 44 (0.523) | 4 (1.049) | 25 (0.683) |
+| **v5.2 untied dagger5b-ft** | **0.780** | **0.902** | 18 (0.970) | 48 (0.498) | 2 (1.088) | **14 (0.800)** |
+| v5.2 loop dagger5b-ft | 0.759 | 0.887 | 19 (0.996) | 52 (0.504) | 0 (1.089) | 18 (0.751) |
+
+Depth 2 beam 4 with garbage (deaths, VSfull):
+
+| model | normal 80/20 | normal 50/50 | danger 80/20 | danger 50/50 |
+|---|---|---|---|---|
+| v5.1 dagger5b-ft | 10 (1.109) | 45 (0.593) | 2 (1.116) | 11 (0.848) |
+| v5.2 untied | 10 (1.132) | 38 (0.650) | 0 (1.160) | 5 (0.902) |
+| v5.2 loop | 14 (1.093) | 41 (0.613) | 4 (1.100) | 8 (0.882) |
+
+- Val top1 is the same for all three (normal 0.649; val_dagger5all 0.492 for both v5.2 vs 0.483 for v5.1), but play differs. Untied wins every setting but normal 50/50 at depth 1. It is the best model so far on these tests. Not yet confirmed with 128-game re-tests, deeper search or versus.
+- Caveats: untied has 19% more parameters, so part of the gain may be capacity (d128 already showed a val gap). Loop gets about half the gain with no new parameters, at the cost of a second cross pass. ms/move on this box (16 games in parallel) was ~42-44 at depth 1; compare latencies only on one machine.
+- **Loop count at play time** (`v52_loops.sh`; loop model trained with 2 passes): APP none 1 / 2 / 3 / 4 passes = 0.488 / **0.759** / 0.615 / 0.393. Deaths at danger 50/50: 58 / 18 / 30 / 59. 2 passes is best everywhere. The block learned "exactly two passes", not an iterative refinement that improves with more passes (3 is the least bad off-design count, 4 collapses).
 
 ## Working rules (from the user; keep them)
 
@@ -313,6 +333,7 @@ A versus smoke test (4 matches, turn-based): CEM-survival commit 6 thought 23.9 
 
 ## Other open options (offered, not started; ask before starting any)
 
+- v5.2 untied d128 follow-ups: a 128-game re-test of danger / normal 50/50; a v5.1 d128 with the same parameter count (e.g. 5 self-attention layers) to separate capacity from the second cross pass; the depth sweep and versus with the untied model.
 - NN dagger5b-ft at depth 5-6 in versus vs CC2 / CEM.
 - The `auto` style test.
 - DAgger 6, or oversampling normal-style hot positions.
