@@ -30,7 +30,9 @@ def name_of(spec):
     if k == "cem":
         w = rest[0].replace("\\", "/").split("/")[-1]
         base = "CEM-survival" if "survive" in w else ("CEM" if w == "normal.txt" else "CEM (%s)" % w)
-        return "%s d%s b%s%s" % (base, rest[1], rest[2], " no-chance" if len(rest) > 3 else "")
+        opts = rest[3:]
+        tags = [" no-chance" for o in opts if o == "nochance"] + [" blitz (commit %s)" % o[6:] for o in opts if o.startswith("commit")]
+        return "%s d%s b%s%s" % (base, rest[1], rest[2], "".join(tags))
     if k == "cc2":
         return "Cold Clear 2 (%s)" % ("time-matched" if rest[0] == "match" else rest[0] + " ms")
     if k == "nn":
@@ -105,23 +107,37 @@ class Playback:
         self.rec = json.load(open(path))
         self.frames = self.rec["frames"]
         self.names = [name_of(self.rec["a"]), name_of(self.rec["b"])]
-        budget = self.rec.get("budget_ms", 0.0) or 0.0
-        self.dt = [max(budget, f[0].get("ms", 0.0), f[1].get("ms", 0.0), 1.0) / 1000.0 for f in self.frames]
+        # realtime (versus.py --realtime): one event per lock of one player, at its game time "t" (ms)
+        self.rt = bool(self.rec.get("realtime"))
+        if self.rt:
+            ts = [f["t"] for f in self.frames]
+            self.dt = [(ts[k] - (ts[k - 1] if k else 0.0)) / 1000.0 for k in range(len(ts))]
+        else:
+            budget = self.rec.get("budget_ms", 0.0) or 0.0
+            self.dt = [max(budget, f[0].get("ms", 0.0), f[1].get("ms", 0.0), 1.0) / 1000.0 for f in self.frames]
         self.seek(0)
+
+    def apply(self, f):
+        if self.rt:
+            i = f["side"]
+            self.sides[i].apply(f)
+            if "opp_pending" in f:
+                self.sides[1 - i].pending = f["opp_pending"]
+        else:
+            for i in range(2):
+                self.sides[i].apply(f[i])
 
     def seek(self, k):
         k = max(0, min(k, len(self.frames)))
         self.sides = [Side(), Side()]
         for f in self.frames[:k]:
-            for i in range(2):
-                self.sides[i].apply(f[i])
+            self.apply(f)
         self.k = k
         self.clock = sum(self.dt[:k])
 
     def step(self):
         if self.k < len(self.frames):
-            for i in range(2):
-                self.sides[i].apply(self.frames[self.k][i])
+            self.apply(self.frames[self.k])
             self.clock += self.dt[self.k]
             self.k += 1
 
@@ -215,9 +231,14 @@ def main():
         win = rec["winner"] if pb.done() else None
         draw_side(screen, font, small, pb.sides[0], pb.names[0], 60, 70, win == "a")
         draw_side(screen, font, small, pb.sides[1], pb.names[1], 500, 70, win == "b")
-        pps = pb.k / pb.clock if pb.clock > 0 else 0.0
-        status = "%s  seed %d  match %d/%d  turn %d/%d  t=%.1fs (%.1f PPS each)  x%g%s" % (
-            rec["mode"], rec["seed"], gi + 1, len(files), pb.k, len(pb.frames), pb.clock, pps, speed, "  PAUSED" if paused else "")
+        if pb.rt:
+            pa, pbb = (s.pieces / pb.clock if pb.clock > 0 else 0.0 for s in pb.sides)
+            status = "%s realtime  seed %d  match %d/%d  event %d/%d  t=%.2fs (%.1f / %.1f PPS)  x%g%s" % (
+                rec["mode"], rec["seed"], gi + 1, len(files), pb.k, len(pb.frames), pb.clock, pa, pbb, speed, "  PAUSED" if paused else "")
+        else:
+            pps = pb.k / pb.clock if pb.clock > 0 else 0.0
+            status = "%s  seed %d  match %d/%d  turn %d/%d  t=%.1fs (%.1f PPS each)  x%g%s" % (
+                rec["mode"], rec["seed"], gi + 1, len(files), pb.k, len(pb.frames), pb.clock, pps, speed, "  PAUSED" if paused else "")
         screen.blit(small.render(status, True, DIM), (20, 12))
         screen.blit(small.render("space pause  <-/-> step (shift 10)  up/down x2 /2  1-4 = x1 x0.5 x0.25 x0.125  n/p match  r restart  esc",
                                  True, DIM), (20, 735))

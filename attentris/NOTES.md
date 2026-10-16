@@ -323,6 +323,35 @@ A versus smoke test (4 matches, turn-based): CEM-survival commit 6 thought 23.9 
 - Multi-step training dilutes: autoreg6-ft is no better in play than autoreg2-ft, slightly worse at depth 1.
 - Single-thread speed on the Ubuntu box (AMD 3970X, Zen 2) is below the Windows P-cores: CEM-depth6 44.7 ms/move; NN depth 1 13-16 ms (expand 6.0 + tokenize 1.9 + forward 4.8); NN depth 6 beam 8 444 ms. Compare latencies on one machine only.
 
+### Realtime blitz (Windows, 2026-10-16)
+
+`versus.py --realtime` gives each player its own clock, advanced by its measured think time per piece (uncapped speed), and applies the next lock in game time first.
+- Garbage cancels the sender's own pending garbage first; the rest is queued for the opponent and lands after the receiver's next non-clearing placement, at most 8 rows.
+- Cold Clear 2 gets its next position only when its own clock starts, so it gets no free background thinking.
+- Scripts: `bot/tools/versus_realtime.sh` and `versus_realtime2.sh`; results in `bot/results/versus/realtime/`.
+- Replays (first 3 matches per pairing): `data/bot/versus/realtime/`, viewed with `versus_watch.py`, which plays realtime replays at true game time.
+
+64 matches each, Cold Clear 1 rules, CEM-survival = `survive.txt`, blitz = commit 6:
+
+| A vs B | A wins - B wins | A PPS / B PPS | A APP / B APP | mean game time |
+|---|---|---|---|---|
+| blitz d6 b64 vs CC2 40 ms | **64 - 0** | 181 / 25 | 0.619 / 0.190 | 0.22 s |
+| plain d6 b64 (commit 1) vs CC2 40 ms (control) | 54 - 10 | 27 / 25 | 0.874 / 0.796 | 2.31 s |
+| blitz d6 b64 vs plain d6 b64 | **64 - 0** | 193 / 38 | 0.633 / 0.477 | 0.25 s |
+| blitz d6 b64 vs CC2 10 ms | 40 - 24 | 116 / 96 | 0.725 / 0.736 | 0.44 s |
+| blitz d6 b64 vs CC2 5 ms | 3 - **61** | 98 / 184 | 0.657 / 0.676 | 0.26 s |
+| blitz d6 **b16** vs CC2 5 ms | **59 - 5** | 401 / 178 | 0.645 / 0.638 | 0.13 s |
+| blitz d4 **b16** vs CC2 5 ms | **64 - 0** | 771 / 166 | 0.487 / 0.488 | 0.07 s |
+| blitz d6 b64 vs CC2 40 ms, garbage delay 333 ms | 64 - 0 | 189 / 25 | 0.684 / 0.413 | 0.57 s |
+| blitz d6 b64 vs CC2 5 ms, garbage delay 333 ms | 11 - **53** | 185 / 185 | 0.718 / 0.725 | 12.66 s |
+
+Findings:
+- **Uncapped, the faster bot wins** almost regardless of quality: matches are decided in well under a second of game time. Blitz turns CEM-survival's 54-10 into 64-0 against the same CC2.
+- **It doesn't beat every bot:** CC2 is an anytime search and can play just as fast. At 5 ms per move (184 PPS) it beats the d6 b64 blitz 61-3, because its garbage cancels the blitz plans and forces new searches (98 PPS instead of 181).
+- **A cheaper blitz search wins it back:** d6 b16 at 400 PPS goes 59-5, and d4 b16 at 771 PPS goes 64-0.
+- **With a TETR.IO-like 333 ms garbage delay at equal speed (185 PPS each), quality decides again:** CC2 5 ms wins 53-11 in long matches.
+- Caveat: the speeds are machine-dependent (Windows P-cores here), and "uncapped" means instant inputs (no DAS / ARR or animation costs).
+
 ### Next (Windows side and later)
 
 1. **Versus blitz:** CEM-survival `cem:bot/results/survive/survive.txt:6:64:commit6` (and commit 2 / 3) vs CC2, (a) uncapped and (b) at a fixed PPS. Uncapped, ~6x the PPS at -12% APP should cancel most incoming garbage. Fixed PPS is the fair-time check.
