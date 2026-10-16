@@ -6,6 +6,9 @@
 #   VARIANT=autoreg N=2 sh attentris/plan_ft.sh   -> data/model_v51_d128_autoreg2_ft.pt
 #   VARIANT=plan    N=2 sh attentris/plan_ft.sh   -> data/model_v51_d128_plan2_ft.pt
 #   VARIANT=pieces  N=6 sh attentris/plan_ft.sh   -> data/model_v51_d128_pieces6_ft.pt (piece queries)
+#   PLAN_LAYERS=2: pieces with 2 rounds of (cross, self) -> model_v51_d128_pieces6L2_ft.pt
+#   FREEZE=1 EPOCHS=10: train only the plan branch (train.py --freeze-base) for 10 epochs -> ..._pieces6L2fze10_ft
+#   PLAY=0: train only (a frozen backbone plays move 1 exactly as dagger5b-ft: its play block would repeat it)
 #   NEW_LR=1.5e-3: the new plan branch's peak lr (train.py --new-lr), the pretrained parts keep 3e-4
 #   VARIANT=none        sh attentris/plan_ft.sh   -> data/model_v51_d128_ctrl_ft.pt (control: the same
 #                                                    3 epochs without a plan loss)
@@ -20,10 +23,11 @@ V51="$DIR/data/v51"
 VARIANT=${VARIANT:-autoreg}
 N=${N:-2}
 W_PLAN=${W_PLAN:-1.0}
+EPOCHS=${EPOCHS:-3}
 BASE=v51_d128_dagger5b_ft
 case $VARIANT in
     none) NAME=v51_d128_ctrl_ft; PLAN="" ;;
-    autoreg|plan|pieces) NAME=v51_d128_${VARIANT}${N}_ft; PLAN="--plan-variant $VARIANT --plan-steps $N --w-plan $W_PLAN${NEW_LR:+ --new-lr $NEW_LR}" ;;
+    autoreg|plan|pieces) NAME=v51_d128_${VARIANT}${N}${PLAN_LAYERS:+L$PLAN_LAYERS}${FREEZE:+fz}$( [ "$EPOCHS" = 3 ] || echo "e$EPOCHS" )_ft; PLAN="--plan-variant $VARIANT --plan-steps $N --w-plan $W_PLAN${NEW_LR:+ --new-lr $NEW_LR}${PLAN_LAYERS:+ --plan-layers $PLAN_LAYERS}${FREEZE:+ --freeze-base}" ;;
     *) echo "VARIANT = autoreg | plan | pieces | none"; exit 1 ;;
 esac
 OUT="$DIR/results_plan.txt"
@@ -36,14 +40,15 @@ new = sum(len(np.load(d + f)['chosen']) for f in ('danger.npz', 'dagger4.npz', '
 rest = sum(len(np.load(d + f)['chosen']) for f in ('train.npz', 'dagger1.npz', 'train1m.npz', 'dagger2.npz'))
 print('%.4f' % (7 / 3 * new / rest))")
 LOG="$DIR/train_$NAME.out"
-if ! grep -q "^epoch 3: val2 (" "$LOG" 2>/dev/null; then
+if ! grep -q "^epoch $EPOCHS: val2 (" "$LOG" 2>/dev/null; then
     R=""; [ -f "$DIR/data/model_$NAME.pt" ] && R="--resume"
     "$PYG" "$DIR/train.py" --data "$(m "$V51")" --batch 512 --threads 8 --device cuda --w-dense 0 --w-q1 0 --w-qs 1 --seed 0 --d 128 --micro 2 \
         --val2 val_dagger5all.npz --train train.npz@$F,dagger1.npz@$F,train1m.npz@$F,dagger2.npz@$F,danger.npz,dagger4.npz,dagger5all.npz \
-        --epochs 3 --lr 3e-4 --n-teachers 3 $PLAN --init "$(m "$DIR/data/model_$BASE.pt")" --out "$(m "$DIR/data/model_$NAME.pt")" $R >> "$LOG" 2>&1
+        --epochs $EPOCHS --lr 3e-4 --n-teachers 3 $PLAN --init "$(m "$DIR/data/model_$BASE.pt")" --out "$(m "$DIR/data/model_$NAME.pt")" $R >> "$LOG" 2>&1
 fi
-grep -q "^epoch 3: val2 (" "$LOG" || { echo "training did not finish (see $LOG)" | tee -a "$OUT"; exit 1; }
-grep "^epoch 3:" "$LOG" | sed 's/argmax Qs top1 [0-9.]* \/ [0-9.]*, Q1.*Qs [0-9.]* |/|/' | tee -a "$OUT"
+grep -q "^epoch $EPOCHS: val2 (" "$LOG" || { echo "training did not finish (see $LOG)" | tee -a "$OUT"; exit 1; }
+grep "^epoch $EPOCHS:" "$LOG" | sed 's/argmax Qs top1 [0-9.]* \/ [0-9.]*, Q1.*Qs [0-9.]* |/|/' | tee -a "$OUT"
+if [ "${PLAY:-1}" = 0 ]; then echo "$NAME trained (PLAY=0: no play block)"; exit 0; fi
 DE="$DIR/data/dagger3_eval"
 play() {   # model style tag games flags...
     f="$DE/$1_$2_$3.games"; md=$1; s=$2; t=$3; g=$4; shift 4

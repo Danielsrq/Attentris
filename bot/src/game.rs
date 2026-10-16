@@ -381,6 +381,7 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
     let mut followup_left = 0u8;
     let mut incoming: Vec<(usize, i32)> = Vec::new();
     for n in 0..cfg.pieces {
+        let landed = !incoming.is_empty();       // versus garbage lands this turn (cancels a committed plan)
         if !incoming.is_empty() {
             // versus: the opponent's garbage, one hole column per attack
             for &(rows, hole) in &incoming {
@@ -437,7 +438,7 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         let t0 = std::time::Instant::now();
         // A committed move is played when nothing changed the board since the search that planned
         // it (no garbage this turn) and its piece is the one the plan expected (current or hold).
-        let garbage_now = cfg.garbage.every > 0 && n > 0 && n % cfg.garbage.every == 0;
+        let garbage_now = landed || (cfg.garbage.every > 0 && n > 0 && n % cfg.garbage.every == 0);
         let next_committed = if commit > 1 && !committed.is_empty() && !garbage_now && !cfg.external && !cfg.shortlist && !cfg.dataset {
             let s = committed.remove(0);
             let expect = if !s.use_hold { Some(spawned) } else if hold.is_some() { hold } else { Some(queue[1]) };

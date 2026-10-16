@@ -45,7 +45,7 @@ PIECE_KIND_IDS = (20, 21, 22, 23, 24, 25, 26)   # pack.KIND_ID of tokenizer.PIEC
 
 
 class AtTenTrisPlan(M.AtTenTris):
-    def __init__(self, *args, variant="autoreg", max_steps=MAX_STEPS, **kw):
+    def __init__(self, *args, variant="autoreg", max_steps=MAX_STEPS, plan_layers=1, **kw):
         super().__init__(*args, **kw)
         assert variant in ("autoreg", "plan", "pieces")
         d = self.d
@@ -62,6 +62,10 @@ class AtTenTrisPlan(M.AtTenTris):
             self.plan_c_bias = M.Bias(heads)
             self.plan_self = M.Block(d, heads)
             self.plan_norm = nn.LayerNorm(d)
+            # plan_layers > 1: more rounds of (cross to the board, self among the pieces), DETR-decoder
+            # style; round 1 keeps the names above (older checkpoints load), the rest live here
+            self.plan_more = nn.ModuleList(nn.ModuleList([M.Block(d, heads), M.Bias(heads), M.Block(d, heads)])
+                                           for _ in range(plan_layers - 1))
             self.when_head = nn.Linear(d, max_steps + 1)        # 0 = not placed, 1..6
             self.where_head = nn.Linear(d, N_PLACE)
         else:
@@ -79,6 +83,9 @@ class AtTenTrisPlan(M.AtTenTris):
         if self.variant in ("plan", "pieces"):
             self.plan_cross.load_state_dict(self.cross.state_dict())
             self.plan_c_bias.load_state_dict(self.c_bias.state_dict())
+            for cross, bias, _ in getattr(self, "plan_more", []):
+                cross.load_state_dict(self.cross.state_dict())
+                bias.load_state_dict(self.c_bias.state_dict())
 
     # ---- the base model's forward, in parts ----
     def encode(self, batch):
@@ -226,6 +233,9 @@ def _piece_plan(self, batch, enc, teacher):
     q, ca = self.plan_cross(q, self.plan_c_bias(feats, both), enc["pad"], ctx=enc["hb"], ctx_norm=self.c_norm)
     no_pad = torch.zeros(B, N_SLOTS, dtype=torch.bool, device=kind.device)
     q, _ = self.plan_self(q, 0.0, no_pad)
+    for cross, bias, selfb in self.plan_more:
+        q, ca = cross(q, bias(feats, both), enc["pad"], ctx=enc["hb"], ctx_norm=self.c_norm)
+        q, _ = selfb(q, 0.0, no_pad)
     q = self.plan_norm(q)
     return self.when_head(q), self.where_head(q), ca
 
@@ -240,7 +250,7 @@ def load(path, variant=None, device="cpu"):
     v = variant or a.get("plan_variant")
     net = AtTenTrisPlan(d=a["d"], layers=a["layers"], n_kinds=ck["model"]["kind.weight"].shape[0],
                         cross_layers=a.get("cross_layers", 1), cross_loops=a.get("cross_loops", 1),
-                        n_teachers=ck["model"]["style.weight"].shape[0], variant=v)
+                        n_teachers=ck["model"]["style.weight"].shape[0], variant=v, plan_layers=a.get("plan_layers", 1))
     missing = net.load_state_dict(ck["model"], strict=False).missing_keys
     if not a.get("plan_variant"):
         net.init_from_base()

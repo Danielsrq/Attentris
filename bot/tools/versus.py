@@ -10,8 +10,10 @@ at most --cap rows per placement; garbage sent this turn can still be cancelled 
 A match ends when a player tops out (the other wins) or both have placed --pieces pieces (a draw).
 
 Players (--a / --b):
-  cem:WEIGHTS:DEPTH:BEAM[:nochance]  our CEM bot, its own search inside play-ext (--self); nochance = no
-                               expectimax ply over the piece after the preview (--no-chance)
+  cem:WEIGHTS:DEPTH:BEAM[:nochance][:commitK]  our CEM bot, its own search inside play-ext (--self); nochance = no
+                               expectimax ply over the piece after the preview (--no-chance); commitK = play
+                               the search plan's next K-1 moves without searching (--commit K; garbage landing
+                               cancels the rest of the plan)
   cc2:THINK_MS                 Cold Clear 2 (external/cold-clear-2, unmodified, TBP), THINK_MS per move
   cc2:match                    Cold Clear 2 thinking as long as its opponent has taken per move so far (running mean)
   nn:MODEL:STYLE[:DEPTH:BEAM]  AtTenTris (STYLE normal | danger | auto), depth 1 by default, else its Qs beam search
@@ -60,8 +62,13 @@ class Side:
         if kind == "cem":
             w, depth, beam = rest[0], rest[1], rest[2]
             cmd += ["--self", "--weights", os.path.join(ROOT, w) if not os.path.isabs(w) else w, "--depth", depth, "--beam", beam, "--threads", "1"]
-            if len(rest) > 3 and rest[3] == "nochance":
-                cmd += ["--no-chance"]
+            for opt in rest[3:]:
+                if opt == "nochance":
+                    cmd += ["--no-chance"]
+                elif opt.startswith("commit"):
+                    cmd += ["--commit", opt[len("commit"):]]
+                else:
+                    raise SystemExit("unknown cem option " + opt)
         elif kind == "cc2":
             self.think_ms = None if rest[0] == "match" else float(rest[0])
             self.cc = C.Cc2(0)

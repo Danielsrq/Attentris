@@ -263,6 +263,9 @@ def main():
                     help="multi-move AtTenTris (model_plan.py): attentris-autoreg or attentris-plan")
     ap.add_argument("--new-lr", type=float, default=0.0, help="with --init: peak lr of the parameters the init checkpoint "
                     "lacks (a new plan branch); the rest use --lr (0 = all at --lr)")
+    ap.add_argument("--freeze-base", action="store_true", help="with --init: train only the parameters the init "
+                    "checkpoint lacks (the plan branch) at --new-lr (or --lr); move 1 stays exactly as loaded")
+    ap.add_argument("--plan-layers", type=int, default=1, help="pieces: rounds of (cross to the board, self among the pieces)")
     ap.add_argument("--plan-steps", type=int, default=2, help="plan length N trained (2..6; move 1 included)")
     ap.add_argument("--w-plan", type=float, default=1.0, help="weight of the plan loss (mean over a position's plan steps)")
     args = ap.parse_args()
@@ -338,13 +341,25 @@ def main():
                                streams=args.tome_streams, n_teachers=args.n_teachers, budget=MT.budget_of(args.tome_budget), split=args.tome_split, pure=args.tome_pure).to(args.device)
     elif args.plan_variant:
         net = MP.AtTenTrisPlan(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops,
-                               n_teachers=args.n_teachers, variant=args.plan_variant).to(args.device)
+                               n_teachers=args.n_teachers, variant=args.plan_variant, plan_layers=args.plan_layers).to(args.device)
     else:
         net = M.AtTenTris(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops,
                           n_teachers=args.n_teachers).to(args.device)
     print("device", args.device, torch.cuda.get_device_name(0) if args.device == "cuda" else "", flush=True)
     groups, lrs = [list(net.parameters())], [args.lr]
-    if args.new_lr and args.init:
+    if args.freeze_base:
+        # only the parameters the --init checkpoint lacks (a new plan branch) train; the backbone and
+        # the move-1 path stay exactly as loaded (move 1 cannot change)
+        if not args.init:
+            raise SystemExit("--freeze-base needs --init")
+        have = set(torch.load(args.init, map_location="cpu", weights_only=False)["model"])
+        for n_, p_ in net.named_parameters():
+            p_.requires_grad_(n_ not in have)
+        groups = [[p_ for p_ in net.parameters() if p_.requires_grad]]
+        lrs = [args.new_lr or args.lr]
+        print("frozen backbone: %d tensors train at %g, %d frozen" % (
+            sum(p_.requires_grad for p_ in net.parameters()), lrs[0], sum(not p_.requires_grad for p_ in net.parameters())), flush=True)
+    elif args.new_lr and args.init:
         # parameters the --init checkpoint does not have (a new plan branch) learn at --new-lr, the
         # pretrained ones at --lr: fast for the random new parts, gentle on the trained backbone
         have = set(torch.load(args.init, map_location="cpu", weights_only=False)["model"])
