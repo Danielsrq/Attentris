@@ -7,8 +7,9 @@
 #   VARIANT=plan    N=2 sh attentris/plan_ft.sh   -> data/model_v51_d128_plan2_ft.pt
 #   VARIANT=none        sh attentris/plan_ft.sh   -> data/model_v51_d128_ctrl_ft.pt (control: the same
 #                                                    3 epochs without a plan loss)
-# Then the standard play block (depth 1: none 256 games, d2 64, normal / danger x 80/20, 50/50 at 64)
-# and vs_score against dagger5b-ft on the same seeds. Resumable: training resumes, finished games are kept.
+# Then the standard play block (depth 1: none 256 games, d2 64, normal / danger x 80/20, 50/50 at 64),
+# depth 2 beam 4 under the same garbage, and vs_score against dagger5b-ft (and COMPARE=<model name>) on
+# the same seeds. Resumable: training resumes, finished games are kept.
 DIR=$(cd "$(dirname "$0")" && pwd)
 ATT="$DIR"; . "$ATT/plat.sh"
 PYG="$DIR/.venv/$VPY"
@@ -54,11 +55,16 @@ play $NAME normal d2 64 --depth 2 --beam 4
 for s in normal danger; do
     play $NAME $s g20 64 --depth 1 --seed 33001 --garbage 10,3-4,cheese0.2,0.2
     play $NAME $s g50 64 --depth 1 --seed 33001 --garbage 10,3-4,cheese0.5,0.2
+    # depth 2 under garbage too (where autoreg2-ft searched much better than dagger5b-ft)
+    play $NAME $s d2g20 64 --depth 2 --beam 4 --seed 33001 --garbage 10,3-4,cheese0.2,0.2
+    play $NAME $s d2g50 64 --depth 2 --beam 4 --seed 33001 --garbage 10,3-4,cheese0.5,0.2
 done
 args=""
-for md in $BASE $NAME; do
-    for x in normal_none normal_d2 normal_g20 normal_g50 danger_g20 danger_g50; do args="$args ${md}_$x=$(m "$DE")/${md}_$x.games"; done
+for md in $BASE ${COMPARE:-} $NAME; do
+    for x in normal_none normal_d2 normal_g20 normal_g50 danger_g20 danger_g50 normal_d2g20 normal_d2g50 danger_d2g20 danger_d2g50; do
+        [ -f "$DE/${md}_$x.games" ] && args="$args ${md}_$x=$(m "$DE")/${md}_$x.games"
+    done
 done
-echo "== APP / VS: $BASE vs $NAME" | tee -a "$OUT"
+echo "== APP / VS: $BASE vs ${COMPARE:+$COMPARE vs }$NAME" | tee -a "$OUT"
 "$PYC" "$DIR/vs_score.py" $args | tee -a "$OUT"
 echo "$NAME done"
