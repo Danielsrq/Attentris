@@ -277,6 +277,7 @@ With garbage, autoreg6-ft is a little higher (step 2 64.6-66.4%, step 6 10.4-13.
 | depth 2 (usual: children re-encoded) | 0.864 | 1.120 (11) | 0.713 (25) | 1.122 (0) | 0.892 (4) | 66.0 |
 
 pieces6-ft commit 2: APP 0.511 (256); 80/20 0.494 (52), 50/50 0.210 (63); danger 0.629 (35), 0.331 (57). Only 19% of moves committed: its step 1 is not the policy's move in 55% of decisions, and 48% of its step-2 placements are illegal.
+pieces6L2-ft (2 rounds of cross + self, 3 epochs): depth 1 APP 0.731 (256), 80/20 0.999 (17), 50/50 0.484 (51), danger 1.064 (3), 0.774 (16); depth 2 0.864, 1.044 (16), 0.669 (35), 1.110 (2), 0.861 (9). Commit 2: APP 0.494 (256); 80/20 0.335 APPfull (56), 50/50 0.124 (64); danger 0.455 (30), 0.198 (57); 21% of moves committed, step 1 not the policy's move in 53%, 43% of step-2 placements illegal. The second round did not make the plan playable.
 Commit 2 saved no time for the networks: the committed move still needs `bot expand` at X+1 (~6 ms with structure tokens), as much as the skipped encoder pass.
 
 **CEM teacher commit K** (`bot play --commit K`, depth 6 beam 64; APP; time relative to commit 1):
