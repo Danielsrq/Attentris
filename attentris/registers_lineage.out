@@ -1,0 +1,40 @@
+== registers (R = 4) through the DAgger lineage 2026-10-17 19:53 (dagger5b mix F=0.6155)
+v51_d128_reg4_dagger_ft: training 19:53
+== v51_d128_reg4_dagger_ft
+epoch 3: train loss 2.251 | val normal top1 0.642 top3 0.869 | val gate4 top1 0.624 top3 0.854 | | 74s
+epoch 3: val2 (val_dagger2.npz, 9737) top1 0.413 top3 0.682 loss 2.766 | argmax Qs top1 0.372 | MAE Qs 7.01
+v51_d128_reg4_dagger3_ft: training 19:57
+== v51_d128_reg4_dagger3_ft
+epoch 3: train loss 2.251 | val normal top1 0.641 top3 0.869 | val gate4 top1 0.622 top3 0.854 | | 72s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.466 top3 0.732 loss 2.634 | argmax Qs top1 0.436 | MAE Qs 7.82
+v51_d128_reg4_dagger5b_ft: training 20:01
+== v51_d128_reg4_dagger5b_ft
+epoch 3: train loss 2.237 | val normal top1 0.640 top3 0.868 | val gate4 top1 0.625 top3 0.852 | | 256s
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.486 top3 0.743 loss 2.524 | argmax Qs top1 0.455 | MAE Qs 7.45
+dagger5b-ft epoch 3: train loss 2.238 | val normal top1 0.645 top3 0.866 | val gate4 top1 0.629 top3 0.858 | | 237s
+dagger5b-ft epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.483 top3 0.745 loss 2.516 | argmax Qs top1 0.458 | MAE Qs 7.45
+model_v51_d128_reg4_dagger5b_ft.pt: 4 registers; reg_k [-0.05 -0.14 -0.14 -0.25]  reg_c [-0.22  0.02 -0.   -0.01]
+val.npz: attention on the registers: self layers 0.126 0.142 0.158 0.162 (an average token's share: 0.170), cross 0.196
+  normal    top1: normal 0.6398 (n 5000), gate4 0.6250 (n 5000)
+  knock-out top1: normal 0.5860 (n 5000), gate4 0.5836 (n 5000)
+  mean      top1: normal 0.6126 (n 5000), gate4 0.6008 (n 5000)
+val_dagger5all.npz: attention on the registers: self layers 0.124 0.120 0.165 0.191 (an average token's share: 0.153), cross 0.175
+  normal    top1: normal 0.4852 (n 4755), danger 0.4861 (n 9832)
+  knock-out top1: normal 0.4334 (n 4755), danger 0.4555 (n 9832)
+  mean      top1: normal 0.4757 (n 4755), danger 0.4771 (n 9832)
+v51_d128_reg4_dagger5b_ft normal none: APP 0.733 (APPfull 0.733), died 0/256, pieces 500 avg, TSD 6560, TST 83, quads 3545, max height 17, illegal 0, 17.7 ms/move (p90 20.4) + search 18.2 ms, 151s
+v51_d128_reg4_dagger5b_ft normal d2: APP 0.867 (APPfull 0.867), died 0/64, pieces 500 avg, TSD 1880, TST 16, quads 940, max height 16, illegal 0, 73.5 ms/move (p90 83.2) + search 74.0 ms, 152s
+v51_d128_reg4_dagger5b_ft normal g20: APP 0.789 (APPfull 0.646), died 24/64, pieces 409 avg, TSD 1005, TST 4, quads 1962, max height 21, illegal 0, 16.5 ms/move (p90 19.4) + search 16.9 ms, 34s
+v51_d128_reg4_dagger5b_ft danger g20: APP 0.733 (APPfull 0.713), died 5/64, pieces 486 avg, TSD 1250, TST 9, quads 2240, max height 20, illegal 0, 16.9 ms/move (p90 19.6) + search 17.3 ms, 38s
+== APP / VS: dagger5b-ft vs the register model through the same lineage
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_dagger5b_ft_normal_none     0/256      500   0.739    0.739   0.739    0.739         -
+v51_d128_dagger5b_ft_normal_d2       0/64      500   0.832    0.832   0.832    0.832         -
+v51_d128_dagger5b_ft_normal_g20     18/64      414   0.785    0.650   1.112    0.921 8653/9162
+v51_d128_dagger5b_ft_danger_g20      4/64      490   0.733    0.718   1.071    1.049 10608/10806
+v51_d128_reg4_dagger5b_ft_normal_none   0/256      500   0.733    0.733   0.733    0.733         -
+v51_d128_reg4_dagger5b_ft_normal_d2   0/64      500   0.867    0.867   0.867    0.867         -
+v51_d128_reg4_dagger5b_ft_normal_g20  24/64      409   0.789    0.646   1.114    0.912 8503/9073
+v51_d128_reg4_dagger5b_ft_danger_g20   5/64      486   0.733    0.713   1.071    1.041 10491/10731
+registers lineage done
+exit 0

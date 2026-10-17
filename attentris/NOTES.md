@@ -420,7 +420,22 @@ Only the from-scratch model uses its registers. The warm-started ones keep them 
 | v51_d128 (scratch) | 0.640 / 0.626 | 0.651 | 0.770 | 0.394 (62) | - |
 | step 3 reg4 (scratch) | 0.643 / 0.628 | 0.645 | 0.786 | 0.366 (58) | - |
 
-Strength is level in both pairs, within noise. From-scratch base models (no DAgger data) die at 80/20 either way. The from-scratch register model is the one to use for probing and steering. To get a strong one: take it through the DAgger lineage (base → DAgger 2 → 3 → 5b, as `v52_d128.sh` did).
+Strength is level in both pairs, within noise. From-scratch base models (no DAgger data) die at 80/20 either way.
+
+**Through the DAgger lineage** (`registers_lineage.sh`: `v51_d128_reg4` → `_dagger_ft` → `_dagger3_ft` → `_dagger5b_ft`, the same recipes as dagger5b-ft; 20-25 min GPU):
+
+| stage (val normal / gate4 top-1; val2 top-1) | without registers | with 4 registers |
+|---|---|---|
+| DAgger 2 | 0.642 / 0.624; 0.418 | 0.642 / 0.624; 0.413 |
+| DAgger 3 | 0.639 / 0.628; 0.466 | 0.641 / 0.622; 0.466 |
+| DAgger 5b | 0.645 / 0.629; 0.483 | 0.640 / 0.625; 0.486 |
+
+| | APP none (256) | APP d2 | normal 80/20 | danger 80/20 |
+|---|---|---|---|---|
+| dagger5b-ft | 0.739 | 0.832 | 0.921 (18) | 1.049 (4) |
+| `v51_d128_reg4_dagger5b_ft` | 0.733 | 0.867 | 0.912 (24) | 1.041 (5) |
+
+On par with dagger5b-ft (d2 +0.035 is one 64-game run). The registers stay in use: attention 0.12-0.19 (0.19 in the last layer on DAgger 5 positions, above an average token's 0.15); knock-out −5.4 / −4.1 pts top-1 on val, −5.2 / −3.1 on val_dagger5all; mean ablation −2.7 / −2.4 on val, −1.0 / −0.9 on val_dagger5all. **This is the model for register probing and steering.**
 
 ### Next (Windows side and later)
 
