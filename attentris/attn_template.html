@@ -1,4 +1,5 @@
-<title>AtTenTris Attention</title>
+<title>__TITLE__</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <style>
 :root {
   --bg: #f4f3ee; --panel: #ffffff; --fg: #1d2127; --muted: #5c626b; --line: #d8d5ca;
@@ -14,7 +15,7 @@
   --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
   --heat: 255, 140, 70; --cool: 110, 170, 255; --move: #f4f5f7; --pick: #7d9cff; --hover: #4fd1a8; --bar: #ff9a5c; color-scheme: dark }
 body { background: var(--bg); color: var(--fg); font: 14px/1.45 "IBM Plex Sans", system-ui, sans-serif; }
-.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: grid; gap: 14px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; display: grid; gap: 14px; }
 header { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
 h1 { font-size: 18px; margin: 0; } h1 span { color: var(--muted); font-weight: 400; }
 .nav, .cands { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }

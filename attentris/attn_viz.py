@@ -51,12 +51,14 @@ def main():
     ap.add_argument("--keep", default="", help="an earlier attn.html: show its positions first, same order (by seed, placement)")
     ap.add_argument("--extra", type=int, default=6, help="v5 tokens: up to this many covered-slot fills, setup plays, T setups")
     ap.add_argument("--label", default="", help="model description shown on the page, e.g. 'v4 · 1.09M positions'")
+    ap.add_argument("--title", default="AtTenTris Attention", help="the page name (browser tab, artifact gallery)")
     args = ap.parse_args()
     n_p = pcores.pin()
     torch.set_num_threads(int(os.environ.get("THREADS", n_p or 8)))
     ck = torch.load(args.model, map_location="cpu", weights_only=False)
     net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0],
-                          cross_layers=ck["args"].get("cross_layers", 1), cross_loops=ck["args"].get("cross_loops", 1))
+                          cross_layers=ck["args"].get("cross_layers", 1), cross_loops=ck["args"].get("cross_loops", 1),
+                          n_teachers=ck["model"]["style.weight"].shape[0], registers=ck["args"].get("registers", 0))
     net.load_state_dict(ck["model"])
     net.eval()
     d = TR.load(args.data)
@@ -222,7 +224,7 @@ def main():
     data = json.dumps({"summary": summary, "epochs": len(ck["log"]), "model": model_label, "log": ck["log"], "positions": pos},
                       separators=(",", ":"))
     with open(args.out, "w", encoding="utf-8") as f:
-        f.write(tpl.replace("__DATA__", data))
+        f.write(tpl.replace("__TITLE__", args.title).replace("__DATA__", data))
     print("%d positions -> %s" % (len(pos), args.out))
 
 
