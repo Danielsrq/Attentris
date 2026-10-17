@@ -1,0 +1,41 @@
+== v51_d128_reg4frz_ft vs v51_d128_dagger5b_ft (validation, epoch 3)
+epoch 1: train loss 2.228 | val normal top1 0.646 top3 0.866 | val gate4 top1 0.629 top3 0.858 | | 141s
+epoch 1: val2 (val_dagger5all.npz, 9832) top1 0.483 top3 0.745 loss 2.516 | argmax Qs top1 0.458 | MAE Qs 7.45
+epoch 2: train loss 2.227 | val normal top1 0.646 top3 0.866 | val gate4 top1 0.629 top3 0.858 | | 143s
+epoch 2: val2 (val_dagger5all.npz, 9832) top1 0.483 top3 0.745 loss 2.516 | argmax Qs top1 0.458 | MAE Qs 7.45
+epoch 3: train loss 2.230 | val normal top1 0.646 top3 0.866 | val gate4 top1 0.629 top3 0.858 | | 144s
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.483 top3 0.745 loss 2.516 | argmax Qs top1 0.458 | MAE Qs 7.45
+dagger5b-ft epoch 3: train loss 2.238 | val normal top1 0.645 top3 0.866 | val gate4 top1 0.629 top3 0.858 | | 237s
+dagger5b-ft epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.483 top3 0.745 loss 2.516 | argmax Qs top1 0.458 | MAE Qs 7.45
+v51_d128_reg4frz_ft normal none: 
+v51_d128_reg4frz_ft normal d2: 
+v51_d128_reg4frz_ft normal g20: 
+== v51_d128_reg4frzb2_ft vs v51_d128_dagger5b_ft (validation, epoch 3)
+epoch 1: train loss 2.230 | val normal top1 0.646 top3 0.867 | val gate4 top1 0.629 top3 0.858 | | 141s
+epoch 1: val2 (val_dagger5all.npz, 9832) top1 0.483 top3 0.745 loss 2.516 | argmax Qs top1 0.459 | MAE Qs 7.45
+epoch 2: train loss 2.227 | val normal top1 0.645 top3 0.866 | val gate4 top1 0.628 top3 0.858 | | 141s
+epoch 2: val2 (val_dagger5all.npz, 9832) top1 0.483 top3 0.744 loss 2.516 | argmax Qs top1 0.459 | MAE Qs 7.45
+epoch 3: train loss 2.230 | val normal top1 0.646 top3 0.866 | val gate4 top1 0.628 top3 0.858 | | 142s
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.483 top3 0.744 loss 2.516 | argmax Qs top1 0.459 | MAE Qs 7.45
+dagger5b-ft epoch 3: train loss 2.238 | val normal top1 0.645 top3 0.866 | val gate4 top1 0.629 top3 0.858 | | 237s
+dagger5b-ft epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.483 top3 0.745 loss 2.516 | argmax Qs top1 0.458 | MAE Qs 7.45
+v51_d128_reg4frzb2_ft normal none: APP 0.734 (APPfull 0.734), died 0/256, pieces 500 avg, TSD 6802, TST 68, quads 3529, max height 17, illegal 0, 17.4 ms/move (p90 20.0) + search 17.9 ms, 148s
+v51_d128_reg4frzb2_ft normal d2: APP 0.842 (APPfull 0.842), died 0/64, pieces 500 avg, TSD 1879, TST 8, quads 895, max height 16, illegal 0, 73.1 ms/move (p90 83.0) + search 73.6 ms, 152s
+v51_d128_reg4frzb2_ft normal g20: APP 0.780 (APPfull 0.677), died 16/64, pieces 434 avg, TSD 1030, TST 6, quads 2095, max height 21, illegal 0, 15.9 ms/move (p90 18.5) + search 16.3 ms, 34s
+v51_d128_reg4frzb2_ft normal g50: APP 0.540 (APPfull 0.318), died 47/64, pieces 294 avg, TSD 592, TST 2, quads 813, max height 21, illegal 0, 15.9 ms/move (p90 18.4) + search 16.4 ms, 25s
+v51_d128_reg4frzb2_ft danger g20: APP 0.745 (APPfull 0.721), died 5/64, pieces 484 avg, TSD 1304, TST 9, quads 2173, max height 21, illegal 0, 16.4 ms/move (p90 18.9) + search 16.9 ms, 37s
+v51_d128_reg4frzb2_ft danger g50: APP 0.526 (APPfull 0.415), died 30/64, pieces 395 avg, TSD 790, TST 4, quads 1058, max height 22, illegal 0, 16.4 ms/move (p90 19.2) + search 16.8 ms, 32s
+== APP / VS: dagger5b-ft vs + 4 frozen-trained registers
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_dagger5b_ft_normal_none     0/256      500   0.739    0.739   0.739    0.739         -
+v51_d128_dagger5b_ft_normal_d2       0/64      500   0.832    0.832   0.832    0.832         -
+v51_d128_dagger5b_ft_normal_g20     18/64      414   0.785    0.650   1.112    0.921 8653/9162
+v51_d128_dagger5b_ft_normal_g50     44/64      305   0.555    0.338   0.859    0.523 5917/6780
+v51_d128_dagger5b_ft_danger_g20      4/64      490   0.733    0.718   1.071    1.049 10608/10806
+v51_d128_dagger5b_ft_danger_g50     25/64      404   0.520    0.421   0.844    0.683 8378/8978
+v51_d128_reg4frzb2_ft_normal_none    0/256      500   0.734    0.734   0.734    0.734         -
+v51_d128_reg4frzb2_ft_normal_d2      0/64      500   0.842    0.842   0.842    0.842         -
+v51_d128_reg4frzb2_ft_normal_g20    16/64      434   0.780    0.677   1.108    0.962 9122/9595
+v51_d128_reg4frzb2_ft_normal_g50    47/64      294   0.540    0.318   0.841    0.495 5667/6559
+v51_d128_reg4frzb2_ft_danger_g20     5/64      484   0.745    0.721   1.082    1.047 10442/10682
+v51_d128_reg4frzb2_ft_danger_g50    30/64      395   0.526    0.415   0.847    0.669 8132/8780

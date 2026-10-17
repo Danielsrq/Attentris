@@ -102,7 +102,7 @@ class Player:
         else:
             self.net = M.AtTenTris(d=ck["args"]["d"], layers=ck["args"]["layers"], n_kinds=ck["model"]["kind.weight"].shape[0],
                           cross_layers=ck["args"].get("cross_layers", 1), cross_loops=cross_loops or ck["args"].get("cross_loops", 1),
-                          n_teachers=ck["model"]["style.weight"].shape[0])
+                          n_teachers=ck["model"]["style.weight"].shape[0], registers=ck["args"].get("registers", 0))
             self.n_styles = ck["model"]["style.weight"].shape[0]
         self.variant = ck["args"].get("plan_variant", "")
         missing = self.net.load_state_dict(ck["model"], strict=False).missing_keys

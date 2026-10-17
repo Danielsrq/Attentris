@@ -28,7 +28,8 @@ def main():
     ck = torch.load(args.model, map_location=args.device, weights_only=False)
     a = ck.get("args", {})
     net = M.AtTenTris(d=a.get("d", 64), layers=a.get("layers", 4), cross_layers=a.get("cross_layers", 1),
-                      cross_loops=a.get("cross_loops", 1), n_teachers=ck["model"]["style.weight"].shape[0]).to(args.device)
+                      cross_loops=a.get("cross_loops", 1), n_teachers=ck["model"]["style.weight"].shape[0],
+                      registers=a.get("registers", 0)).to(args.device)
     net.load_state_dict(ck["model"])
     targs = argparse.Namespace(tau=a.get("tau", 2.0), w_dense=0.0, tau_dense=2.0, w_q=0.0, w_q1=0.0, w_qs=1.0)
     d = TR.load(os.path.join(args.data, args.val))

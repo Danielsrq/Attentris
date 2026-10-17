@@ -118,9 +118,20 @@ class Block(nn.Module):
 
 
 class AtTenTris(nn.Module):
-    def __init__(self, d=64, heads=4, layers=4, n_extra=12, n_teachers=2, n_kinds=N_KINDS, cross_layers=1, cross_loops=1):
+    def __init__(self, d=64, heads=4, layers=4, n_extra=12, n_teachers=2, n_kinds=N_KINDS, cross_layers=1, cross_loops=1,
+                 registers=0):
         super().__init__()
         self.d = d
+        # register tokens: R learned vectors appended to the board-side sequence (no mask, box or readout).
+        # They read and write in every self-attention layer; candidates can attend to them in the cross block.
+        # Geometry has no meaning for them, so their attention bias is a learned constant per head: as a key
+        # (reg_k, reg_c) it starts at -8, so a model warm-started without registers behaves as before.
+        self.registers = registers
+        if registers:
+            self.reg = nn.Parameter(torch.randn(registers, d) * 0.02)
+            self.reg_k = nn.Parameter(torch.full((heads,), -8.0))     # any board-side query -> register key
+            self.reg_q = nn.Parameter(torch.zeros(heads))             # register query -> board-token key
+            self.reg_c = nn.Parameter(torch.full((heads,), -8.0))     # candidate query -> register key
         self.val = nn.Embedding(2, d)
         self.pos = Pos2D(d)
         self.Wk, self.Wv = nn.Linear(d, d, bias=False), nn.Linear(d, d, bias=False)
@@ -176,6 +187,17 @@ class AtTenTris(nn.Module):
         maskf = mask.float()
         feats, both = pair_features(box, box, maskf, maskf)
         bias = self.bias(feats, both)
+        R = self.registers
+        if R:
+            NT = x.shape[1]
+            x = torch.cat([x, self.reg.unsqueeze(0).expand(B, -1, -1)], 1)
+            H = bias.shape[1]
+            full = bias.new_zeros(B, H, NT + R, NT + R)
+            full[:, :, :NT, :NT] = bias
+            full[:, :, NT:, :NT] = self.reg_q.view(1, H, 1, 1)
+            full[:, :, :, NT:] = self.reg_k.view(1, H, 1, 1)
+            bias = full
+            pad = torch.cat([pad, pad.new_zeros(B, R)], 1)
         attn = []
         for blk in self.blocks:
             x, a = blk(x, bias, pad)
@@ -205,7 +227,10 @@ class AtTenTris(nn.Module):
         passes = [(self.cross, self.c_bias)] * self.cross_loops + list(zip(self.cross_extra, self.c_bias_extra))
         cross_all = []
         for blk, cb in passes:
-            y, ca = blk(y, cb(cfeats, cboth), pad, ctx=hb, ctx_norm=self.c_norm)
+            cbias = cb(cfeats, cboth)
+            if R:
+                cbias = torch.cat([cbias, self.reg_c.view(1, -1, 1, 1).expand(B, -1, cbias.shape[2], R)], -1)
+            y, ca = blk(y, cbias, pad, ctx=hb, ctx_norm=self.c_norm)
             cross_all.append(ca)
         logit = self.head(y).squeeze(-1).masked_fill(cpad, float("-inf"))    # (B, NC)
         out = {"logit": logit, "q1": self.q1(y).squeeze(-1), "qs": self.qs(y).squeeze(-1)} if heads else logit

@@ -226,6 +226,8 @@ def main():
     ap.add_argument("--out", default=None, help="checkpoint (default DATA/model.pt; DATA/model_tome.pt for --arch tome)")
     ap.add_argument("--cross-layers", type=int, default=1, help="attentris: independent cross-attention blocks (v5.2-untied: 2)")
     ap.add_argument("--cross-loops", type=int, default=1, help="attentris: apply the cross block this many times, same weights (v5.2-loop: 2)")
+    ap.add_argument("--registers", type=int, default=0, help="attentris: R register tokens on the board side (with --init and --freeze-base: only they train)")
+    ap.add_argument("--reg-bias-init", type=float, default=-8.0, help="--registers with --init: attention bias of the register keys at the start (-8: the warm-started model is unchanged but the registers hardly get attention; 0: they do)")
     ap.add_argument("--arch", default="attentris", choices=("attentris", "tome"), help="tome = AtTenTris-ToMe (model_tome.py)")
     ap.add_argument("--merge", default="0,0.45,0.45,0.45", help="tome: fraction of cell tokens merged after attention, per layer")
     ap.add_argument("--tome-sky", action="store_true", help="tome: the sky starts as one token per column (model_tome sky=True)")
@@ -344,7 +346,7 @@ def main():
                                n_teachers=args.n_teachers, variant=args.plan_variant, plan_layers=args.plan_layers).to(args.device)
     else:
         net = M.AtTenTris(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops,
-                          n_teachers=args.n_teachers).to(args.device)
+                          n_teachers=args.n_teachers, registers=args.registers).to(args.device)
     print("device", args.device, torch.cuda.get_device_name(0) if args.device == "cuda" else "", flush=True)
     groups, lrs = [list(net.parameters())], [args.lr]
     if args.freeze_base:
@@ -384,6 +386,14 @@ def main():
             missing = net.load_state_dict(ck0["model"], strict=False).missing_keys
             net.init_from_base()
             print("plan model (%s) from a single-move checkpoint: %d new tensors" % (args.plan_variant, len(missing)), flush=True)
+        elif args.registers and "reg" not in ck0["model"]:
+            # register tokens added to a checkpoint without them: everything else loads exactly
+            missing = net.load_state_dict(ck0["model"], strict=False).missing_keys
+            assert set(missing) == {"reg", "reg_k", "reg_q", "reg_c"}, missing
+            with torch.no_grad():
+                net.reg_k.fill_(args.reg_bias_init)
+                net.reg_c.fill_(args.reg_bias_init)
+            print("registers added: %d tokens, new tensors %s, key bias starts at %g" % (args.registers, missing, args.reg_bias_init), flush=True)
         else:
             net.load_state_dict(ck0["model"])
         print("warm start from %s (%d epochs)" % (args.init, len(ck0.get("log", []))), flush=True)

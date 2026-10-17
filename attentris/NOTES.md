@@ -382,6 +382,20 @@ Findings:
 - **With a TETR.IO-like 333 ms garbage delay at equal speed (185 PPS each), quality decides again:** CC2 5 ms wins 53-11 in long matches.
 - Caveat: the speeds are machine-dependent (Windows P-cores here), and "uncapped" means instant inputs (no DAS / ARR or animation costs).
 
+### Register tokens, frozen backbone (Windows, 2026-10-17)
+
+`model.py --registers R`: R learned tokens appended to the board-side sequence (no mask, box or readout). They read and write in all 4 self-attention layers, and the candidates can attend to them in the cross block. Their attention bias is a learned constant per head: `reg_k` (any query to a register), `reg_q` (register to board token), `reg_c` (candidate to register). `train.py --registers R --reg-bias-init B --freeze-base --new-lr 1e-3` warm-starts from a checkpoint without registers and trains only those 4 tensors (~530 numbers at R = 4, d128). `test_registers.py` checks the start and the gradients. Script: `registers_frozen.sh` (`N=... BIAS=...`); results in `results_registers.txt`.
+
+- **Bias start −8** (`v51_d128_reg4frz_ft`): the model starts as dagger5b-ft exactly (KL 2e-7), but the registers get ~0.05% attention and the gradient to the bias is too small. After 3 epochs it had only moved to −7.7, so validation was identical to dagger5b-ft to 3 decimals. Uninformative; play tests skipped.
+- **Bias start −2** (`v51_d128_reg4frzb2_ft`): 5% of top-1 moves change at the start (KL 0.013). It recovers to dagger5b-ft's level within the first epoch, and the bias then **drifts shut** (−2 → −2.4 / −2.7): the frozen network learns to ignore the registers, not to use them.
+
+| | val normal / gate4 top-1 | val2 top-1 | APP none (256) | APP d2 | normal 80/20 | normal 50/50 | danger 80/20 | danger 50/50 |
+|---|---|---|---|---|---|---|---|---|
+| dagger5b-ft | 0.645 / 0.629 | 0.483 | 0.739 | 0.832 | 0.921 (18) | 0.523 (44) | 1.049 (4) | 0.683 (25) |
+| + 4 frozen-trained registers (bias −2) | 0.646 / 0.628 | 0.483 | 0.734 | 0.842 | 0.962 (16) | 0.495 (47) | 1.047 (5) | 0.669 (30) |
+
+(VSfull, deaths / 64 in brackets.) All within noise: with a frozen backbone, registers neither help nor hurt. Frozen register training is ~40% faster per epoch (141 s vs 237 s). The real test of registers as scratch space needs the layers to learn to use them: an unfrozen r = 4 fine-tune compared with `v51_d128_ctrl_ft`, or a from-scratch run.
+
 ### Next (Windows side and later)
 
 1. **Versus blitz:** CEM-survival `cem:bot/results/survive/survive.txt:6:64:commit6` (and commit 2 / 3) vs CC2, (a) uncapped and (b) at a fixed PPS. Uncapped, ~6x the PPS at -12% APP should cancel most incoming garbage. Fixed PPS is the fair-time check.
