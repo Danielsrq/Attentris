@@ -213,6 +213,8 @@ class AtTenTris(nn.Module):
                 rec = getattr(self, "reg_record", None)
                 if rec is not None:
                     rec.setdefault(li, []).append(x[:, NT:].detach().cpu())
+                    real = (~pad[:, :NT]).unsqueeze(-1).to(x.dtype)       # the mean of the real board tokens, for comparison
+                    rec.setdefault(("board", li), []).append(((x[:, :NT] * real).sum(1) / real.sum(1).clamp(min=1)).detach().cpu())
             attn.append(a)
         hb = x                                                   # (B, NT, d), pre-norm residual
 

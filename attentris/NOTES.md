@@ -437,6 +437,31 @@ Strength is level in both pairs, within noise. From-scratch base models (no DAgg
 
 On par with dagger5b-ft (d2 +0.035 is one 64-game run). The registers stay in use: attention 0.12-0.19 (0.19 in the last layer on DAgger 5 positions, above an average token's 0.15); knock-out −5.4 / −4.1 pts top-1 on val, −5.2 / −3.1 on val_dagger5all; mean ablation −2.7 / −2.4 on val, −1.0 / −0.9 on val_dagger5all. **This is the model for register probing and steering.**
 
+**Linear probes on its registers** (`register_probe.py collect --source val|play`, `probe`; `probe_games.sh`; `results_probes.txt`; features in `data/probe/`):
+- **Positions:**
+  - 52,916 held-out validation positions (the 5 val files);
+  - 44,500 positions from the model's own games: 128 at 80/20 + 128 at 50/50, normal style, every 2nd position; 149 deaths.
+- **Probe:** logistic regression on one register (128 numbers), all 4 together, or the mean of the board tokens, per layer. It's fitted on 80% of games and scored by AUC on the other 20% (split by seed). Baseline: 6 board features (max / mean height, holes, bumpiness, deepest well, filled cells). Control: shuffled labels give AUC 0.50 / 0.50.
+- **Labels for "own move":** the model's own top move, not the teacher's.
+
+| target (play positions; val similar) | best single register | all 4 registers, layer 1 → 4 | board-token mean, L4 | board features |
+|---|---|---|---|---|
+| hot (height ≥ 12 or ≥ 6 holes) | 0.99 | 0.998 → 0.997 | 0.996 | 0.990 |
+| T-structure token present | 0.96 (L1) → 0.999 (L2) | 0.993 → 1.000 | 1.000 | 0.853 |
+| own move is a T-spin | **reg 3: 0.960 at L1** (others 0.82-0.87) | 0.977 → 0.983 | 0.951 | 0.719 |
+| own move clears lines | 0.87 | 0.821 → 0.899 | 0.855 | 0.665 |
+| own move sends attack | 0.93 | 0.896 → 0.957 | 0.895 | 0.680 |
+| own move uses hold | 0.60 | 0.586 → 0.608 | 0.592 | 0.563 |
+| dies within 10 moves (1.7%) | 0.96 | 0.952 → 0.959 | 0.957 | 0.949 |
+| dies within 30 moves (5.2%) | 0.91 | 0.906 → 0.904 | 0.914 | 0.893 |
+
+Reading:
+- **Board state** (hot, height, holes) is in every register from layer 1, but it's just as readable from 6 simple board features: a summary, nothing deeper.
+- **The model's own next move** (T-spin, clear, attack) is held more strongly in the registers than in the average board token, and grows with depth (attack 0.90 → 0.96). Register 3 is a candidate "T-spin register": 0.96 for the T-spin decision already at layer 1, the others 0.82.
+- **Hold** is barely decodable anywhere (≤ 0.61). It's decided in the cross block (candidates compare hold vs no-hold), not on the board side.
+- **No foresight of death:** dies-within-10/30 is decodable (0.95 / 0.90) but no better than the board features (0.95 / 0.89). The registers' "danger" is "the board looks bad", not a prediction beyond it. (The model never sees incoming garbage, which limits what it could foresee.)
+- For steering, "hot" is a board-state direction. A T-spin / attack (intent) direction from register 3 is the more interesting one to test.
+
 ### Next (Windows side and later)
 
 1. **Versus blitz:** CEM-survival `cem:bot/results/survive/survive.txt:6:64:commit6` (and commit 2 / 3) vs CC2, (a) uncapped and (b) at a fixed PPS. Uncapped, ~6x the PPS at -12% APP should cancel most incoming garbage. Fixed PPS is the fair-time check.
