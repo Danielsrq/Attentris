@@ -620,7 +620,9 @@ pub fn play(searcher: &mut Searcher, cfg: &GameConfig) -> (Stats, String) {
         board = o_board;
         b2b = o.b2b;
         if cfg.versus {
-            match versus_lock(n, &o, &board, h, &shapes, &p) {
+            // what a player sees after this lock: the hold piece and the next 5 pieces (for replays)
+            let next: String = (0..5).map(|i| bag.get(drawn + i).letter().to_ascii_uppercase()).collect();
+            match versus_lock(n, &o, &board, h, &shapes, &p, hold, &next) {
                 Some(g) => incoming = g,
                 None => break, // the referee ended the game (the opponent topped out)
             }
@@ -723,10 +725,12 @@ fn read_shortlist(n: usize, board: &Board, spawned: Piece, previews: &[Piece], h
 }
 
 /// `bot play-ext --versus`: report the lock ({"lock": n, "attack", "lines", "spin" 0/1/2, "piece",
-/// "b2b", "combo", "height", "cells"}) and read the garbage to add before the next piece
-/// ({"garbage": [[rows, hole column], ...]}); None for {"stop": true} (the game ends, not as a death).
+/// "b2b", "combo", "height", "cells", "rows", "hold" (letter or ""), "queue" (the next 5 pieces)}) and read
+/// the garbage to add before the next piece ({"garbage": [[rows, hole column], ...]}); None for
+/// {"stop": true} (the game ends, not as a death).
+#[allow(clippy::too_many_arguments)]
 fn versus_lock(n: usize, o: &crate::search::Outcome, board: &Board, height: i32, shapes: &crate::rules::Shapes,
-               p: &crate::board::Placement) -> Option<Vec<(usize, i32)>> {
+               p: &crate::board::Placement, hold: Option<Piece>, next: &str) -> Option<Vec<(usize, i32)>> {
     use std::io::{BufRead, Write};
     let spin = match o.spin { Spin::None => 0, Spin::Mini => 1, _ => 2 };
     {
@@ -734,8 +738,9 @@ fn versus_lock(n: usize, o: &crate::search::Outcome, board: &Board, height: i32,
         let cells = p.abs_cells(shapes).iter().map(|(x, y)| format!("{},{}", x, y)).collect::<Vec<_>>().join(",");
         // "rows": the board after this lock (before the referee's garbage), for replays (versus.py --record)
         let rows = board.rows.iter().map(|r| r.to_string()).collect::<Vec<_>>().join(",");
-        let _ = writeln!(out, "{{\"lock\":{},\"attack\":{},\"lines\":{},\"spin\":{},\"piece\":\"{}\",\"b2b\":{},\"combo\":{},\"height\":{},\"cells\":[{}],\"rows\":[{}]}}",
-            n, o.attack, o.lines, spin, p.piece.letter().to_ascii_uppercase(), o.b2b, board.combo, height, cells, rows);
+        let hold = hold.map(|h| h.letter().to_ascii_uppercase().to_string()).unwrap_or_default();
+        let _ = writeln!(out, "{{\"lock\":{},\"attack\":{},\"lines\":{},\"spin\":{},\"piece\":\"{}\",\"b2b\":{},\"combo\":{},\"height\":{},\"cells\":[{}],\"rows\":[{}],\"hold\":\"{}\",\"queue\":\"{}\"}}",
+            n, o.attack, o.lines, spin, p.piece.letter().to_ascii_uppercase(), o.b2b, board.combo, height, cells, rows, hold, next);
         let _ = out.flush();
     }
     let mut line = String::new();

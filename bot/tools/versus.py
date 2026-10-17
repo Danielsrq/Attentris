@@ -260,7 +260,7 @@ def realtime_loop(sides, args, holes, sent, received):
                 if pending[i][0][0] == 0:
                     pending[i].pop(0)
         if args.record:
-            ev = {k: l[k] for k in ("piece", "cells", "rows", "attack", "lines", "spin", "b2b", "combo") if k in l}
+            ev = {k: l[k] for k in ("piece", "cells", "rows", "attack", "lines", "spin", "b2b", "combo", "hold", "queue") if k in l}
             ev.update({"side": i, "t": round(t, 2), "ms": round(dt, 2), "garbage": g, "pending": sum(x[0] for x in pending[i]),
                        "opp_pending": sum(x[0] for x in pending[o]), "sent": sent[i]})
             events.append(ev)
@@ -306,7 +306,7 @@ def match(job):
                     l = locks[i]
                     ms = 1000 * sides[i].think[-1] if len(sides[i].think) > nthink[i] else 0.0
                     fr.append({"dead": True, "ms": round(ms, 1)} if dead[i] else
-                              {k: l[k] for k in ("piece", "cells", "rows", "attack", "lines", "spin", "b2b", "combo") if k in l} | {"ms": round(ms, 1)})
+                              {k: l[k] for k in ("piece", "cells", "rows", "attack", "lines", "spin", "b2b", "combo", "hold", "queue") if k in l} | {"ms": round(ms, 1)})
                 frames.append(fr)
             if any(dead):
                 break

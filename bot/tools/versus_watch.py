@@ -1,6 +1,7 @@
 """Watch recorded versus matches (bot/tools/versus.py --record DIR) in a pygame window: both boards side
 by side, turn by turn, at the pace the bots actually played (a turn takes the slower bot's measured think
 time, at least the match's budget_ms: 2 PPS replays play at 500 ms per piece), with a speed multiplier.
+Each board shows its hold piece and the next 5 pieces after every lock (replays recorded from 2026-10-17 on).
 
     external/tetrisbattle/.venv/Scripts/python bot/tools/versus_watch.py bot/results/versus/replays [--speed 0.5]
 
@@ -21,6 +22,10 @@ SHOW = 22                       # rows drawn: 2 buffer rows above the visible 20
 CELL = 24
 COLORS = {"I": (0, 200, 220), "O": (230, 210, 0), "T": (160, 60, 200), "S": (60, 190, 60), "Z": (220, 50, 50),
           "J": (40, 80, 220), "L": (240, 140, 20), "G": (120, 120, 120), "?": (90, 90, 110)}
+MINI = 11                       # cell size of the hold / next previews
+SHAPES = {"I": [(0, 0), (1, 0), (2, 0), (3, 0)], "O": [(0, 0), (1, 0), (0, 1), (1, 1)], "T": [(1, 0), (0, 1), (1, 1), (2, 1)],
+          "S": [(1, 0), (2, 0), (0, 1), (1, 1)], "Z": [(0, 0), (1, 0), (1, 1), (2, 1)], "J": [(0, 0), (0, 1), (1, 1), (2, 1)],
+          "L": [(2, 0), (0, 1), (1, 1), (2, 1)]}
 BG, GRID, TEXT, DIM, WARN = (18, 18, 26), (40, 40, 55), (230, 230, 235), (140, 140, 155), (230, 60, 60)
 SPEEDS = {pygame.K_1: 1.0, pygame.K_2: 0.5, pygame.K_3: 0.25, pygame.K_4: 0.125,
           # slow motion for realtime replays (a whole match can last 0.2-1 s of game time)
@@ -67,6 +72,7 @@ class Side:
         self.combo = -1
         self.dead = False
         self.cells = []
+        self.hold, self.queue = "", ""   # after the last lock (replays recorded before 2026-10-17 have neither)
 
     def apply(self, f):
         if f.get("dead"):
@@ -101,6 +107,7 @@ class Side:
             self.received += c
         self.pending = f.get("pending", 0)
         self.sent = f.get("sent", self.sent)
+        self.hold, self.queue = f.get("hold", ""), f.get("queue", "")
 
 
 class Playback:
@@ -147,6 +154,23 @@ class Playback:
         return self.k >= len(self.frames)
 
 
+def draw_mini(screen, piece, x, y):
+    """One piece in spawn orientation, MINI-sized cells, centred in a 4 x 2 slot."""
+    if piece not in SHAPES:
+        return
+    cells = SHAPES[piece]
+    w = max(c[0] for c in cells) + 1
+    ox = x + (4 - w) * MINI // 2
+    for cx, cy in cells:
+        pygame.draw.rect(screen, COLORS[piece], (ox + cx * MINI, y + cy * MINI, MINI - 1, MINI - 1))
+
+
+def draw_box(screen, small, label, piece, x, y, dim):
+    screen.blit(small.render(label, True, DIM), (x, y))
+    pygame.draw.rect(screen, GRID, (x, y + 18, 4 * MINI + 8, 2 * MINI + 8), 1)
+    draw_mini(screen, piece, x + 4, y + 22)
+
+
 def draw_side(screen, font, small, s, name, x0, y0, winner):
     screen.blit(font.render(name, True, TEXT), (x0, y0 - 34))
     top = H - SHOW
@@ -169,6 +193,12 @@ def draw_side(screen, font, small, s, name, x0, y0, winner):
     pygame.draw.rect(screen, GRID, (mx, y0 + (SHOW - VIS) * CELL, 8, VIS * CELL), 1)
     if p:
         pygame.draw.rect(screen, WARN, (mx + 1, y0 + SHOW * CELL - p * CELL, 6, p * CELL))
+    # hold box and the next 5 pieces, right of the garbage meter
+    px = mx + 16
+    draw_box(screen, small, "HOLD", s.hold, px, y0, dim=False)
+    screen.blit(small.render("NEXT", True, DIM), (px, y0 + 3 * MINI + 26))
+    for k in range(5):
+        draw_mini(screen, s.queue[k] if k < len(s.queue) else "", px + 4, y0 + 3 * MINI + 46 + k * (3 * MINI + 8))
     lines = ["pieces %d   attack %d   APP %.3f" % (s.pieces, s.attack, s.attack / max(1, s.pieces)),
              "sent %d   received %d   incoming %d" % (s.sent, s.received, s.pending),
              "B2B %s   combo %s   %.1f ms/move" % (s.b2b if s.b2b >= 0 else "-", s.combo if s.combo >= 0 else "-", s.ms),
@@ -192,7 +222,7 @@ def main():
     if not files:
         sys.exit("no replays found")
     pygame.init()
-    screen = pygame.display.set_mode((900, 760))
+    screen = pygame.display.set_mode((960, 760))
     pygame.display.set_caption("versus replay")
     font, small = pygame.font.SysFont("consolas", 22), pygame.font.SysFont("consolas", 16)
     clock = pygame.time.Clock()
@@ -232,7 +262,7 @@ def main():
         rec = pb.rec
         win = rec["winner"] if pb.done() else None
         draw_side(screen, font, small, pb.sides[0], pb.names[0], 60, 70, win == "a")
-        draw_side(screen, font, small, pb.sides[1], pb.names[1], 500, 70, win == "b")
+        draw_side(screen, font, small, pb.sides[1], pb.names[1], 530, 70, win == "b")
         if pb.rt:
             pa, pbb = (s.pieces / pb.clock if pb.clock > 0 else 0.0 for s in pb.sides)
             lead = pb.sides[0].pieces - pb.sides[1].pieces
