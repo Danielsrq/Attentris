@@ -357,6 +357,21 @@ A versus smoke test (4 matches, turn-based): CEM-survival commit 6 thought 23.9 
 The two draw level at CC2 ≈ 33-34 ms per move: CC2 has to play ~25% faster (30 vs 24 PPS) to make up for its lower APP (0.82 vs 0.93).
 CC2's quality saturates early: from 33 to 15 ms it loses only 0.11 APP while doubling its speed, which is why a fast CC2 wins uncapped. The crossover is steep: 0.39 at 30 ms, 0.73 at 36 ms.
 
+**CEM-survival think time vs depth x beam** (`bot/tools/cem_budget_grid.sh`, our default rules, 16 games x 500 pieces, single-threaded, 8 games at a time; `bot/results/survive/budget/`):
+
+| depth x beam | 1x1 | 2x4 | 3x8 | 3x16 | 4x8 | 6x4 | 5x8 | 4x16 | 5x12 | 6x8 | 6x16 | 6x64 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| ms / move | 0.1 | 0.5 | 1.6 | 3.2 | 2.4 | 3.3 | 3.1 | 4.7 | 4.7 | 6.7 | 11.9 | 34.6 |
+| APP, no garbage | 0.27 | 0.51 | 0.68 | 0.77 | 0.88 | 0.85 | 0.98 | 0.94 | 0.99 | 1.01 | 1.04 | 1.15 |
+| 50/50: APP (deaths / 16) | 0.26 (16) | 0.37 (16) | 0.53 (11) | 0.50 (11) | 0.58 (1) | 0.56 (2) | 0.60 (0) | 0.62 (0) | 0.64 (2) | 0.65 (1) | 0.72 (0) | 0.80 (0) |
+
+Cost is ~linear in beam and in depth; at a fixed budget depth beats width (5x8 at 3.1 ms ≈ 4x16 at 4.7 ms; 6x4 > 3x16).
+
+**At ~5 ms, CC2's rules** (`bot/tools/cem_vs_cc2_5ms_solo.sh`, `--mode standard --no-180`, 16 games): CEM d4b16 APP 0.768, d5b12 0.905, d6b64 1.117; CC2 5 ms 0.937. 50/50: CEM d5b12 VSfull 0.983 (0 deaths), d4b16 0.838 (3), d6b64 1.093 (0); CC2 5 ms 0.752 (10 deaths).
+Caveat: in the solo harness CC2 keeps thinking while our game process works (measured 15.1 ms per move at `--think-ms 5`), so its solo numbers are flattering; the realtime versus harness gives it no free thinking.
+
+**Realtime at equal ~5 ms** (64 matches): CEM-survival d4b16 vs CC2 5 ms **39-25** (188 vs 182 PPS, APP 0.704 vs 0.737); d5b12 vs CC2 5 ms **45-19** (197 vs 183 PPS, APP 0.765 vs 0.763, VS 1.097 vs 1.099). At equal time CEM is ahead; it lost the sweep above only because d6 b64 costs ~35 ms.
+
 Findings:
 - **Uncapped, the faster bot wins** almost regardless of quality: matches are decided in well under a second of game time. Blitz turns CEM-survival's 54-10 into 64-0 against the same CC2.
 - **It doesn't beat every bot:** CC2 is an anytime search and can play just as fast. At 5 ms per move (184 PPS) it beats the d6 b64 blitz 61-3, because its garbage cancels the blitz plans and forces new searches (98 PPS instead of 181).
