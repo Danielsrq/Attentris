@@ -1,0 +1,5 @@
+model_v51_d128_reg4.pt: 4 registers; reg_k [-0.05 -0.15 -0.16 -0.26]  reg_c [-0.22  0.02  0.   -0.01]
+val.npz: attention on the registers: self layers 0.121 0.135 0.155 0.157 (an average token's share: 0.170), cross 0.192
+  normal    top1: normal 0.6434 (n 5000), gate4 0.6284 (n 5000)
+  knock-out top1: normal 0.5884 (n 5000), gate4 0.5898 (n 5000)
+  mean      top1: normal 0.6152 (n 5000), gate4 0.5996 (n 5000)

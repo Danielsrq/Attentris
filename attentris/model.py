@@ -198,9 +198,21 @@ class AtTenTris(nn.Module):
             full[:, :, :, NT:] = self.reg_k.view(1, H, 1, 1)
             bias = full
             pad = torch.cat([pad, pad.new_zeros(B, R)], 1)
+            # analysis only (register_usage.py): reg_knockout hides the registers from every query;
+            # reg_mean = [layer -> (R, d)] replaces their states after each layer; reg_record collects them
+            if getattr(self, "reg_knockout", False):
+                pad = pad.clone()
+                pad[:, NT:] = True
         attn = []
-        for blk in self.blocks:
+        for li, blk in enumerate(self.blocks):
             x, a = blk(x, bias, pad)
+            if R:
+                rm = getattr(self, "reg_mean", None)
+                if rm is not None:
+                    x = torch.cat([x[:, :NT], rm[li].to(x.dtype).unsqueeze(0).expand(B, -1, -1)], 1)
+                rec = getattr(self, "reg_record", None)
+                if rec is not None:
+                    rec.setdefault(li, []).append(x[:, NT:].detach().cpu())
             attn.append(a)
         hb = x                                                   # (B, NT, d), pre-norm residual
 

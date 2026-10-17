@@ -347,6 +347,11 @@ def main():
     else:
         net = M.AtTenTris(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops,
                           n_teachers=args.n_teachers, registers=args.registers).to(args.device)
+    if args.registers and not args.init:
+        # from scratch: the register keys' bias starts at --reg-bias-init (0 = an ordinary token)
+        with torch.no_grad():
+            net.reg_k.fill_(args.reg_bias_init)
+            net.reg_c.fill_(args.reg_bias_init)
     print("device", args.device, torch.cuda.get_device_name(0) if args.device == "cuda" else "", flush=True)
     groups, lrs = [list(net.parameters())], [args.lr]
     if args.freeze_base:

@@ -394,7 +394,33 @@ Findings:
 | dagger5b-ft | 0.645 / 0.629 | 0.483 | 0.739 | 0.832 | 0.921 (18) | 0.523 (44) | 1.049 (4) | 0.683 (25) |
 | + 4 frozen-trained registers (bias −2) | 0.646 / 0.628 | 0.483 | 0.734 | 0.842 | 0.962 (16) | 0.495 (47) | 1.047 (5) | 0.669 (30) |
 
-(VSfull, deaths / 64 in brackets.) All within noise: with a frozen backbone, registers neither help nor hurt. Frozen register training is ~40% faster per epoch (141 s vs 237 s). The real test of registers as scratch space needs the layers to learn to use them: an unfrozen r = 4 fine-tune compared with `v51_d128_ctrl_ft`, or a from-scratch run.
+(VSfull, deaths / 64 in brackets.) All within noise: with a frozen backbone, registers neither help nor hurt. Frozen register training is ~40% faster per epoch (141 s vs 237 s).
+
+**Steps 2-3** (`registers_steps.sh`; 50/50 dropped by the user's choice until a model looks promising):
+- **Step 2** `v51_d128_reg4_ft`: dagger5b-ft + registers (bias −2), all weights train, 3 epochs, the dagger5b mix. Compared with `v51_d128_ctrl_ft`.
+- **Step 3** `v51_d128_reg4`: from scratch with the `v51_d128` recipe (8 epochs, lr 1.5e-3), bias 0. Compared with `v51_d128`.
+
+Usage check (`register_usage.py`, 5,000 val positions):
+- attention share: total weight that board tokens (or candidates, in the cross block) put on the 4 registers; spread evenly it would be ~0.17;
+- knock-out: no query may read the registers;
+- mean ablation: register states overwritten after every layer by their average over the val positions, which removes only the position-specific content.
+
+| model | attention on registers (self layers 1-4; cross) | knock-out Δ top-1 (normal / gate4) | mean ablation Δ top-1 |
+|---|---|---|---|
+| frozen, bias −2 | 0.012 / 0.008 / 0.005 / 0.007; 0.009 | 0.000 / 0.000 | +0.001 / 0.000 |
+| step 2, unfrozen ft | 0.014 / 0.013 / 0.009 / 0.011; 0.017 | −0.002 / +0.001 | −0.001 / 0.000 |
+| **step 3, from scratch** | **0.12 / 0.14 / 0.16 / 0.16; 0.19** | **−0.055 / −0.039** | **−0.028 / −0.029** |
+
+Only the from-scratch model uses its registers. The warm-started ones keep them nearly shut (key bias ~−2.5) because their layers already work without them.
+
+| | val normal / gate4 top-1 | APP none (256) | APP d2 | normal 80/20 | danger 80/20 |
+|---|---|---|---|---|---|
+| ctrl_ft | 0.645 / 0.626 | 0.739 | 0.832 | 0.918 (24) | 1.046 (4) |
+| step 2 reg4_ft | 0.645 / 0.627 | 0.736 | 0.842 | 0.962 (20) | 1.055 (3) |
+| v51_d128 (scratch) | 0.640 / 0.626 | 0.651 | 0.770 | 0.394 (62) | - |
+| step 3 reg4 (scratch) | 0.643 / 0.628 | 0.645 | 0.786 | 0.366 (58) | - |
+
+Strength is level in both pairs, within noise. From-scratch base models (no DAgger data) die at 80/20 either way. The from-scratch register model is the one to use for probing and steering. To get a strong one: take it through the DAgger lineage (base → DAgger 2 → 3 → 5b, as `v52_d128.sh` did).
 
 ### Next (Windows side and later)
 

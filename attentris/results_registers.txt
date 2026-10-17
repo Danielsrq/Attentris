@@ -39,3 +39,50 @@ v51_d128_reg4frzb2_ft_normal_g20    16/64      434   0.780    0.677   1.108    0
 v51_d128_reg4frzb2_ft_normal_g50    47/64      294   0.540    0.318   0.841    0.495 5667/6559
 v51_d128_reg4frzb2_ft_danger_g20     5/64      484   0.745    0.721   1.082    1.047 10442/10682
 v51_d128_reg4frzb2_ft_danger_g50    30/64      395   0.526    0.415   0.847    0.669 8132/8780
+== step 2: v51_d128_reg4_ft vs v51_d128_ctrl_ft (validation, epoch 3)
+epoch 3: train loss 2.217 | val normal top1 0.645 top3 0.869 | val gate4 top1 0.627 top3 0.859 | | 256s
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.486 top3 0.747 loss 2.505 | argmax Qs top1 0.457 | MAE Qs 7.38
+ctrl_ft epoch 3: train loss 2.217 | val normal top1 0.645 top3 0.867 | val gate4 top1 0.626 top3 0.858 | | 138s
+ctrl_ft epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.485 top3 0.748 loss 2.505 | argmax Qs top1 0.458 | MAE Qs 7.38
+model_v51_d128_reg4_ft.pt: 4 registers; reg_k [-2.14 -2.05 -2.08 -2.13]  reg_c [-2.07 -2.03 -2.1  -2.03]
+val.npz: attention on the registers: self layers 0.014 0.013 0.009 0.011 (an average token's share: 0.170), cross 0.017
+  normal    top1: normal 0.6452 (n 5000), gate4 0.6268 (n 5000)
+  knock-out top1: normal 0.6434 (n 5000), gate4 0.6274 (n 5000)
+  mean      top1: normal 0.6440 (n 5000), gate4 0.6268 (n 5000)
+val_dagger5all.npz: attention on the registers: self layers 0.014 0.013 0.009 0.012 (an average token's share: 0.153), cross 0.015
+  normal    top1: normal 0.4805 (n 4755), danger 0.4857 (n 9832)
+  knock-out top1: normal 0.4797 (n 4755), danger 0.4859 (n 9832)
+  mean      top1: normal 0.4793 (n 4755), danger 0.4848 (n 9832)
+v51_d128_reg4_ft normal none: APP 0.736 (APPfull 0.736), died 0/256, pieces 500 avg, TSD 6823, TST 54, quads 3571, max height 16, illegal 0, 17.4 ms/move (p90 19.9) + search 17.8 ms, 148s
+v51_d128_reg4_ft normal d2: APP 0.842 (APPfull 0.842), died 0/64, pieces 500 avg, TSD 1890, TST 15, quads 900, max height 15, illegal 0, 73.1 ms/move (p90 82.7) + search 73.6 ms, 152s
+v51_d128_reg4_ft normal g20: APP 0.788 (APPfull 0.680), died 20/64, pieces 431 avg, TSD 1045, TST 9, quads 2086, max height 22, illegal 0, 16.5 ms/move (p90 19.5) + search 17.0 ms, 36s
+v51_d128_reg4_ft danger g20: APP 0.744 (APPfull 0.725), died 3/64, pieces 487 avg, TSD 1270, TST 6, quads 2248, max height 21, illegal 0, 16.6 ms/move (p90 19.2) + search 17.1 ms, 38s
+== APP / VS: step 2, ctrl_ft vs + 4 registers (all weights trained)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_ctrl_ft_normal_none         0/256      500   0.739    0.739   0.739    0.739         -
+v51_d128_ctrl_ft_normal_d2           0/64      500   0.832    0.832   0.832    0.832         -
+v51_d128_ctrl_ft_normal_g20         24/64      413   0.786    0.650   1.111    0.918 8587/9165
+v51_d128_ctrl_ft_danger_g20          4/64      488   0.735    0.716   1.073    1.046 10559/10759
+v51_d128_reg4_ft_normal_none         0/256      500   0.736    0.736   0.736    0.736         -
+v51_d128_reg4_ft_normal_d2           0/64      500   0.842    0.842   0.842    0.842         -
+v51_d128_reg4_ft_normal_g20         20/64      431   0.788    0.680   1.116    0.962 9026/9556
+v51_d128_reg4_ft_danger_g20          3/64      487   0.744    0.725   1.083    1.055 10558/10749
+== step 3: v51_d128_reg4 vs v51_d128 (validation, epoch 8)
+epoch 8: train loss 2.053 | val normal top1 0.643 top3 0.866 | val gate4 top1 0.628 top3 0.849 | | 268s
+v51_d128 epoch 8: train loss 2.053 | val normal top1 0.640 top3 0.865 | val gate4 top1 0.626 top3 0.854 | | 256s
+model_v51_d128_reg4.pt: 4 registers; reg_k [-0.05 -0.15 -0.16 -0.26]  reg_c [-0.22  0.02  0.   -0.01]
+val.npz: attention on the registers: self layers 0.121 0.135 0.155 0.157 (an average token's share: 0.170), cross 0.192
+  normal    top1: normal 0.6434 (n 5000), gate4 0.6284 (n 5000)
+  knock-out top1: normal 0.5884 (n 5000), gate4 0.5898 (n 5000)
+  mean      top1: normal 0.6152 (n 5000), gate4 0.5996 (n 5000)
+v51_d128_reg4 normal none: APP 0.645 (APPfull 0.645), died 0/256, pieces 500 avg, TSD 6046, TST 81, quads 2987, max height 20, illegal 0, 17.9 ms/move (p90 20.7) + search 18.4 ms, 153s
+v51_d128_reg4 normal d2: APP 0.786 (APPfull 0.786), died 0/64, pieces 500 avg, TSD 1775, TST 22, quads 822, max height 18, illegal 0, 72.3 ms/move (p90 81.8) + search 72.8 ms, 150s
+v51_d128_reg4 normal g20: APP 0.734 (APPfull 0.269), died 58/64, pieces 183 avg, TSD 432, TST 2, quads 783, max height 21, illegal 0, 16.0 ms/move (p90 18.8) + search 16.5 ms, 18s
+== APP / VS: step 3, v51_d128 vs + 4 registers (from scratch)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_normal_none                 4/256      497   0.651    0.647   0.651    0.647         -
+v51_d128_normal_d2                   0/64      500   0.770    0.770   0.770    0.770         -
+v51_d128_normal_g20                 62/64      199   0.717    0.286   0.989    0.394 3468/4481
+v51_d128_reg4_normal_none            0/256      500   0.645    0.645   0.645    0.645         -
+v51_d128_reg4_normal_d2              0/64      500   0.786    0.786   0.786    0.786         -
+v51_d128_reg4_normal_g20            58/64      183   0.734    0.269   0.999    0.366 3102/4072
