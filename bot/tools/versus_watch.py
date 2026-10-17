@@ -5,7 +5,7 @@ time, at least the match's budget_ms: 2 PPS replays play at 500 ms per piece), w
     external/tetrisbattle/.venv/Scripts/python bot/tools/versus_watch.py bot/results/versus/replays [--speed 0.5]
 
 Keys: space pause | left / right one turn back / forward (shift: 10) | up / down speed x2 / /2 |
-1 / 2 / 3 / 4 speed x1 / x0.5 / x0.25 / x0.125 | n / p next / previous match | r restart | esc quit
+1 / 2 / 3 / 4 speed x1 / x0.5 / x0.25 / x0.125 | 5 - 9 slow motion x0.05 / x0.02 / x0.01 / x0.005 / x0.002 | n / p next / previous match | r restart | esc quit
 """
 import argparse
 import glob
@@ -22,7 +22,9 @@ CELL = 24
 COLORS = {"I": (0, 200, 220), "O": (230, 210, 0), "T": (160, 60, 200), "S": (60, 190, 60), "Z": (220, 50, 50),
           "J": (40, 80, 220), "L": (240, 140, 20), "G": (120, 120, 120), "?": (90, 90, 110)}
 BG, GRID, TEXT, DIM, WARN = (18, 18, 26), (40, 40, 55), (230, 230, 235), (140, 140, 155), (230, 60, 60)
-SPEEDS = {pygame.K_1: 1.0, pygame.K_2: 0.5, pygame.K_3: 0.25, pygame.K_4: 0.125}
+SPEEDS = {pygame.K_1: 1.0, pygame.K_2: 0.5, pygame.K_3: 0.25, pygame.K_4: 0.125,
+          # slow motion for realtime replays (a whole match can last 0.2-1 s of game time)
+          pygame.K_5: 0.05, pygame.K_6: 0.02, pygame.K_7: 0.01, pygame.K_8: 0.005, pygame.K_9: 0.002}
 
 
 def name_of(spec):
@@ -233,14 +235,16 @@ def main():
         draw_side(screen, font, small, pb.sides[1], pb.names[1], 500, 70, win == "b")
         if pb.rt:
             pa, pbb = (s.pieces / pb.clock if pb.clock > 0 else 0.0 for s in pb.sides)
-            status = "%s realtime  seed %d  match %d/%d  event %d/%d  t=%.2fs (%.1f / %.1f PPS)  x%g%s" % (
-                rec["mode"], rec["seed"], gi + 1, len(files), pb.k, len(pb.frames), pb.clock, pa, pbb, speed, "  PAUSED" if paused else "")
+            lead = pb.sides[0].pieces - pb.sides[1].pieces
+            who = "even" if lead == 0 else "%s +%d pieces" % ("left" if lead > 0 else "right", abs(lead))
+            status = "%s realtime  seed %d  match %d/%d  t=%.3fs  %.0f / %.0f PPS  %s  x%g%s" % (
+                rec["mode"], rec["seed"], gi + 1, len(files), pb.clock, pa, pbb, who, speed, "  PAUSED" if paused else "")
         else:
             pps = pb.k / pb.clock if pb.clock > 0 else 0.0
             status = "%s  seed %d  match %d/%d  turn %d/%d  t=%.1fs (%.1f PPS each)  x%g%s" % (
                 rec["mode"], rec["seed"], gi + 1, len(files), pb.k, len(pb.frames), pb.clock, pps, speed, "  PAUSED" if paused else "")
         screen.blit(small.render(status, True, DIM), (20, 12))
-        screen.blit(small.render("space pause  <-/-> step (shift 10)  up/down x2 /2  1-4 = x1 x0.5 x0.25 x0.125  n/p match  r restart  esc",
+        screen.blit(small.render("space pause  <-/-> step (shift 10)  up/down x2 /2  1-4 x1..x0.125  5-9 slow x0.05..x0.002  n/p match  r restart  esc",
                                  True, DIM), (20, 735))
         pygame.display.flip()
 

@@ -371,6 +371,8 @@ Cost is ~linear in beam and in depth; at a fixed budget depth beats width (5x8 a
 Caveat: in the solo harness CC2 keeps thinking while our game process works (measured 15.1 ms per move at `--think-ms 5`), so its solo numbers are flattering; the realtime versus harness gives it no free thinking.
 
 **Realtime at equal ~5 ms** (64 matches): CEM-survival d4b16 vs CC2 5 ms **39-25** (188 vs 182 PPS, APP 0.704 vs 0.737); d5b12 vs CC2 5 ms **45-19** (197 vs 183 PPS, APP 0.765 vs 0.763, VS 1.097 vs 1.099). At equal time CEM is ahead; it lost the sweep above only because d6 b64 costs ~35 ms.
+Speed or quality? With `--min-ms 6` (both clamped to at least 6 ms per piece; `bot/tools/versus_5ms_matched.sh`), d5b12 still wins **45-19** although slightly slower (157 vs 163 PPS: its occasional >6 ms searches cost pieces), so its edge is move quality (survival). d4b16 drops to 35-29 (within noise of even), so its natural-speed 39-25 was mostly speed.
+Replays: `data/bot/versus/realtime/plain_d{4b16,5b12}_vs_cc2_5_{min6,rec}_s*.json` (6 each). `versus_watch.py` keys 5-9 = slow motion x0.05 / x0.02 / x0.01 / x0.005 / x0.002, and the status line shows the piece lead. Watch `plain_d5b12_vs_cc2_5_min6_s50003` (1.46 s, CEM wins 16 pieces behind).
 
 Findings:
 - **Uncapped, the faster bot wins** almost regardless of quality: matches are decided in well under a second of game time. Blitz turns CEM-survival's 54-10 into 64-0 against the same CC2.

@@ -1,0 +1,17 @@
+== d5b12 vs cc2:5, both at least 6 ms per piece 11:42
+cem:bot/results/survive/survive.txt:5:12 vs cc2:5 (coldclear, realtime, 64 matches): a wins 45, b wins 19, draws 0 (a score 0.703), mean 0.71 s game time
+  a: APP 0.801, VS 1.211, sent 68.7/match, 5.2 ms/move, illegal 0, 157.0 PPS
+  b: APP 0.787, VS 1.125, sent 73.9/match, 5.2 ms/move, illegal 11, 163.2 PPS
+== d5b12 vs cc2:5, natural speed, 6 recorded matches 11:42
+cem:bot/results/survive/survive.txt:5:12 vs cc2:5 (coldclear, realtime, 6 matches): a wins 6, b wins 0, draws 0 (a score 1.000), mean 0.21 s game time
+  a: APP 0.740, VS 1.070, sent 30.3/match, 4.4 ms/move, illegal 0, 228.7 PPS
+  b: APP 0.648, VS 0.918, sent 20.8/match, 5.1 ms/move, illegal 0, 187.0 PPS
+== d4b16 vs cc2:5, both at least 6 ms per piece 11:43
+cem:bot/results/survive/survive.txt:4:16 vs cc2:5 (coldclear, realtime, 64 matches): a wins 35, b wins 29, draws 0 (a score 0.547), mean 0.78 s game time
+  a: APP 0.756, VS 1.146, sent 69.0/match, 5.2 ms/move, illegal 0, 155.9 PPS
+  b: APP 0.769, VS 1.093, sent 79.7/match, 5.2 ms/move, illegal 3, 163.7 PPS
+== d4b16 vs cc2:5, natural speed, 6 recorded matches 11:43
+cem:bot/results/survive/survive.txt:4:16 vs cc2:5 (coldclear, realtime, 6 matches): a wins 3, b wins 3, draws 0 (a score 0.500), mean 0.28 s game time
+  a: APP 0.677, VS 0.915, sent 28.8/match, 5.0 ms/move, illegal 0, 198.8 PPS
+  b: APP 0.752, VS 0.983, sent 31.3/match, 5.2 ms/move, illegal 1, 181.4 PPS
+matched-speed test done
