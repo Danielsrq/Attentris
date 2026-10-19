@@ -474,13 +474,20 @@ Reading:
   - **Kicks:** the bot (and Cold Clear 2, `external/cold-clear-2/src/movegen.rs`) uses guideline SRS for 90° turns plus an SRS+ table for 180° (`core/kick_tables.gd`, `bot/src/rules.rs kicks()`). TETR.IO's SRS+ differs mainly in the I piece's 90° kicks. That's minor for tuning, since the bot's game and move generator agree; swap in an authoritative TETR.IO table before playing on TETR.IO itself. "SRS+" isn't one fixed table: the perfect-tetris solver lists separate `srsPlus` / `srsTetrio` sets.
 - **1b. If 1a works: all-spin data.** ~500k-1M positions from CEM-allspins plus ~500k from CEM-allspins-survival (`bot dataset` / `bot label --all-roots 1 --beam 128` with `--mode allspin`; smoke-test that spin flags and attack come through first). The split depends on 1a.
   - **Missing input:** the wound rule depends on the *previous* clear's type, which AtTenTris can't see. Add "last clear type" (and maybe "wound pending") as an input before training on all-spin data.
-- **1c. Model:** either an all-spin model from scratch, or a 4th style tag (`allspin`) on dagger5b-ft: can one model switch between normal and all-spin play? Undecided. The rules differ (the candidates' attack / spin inputs change with the mode), so the style tag alone may not be the whole story.
+- **1c. Model:** either an all-spin model from scratch, or a 4th style tag (`allspin`) on dagger5b-ft: can one model switch between normal and all-spin play? Undecided.
+  - **Per move, the two rule sets don't clash.** The candidates' spin / lines / attack inputs are computed under the active rules: an S-spin double arrives as mini, 0 attack under normal rules and as full, 4 attack under all-spin.
+  - **For planning they do.** The value of building an S-spin slot, or of avoiding a repeated clear type, depends on the rules, but the board tokens are identical in both modes, and the style tag only reaches the candidates (never the board side). A mixed model needs a **rules input the board side sees**: a rules token, or a flag on every board token. It also needs the "last clear type" input.
 
 **2. Ablations not done yet** (done: setup tokens, non-T slots, T structures + fit_t, all trained at d64; FLAT-2D at inference only; capacity, cross passes, ToMe, registers, plan heads, value targets, data size):
 - FLAT-2D **trained off** (plain 2D position embeddings only), through the same lineage: the inference ablation only shows a model trained with it depends on it.
 - **All rule overlays off together** (sky / wells / play rows + pieces only): the cleanest test of "rule structure tokens help".
-- A plain **per-cell baseline** (200 cell tokens, no rule tokens, similar size), planned in DESIGN.md but never run.
-- The **hand-made candidate inputs** (attack, lines, spin type): does the model need to be told, or does it read them off the board?
+- A plain **per-cell baseline** (200 cell tokens, no rule tokens, similar size), planned in DESIGN.md but never run. It's memory-heavy: attention and the FLAT-2D pair features grow with tokens², ~40× at 200 vs ~31 tokens. **20 row tokens** (DESIGN.md's other baseline) is the cheap structure-free alternative.
+- The candidates' **attack input only** (keep lines and spin type): does the model learn the attack table (T-spin double ≫ double) from the Qs targets? The spin flag stays: whether a move is a spin depends on how the piece got there (the last action a rotation, plus the corner rule), not on its final cells. The same 4 cells can be a plain double or a T-spin double, so removing it would hide information the model can't recover.
+- **Head masking with matched behaviour tests** (no training): the cross heads' roles are placement (head 2, −17.2 pts top-1 when off), queue (head 3), surroundings / holes (head 4) and general (head 1). Top-1 is the wrong measure for the specific roles, so pair each head with its behaviour:
+  - head 3 off → does the model stop reacting to the previews? Counterfactual test: change the previews and count how often the move changes.
+  - head 4 off → rougher stacks in play (bumpiness, holes, well depth).
+  - head 2 off → expected to break everything.
+  - Use mean-ablation (a head's average output) as well as zeroing it.
 - **Preview length** (5 vs 1 vs 0 previews); **head count** (pruning curve first); the DAgger 4-only ablation.
 
 ### Next (Windows side and later)
