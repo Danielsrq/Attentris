@@ -462,6 +462,27 @@ Reading:
 - **No foresight of death:** dies-within-10/30 is decodable (0.95 / 0.90) but no better than the board features (0.95 / 0.89). The registers' "danger" is "the board looks bad", not a prediction beyond it. (The model never sees incoming garbage, which limits what it could foresee.)
 - For steering, "hot" is a board-state direction. A T-spin / attack (intent) direction from register 3 is the more interesting one to test.
 
+### Next plan (agreed 2026-10-20; not started)
+
+**1. All-spin**
+- **1a. CEM-allspins-survival: can an all-spin bot also survive garbage?**
+  - **Rules:** `--mode allspin`. Every spin counts as full and non-T spins score like T-spins (2 / 4 / 6); two consecutive clears of the same type insert a wound row.
+  - **Start from** `bot/weights/allspin_slots.txt`. It and `allspin.txt` were tuned on clean boards and don't survive cheese (`bot/README.md`).
+  - **Recipe:** as CEM-survival (`bot/results/survive/run.sh`): `bot tune --algo cem --mode allspin --garbage 10,3-4,cheese0.5,0.2 --fitness vs --freeze default --gens 30 --pop 32 --elite 8 --games 12 --pieces 500 --beam 24 --depth 4`. That's ~11,500 games, ~75 min on 16 Windows threads.
+  - **Where to run:** the Ubuntu box (3970X, `--threads 32`-`64`) is fine. `run.sh` is Windows-only (`bot.exe`, `cygpath`): write a portable copy that sources `attentris/plat.sh`.
+  - **Evaluate:** old vs new allspin weights at d6 b64, 64 games each: no garbage, 80/20, 50/50. Deaths, APP, VS, and the **non-T spin rate** (spin% in the play summary). The question is whether it still all-spins or just survives by playing safe.
+  - **Kicks:** the bot (and Cold Clear 2, `external/cold-clear-2/src/movegen.rs`) uses guideline SRS for 90° turns plus an SRS+ table for 180° (`core/kick_tables.gd`, `bot/src/rules.rs kicks()`). TETR.IO's SRS+ differs mainly in the I piece's 90° kicks. That's minor for tuning, since the bot's game and move generator agree; swap in an authoritative TETR.IO table before playing on TETR.IO itself. "SRS+" isn't one fixed table: the perfect-tetris solver lists separate `srsPlus` / `srsTetrio` sets.
+- **1b. If 1a works: all-spin data.** ~500k-1M positions from CEM-allspins plus ~500k from CEM-allspins-survival (`bot dataset` / `bot label --all-roots 1 --beam 128` with `--mode allspin`; smoke-test that spin flags and attack come through first). The split depends on 1a.
+  - **Missing input:** the wound rule depends on the *previous* clear's type, which AtTenTris can't see. Add "last clear type" (and maybe "wound pending") as an input before training on all-spin data.
+- **1c. Model:** either an all-spin model from scratch, or a 4th style tag (`allspin`) on dagger5b-ft: can one model switch between normal and all-spin play? Undecided. The rules differ (the candidates' attack / spin inputs change with the mode), so the style tag alone may not be the whole story.
+
+**2. Ablations not done yet** (done: setup tokens, non-T slots, T structures + fit_t, all trained at d64; FLAT-2D at inference only; capacity, cross passes, ToMe, registers, plan heads, value targets, data size):
+- FLAT-2D **trained off** (plain 2D position embeddings only), through the same lineage: the inference ablation only shows a model trained with it depends on it.
+- **All rule overlays off together** (sky / wells / play rows + pieces only): the cleanest test of "rule structure tokens help".
+- A plain **per-cell baseline** (200 cell tokens, no rule tokens, similar size), planned in DESIGN.md but never run.
+- The **hand-made candidate inputs** (attack, lines, spin type): does the model need to be told, or does it read them off the board?
+- **Preview length** (5 vs 1 vs 0 previews); **head count** (pruning curve first); the DAgger 4-only ablation.
+
 ### Next (Windows side and later)
 
 1. **Versus blitz:** CEM-survival `cem:bot/results/survive/survive.txt:6:64:commit6` (and commit 2 / 3) vs CC2, (a) uncapped and (b) at a fixed PPS. Uncapped, ~6x the PPS at -12% APP should cancel most incoming garbage. Fixed PPS is the fair-time check.
