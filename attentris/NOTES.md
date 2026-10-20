@@ -495,6 +495,22 @@ Reading:
 - **No foresight of death:** dies-within-10/30 is decodable (0.95 / 0.90) but no better than the board features (0.95 / 0.89). The registers' "danger" is "the board looks bad", not a prediction beyond it. (The model never sees incoming garbage, which limits what it could foresee.)
 - For steering, "hot" is a board-state direction. A T-spin / attack (intent) direction from register 3 is the more interesting one to test.
 
+### Token SHAP (2026-10-20)
+
+Which tokens drove a move (Lundberg & Lee 2017, SHAP; Shapley values over the tokens of one position). `token_shap.py`:
+- **Players:** the tokens of one position (board-side structure tokens and the 7 piece tokens). A coalition S keeps those tokens and blanks the rest as padding (as `--drop-kinds`); the cells and the candidates stay, so the empty coalition is "board cells + candidates only" (`model.py` `allow_empty`, analysis only: attention with no keys outputs 0).
+- **Value:** log p(move | tokens in S), for the model's move, or with `--top N` for each of its N best moves plus the teacher's move (the same coalitions serve all moves: Shapley values are linear in the value).
+- **Estimate:** permutation sampling in antithetic pairs; per move sum(phi) = log p(all tokens) - log p(no tokens), exactly. Noise at 64 permutations: two seeds correlate 0.84-0.96 per position; use 128 for single-position pictures. ~5-15 s per position on CPU.
+- **Reading:** phi > 0 = the token makes this move more likely (a reason for it); phi < 0 = less likely (a reason against it, usually for a rival: find the moves where the same token is positive). Values are relative to "no tokens", and interactions are split evenly between the tokens involved.
+- **Viewer:** `shap_page.py` adds the values to an attention page (`token_shap.py --keep PAGE --top 5`); `attn_template.html` has a "SHAP (toward this move)" view (board heat red / blue, piece panel, token list by |phi|). `attn_shap_v51_d128_dagger5b.html` = the 66 positions of the dagger5b-ft attention page, 128 permutations (published as an artifact, private).
+- Example (position 6 of that page): `tsd` is −0.79 / −0.75 for both T-spin singles the model ranks first and second and +1.8 to +2.6 for the J-from-hold placements: the TSD token argues for keeping the slot rather than taking a single now.
+
+**dagger5b-ft on 300 validation positions** (100 each from val, val_danger, val_dagger5all; 179 hot; `data/shap/v51_d128_dagger5b_ft.jsonl`, `token_shap.py --summary`). Share = the kind's part of a position's total |phi| (summed over its tokens, so many-token kinds score higher):
+- play rows 0.29, the 5 previews 0.21, wells 0.10 (hot 0.12, calm 0.06), current 0.06, hold 0.05, sky 0.05, each slot kind (`fit_s/z/l/j`) and `pit2` ~0.05.
+- The queue (current + hold + previews) carries about a third; previews push toward the chosen move 69% of the time (92% for quads).
+- For clears the play rows mostly push against the chosen move (toward it 18% for quads, 31% for spin clears); for non-clearing moves they and the S/Z slots push toward it (+0.22, +0.20): row tokens favour building, clears are chosen despite them, driven by the queue and the sky.
+- `tsd` is present in 68% of spin-clear positions with mean phi ~0: a T structure supports some moves and argues against others.
+
 ### Next plan (agreed 2026-10-20; not started)
 
 **1. All-spin**

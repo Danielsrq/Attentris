@@ -37,6 +37,7 @@ svg.board { width: 100%; max-width: 260px; height: auto; display: block; }
 .row { display: grid; grid-template-columns: 112px minmax(0, 1fr) 46px 50px 54px; gap: 8px; align-items: center; padding: 2px 6px; border-radius: 5px; }
 .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
 .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin: 0 2px 0 8px; }
+.legend[hidden], .note[hidden] { display: none; }
 .hlabel { color: var(--muted); font-size: 12px; }
 .row.head { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; }
 .row .num { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; }
@@ -92,11 +93,14 @@ table.agree td:first-child { text-align: left; font-weight: 600; }
       <table class="probs" id="probs"></table>
       <div class="toggle"><button id="dens" class="on">per-cell density</button><button id="mass">whole-token share</button></div>
       <div class="toggle" id="heads"><span class="hlabel">heads:</span><button data-h="all" class="on">all (mean)</button><button data-h="0">1</button><button data-h="1">2</button><button data-h="2">3</button><button data-h="3">4</button></div>
-      <div class="toggle" id="src"><button data-s="attn" class="on">attention</button><button data-s="gattn">geometry only (FLAT-2D)</button><button data-s="cattn">content only (Q·K)</button><button data-s="geo">geometry bias, signed</button></div>
+      <div class="toggle" id="src"><button data-s="attn" class="on">attention</button><button data-s="gattn">geometry only (FLAT-2D)</button><button data-s="cattn">content only (Q·K)</button><button data-s="geo">geometry bias, signed</button><button data-s="shap" id="shapbtn" hidden>SHAP (toward this move)</button></div>
       <div class="legend" id="signed" hidden>geometry bias relative to the average board token (softmax ignores a constant shift):<span class="sw" style="background:rgb(var(--cool))"></span>below average
         <span class="sw" style="background:var(--empty);border:1px solid var(--line)"></span>0
         <span class="sw" style="background:rgb(var(--heat))"></span>above average</div>
-      <h2>Attention over tokens (mean of 4 heads)</h2>
+      <div class="legend" id="shaplegend" hidden>token Shapley value for log p(this move):<span class="sw" style="background:rgb(var(--cool))"></span>pushes away
+        <span class="sw" style="background:var(--empty);border:1px solid var(--line)"></span>0
+        <span class="sw" style="background:rgb(var(--heat))"></span>pushes toward <span id="shapsum"></span></div>
+      <h2 id="rowstitle">Attention over tokens (mean of 4 heads)</h2>
       <div id="rows"></div>
     </div>
   </div>
@@ -105,6 +109,11 @@ table.agree td:first-child { text-align: left; font-weight: 600; }
     <b>whole-token share</b> paints every cell of a token with its full share. Overlapping overlays add up.
     Dashed outline: the move the bot played. Solid blue: the candidate selected above. Hover a token row to outline it.
     Attention shows where information was routed from, not proof of what decided the move.</p>
+  <p class="note" id="shapnote" hidden><b>SHAP.</b> For the selected move, each token's Shapley value: how much having that token present changes the
+    model's log-probability of this move, averaged over every order in which the tokens could be added (sampled, 128 orders).
+    A missing token is blanked as padding; the board cells and the candidates always stay, so the values sum to
+    log p(move | all tokens) − log p(move | no tokens). Red tokens push the model toward this move, blue ones away from it (often
+    toward a rival). Unlike attention, this is about what changed the decision, not where information came from. Heads do not apply.</p>
   <p class="note"><b>Why it looked there.</b> Each attention score is the sum of two terms (shown per token, mean of the 4 heads, in logit units):
     <b>geom.</b> is the FLAT-2D bias, a learned function of geometry only (how the move's 4 cells and box sit relative to the token's
     mask and box: overlap and row/column offsets); <b>content</b> is Q·K/√d, what the token's vector says to the move's. The heat-map switch
@@ -153,7 +162,10 @@ function render() {
   $("sub").textContent = `Bot played ${candLabel(p.chosen)} — the model ranks it #${p.rank} of ${p.n_cand} (p = ${(p.chosen.p * 100).toFixed(0)}%).`;
   $("jump").value = idx;
   const cand = sel === "chosen" ? p.chosen : p.top[+sel];
-  $("cap").textContent = sel === "chosen" ? "Attention of the bot's move" : `Attention of model pick #${+sel + 1}`;
+  const isShap = src === "shap";
+  const SH = isShap ? (cand.shap || null) : null;
+  const what = isShap ? "SHAP" : "Attention";
+  $("cap").textContent = (sel === "chosen" ? `${what} of the bot's move` : `${what} of model pick #${+sel + 1}`) + (isShap && !SH ? " (not computed for this move)" : "");
   // the model's probabilities: top 8, then everything else
   const selI = cand.i;
   let pt = p.probs.map((c, k) => {
@@ -173,7 +185,7 @@ function render() {
   // the piece queue, with each piece token's share of the selected move's attention
   const PIECE_CELLS = { I: [[0,0],[1,0],[2,0],[3,0]], O: [[1,0],[2,0],[1,1],[2,1]], T: [[0,0],[1,0],[2,0],[1,1]],
     S: [[0,0],[1,0],[1,1],[2,1]], Z: [[1,0],[2,0],[0,1],[1,1]], J: [[0,0],[1,0],[2,0],[0,1]], L: [[0,0],[1,0],[2,0],[2,1]] };
-  const qtok = (kind) => { const j = p.tokens.findIndex(t => t.kind === kind); return j < 0 ? null : [p.tokens[j], hv(cand, "attn")[j]]; };
+  const qtok = (kind) => { const j = p.tokens.findIndex(t => t.kind === kind); return j < 0 ? null : [p.tokens[j], SH ? SH[j] : hv(cand, "attn")[j]]; };
   const mini = (piece) => {
     if (!piece) return `<svg viewBox="0 0 46 24"><text x="23" y="16" text-anchor="middle" font-size="11" fill="var(--muted)">empty</text></svg>`;
     return `<svg viewBox="0 0 46 24">` + PIECE_CELLS[piece].map(([x, y]) =>
@@ -182,9 +194,10 @@ function render() {
   const qcell = (kind, name) => {
     const q = qtok(kind);
     if (!q) return "";
-    return `<div class="qitem">${mini(q[0].piece)}<b>${name}${q[0].piece ? " " + q[0].piece : ""}</b><span>${(100 * q[1]).toFixed(1)}%</span></div>`;
+    const val = SH ? `<span style="color:rgb(var(${q[1] >= 0 ? "--heat" : "--cool"}))">${q[1] >= 0 ? "+" : "−"}${Math.abs(q[1]).toFixed(2)}</span>` : `<span>${(100 * q[1]).toFixed(1)}%</span>`;
+    return `<div class="qitem">${mini(q[0].piece)}<b>${name}${q[0].piece ? " " + q[0].piece : ""}</b>${val}</div>`;
   };
-  $("queue").innerHTML = `<div class="qtitle">Pieces (attention share)</div>` + qcell("current", "current") + qcell("hold", "hold") +
+  $("queue").innerHTML = `<div class="qtitle">Pieces (${SH ? "SHAP" : "attention share"})</div>` + qcell("current", "current") + qcell("hold", "hold") +
     [1, 2, 3, 4, 5].map(k => qcell("preview" + k, "next " + k)).join("");
 
   // heat per cell
@@ -199,24 +212,30 @@ function render() {
   const geoMean = G ? G.reduce((a, v, j) => a + (onBoard[j] ? v : 0), 0) / nb : 0;
   const geoRel = G ? G.map((v, j) => onBoard[j] ? v - geoMean : null) : null;
   $("signed").hidden = !signed;
+  $("shaplegend").hidden = !SH;
+  $("shapnote").hidden = !isShap;
+  if (SH) $("shapsum").textContent = ` · sum ${(cand.shap_all - cand.shap_none) >= 0 ? "+" : "−"}${Math.abs(cand.shap_all - cand.shap_none).toFixed(2)} = log p ${cand.shap_all.toFixed(2)} (all tokens) − ${cand.shap_none.toFixed(2)} (none)`;
   const hsrc = signed ? geoRel : (cand[src] ? hv(cand, src) : AT);
   const board = p.tokens.map((t, j) => [t, hsrc[j]]).filter(([t]) => t.cells.length);
   const cover = new Float64Array(200);
-  if (signed) {            // the raw bias of each token on its cells (mean where tokens overlap)
+  if (SH) {                // Shapley values add up: overlapping tokens sum (density: each token's value spread over its cells)
+    p.tokens.forEach((t, j) => { for (const i of t.cells) { heat[i] += mode === "dens" ? SH[j] / t.cells.length : SH[j]; cover[i] = 1; } });
+  } else if (signed) {     // the raw bias of each token on its cells (mean where tokens overlap)
     for (const [t, v] of board) for (const i of t.cells) { heat[i] += v; cover[i] += 1; }
     for (let i = 0; i < 200; i++) if (cover[i]) heat[i] /= cover[i];
   } else {
     for (const [t, a] of board) for (const i of t.cells) heat[i] += mode === "dens" ? a / t.cells.length : a;
   }
-  const mx = signed ? (Math.max(...heat.map(Math.abs)) || 1) : (Math.max(...heat) || 1);
+  const sgn = signed || !!SH;
+  const mx = sgn ? (Math.max(...heat.map(Math.abs)) || 1) : (Math.max(...heat) || 1);
 
   let s = "";
   for (const r of [0, 4, 9, 14, 19]) s += `<text x="-6" y="${Y(r) + 14}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${r + 1}</text>`;
   for (let i = 0; i < 200; i++) {
     const [r, c] = rc(i);
     s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="var(--empty)" stroke="var(--grid)" stroke-width="1"/>`;
-    if (signed && cover[i]) s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="rgb(var(${heat[i] >= 0 ? "--heat" : "--cool"}))" opacity="${(0.85 * Math.abs(heat[i]) / mx).toFixed(3)}"/>`;
-    else if (!signed && heat[i] > 0) s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="rgb(var(--heat))" opacity="${(0.08 + 0.85 * heat[i] / mx).toFixed(3)}"/>`;
+    if (sgn && cover[i]) s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="rgb(var(${heat[i] >= 0 ? "--heat" : "--cool"}))" opacity="${(0.85 * Math.abs(heat[i]) / mx).toFixed(3)}"/>`;
+    else if (!sgn && heat[i] > 0) s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="rgb(var(--heat))" opacity="${(0.08 + 0.85 * heat[i] / mx).toFixed(3)}"/>`;
     if (p.board[i]) s += `<rect x="${X(c) + 4}" y="${Y(r) + 4}" width="${CS - 8}" height="${CS - 8}" rx="2" fill="var(--filled)" opacity="0.8"/>`;
   }
   if (hover) s += `<path d="${outline(hover.cells, 1)}" stroke="var(--hover)" stroke-width="2.5" fill="none"/>`;
@@ -225,19 +244,22 @@ function render() {
   $("board").innerHTML = s;
 
   const cMean = C ? C.reduce((a, v, j) => a + (onBoard[j] ? v : 0), 0) / nb : 0;
-  const rows = p.tokens.map((t, j) => ({ t, a: AT[j], g: geoRel ? geoRel[j] : null, graw: G ? G[j] : null,
-    c: C ? (onBoard[j] ? C[j] - cMean : null) : null, craw: C ? C[j] : null })).sort((a, b) => b.a - a.a);
-  const top = rows[0].a || 1;
+  const rows = p.tokens.map((t, j) => ({ t, a: SH ? SH[j] : AT[j], g: geoRel ? geoRel[j] : null, graw: G ? G[j] : null,
+    c: C ? (onBoard[j] ? C[j] - cMean : null) : null, craw: C ? C[j] : null })).sort((a, b) => SH ? Math.abs(b.a) - Math.abs(a.a) : b.a - a.a);
+  const top = (SH ? Math.max(...rows.map(r => Math.abs(r.a))) : rows[0].a) || 1;
+  $("rowstitle").textContent = SH ? "SHAP over tokens (log p of this move)" : "Attention over tokens (mean of 4 heads)";
   const sg = (v, col, raw) => v === null ? (raw === null || raw === undefined ? "" : `<span class="num" title="piece token: no board position, shown raw">${raw >= 0 ? "+" : "−"}${Math.abs(raw).toFixed(2)}*</span>`) : `<span class="num" title="raw ${raw >= 0 ? "+" : "−"}${Math.abs(raw).toFixed(2)} (before subtracting the mean over tokens)"${col ? ` style="color:rgb(var(${v >= 0 ? "--heat" : "--cool"}))"` : ""}>${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}</span>`;
-  $("rows").innerHTML = `<div class="row head"><span class="k">token</span><span>attention</span><span class="v">share</span><span class="num" title="relative to the mean over tokens">geom. ±</span><span class="num" title="relative to the mean over tokens">content ±</span></div>` +
+  $("rows").innerHTML = `<div class="row head"><span class="k">token</span><span>${SH ? "SHAP" : "attention"}</span><span class="v">${SH ? "φ" : "share"}</span><span class="num" title="relative to the mean over tokens">geom. ±</span><span class="num" title="relative to the mean over tokens">content ±</span></div>` +
     rows.map(({ t, a, g, graw, c, craw }, k) => `<div class="row" data-k="${k}"><span class="k">${t.kind}${t.piece ? " " + t.piece : ""}${t.note ? ` <span class="note">${t.note}</span>` : ""}</span>` +
-    `<span class="bar" style="width:${(100 * a / top).toFixed(1)}%"></span><span class="v">${(100 * a).toFixed(1)}%</span>${sg(g, true, graw)}${sg(c, false, craw)}</div>`).join("");
+    (SH ? `<span class="bar" style="width:${(100 * Math.abs(a) / top).toFixed(1)}%;background:rgb(var(${a >= 0 ? "--heat" : "--cool"}))"></span><span class="v">${a >= 0 ? "+" : "−"}${Math.abs(a).toFixed(2)}</span>`
+        : `<span class="bar" style="width:${(100 * a / top).toFixed(1)}%"></span><span class="v">${(100 * a).toFixed(1)}%</span>`) + `${sg(g, true, graw)}${sg(c, false, craw)}</div>`).join("");
   $("rows").querySelectorAll(".row[data-k]").forEach(el => {
     el.onmouseenter = () => { const t = rows[+el.dataset.k].t; if (t.cells.length) { hover = t; render(); } };
     el.onmouseleave = () => { if (hover) { hover = null; render(); } };
   });
 }
 
+if (DATA.positions.some(p => p.top.some(c => c.shap) || p.chosen.shap)) $("shapbtn").hidden = false;
 const S = DATA.summary;
 $("summary").innerHTML = `<div><b>${(S.top1 * 100).toFixed(1)}%</b> <span>top-1 agreement with the bot on ${S.positions.toLocaleString()} held-out positions</span></div>` +
   `<div><b>${(S.pointing * 100).toFixed(0)}%</b> <span>of ${S.pointing_n} T-spins into a T structure: that structure is the most-attended token (random: ${(S.pointing_random * 100).toFixed(0)}%)</span></div>` +

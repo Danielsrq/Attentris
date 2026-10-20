@@ -93,6 +93,8 @@ class Attention(nn.Module):
             self.kept = (qk.detach(), (bias + torch.zeros_like(qk)).detach())
         s = s.masked_fill(key_pad[:, None, None, :], float("-inf"))
         a = s.softmax(-1)                                        # (B, H, Nq, Nk)
+        if getattr(self, "allow_empty", False):                  # analysis only (token_shap): no keys at all -> zero output
+            a = a.nan_to_num(0.0)
         out = a @ v                                              # (B, H, Nq, dh)
         hm = getattr(self, "head_mask", None)                    # analysis only: switch heads off
         if hm is not None:
