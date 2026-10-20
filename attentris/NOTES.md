@@ -5,7 +5,7 @@ CEM commit-K) is in "Multi-move (plan) models" below, with its results and the n
 
 **2026-10-20 (Ubuntu box), where to find it:**
 - v5.2 (two cross passes) at d128 through the full lineage: untied beats v5.1 dagger5b-ft (APP 0.780 vs 0.739), the best model on the standard block; "Latest results", "v5.2 at d = 128".
-- d128 ablations through the full lineage (FLAT-2D trained off, all overlay tokens off, setup tokens off) FLAT-2D and overlays lose survival under garbage (paired McNemar tests); the setup-token run and 128-game statistics were still running at this writing: "Latest results", "Ablations at d = 128", `results_ablation_d128.txt`.
+- d128 ablations through the full lineage (FLAT-2D trained off, all overlay tokens off, setup tokens off) all three lose survival under garbage over 128 paired games (pooled McNemar p = 0.0002 / 3e-15 / 0.016; overlays matter most): "Latest results", "Ablations at d = 128".
 - Token SHAP (which tokens drove a move) and a SHAP view on the attention page: "Explainability: token SHAP".
 - All-spin: rule sets documented ("Teachers and styles", "Rule sets"); CEM-allspins-survival (survives only with garbage every 15 pieces); rule variants for game design (`allspin_s1`, `allspin_cash`): "Next plan", item 1. Machine setup and data sync are in `../SETUP.md`; the model and tokenizer in depth in `DESIGN.md`.
 Results live in `results_*.txt` (one file per experiment, appended by the run scripts).
@@ -229,6 +229,30 @@ Depth 2 beam 4 with garbage (deaths, VSfull): v5.1 10 (1.109) / 45 (0.593) / 2 (
 - Top-1 is the wrong yardstick for these components (as for the heads): what they buy is in the hot, rare positions.
 - Depth-2 search closes most of the gap at 50/50 and danger style, not at normal 80/20.
 - Side effect: both train ~45% faster per epoch (131-136 s vs 237 s at dagger5b), noflat from no pair features, nooverlay from fewer tokens.
+
+**128 paired games per garbage setting** (seeds 33001+ and 53001+, `ablation_more.sh`; `nosetup` = only the `setup_*` tokens blanked, val 0.635 / 0.629 / 0.487). Deaths / 128, exact McNemar p in brackets (`ablation_stats.py`, `ablation_stats_128.txt`); APP none over 256 games:
+
+| setting | v5.1 dagger5b-ft | noflat | nooverlay | nosetup |
+|---|---|---|---|---|
+| APP none (256) | 0.739 | 0.724 | 0.729 | 0.722 |
+| APP d2 (64) | 0.832 | 0.835 | 0.855 | 0.842 |
+| normal 80/20 | 38 | 53 (0.08) | **69** (0.0001) | **65** (0.0007) |
+| normal 50/50 | 92 | **112** (0.004) | **118** (<0.0001) | 104 (0.10) |
+| danger 80/20 | 10 | 9 (1.0) | **25** (0.006) | 14 (0.50) |
+| danger 50/50 | 47 | 57 (0.19) | **70** (0.004) | 40 (0.40) |
+| normal d2 80/20 | 22 | 31 (0.21) | **45** (0.0008) | 17 (0.47) |
+| normal d2 50/50 | 77 | 83 (0.49) | **93** (0.03) | 86 (0.29) |
+| danger d2 80/20 | 5 | 5 (1.0) | 4 (1.0) | 4 (1.0) |
+| danger d2 50/50 | 18 | 25 (0.30) | 27 (0.20) | 22 (0.61) |
+| **pooled, 8 settings** (games only one side lost) | | 186 vs 120, **p = 0.0002** | 236 vs 94, **p = 3e-15** | 175 vs 132, **p = 0.016** |
+
+VSfull (128 games): normal 80/20 0.941 / 0.873 / 0.775 / 0.821; normal 50/50 0.516 / 0.389 / 0.352 / 0.479; danger 50/50 0.703 / 0.667 / 0.598 / 0.733.
+
+- **All three components help survival** (pooled, game noise only). Ranking: overlays (all of them) ≫ FLAT-2D > setup tokens.
+- **Overlays off** hurts in 6 of 8 settings individually, including danger style and depth 2: the rule tokens are the strongest single design element.
+- **FLAT-2D off** hurts mainly in normal style at depth 1 (50/50 92 → 112); search and danger style mostly absorb it.
+- **Setup tokens off** costs normal 80/20 (38 → 65) and is otherwise neutral, even slightly better at danger 50/50 (47 → 40, n.s.): setups matter to the attacking normal style, not to the survival style.
+- Each model is one training run; a second training seed would test model-to-model noise (not done, the user's choice).
 
 ## Explainability: token SHAP (2026-10-20)
 

@@ -1,0 +1,49 @@
+== ablations at d=128 (nosetup), full lineage 2026-10-20 17:37 (dagger5b mix F=0.6155)
+v51_d128_nosetup: training 17:37
+== v51_d128_nosetup
+epoch 8: train loss 2.058 | val normal top1 0.638 top3 0.865 | val gate4 top1 0.627 top3 0.849 | | 147s
+v51_d128_nosetup_dagger_ft: training 18:12
+== v51_d128_nosetup_dagger_ft
+epoch 3: train loss 2.257 | val normal top1 0.635 top3 0.866 | val gate4 top1 0.629 top3 0.852 | | 40s
+epoch 3: val2 (val_dagger2.npz, 9737) top1 0.413 top3 0.676 loss 2.784 | argmax Qs top1 0.365 | MAE Qs 7.02
+v51_d128_nosetup_dagger3_ft: training 18:14
+== v51_d128_nosetup_dagger3_ft
+epoch 3: train loss 2.256 | val normal top1 0.632 top3 0.863 | val gate4 top1 0.629 top3 0.848 | | 39s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.469 top3 0.731 loss 2.634 | argmax Qs top1 0.435 | MAE Qs 7.81
+v51_d128_nosetup_dagger5b_ft: training 18:16
+== v51_d128_nosetup_dagger5b_ft
+epoch 3: train loss 2.243 | val normal top1 0.635 top3 0.864 | val gate4 top1 0.629 top3 0.854 | | 145s
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.487 top3 0.747 loss 2.523 | argmax Qs top1 0.459 | MAE Qs 7.47
+v51_d128_nosetup_dagger5b_ft normal none: APP 0.722 (APPfull 0.722), died 0/256, pieces 500 avg, TSD 6517, TST 44, quads 3627, max height 17, illegal 0, 57.1 ms/move (p90 93.0) + search 58.8 ms, 137s
+v51_d128_nosetup_dagger5b_ft normal d2: APP 0.842 (APPfull 0.842), died 0/64, pieces 500 avg, TSD 1889, TST 8, quads 918, max height 15, illegal 0, 454.1 ms/move (p90 680.6) + search 457.4 ms, 250s
+v51_d128_nosetup_dagger5b_ft normal g20: APP 0.772 (APPfull 0.596), died 34/64, pieces 386 avg, TSD 922, TST 4, quads 1834, max height 22, illegal 0, 106.3 ms/move (p90 183.3) + search 109.2 ms, 70s
+v51_d128_nosetup_dagger5b_ft normal g50: APP 0.539 (APPfull 0.308), died 53/64, pieces 285 avg, TSD 516, TST 0, quads 814, max height 22, illegal 0, 63.0 ms/move (p90 106.8) + search 64.8 ms, 36s
+v51_d128_nosetup_dagger5b_ft normal d2g20: APP 0.841 (APPfull 0.794), died 10/64, pieces 472 avg, TSD 1264, TST 5, quads 2372, max height 21, illegal 0, 288.4 ms/move (p90 514.3) + search 290.7 ms, 160s
+v51_d128_nosetup_dagger5b_ft normal d2g50: APP 0.603 (APPfull 0.371), died 44/64, pieces 308 avg, TSD 655, TST 5, quads 973, max height 22, illegal 0, 414.3 ms/move (p90 594.9) + search 417.3 ms, 184s
+v51_d128_nosetup_dagger5b_ft danger g20: APP 0.732 (APPfull 0.703), died 4/64, pieces 480 avg, TSD 1173, TST 4, quads 2206, max height 21, illegal 0, 109.7 ms/move (p90 162.9) + search 112.7 ms, 77s
+v51_d128_nosetup_dagger5b_ft danger g50: APP 0.529 (APPfull 0.475), died 16/64, pieces 449 avg, TSD 865, TST 4, quads 1268, max height 22, illegal 0, 93.6 ms/move (p90 139.8) + search 96.2 ms, 69s
+v51_d128_nosetup_dagger5b_ft danger d2g20: APP 0.798 (APPfull 0.791), died 1/64, pieces 496 avg, TSD 1410, TST 5, quads 2384, max height 19, illegal 0, 158.6 ms/move (p90 194.2) + search 159.7 ms, 89s
+v51_d128_nosetup_dagger5b_ft danger d2g50: APP 0.575 (APPfull 0.515), died 13/64, pieces 448 avg, TSD 995, TST 6, quads 1332, max height 22, illegal 0, 143.6 ms/move (p90 182.4) + search 144.6 ms, 77s
+== APP / VS: v5.1 d128 dagger5b-ft vs the ablations (nosetup), dagger5b-ft each (same lineage, same seeds)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_dagger5b_ft_normal_none     0/256      500   0.739    0.739   0.739    0.739         -
+v51_d128_dagger5b_ft_normal_d2       0/64      500   0.832    0.832   0.832    0.832         -
+v51_d128_dagger5b_ft_normal_g20     18/64      414   0.785    0.650   1.112    0.921 8653/9162
+v51_d128_dagger5b_ft_normal_g50     44/64      305   0.555    0.338   0.859    0.523 5917/6780
+v51_d128_dagger5b_ft_danger_g20      4/64      490   0.733    0.718   1.071    1.049 10608/10806
+v51_d128_dagger5b_ft_danger_g50     25/64      404   0.520    0.421   0.844    0.683 8378/8978
+v51_d128_dagger5b_ft_normal_d2g20   10/64      470   0.846    0.795   1.180    1.109 10044/10398
+v51_d128_dagger5b_ft_normal_d2g50   45/64      323   0.610    0.394   0.917    0.593 6360/7232
+v51_d128_dagger5b_ft_danger_d2g20    2/64      493   0.793    0.781   1.132    1.116 10701/10882
+v51_d128_dagger5b_ft_danger_d2g50   11/64      461   0.587    0.542   0.919    0.848 9788/10199
+v51_d128_nosetup_dagger5b_ft_normal_none   0/256      500   0.722    0.722   0.722    0.722         -
+v51_d128_nosetup_dagger5b_ft_normal_d2   0/64      500   0.842    0.842   0.842    0.842         -
+v51_d128_nosetup_dagger5b_ft_normal_g20  34/64      386   0.772    0.596   1.091    0.843 7901/8577
+v51_d128_nosetup_dagger5b_ft_normal_g50  53/64      285   0.539    0.308   0.837    0.478 5440/6398
+v51_d128_nosetup_dagger5b_ft_danger_g20   4/64      480   0.732    0.703   1.070    1.028 10404/10609
+v51_d128_nosetup_dagger5b_ft_danger_g50  16/64      449   0.529    0.475   0.858    0.771 9462/9944
+v51_d128_nosetup_dagger5b_ft_normal_d2g20  10/64      472   0.841    0.794   1.174    1.108 10054/10427
+v51_d128_nosetup_dagger5b_ft_normal_d2g50  44/64      308   0.603    0.371   0.906    0.558 5975/6856
+v51_d128_nosetup_dagger5b_ft_danger_d2g20   1/64      496   0.798    0.791   1.138    1.128 10798/10934
+v51_d128_nosetup_dagger5b_ft_danger_d2g50  13/64      448   0.575    0.515   0.905    0.812 9486/9920
+ablation d128 done
