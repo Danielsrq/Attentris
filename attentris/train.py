@@ -246,6 +246,7 @@ def main():
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--save-every", type=int, default=300, help="mid-epoch checkpoint every N batches (0 = epoch ends only)")
     ap.add_argument("--seed", type=int, default=0, help="weight init and batch order")
+    ap.add_argument("--no-flat", action="store_true", help="ablation: no FLAT-2D attention bias (box / cell position embeddings only)")
     ap.add_argument("--drop-kinds", default="", help="ablation: token kinds to blank, by prefix, comma-separated (e.g. setup_)")
     ap.add_argument("--n-teachers", type=int, default=2, help="style rows (3: + danger); a smaller --init checkpoint grows, new rows copied from normal")
     ap.add_argument("--init", default="", help="warm start: load these model weights, fresh optimizer and schedule")
@@ -346,7 +347,7 @@ def main():
                                n_teachers=args.n_teachers, variant=args.plan_variant, plan_layers=args.plan_layers).to(args.device)
     else:
         net = M.AtTenTris(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops,
-                          n_teachers=args.n_teachers, registers=args.registers).to(args.device)
+                          n_teachers=args.n_teachers, registers=args.registers, flat=not args.no_flat).to(args.device)
     if args.registers and not args.init:
         # from scratch: the register keys' bias starts at --reg-bias-init (0 = an ordinary token)
         with torch.no_grad():

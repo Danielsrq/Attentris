@@ -203,6 +203,21 @@ Depth 2 beam 4 with garbage (deaths, VSfull):
 - Caveats: untied has 19% more parameters, so part of the gain may be capacity (d128 already showed a val gap). Loop gets about half the gain with no new parameters, at the cost of a second cross pass. ms/move on this box (16 games in parallel) was ~42-44 at depth 1; compare latencies only on one machine.
 - **Loop count at play time** (`v52_loops.sh`; loop model trained with 2 passes): APP none 1 / 2 / 3 / 4 passes = 0.488 / **0.759** / 0.615 / 0.393. Deaths at danger 50/50: 58 / 18 / 30 / 59. 2 passes is best everywhere. The block learned "exactly two passes", not an iterative refinement that improves with more passes (3 is the least bad off-design count, 4 collapses).
 
+**Ablations at d = 128, full lineage** (2026-10-20, `ablation_d128.sh`, `results_ablation_d128.txt`; each dagger5b-ft with the same recipes and seeds as v5.1 d128 dagger5b-ft). `noflat` = FLAT-2D bias trained off (`train.py --no-flat`: geometry only through the box / cell position embeddings, in the self- and cross-attention). `nooverlay` = every overlay token kind blanked (`--drop-kinds imperial,stsd,cspin,fractal,tsd,vertical,rect12,fit_,pit,setup_,hang`, ~6.9 tokens per position): left are sky / well / play / band and the piece tokens; the cells still feed the pooling.
+
+| model | val normal / gate4 / dagger5all top-1 | APP none (256) | APP d2 | normal 80/20 | normal 50/50 | danger 80/20 | danger 50/50 |
+|---|---|---|---|---|---|---|---|
+| v5.1 dagger5b-ft | 0.645 / 0.629 / 0.483 | 0.739 | 0.832 | 18 (0.921) | 44 (0.523) | 4 (1.049) | 25 (0.683) |
+| noflat | 0.640 / 0.626 / 0.481 | 0.724 | 0.835 | 30 (0.802) | 56 (0.372) | 2 (1.036) | 32 (0.633) |
+| nooverlay | 0.635 / 0.633 / 0.483 | 0.729 | 0.855 | 34 (0.794) | 63 (0.323) | 11 (1.003) | 36 (0.594) |
+
+Depth 2 beam 4 with garbage (deaths, VSfull): v5.1 10 (1.109) / 45 (0.593) / 2 (1.116) / 11 (0.848); noflat 17 (1.014) / 44 (0.596) / 1 (1.128) / 15 (0.792); nooverlay 24 (0.975) / 48 (0.559) / 1 (1.119) / 12 (0.799) (normal 80/20, normal 50/50, danger 80/20, danger 50/50).
+
+- **Validation and clean-board APP hardly move** (top-1 within 0.01, APP none −0.010 to −0.015, d2 even +0.02); the cost shows **under garbage**: normal style 80/20 deaths 18 → 30 / 34, 50/50 44 → 56 / 63; danger 50/50 25 → 32 / 36. Both components matter for survival, the overlays slightly more.
+- Top-1 is the wrong yardstick for these components (as for the heads): what they buy is in the hot, rare positions.
+- Depth-2 search closes most of the gap at 50/50 and danger style, not at normal 80/20.
+- Side effect: both train ~45% faster per epoch (131-136 s vs 237 s at dagger5b), noflat from no pair features, nooverlay from fewer tokens.
+
 ## Working rules (from the user; keep them)
 
 - **Commits:** plain messages, never a Claude co-author or attribution trailer.
@@ -504,6 +519,11 @@ Reading:
   - The price: it still spins on ~80% of its clears (~78% of the spins non-T) but breaks B2B on purpose (B2B kept 0.92 / 0.88, chains ~8-11 clears instead of 40-100) and gives up ~0.5 APP on clean boards (2.20 vs 2.71). It digs with plain clears between spin chains rather than spinning through the garbage.
   - Its weights moved far: `danger` −0.16 → −30.7, `holes` −0.46 → −6.8, `wounds` −1.8 → −14.3, `b2b` 4.0 → 0.63, while `b2b_next` (keeping the next clear B2B-eligible) is 6.7.
   - Tune cost on the Ubuntu box: E=10 ~4 min (every game dies early), E=15 ~25 min, 32 threads.
+- **All-spin weights in a normal-rules game** (`bot play --mode normal --believe allspin`, `bot/results/allspin_survive/believe/`, E=10): `allspin_slots` APP 2.714 → 0.286 (non-T spins become Minis worth 0; B2B still kept); `allspin_survive_e15` 2.201 → 0.499, but it keeps digging: 80/20 4 deaths, 50/50 13 (normal.txt: 18 / 33) at well under half the APP.
+- **Rule variants for game design** (the user's: reward the harder spins). Per line, with B2B bonus b paid per clear, a spin double beats a spin single only when d > b + 2s, so with a flat per-clear bonus singles win at any realistic chain:
+  - `--mode allspin_s1` (spin single base 1): the existing weights shift only a little (no garbage `allspin_slots` spin doubles 1.3 → 3.2 per 100 pieces, singles 39 → 35; `allspin_survive_e15` doubles 3.7 → 6.6). `bot/results/allspin_s1/`.
+  - `--mode allspin_cash` ("singles build, doubles and triples cash"): spin single 1 and no B2B bonus (still extends the chain), spin double 4 + b, spin triple (any piece) 9 + b. Per line 1 / 2 + b/2 / 3 + b/3. Tune and evals: `bot/results/allspin_cash/run.sh` (from `allspin_survive_e15.txt`, E=15).
+  - B2B: our Fibonacci table is the user's fit to TETR.IO's levels (`--b2b tetrio`); they differ by at most one level at a few chain lengths. The user keeps Fibonacci for now (rules can be swapped at inference).
 - **1a'. If 1a works: super-allspin** (tentative, the user's idea): the same rules, but a repeated clear type ends the game at once instead of inserting a wound (a penalty of −∞). Needs a rules flag (e.g. `repeat_kills`) that makes a repeat a lock-out in both the game (`game.rs`) and the search (`search.rs`, `Outcome.lock_out`), a `--mode super_allspin`, then the same CEM-survival tune from the allspin-survival weights and the same evaluation. Expect it to trade attack for clear-type variety.
 - **1b. If 1a works: all-spin data.** ~500k-1M positions from CEM-allspins plus ~500k from CEM-allspins-survival (`bot dataset` / `bot label --all-roots 1 --beam 128` with `--mode allspin`; smoke-test that spin flags and attack come through first). The split depends on 1a.
   - **Missing input:** the wound rule depends on the *previous* clear's type, which AtTenTris can't see. Add "last clear type" (and maybe "wound pending") as an input before training on all-spin data.

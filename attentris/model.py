@@ -119,9 +119,13 @@ class Block(nn.Module):
 
 class AtTenTris(nn.Module):
     def __init__(self, d=64, heads=4, layers=4, n_extra=12, n_teachers=2, n_kinds=N_KINDS, cross_layers=1, cross_loops=1,
-                 registers=0):
+                 registers=0, flat=True):
         super().__init__()
         self.d = d
+        # flat=False (ablation, train.py --no-flat): no FLAT-2D bias anywhere (self-attention and the
+        # candidates' cross-attention); geometry reaches attention only through the box / cell position
+        # embeddings. The Bias modules stay (unused) so checkpoints keep one layout.
+        self.flat = flat
         # register tokens: R learned vectors appended to the board-side sequence (no mask, box or readout).
         # They read and write in every self-attention layer; candidates can attend to them in the cross block.
         # Geometry has no meaning for them, so their attention bias is a learned constant per head: as a key
@@ -185,8 +189,11 @@ class AtTenTris(nn.Module):
         box = batch["tok_box"]
         x = z + self.kind(k) + self.pos.box(box) + self.extra(batch["tok_extra"])
         maskf = mask.float()
-        feats, both = pair_features(box, box, maskf, maskf)
-        bias = self.bias(feats, both)
+        if self.flat:
+            feats, both = pair_features(box, box, maskf, maskf)
+            bias = self.bias(feats, both)
+        else:
+            bias = x.new_zeros(B, self.bias.nobox.shape[0], x.shape[1], x.shape[1])
         R = self.registers
         if R:
             NT = x.shape[1]
@@ -237,11 +244,12 @@ class AtTenTris(nn.Module):
              + self.pos.box(cbox) + self.style(batch["teacher"]).unsqueeze(1))
         cmask = torch.zeros(B, cc.shape[1], 200, device=cells.device)
         cmask.scatter_(2, idx, onb.float())
-        cfeats, cboth = pair_features(cbox, box, cmask, maskf)
+        if self.flat:
+            cfeats, cboth = pair_features(cbox, box, cmask, maskf)
         passes = [(self.cross, self.c_bias)] * self.cross_loops + list(zip(self.cross_extra, self.c_bias_extra))
         cross_all = []
         for blk, cb in passes:
-            cbias = cb(cfeats, cboth)
+            cbias = cb(cfeats, cboth) if self.flat else y.new_zeros(B, cb.nobox.shape[0], y.shape[1], hb.shape[1])
             if R:
                 cbias = torch.cat([cbias, self.reg_c.view(1, -1, 1, 1).expand(B, -1, cbias.shape[2], R)], -1)
             y, ca = blk(y, cbias, pad, ctx=hb, ctx_norm=self.c_norm)

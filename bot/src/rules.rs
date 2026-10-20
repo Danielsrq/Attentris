@@ -303,6 +303,13 @@ pub struct Rules {
     pub burst: bool,
     /// Base attack of a full T-spin triple (6; 10 under burst rules).
     pub tst_attack: i32,
+    /// Base attack of a full spin single, any piece (2; 1 under `allspin_s1` / `allspin_cash`).
+    pub spin_single_attack: i32,
+    /// Base attack of a full non-T spin triple (6; 9 under `allspin_cash`). T: `tst_attack`.
+    pub spin_triple_attack: i32,
+    /// The B2B bonus is paid only on clears of at least this many lines (1; 2 under
+    /// `allspin_cash`: singles still extend the chain but never cash it).
+    pub b2b_cash_min_lines: u32,
     /// Burst rules: a qualifying clear is doubled when an arming clear happened within
     /// this many previous placements (1 = straight after).
     pub burst_window: u8,
@@ -345,6 +352,9 @@ impl Default for Rules {
             b2b_cap: None,
             burst: false,
             tst_attack: 6,
+            spin_single_attack: 2,
+            spin_triple_attack: 6,
+            b2b_cash_min_lines: 1,
             burst_window: 1,
             burst_tss_arms: true,
             gate: false,
@@ -544,6 +554,21 @@ impl Rules {
     pub fn allspin_nw() -> Rules {
         Rules { repeat_penalty: false, ..Rules::allspin() }
     }
+
+    /// All-spin with cheap singles: as `allspin` (Minis promoted, repeat wounds), but a full
+    /// spin single of any piece sends 1 instead of 2 (doubles 4, triples 6 as before), so
+    /// spin doubles become the efficient clear.
+    pub fn allspin_s1() -> Rules {
+        Rules { spin_single_attack: 1, ..Rules::allspin() }
+    }
+
+    /// All-spin, "singles build, doubles and triples cash": as `allspin`, but a full spin single
+    /// sends 1 and earns no B2B bonus (it still extends the chain, like a Mini under normal
+    /// rules), a spin double sends 4 + bonus and a spin triple of any piece 9 + bonus. Per line:
+    /// single 1, double 2 + b/2, triple 3 + b/3 (triples ahead while the bonus is below +6).
+    pub fn allspin_cash() -> Rules {
+        Rules { spin_single_attack: 1, spin_triple_attack: 9, tst_attack: 9, b2b_cash_min_lines: 2, ..Rules::allspin() }
+    }
 }
 
 /// Clear type for the repeat penalty: piece + lines + spin. All non-spin clears of the
@@ -577,9 +602,9 @@ impl Rules {
             // Every piece's Mini sends nothing (AttackTable.t_spin_mini_attack).
             0
         } else if spin == Spin::Full && piece == Piece::T {
-            [0, 2, 4, self.tst_attack, 0][l.min(4)]
+            [0, self.spin_single_attack, 4, self.tst_attack, 0][l.min(4)]
         } else if spin != Spin::None {
-            [0, 2, 4, 6, 8][l.min(4)]
+            [0, self.spin_single_attack, 4, self.spin_triple_attack, 8][l.min(4)]
         } else {
             [0, 0, 1, 2, 4][l.min(4)]
         };
@@ -587,7 +612,7 @@ impl Rules {
             out *= 2;
         }
         // A Mini keeps the chain alive (is_difficult) but earns no bonus itself.
-        if is_difficult(spin, lines) && b2b_after >= 1 && spin != Spin::Mini {
+        if is_difficult(spin, lines) && b2b_after >= 1 && spin != Spin::Mini && lines >= self.b2b_cash_min_lines {
             let bonus = self.b2b.bonus(b2b_after);
             out += self.b2b_cap.map_or(bonus, |c| bonus.min(c));
         }
@@ -663,6 +688,13 @@ mod tests {
         // And not in normal rules.
         assert_eq!(Rules::normal().attack_with(t, Spin::Full, 2, 0, false, true), 4);
         assert_eq!(Rules::normal().attack(t, Spin::Full, 3, 0, false), 6);
+        let c = Rules::allspin_cash();
+        assert_eq!(c.attack(Piece::S, Spin::Full, 1, 30, false), 1, "allspin_cash: a spin single never cashes B2B");
+        assert_eq!(c.attack(Piece::S, Spin::Full, 2, 30, false), 4 + 4, "   a spin double does (+4 at chain 30)");
+        assert_eq!(c.attack(Piece::L, Spin::Full, 3, 0, false), 9);
+        assert_eq!(c.attack(t, Spin::Full, 3, 30, false), 9 + 4);
+        assert_eq!(c.attack(Piece::I, Spin::None, 4, 30, false), 4 + 4, "   quads cash as before");
+        assert_eq!(c.attack(Piece::Z, Spin::Mini, 1, 30, false), 0, "   (attack() itself sees a Mini; the game promotes it first)");
 
         assert!(burst_qualifies(Spin::Mini, 2) && burst_qualifies(Spin::Mini, 3));
         assert!(!burst_qualifies(Spin::Mini, 1), "Mini singles break the chain");

@@ -1,0 +1,7 @@
+config                    APP  died    pcs  quad%   TSD%   TST%   TSS%  mini%  spin%   1-3%  gbclr   b2b  rep%  wnd   ms/pc  APPfull
+allspin_slots           2.236  0/64    500   0.00   1.96   0.00   6.34   0.00  29.85   0.00  594/0   199  2.00    4   59.16    2.236
+think time per move (wall clock, 32 threads): mean 50.0 ms  p50 48.2  p95 70.0  p99 87.2  max 121.8
+clears per 100 pieces -- spin singles 34.94, doubles 3.19, triples 0.01; plain 1/2/3/4: 0.00/0.00/0.00/0.00; attack per line 5.41
+burst -- 7-pc window APP best 4.64 p90 3.43, 14-pc window APP best 3.72 p90 3.00; pair rate 24.6% of 12208 qualifying clears; burst-pair attack share 46.1%; doubled 0 clears sending 0.0% of attack
+STSD/TST template -- in search: 0.57% of 498302500 V evals saw a slot, 0.15% a ready one; on the board: ready before 29 moves, cashed 20 (followed by a TSD 1); vertical T-spin doubles/triples 20, 20 of them found by the template beforehand
+plan stability: 80.6% of moves were exactly what the previous search planned (25735 / 31936)

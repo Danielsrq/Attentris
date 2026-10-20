@@ -1,0 +1,83 @@
+== ablations at d=128 (noflat nooverlay), full lineage 2026-10-20 14:56 (dagger5b mix F=0.6155)
+v51_d128_noflat: training 14:56
+== v51_d128_noflat
+epoch 8: train loss 2.061 | val normal top1 0.641 top3 0.864 | val gate4 top1 0.625 top3 0.850 | | 137s
+v51_d128_noflat_dagger_ft: training 15:14
+== v51_d128_noflat_dagger_ft
+epoch 3: train loss 2.262 | val normal top1 0.639 top3 0.864 | val gate4 top1 0.622 top3 0.852 | | 38s
+epoch 3: val2 (val_dagger2.npz, 9737) top1 0.409 top3 0.675 loss 2.803 | argmax Qs top1 0.366 | MAE Qs 7.11
+v51_d128_noflat_dagger3_ft: training 15:16
+== v51_d128_noflat_dagger3_ft
+epoch 3: train loss 2.265 | val normal top1 0.637 top3 0.863 | val gate4 top1 0.618 top3 0.848 | | 37s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.463 top3 0.728 loss 2.653 | argmax Qs top1 0.427 | MAE Qs 7.90
+v51_d128_noflat_dagger5b_ft: training 15:19
+== v51_d128_noflat_dagger5b_ft
+epoch 3: train loss 2.251 | val normal top1 0.640 top3 0.863 | val gate4 top1 0.626 top3 0.849 | | 131s
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.481 top3 0.740 loss 2.543 | argmax Qs top1 0.453 | MAE Qs 7.54
+v51_d128_nooverlay: training 15:25
+== v51_d128_nooverlay
+epoch 8: train loss 2.081 | val normal top1 0.632 top3 0.869 | val gate4 top1 0.629 top3 0.849 | | 144s
+v51_d128_nooverlay_dagger_ft: training 15:45
+== v51_d128_nooverlay_dagger_ft
+epoch 3: train loss 2.283 | val normal top1 0.632 top3 0.871 | val gate4 top1 0.623 top3 0.849 | | 40s
+epoch 3: val2 (val_dagger2.npz, 9737) top1 0.414 top3 0.675 loss 2.817 | argmax Qs top1 0.368 | MAE Qs 7.31
+v51_d128_nooverlay_dagger3_ft: training 15:47
+== v51_d128_nooverlay_dagger3_ft
+epoch 3: train loss 2.283 | val normal top1 0.636 top3 0.870 | val gate4 top1 0.628 top3 0.846 | | 39s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.466 top3 0.727 loss 2.659 | argmax Qs top1 0.431 | MAE Qs 7.92
+v51_d128_nooverlay_dagger5b_ft: training 15:49
+== v51_d128_nooverlay_dagger5b_ft
+epoch 3: train loss 2.273 | val normal top1 0.635 top3 0.872 | val gate4 top1 0.633 top3 0.851 | | 136s
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.483 top3 0.739 loss 2.564 | argmax Qs top1 0.455 | MAE Qs 7.63
+v51_d128_noflat_dagger5b_ft normal none: APP 0.724 (APPfull 0.724), died 0/256, pieces 500 avg, TSD 6625, TST 50, quads 3606, max height 15, illegal 0, 30.8 ms/move (p90 38.7) + search 31.6 ms, 73s
+v51_d128_noflat_dagger5b_ft normal d2: APP 0.835 (APPfull 0.835), died 0/64, pieces 500 avg, TSD 1901, TST 15, quads 886, max height 16, illegal 0, 113.3 ms/move (p90 140.6) + search 114.0 ms, 67s
+v51_d128_noflat_dagger5b_ft normal g20: APP 0.754 (APPfull 0.563), died 30/64, pieces 374 avg, TSD 845, TST 6, quads 1756, max height 22, illegal 0, 28.1 ms/move (p90 46.7) + search 29.4 ms, 20s
+v51_d128_noflat_dagger5b_ft normal g50: APP 0.540 (APPfull 0.245), died 56/64, pieces 227 avg, TSD 442, TST 2, quads 624, max height 22, illegal 0, 26.5 ms/move (p90 44.5) + search 27.6 ms, 16s
+v51_d128_noflat_dagger5b_ft normal d2g20: APP 0.844 (APPfull 0.730), died 17/64, pieces 432 avg, TSD 1169, TST 4, quads 2169, max height 21, illegal 0, 118.2 ms/move (p90 189.0) + search 119.5 ms, 69s
+v51_d128_noflat_dagger5b_ft normal d2g50: APP 0.590 (APPfull 0.392), died 44/64, pieces 332 avg, TSD 699, TST 4, quads 1035, max height 23, illegal 0, 110.4 ms/move (p90 188.1) + search 111.6 ms, 54s
+v51_d128_noflat_dagger5b_ft danger g20: APP 0.718 (APPfull 0.704), died 2/64, pieces 490 avg, TSD 1236, TST 5, quads 2186, max height 21, illegal 0, 31.9 ms/move (p90 52.9) + search 33.2 ms, 25s
+v51_d128_noflat_dagger5b_ft danger g50: APP 0.505 (APPfull 0.388), died 32/64, pieces 384 avg, TSD 733, TST 6, quads 988, max height 22, illegal 0, 27.9 ms/move (p90 47.6) + search 29.1 ms, 20s
+v51_d128_noflat_dagger5b_ft danger d2g20: APP 0.791 (APPfull 0.790), died 1/64, pieces 499 avg, TSD 1443, TST 5, quads 2382, max height 20, illegal 0, 132.6 ms/move (p90 202.5) + search 134.1 ms, 79s
+v51_d128_noflat_dagger5b_ft danger d2g50: APP 0.563 (APPfull 0.500), died 15/64, pieces 444 avg, TSD 939, TST 3, quads 1273, max height 22, illegal 0, 118.2 ms/move (p90 190.1) + search 119.5 ms, 69s
+v51_d128_nooverlay_dagger5b_ft normal none: APP 0.729 (APPfull 0.729), died 0/256, pieces 500 avg, TSD 6788, TST 43, quads 3624, max height 17, illegal 0, 42.9 ms/move (p90 66.3) + search 44.6 ms, 99s
+v51_d128_nooverlay_dagger5b_ft normal d2: APP 0.855 (APPfull 0.855), died 0/64, pieces 500 avg, TSD 1953, TST 7, quads 938, max height 16, illegal 0, 174.8 ms/move (p90 289.2) + search 176.4 ms, 104s
+v51_d128_nooverlay_dagger5b_ft normal g20: APP 0.787 (APPfull 0.566), died 34/64, pieces 360 avg, TSD 914, TST 6, quads 1695, max height 21, illegal 0, 31.0 ms/move (p90 52.9) + search 32.2 ms, 20s
+v51_d128_nooverlay_dagger5b_ft normal g50: APP 0.536 (APPfull 0.215), died 63/64, pieces 201 avg, TSD 394, TST 3, quads 546, max height 22, illegal 0, 28.1 ms/move (p90 49.0) + search 29.3 ms, 15s
+v51_d128_nooverlay_dagger5b_ft normal d2g20: APP 0.848 (APPfull 0.704), died 24/64, pieces 415 avg, TSD 1177, TST 5, quads 2081, max height 22, illegal 0, 169.4 ms/move (p90 265.4) + search 171.0 ms, 86s
+v51_d128_nooverlay_dagger5b_ft normal d2g50: APP 0.598 (APPfull 0.371), died 48/64, pieces 310 avg, TSD 715, TST 4, quads 944, max height 22, illegal 0, 150.8 ms/move (p90 250.8) + search 152.2 ms, 62s
+v51_d128_nooverlay_dagger5b_ft danger g20: APP 0.722 (APPfull 0.685), died 11/64, pieces 474 avg, TSD 1229, TST 7, quads 2113, max height 22, illegal 0, 36.2 ms/move (p90 65.0) + search 37.7 ms, 27s
+v51_d128_nooverlay_dagger5b_ft danger g50: APP 0.506 (APPfull 0.366), died 36/64, pieces 362 avg, TSD 701, TST 5, quads 920, max height 22, illegal 0, 32.3 ms/move (p90 56.3) + search 33.6 ms, 21s
+v51_d128_nooverlay_dagger5b_ft danger d2g20: APP 0.786 (APPfull 0.781), died 1/64, pieces 497 avg, TSD 1489, TST 6, quads 2336, max height 20, illegal 0, 186.6 ms/move (p90 290.7) + search 188.3 ms, 106s
+v51_d128_nooverlay_dagger5b_ft danger d2g50: APP 0.572 (APPfull 0.506), died 12/64, pieces 443 avg, TSD 1031, TST 10, quads 1287, max height 22, illegal 0, 169.8 ms/move (p90 265.2) + search 171.4 ms, 92s
+== APP / VS: v5.1 d128 dagger5b-ft vs the ablations (noflat nooverlay), dagger5b-ft each (same lineage, same seeds)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_dagger5b_ft_normal_none     0/256      500   0.739    0.739   0.739    0.739         -
+v51_d128_dagger5b_ft_normal_d2       0/64      500   0.832    0.832   0.832    0.832         -
+v51_d128_dagger5b_ft_normal_g20     18/64      414   0.785    0.650   1.112    0.921 8653/9162
+v51_d128_dagger5b_ft_normal_g50     44/64      305   0.555    0.338   0.859    0.523 5917/6780
+v51_d128_dagger5b_ft_danger_g20      4/64      490   0.733    0.718   1.071    1.049 10608/10806
+v51_d128_dagger5b_ft_danger_g50     25/64      404   0.520    0.421   0.844    0.683 8378/8978
+v51_d128_dagger5b_ft_normal_d2g20   10/64      470   0.846    0.795   1.180    1.109 10044/10398
+v51_d128_dagger5b_ft_normal_d2g50   45/64      323   0.610    0.394   0.917    0.593 6360/7232
+v51_d128_dagger5b_ft_danger_d2g20    2/64      493   0.793    0.781   1.132    1.116 10701/10882
+v51_d128_dagger5b_ft_danger_d2g50   11/64      461   0.587    0.542   0.919    0.848 9788/10199
+v51_d128_noflat_dagger5b_ft_normal_none   0/256      500   0.724    0.724   0.724    0.724         -
+v51_d128_noflat_dagger5b_ft_normal_d2   0/64      500   0.835    0.835   0.835    0.835         -
+v51_d128_noflat_dagger5b_ft_normal_g20  30/64      374   0.754    0.563   1.073    0.802 7633/8274
+v51_d128_noflat_dagger5b_ft_normal_g50  56/64      227   0.540    0.245   0.820    0.372 4074/5072
+v51_d128_noflat_dagger5b_ft_danger_g20   2/64      490   0.718    0.704   1.057    1.036 10609/10816
+v51_d128_noflat_dagger5b_ft_danger_g50  32/64      384   0.505    0.388   0.824    0.633 7846/8550
+v51_d128_noflat_dagger5b_ft_normal_d2g20  17/64      432   0.844    0.730   1.172    1.014 9073/9570
+v51_d128_noflat_dagger5b_ft_normal_d2g50  44/64      332   0.590    0.392   0.896    0.596 6513/7404
+v51_d128_noflat_dagger5b_ft_danger_d2g20   1/64      499   0.791    0.790   1.130    1.128 10835/11018
+v51_d128_noflat_dagger5b_ft_danger_d2g50  15/64      444   0.563    0.500   0.892    0.792 9351/9828
+v51_d128_nooverlay_dagger5b_ft_normal_none   0/256      500   0.729    0.729   0.729    0.729         -
+v51_d128_nooverlay_dagger5b_ft_normal_d2   0/64      500   0.855    0.855   0.855    0.855         -
+v51_d128_nooverlay_dagger5b_ft_normal_g20  34/64      360   0.787    0.566   1.105    0.794 7306/7983
+v51_d128_nooverlay_dagger5b_ft_normal_g50  63/64      201   0.536    0.215   0.806    0.323 3467/4506
+v51_d128_nooverlay_dagger5b_ft_danger_g20  11/64      474   0.722    0.685   1.057    1.003 10178/10494
+v51_d128_nooverlay_dagger5b_ft_danger_g50  36/64      362   0.506    0.366   0.821    0.594 7287/8047
+v51_d128_nooverlay_dagger5b_ft_normal_d2g20  24/64      415   0.848    0.704   1.174    0.975 8668/9217
+v51_d128_nooverlay_dagger5b_ft_normal_d2g50  48/64      310   0.598    0.371   0.901    0.559 6010/6924
+v51_d128_nooverlay_dagger5b_ft_danger_d2g20   1/64      497   0.786    0.781   1.126    1.119 10819/10969
+v51_d128_nooverlay_dagger5b_ft_danger_d2g50  12/64      443   0.572    0.506   0.902    0.799 9353/9789

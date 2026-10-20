@@ -1,0 +1,7 @@
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+allspin_slots_none                   0/64      500   2.236    2.236   2.255    2.255         -
+allspin_slots_g20                   64/64       91   1.710    0.310   1.877    0.340  964/2028
+allspin_slots_g20_e15               61/64      196   2.126    0.831   2.284    0.893 1981/2918
+allspin_survive_e15_none             0/64      500   1.750    1.750   1.754    1.754         -
+allspin_survive_e15_g20             11/64      460   1.425    1.311   1.768    1.626 10104/10163
+allspin_survive_e15_g20_e15          0/64      500   1.570    1.570   1.802    1.802 7439/7428
