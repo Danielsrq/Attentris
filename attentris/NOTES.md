@@ -1,7 +1,13 @@
-# AtTenTris: handover notes (state at the end of 2026-10-16, Ubuntu machine)
+# AtTenTris: handover notes (state at 2026-10-20, Ubuntu machine)
 
 Read this first in a new session. The 2026-10-16 work (multi-move "plan" models, plan labels for all data,
-CEM commit-K) is in "Multi-move (plan) models" below, with its results and the next tests for the Windows side. Machine setup and data sync are in `../SETUP.md`; the model and tokenizer in depth in `DESIGN.md`.
+CEM commit-K) is in "Multi-move (plan) models" below, with its results and the next tests for the Windows side.
+
+**2026-10-20 (Ubuntu box), where to find it:**
+- v5.2 (two cross passes) at d128 through the full lineage: untied beats v5.1 dagger5b-ft (APP 0.780 vs 0.739), the best model on the standard block; "Latest results", "v5.2 at d = 128".
+- d128 ablations through the full lineage (FLAT-2D trained off, all overlay tokens off, setup tokens off) FLAT-2D and overlays lose survival under garbage (paired McNemar tests); the setup-token run and 128-game statistics were still running at this writing: "Latest results", "Ablations at d = 128", `results_ablation_d128.txt`.
+- Token SHAP (which tokens drove a move) and a SHAP view on the attention page: "Explainability: token SHAP".
+- All-spin: rule sets documented ("Teachers and styles", "Rule sets"); CEM-allspins-survival (survives only with garbage every 15 pieces); rule variants for game design (`allspin_s1`, `allspin_cash`): "Next plan", item 1. Machine setup and data sync are in `../SETUP.md`; the model and tokenizer in depth in `DESIGN.md`.
 Results live in `results_*.txt` (one file per experiment, appended by the run scripts).
 
 ## What it is
@@ -41,6 +47,10 @@ The user's stated main contributions: an explainable model that considers Tetris
 | `bot/weights/normal.txt` | teacher "CEM-depth6" (normal style); `bot/results/survive/survive.txt` = CEM-survival (danger style) |
 | `bot/tools/` | versus harness (`versus.py`), Cold Clear 2 driver (`cc2_play.py`), replay viewer (`versus_watch.py`) |
 | `data/bot/` | replays (`data/bot/versus/{fixed,2pps}` = 18 versus replays) |
+| `attentris/attn_viz.py`, `attn_template.html` | attention page (cross-attention per move, geometry vs content); SHAP view when the data has it |
+| `attentris/token_shap.py`, `shap_page.py` | token SHAP per position (`--top N` moves, `--keep PAGE`, `--summary`); merge into an attention page |
+| `attentris/ablation_d128.sh`, `ablation_more.sh`, `ablation_stats.py` | d128 ablation lineages (`VARIANTS=noflat nooverlay nosetup`), 64 more games on seeds 53001+, paired McNemar tests |
+| `bot/results/allspin_survive/run.sh`, `bot/results/allspin_cash/run.sh` | CEM all-spin survival tunes and evals (portable); `bot/tools/spin_stats.py` = spin / B2B / wound stats from `bot play --out` replays |
 
 ## Architecture (current best: v5.1 at d = 128)
 
@@ -128,7 +138,9 @@ The teachers above and every AtTenTris model so far use **normal** rules. All-sp
 `v51` (d64) -> `v51_dagger_ft` (DAgger 2) -> `v51_dagger3_ft`; the same lineage at `v51_d96*` and `v51_d128*`.
 **Best: `v51_d128_dagger5b_ft`**: d128 base -> dagger_ft -> dagger3_ft -> dagger5b_ft (rounds 4 + 5 + extension).
 
-Other checkpoints: `v51_d128_dagger5_ft`, ToMe `tome_v41*` / `tome_v42_{l4h,l4g,l6g}*`, `v52_{loop,untied}*` (d64), `v52_d128_{untied,loop}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage), ablations `v51_{nosetup,nofitx,not}*`.
+Other checkpoints: `v51_d128_dagger5_ft`, ToMe `tome_v41*` / `tome_v42_{l4h,l4g,l6g}*`, `v52_{loop,untied}*` (d64), `v52_d128_{untied,loop}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage), ablations `v51_{nosetup,nofitx,not}*` (d64) and `v51_d128_{noflat,nooverlay,nosetup}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage, 2026-10-20).
+Strongest on the standard block since 2026-10-20: `v52_d128_untied_dagger5b_ft` (1.26M params; not yet re-tested at 128 games, deeper search or versus).
+Bot weights from 2026-10-20 (in git): `bot/results/allspin_survive/allspin_survive_e15.txt` (all-spin, survives garbage every 15 pieces), `bot/results/allspin_cash/allspin_cash_e15.txt` (the `allspin_cash` variant).
 Plan models (2026-10-16, all d128; "-ft" = fine-tuned from `v51_d128_dagger5b_ft` with the dagger5b recipe, 3 epochs):
 `v51_d128_ctrl_ft` (the control: the same 3 epochs, no plan loss), `v51_d128_autoreg2_ft`, `v51_d128_autoreg6_ft`, `v51_d128_plan2_ft`,
 `v51_d128_pieces6_ft`, `v51_d128_pieces6L2_ft`, `v51_d128_pieces6L2fze10_ft`; `v51_d128_autoreg2` = trained from scratch with the `v51_d128` recipe.
@@ -217,6 +229,22 @@ Depth 2 beam 4 with garbage (deaths, VSfull): v5.1 10 (1.109) / 45 (0.593) / 2 (
 - Top-1 is the wrong yardstick for these components (as for the heads): what they buy is in the hot, rare positions.
 - Depth-2 search closes most of the gap at 50/50 and danger style, not at normal 80/20.
 - Side effect: both train ~45% faster per epoch (131-136 s vs 237 s at dagger5b), noflat from no pair features, nooverlay from fewer tokens.
+
+## Explainability: token SHAP (2026-10-20)
+
+Which tokens drove a move (Lundberg & Lee 2017, SHAP; Shapley values over the tokens of one position). `token_shap.py`:
+- **Players:** the tokens of one position (board-side structure tokens and the 7 piece tokens). A coalition S keeps those tokens and blanks the rest as padding (as `--drop-kinds`); the cells and the candidates stay, so the empty coalition is "board cells + candidates only" (`model.py` `allow_empty`, analysis only: attention with no keys outputs 0).
+- **Value:** log p(move | tokens in S), for the model's move, or with `--top N` for each of its N best moves plus the teacher's move (the same coalitions serve all moves: Shapley values are linear in the value).
+- **Estimate:** permutation sampling in antithetic pairs; per move sum(phi) = log p(all tokens) - log p(no tokens), exactly. Noise at 64 permutations: two seeds correlate 0.84-0.96 per position; use 128 for single-position pictures. ~5-15 s per position on CPU.
+- **Reading:** phi > 0 = the token makes this move more likely (a reason for it); phi < 0 = less likely (a reason against it, usually for a rival: find the moves where the same token is positive). Values are relative to "no tokens", and interactions are split evenly between the tokens involved.
+- **Viewer:** `shap_page.py` adds the values to an attention page (`token_shap.py --keep PAGE --top 5`); `attn_template.html` has a "SHAP (toward this move)" view (board heat red / blue, piece panel, token list by |phi|). `attn_shap_v51_d128_dagger5b.html` = the 66 positions of the dagger5b-ft attention page, 128 permutations (published as an artifact, private).
+- Example (position 6 of that page): `tsd` is −0.79 / −0.75 for both T-spin singles the model ranks first and second and +1.8 to +2.6 for the J-from-hold placements: the TSD token argues for keeping the slot rather than taking a single now.
+
+**dagger5b-ft on 300 validation positions** (100 each from val, val_danger, val_dagger5all; 179 hot; `data/shap/v51_d128_dagger5b_ft.jsonl`, `token_shap.py --summary`). Share = the kind's part of a position's total |phi| (summed over its tokens, so many-token kinds score higher):
+- play rows 0.29, the 5 previews 0.21, wells 0.10 (hot 0.12, calm 0.06), current 0.06, hold 0.05, sky 0.05, each slot kind (`fit_s/z/l/j`) and `pit2` ~0.05.
+- The queue (current + hold + previews) carries about a third; previews push toward the chosen move 69% of the time (92% for quads).
+- For clears the play rows mostly push against the chosen move (toward it 18% for quads, 31% for spin clears); for non-clearing moves they and the S/Z slots push toward it (+0.22, +0.20): row tokens favour building, clears are chosen despite them, driven by the queue and the sky.
+- `tsd` is present in 68% of spin-clear positions with mean phi ~0: a T structure supports some moves and argues against others.
 
 ## Working rules (from the user; keep them)
 
@@ -495,26 +523,10 @@ Reading:
 - **No foresight of death:** dies-within-10/30 is decodable (0.95 / 0.90) but no better than the board features (0.95 / 0.89). The registers' "danger" is "the board looks bad", not a prediction beyond it. (The model never sees incoming garbage, which limits what it could foresee.)
 - For steering, "hot" is a board-state direction. A T-spin / attack (intent) direction from register 3 is the more interesting one to test.
 
-### Token SHAP (2026-10-20)
-
-Which tokens drove a move (Lundberg & Lee 2017, SHAP; Shapley values over the tokens of one position). `token_shap.py`:
-- **Players:** the tokens of one position (board-side structure tokens and the 7 piece tokens). A coalition S keeps those tokens and blanks the rest as padding (as `--drop-kinds`); the cells and the candidates stay, so the empty coalition is "board cells + candidates only" (`model.py` `allow_empty`, analysis only: attention with no keys outputs 0).
-- **Value:** log p(move | tokens in S), for the model's move, or with `--top N` for each of its N best moves plus the teacher's move (the same coalitions serve all moves: Shapley values are linear in the value).
-- **Estimate:** permutation sampling in antithetic pairs; per move sum(phi) = log p(all tokens) - log p(no tokens), exactly. Noise at 64 permutations: two seeds correlate 0.84-0.96 per position; use 128 for single-position pictures. ~5-15 s per position on CPU.
-- **Reading:** phi > 0 = the token makes this move more likely (a reason for it); phi < 0 = less likely (a reason against it, usually for a rival: find the moves where the same token is positive). Values are relative to "no tokens", and interactions are split evenly between the tokens involved.
-- **Viewer:** `shap_page.py` adds the values to an attention page (`token_shap.py --keep PAGE --top 5`); `attn_template.html` has a "SHAP (toward this move)" view (board heat red / blue, piece panel, token list by |phi|). `attn_shap_v51_d128_dagger5b.html` = the 66 positions of the dagger5b-ft attention page, 128 permutations (published as an artifact, private).
-- Example (position 6 of that page): `tsd` is −0.79 / −0.75 for both T-spin singles the model ranks first and second and +1.8 to +2.6 for the J-from-hold placements: the TSD token argues for keeping the slot rather than taking a single now.
-
-**dagger5b-ft on 300 validation positions** (100 each from val, val_danger, val_dagger5all; 179 hot; `data/shap/v51_d128_dagger5b_ft.jsonl`, `token_shap.py --summary`). Share = the kind's part of a position's total |phi| (summed over its tokens, so many-token kinds score higher):
-- play rows 0.29, the 5 previews 0.21, wells 0.10 (hot 0.12, calm 0.06), current 0.06, hold 0.05, sky 0.05, each slot kind (`fit_s/z/l/j`) and `pit2` ~0.05.
-- The queue (current + hold + previews) carries about a third; previews push toward the chosen move 69% of the time (92% for quads).
-- For clears the play rows mostly push against the chosen move (toward it 18% for quads, 31% for spin clears); for non-clearing moves they and the S/Z slots push toward it (+0.22, +0.20): row tokens favour building, clears are chosen despite them, driven by the queue and the sky.
-- `tsd` is present in 68% of spin-clear positions with mean phi ~0: a T structure supports some moves and argues against others.
-
-### Next plan (agreed 2026-10-20; not started)
+### Next plan (agreed 2026-10-20; 1a and the FLAT-2D / overlay / setup ablations done the same day)
 
 **1. All-spin**
-- **1a. CEM-allspins-survival: can an all-spin bot also survive garbage?**
+- **1a. CEM-allspins-survival: can an all-spin bot also survive garbage?** (done 2026-10-20, results below)
   - **Rules:** `--mode allspin`. Every spin counts as full and non-T spins score like T-spins (2 / 4 / 6); two consecutive clears of the same type insert a wound row.
   - **Start from** `bot/weights/allspin_slots.txt`. It and `allspin.txt` were tuned on clean boards and don't survive cheese (`bot/README.md`).
   - **Recipe:** as CEM-survival (`bot/results/survive/run.sh`): `bot tune --algo cem --mode allspin --garbage 10,3-4,cheese0.5,0.2 --fitness vs --gens 30 --pop 32 --elite 8 --games 12 --pieces 500 --beam 24 --depth 4`, **without `--freeze default`** (it would zero the all-spin features). ~11,500 games. Script: `bot/results/allspin_survive/run.sh` (portable; started 2026-10-20 on the Ubuntu box, 32 threads).
@@ -555,9 +567,8 @@ Which tokens drove a move (Lundberg & Lee 2017, SHAP; Shapley values over the to
   - **Per move, the two rule sets don't clash.** The candidates' spin / lines / attack inputs are computed under the active rules: an S-spin double arrives as mini, 0 attack under normal rules and as full, 4 attack under all-spin.
   - **For planning they do.** The value of building an S-spin slot, or of avoiding a repeated clear type, depends on the rules, but the board tokens are identical in both modes, and the style tag only reaches the candidates (never the board side). A mixed model needs a **rules input the board side sees**: a rules token, or a flag on every board token. It also needs the "last clear type" input.
 
-**2. Ablations not done yet** (done: setup tokens, non-T slots, T structures + fit_t, all trained at d64; FLAT-2D at inference only; capacity, cross passes, ToMe, registers, plan heads, value targets, data size):
-- FLAT-2D **trained off** (plain 2D position embeddings only), through the same lineage: the inference ablation only shows a model trained with it depends on it.
-- **All rule overlays off together** (sky / wells / play rows + pieces only): the cleanest test of "rule structure tokens help".
+**2. Ablations not done yet** (done: setup tokens, non-T slots, T structures + fit_t, all trained at d64; FLAT-2D at inference only; capacity, cross passes, ToMe, registers, plan heads, value targets, data size; on 2026-10-20 at d128 through the full lineage: FLAT-2D trained off, all overlays off, setup tokens off, see "Ablations at d = 128"):
+- A second training seed for the d128 ablations and the baseline (the user skipped it for now): the paired tests cover game noise only.
 - A plain **per-cell baseline** (200 cell tokens, no rule tokens, similar size), planned in DESIGN.md but never run. It's memory-heavy: attention and the FLAT-2D pair features grow with tokens², ~40× at 200 vs ~31 tokens. **20 row tokens** (DESIGN.md's other baseline) is the cheap structure-free alternative.
 - The candidates' **attack input only** (keep lines and spin type): does the model learn the attack table (T-spin double ≫ double) from the Qs targets? The spin flag stays: whether a move is a spin depends on how the piece got there (the last action a rotation, plus the corner rule), not on its final cells. The same 4 cells can be a plain double or a T-spin double, so removing it would hide information the model can't recover.
 - **Head masking with matched behaviour tests** (no training): the cross heads' roles are placement (head 2, −17.2 pts top-1 when off), queue (head 3), surroundings / holes (head 4) and general (head 1). Top-1 is the wrong measure for the specific roles, so pair each head with its behaviour:
@@ -573,7 +584,7 @@ Which tokens drove a move (Lundberg & Lee 2017, SHAP; Shapley values over the to
 2. **Equal-time check:** CEM commit 2 vs a plain search with half the budget (e.g. beam 32): commit only helps if it beats a cheaper search at equal time.
 3. **pieces:** the parallel head plateaus (step 2 ~0.38; commit 2 APP ~0.48-0.51). Next idea: condition it on the ACTUAL move 1 (a move-1 token for the piece queries, as autoreg does), so step 2 is predicted given the move played, still as a coordinate (no move generation; a cheap Rust single-placement legality check). If step 2 reaches ~0.55-0.6 and commit 2 costs little, scale data (plan-only teacher labels: ~45 ms a position, 5M positions ~2 h on the Ubuntu box) and model size (d192 / d256).
 4. A lean `bot expand` (legal moves only, no structure tokens) for any NN mode that needs move lists at later steps.
-5. On a new machine: `cargo build --release` (new `bot label --plan`, `plan-cands`, `play --commit`), unpack the delta, `python attentris/pack_plan.py` if training autoreg (rebuilds `data/v51plan`).
+5. On a new machine: `cargo build --release` (new `bot label --plan`, `plan-cands`, `play --commit`; 2026-10-20: `--mode allspin_s1 | allspin_cash`), unpack the delta, `python attentris/pack_plan.py` if training autoreg (rebuilds `data/v51plan`).
 
 ## Other open options (offered, not started; ask before starting any)
 
