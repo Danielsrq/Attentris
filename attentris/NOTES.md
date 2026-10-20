@@ -70,6 +70,24 @@ Details and the full diagram are in `DESIGN.md` ("Architecture as implemented").
 `play.py --style normal|gate4|danger|auto` picks the style row. `auto` uses danger on hot boards (stack >= 12 or >= 6 holes).
 Labelling: `bot label --all-roots 1 --beam 128` gives a search score for every root move.
 
+### Rule sets (`bot --mode`; Godot `RuleSet.*`)
+
+The teachers above and every AtTenTris model so far use **normal** rules. All-spin rules are a different game, with different attack, B2B and a penalty.
+
+| | `normal` (default) | `allspin` | `allspin_nw` | super-allspin (proposed, not built) |
+|---|---|---|---|---|
+| which pieces can spin | all | all | all | all |
+| non-T spin | Mini: 0 attack, but keeps B2B alive | **full**: scores like a T-spin, 2 / 4 / 6 for single / double / triple, + B2B | as allspin | as allspin |
+| T-spin Mini | Mini (0 attack) | promoted to full | promoted | promoted |
+| repeating the previous clear type | nothing | **wound**: an unclearable line is inserted at the bottom, pushing the stack up | nothing | **game over** (penalty = −∞) |
+
+- **Clear type** (`rules.rs clear_type`): piece + spin + lines for spins (TSD → ZSD is *not* a repeat; ZSS → ZSS is), lines only for plain clears (any plain double → any plain double is a repeat).
+- **Wound line:** counts down once per clear (any type) and after 10 clears (`wound_clears`) turns into an ordinary garbage line. Its hole follows the previous wound's column with probability 1 − `wound_messiness` (0.5). Incoming garbage enters beneath wounds. The search tracks `last_clear` and the wounds (`search.rs`), so the bot plans around repeats. Features `wounds`, `ready_repeat` and the S/Z, L/J, I spin-slot features exist for this mode.
+- **B2B:** spins of any piece and quads extend the chain; plain singles / doubles / triples break it. Under all-spin almost every clear is a spin, so a chain lasts until a forced plain clear or death.
+- **Do not tune all-spin weights with `--freeze default`**: it zeroes exactly the all-spin features (`eval::FROZEN_OUTSIDE_ALLSPIN`). It is right for normal-rules tunes only.
+- Weights: `bot/weights/allspin.txt`, `allspin_slots.txt` (with spin-slot features; strongest on clean boards, both die to cheese), `bot/results/allspin_survive/allspin_survive.txt` (CEM-allspins-survival, 2026-10-20).
+- Stats for these rules: `bot/tools/spin_stats.py` on `bot play --out` replays (+ `--game-log`): deaths, APP / APPfull / VSfull, spin share of clears, non-T share of spins, **B2B kept** (of the clears made while a chain was alive, the share that kept it), mean / max chain, repeats (wounds) per 100 pieces.
+
 ## Data (`attentris/data/v51/*.npz`, packed with tokenizer v5)
 
 | file | what |
@@ -468,10 +486,25 @@ Reading:
 - **1a. CEM-allspins-survival: can an all-spin bot also survive garbage?**
   - **Rules:** `--mode allspin`. Every spin counts as full and non-T spins score like T-spins (2 / 4 / 6); two consecutive clears of the same type insert a wound row.
   - **Start from** `bot/weights/allspin_slots.txt`. It and `allspin.txt` were tuned on clean boards and don't survive cheese (`bot/README.md`).
-  - **Recipe:** as CEM-survival (`bot/results/survive/run.sh`): `bot tune --algo cem --mode allspin --garbage 10,3-4,cheese0.5,0.2 --fitness vs --freeze default --gens 30 --pop 32 --elite 8 --games 12 --pieces 500 --beam 24 --depth 4`. That's ~11,500 games, ~75 min on 16 Windows threads.
+  - **Recipe:** as CEM-survival (`bot/results/survive/run.sh`): `bot tune --algo cem --mode allspin --garbage 10,3-4,cheese0.5,0.2 --fitness vs --gens 30 --pop 32 --elite 8 --games 12 --pieces 500 --beam 24 --depth 4`, **without `--freeze default`** (it would zero the all-spin features). ~11,500 games. Script: `bot/results/allspin_survive/run.sh` (portable; started 2026-10-20 on the Ubuntu box, 32 threads).
   - **Where to run:** the Ubuntu box (3970X, `--threads 32`-`64`) is fine. `run.sh` is Windows-only (`bot.exe`, `cygpath`): write a portable copy that sources `attentris/plat.sh`.
-  - **Evaluate:** old vs new allspin weights at d6 b64, 64 games each: no garbage, 80/20, 50/50. Deaths, APP, VS, and the **non-T spin rate** (spin% in the play summary). The question is whether it still all-spins or just survives by playing safe.
+  - **Evaluate:** old vs new allspin weights at d6 b64, 64 games each: no garbage, 80/20, 50/50. Deaths, APP, VS, spin share, non-T share, B2B kept and chain length (`bot/tools/spin_stats.py`). The question is whether it still all-spins or just survives by playing safe.
   - **Kicks:** the bot (and Cold Clear 2, `external/cold-clear-2/src/movegen.rs`) uses guideline SRS for 90° turns plus an SRS+ table for 180° (`core/kick_tables.gd`, `bot/src/rules.rs kicks()`). TETR.IO's SRS+ differs mainly in the I piece's 90° kicks. That's minor for tuning, since the bot's game and move generator agree; swap in an authoritative TETR.IO table before playing on TETR.IO itself. "SRS+" isn't one fixed table: the perfect-tetris solver lists separate `srsPlus` / `srsTetrio` sets.
+- **1a results (2026-10-20, Ubuntu box, `bot/results/allspin_survive/`, `eval.txt`, `eval_e15.txt`; d6 b64, 64 games, seeds 33001+; replays in `attentris/data/allspin_survive/`):**
+  - **Garbage every 10 pieces is too harsh** for an all-spin bot. The tune from `allspin_slots.txt` stayed at fitness ~0.25 (CEM-survival under normal rules: ~0.8), and every all-spin weight set died 64/64 at 80/20 and 50/50 (85-126 pieces). The bots kept B2B (~0.99 kept) and kept spinning until they topped out.
+  - **Garbage every 15 pieces (`E=15`, the user's choice) works:** `allspin_survive_e15.txt` reached fitness 1.38 (elite mean, gen 30) and survives:
+
+    | weights (15-piece garbage) | none: died, APP | 80/20: died, APPfull, VSfull | 50/50: died, APPfull, VSfull | spin % of clears (80/20) | B2B kept / mean chain (80/20) | wounds / 100 pieces (80/20) |
+    |---|---|---|---|---|---|---|
+    | `allspin.txt` | 0, 2.703 | 64, 0.825, 0.878 | 64, 0.500, 0.524 | 93.0 | 0.991 / 46 | 1.66 |
+    | `allspin_slots.txt` | 0, 2.714 | 64, 0.738, 0.780 | 64, 0.544, 0.569 | 94.6 | 0.999 / 61 | 1.51 |
+    | `allspin_survive.txt` (tuned at E=10) | 0, 2.634 | 50, 1.688, 1.806 | 64, 0.947, 1.004 | 91.9 | 0.998 / 103 | 0.88 |
+    | **`allspin_survive_e15.txt`** | 0, 2.201 | **1**, **1.879**, **2.112** | **4**, **1.695**, **1.923** | 79.6 | 0.916 / 11 | 0.85 |
+
+  - The price: it still spins on ~80% of its clears (~78% of the spins non-T) but breaks B2B on purpose (B2B kept 0.92 / 0.88, chains ~8-11 clears instead of 40-100) and gives up ~0.5 APP on clean boards (2.20 vs 2.71). It digs with plain clears between spin chains rather than spinning through the garbage.
+  - Its weights moved far: `danger` −0.16 → −30.7, `holes` −0.46 → −6.8, `wounds` −1.8 → −14.3, `b2b` 4.0 → 0.63, while `b2b_next` (keeping the next clear B2B-eligible) is 6.7.
+  - Tune cost on the Ubuntu box: E=10 ~4 min (every game dies early), E=15 ~25 min, 32 threads.
+- **1a'. If 1a works: super-allspin** (tentative, the user's idea): the same rules, but a repeated clear type ends the game at once instead of inserting a wound (a penalty of −∞). Needs a rules flag (e.g. `repeat_kills`) that makes a repeat a lock-out in both the game (`game.rs`) and the search (`search.rs`, `Outcome.lock_out`), a `--mode super_allspin`, then the same CEM-survival tune from the allspin-survival weights and the same evaluation. Expect it to trade attack for clear-type variety.
 - **1b. If 1a works: all-spin data.** ~500k-1M positions from CEM-allspins plus ~500k from CEM-allspins-survival (`bot dataset` / `bot label --all-roots 1 --beam 128` with `--mode allspin`; smoke-test that spin flags and attack come through first). The split depends on 1a.
   - **Missing input:** the wound rule depends on the *previous* clear's type, which AtTenTris can't see. Add "last clear type" (and maybe "wound pending") as an input before training on all-spin data.
 - **1c. Model:** either an all-spin model from scratch, or a 4th style tag (`allspin`) on dagger5b-ft: can one model switch between normal and all-spin play? Undecided.

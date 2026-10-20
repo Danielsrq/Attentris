@@ -1,0 +1,63 @@
+== CEM-allspins-survival: CEM under all-spin rules with garbage 10,3-4,cheese0.5,0.2, fitness VS, from allspin_slots.txt 10:00
+tuning (cem): 30 gens x 32 candidates x 12 games x 500 pieces, search beam 24 depth 4, fitness VS (attack + garbage cleared) / full budget
+gen  1/30: best 0.185  elite mean 0.166  (incumbent 0.157)  spread 2.530  6s  eta 3m
+gen  2/30: best 0.191  elite mean 0.172  (incumbent 0.162)  spread 2.036  6s  eta 3m
+gen  3/30: best 0.232  elite mean 0.214  (incumbent 0.232)  spread 1.776  7s  eta 3m
+gen  4/30: best 0.219  elite mean 0.213  (incumbent 0.174)  spread 1.674  7s  eta 3m
+gen  5/30: best 0.239  elite mean 0.222  (incumbent 0.177)  spread 1.668  7s  eta 3m
+gen  6/30: best 0.215  elite mean 0.203  (incumbent 0.190)  spread 1.546  7s  eta 3m
+gen  7/30: best 0.241  elite mean 0.234  (incumbent 0.216)  spread 1.371  7s  eta 3m
+gen  8/30: best 0.249  elite mean 0.227  (incumbent 0.205)  spread 1.195  7s  eta 3m
+gen  9/30: best 0.257  elite mean 0.223  (incumbent 0.203)  spread 1.047  7s  eta 2m
+gen 10/30: best 0.239  elite mean 0.224  (incumbent 0.195)  spread 0.988  7s  eta 2m
+gen 11/30: best 0.233  elite mean 0.215  (incumbent 0.191)  spread 1.005  7s  eta 2m
+gen 12/30: best 0.212  elite mean 0.199  (incumbent 0.176)  spread 0.865  7s  eta 2m
+gen 13/30: best 0.214  elite mean 0.201  (incumbent 0.179)  spread 0.837  7s  eta 2m
+gen 14/30: best 0.228  elite mean 0.209  (incumbent 0.203)  spread 0.703  7s  eta 2m
+gen 15/30: best 0.247  elite mean 0.236  (incumbent 0.247)  spread 0.629  7s  eta 2m
+gen 16/30: best 0.267  elite mean 0.237  (incumbent 0.212)  spread 0.588  7s  eta 2m
+gen 17/30: best 0.220  elite mean 0.208  (incumbent 0.197)  spread 0.554  7s  eta 2m
+gen 18/30: best 0.238  elite mean 0.221  (incumbent 0.223)  spread 0.512  7s  eta 1m
+gen 19/30: best 0.267  elite mean 0.245  (incumbent 0.225)  spread 0.550  8s  eta 1m
+gen 20/30: best 0.294  elite mean 0.247  (incumbent 0.226)  spread 0.517  8s  eta 1m
+gen 21/30: best 0.242  elite mean 0.233  (incumbent 0.215)  spread 0.461  7s  eta 1m
+gen 22/30: best 0.285  elite mean 0.262  (incumbent 0.205)  spread 0.450  8s  eta 1m
+gen 23/30: best 0.274  elite mean 0.252  (incumbent 0.243)  spread 0.389  8s  eta 1m
+gen 24/30: best 0.230  elite mean 0.218  (incumbent 0.214)  spread 0.356  7s  eta 1m
+gen 25/30: best 0.225  elite mean 0.209  (incumbent 0.196)  spread 0.337  7s  eta 1m
+gen 26/30: best 0.307  elite mean 0.286  (incumbent 0.248)  spread 0.309  8s  eta 0m
+gen 27/30: best 0.231  elite mean 0.214  (incumbent 0.177)  spread 0.268  7s  eta 0m
+gen 28/30: best 0.321  elite mean 0.275  (incumbent 0.250)  spread 0.252  10s  eta 0m
+gen 29/30: best 0.233  elite mean 0.229  (incumbent 0.220)  spread 0.222  9s  eta 0m
+gen 30/30: best 0.249  elite mean 0.234  (incumbent 0.219)  spread 0.211  10s  eta 0m
+
+saved distribution mean to /home/sruiqi/Desktop/LLMplayground/Attentris/bot/results/allspin_survive/allspin_survive.txt (best single candidate scored 0.321)
+allspin none 10:03
+allspin                 2.703  0/64    500   0.03   0.43   0.00   8.03   0.00  31.26   0.00  917/0   205  3.14    5   57.49    2.703
+allspin_slots none 10:04
+allspin_slots           2.714  0/64    500   0.02   0.52   0.00   7.87   0.00  31.86   0.00  684/0   209  2.35    4   47.37    2.714
+allspin_survive none 10:05
+allspin_survive         2.634  0/64    500   0.00   0.26   0.00   6.68   0.00  31.64   0.00  239/0   197  0.79    3   44.51    2.634
+allspin cheese20 10:06
+allspin                 1.945 64/64     85   2.49   0.98   0.02   7.15   0.00  27.05   0.85 852/1891    76  1.79    3   74.37    0.330
+allspin_slots cheese20 10:06
+allspin_slots           2.127 64/64     92   2.65   1.78   0.00   7.30   0.00  27.73   0.20 993/2062   108  1.35    2   99.60    0.393
+allspin_survive cheese20 10:06
+allspin_survive         2.318 64/64    126   3.78   1.49   0.04   6.48   0.00  28.01   0.19 1732/2806   102  0.76    2   77.20    0.582
+allspin cheese50 10:07
+allspin                 1.826 64/64     69   1.11   1.18   0.00   7.36   0.00  27.43   0.70 477/1545    52  1.40    3   61.94    0.252
+allspin_slots cheese50 10:07
+allspin_slots           1.930 64/64     74   1.45   1.83   0.00   6.87   0.00  28.41   0.25 571/1666    51  1.26    2   65.65    0.287
+allspin_survive cheese50 10:07
+allspin_survive         2.062 64/64     86   1.72   1.58   0.04   6.76   0.00  28.76   0.31 808/1931    59  0.58    2   62.24    0.355
+run                                  died    pcs     APP APPfull  VSfull clr/100  spin% nonT% B2B kept      chain alive%  rep% wnd/100
+allspin_none                         0/64    500   2.703   2.703   2.732   39.8   99.9  78.7    1.000 198.8 / 206   99.0  7.90    3.14
+allspin_slots_none                   0/64    500   2.714   2.714   2.735   40.3  100.0  79.2    1.000 201.3 / 210   98.9  5.83    2.35
+allspin_survive_none                 0/64    500   2.634   2.634   2.642   38.6  100.0  82.0    1.000 192.9 / 198   99.0  2.06    0.79
+allspin_cheese20                    64/64     85   1.945   0.330   0.357   38.5   91.3  76.9    0.986  23.8 / 77   92.5  4.64    1.79
+allspin_slots_cheese20              64/64     92   2.127   0.393   0.424   39.7   92.8  75.3    0.996 33.3 / 109   93.7  3.41    1.35
+allspin_survive_cheese20            64/64    126   2.318   0.582   0.637   40.0   90.1  77.8    0.996 44.4 / 103   95.8  1.90    0.76
+allspin_cheese50                    64/64     69   1.826   0.252   0.267   37.8   95.2  76.3    0.989  21.0 / 53   91.4  3.71    1.40
+allspin_slots_cheese50              64/64     74   1.930   0.287   0.305   38.8   95.6  76.6    0.995  26.2 / 52   92.2  3.25    1.26
+allspin_survive_cheese50            64/64     86   2.062   0.355   0.381   39.2   94.8  77.5    0.993  29.8 / 60   93.7  1.48    0.58
+all done
