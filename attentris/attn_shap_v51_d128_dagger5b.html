@@ -132,7 +132,8 @@ const DATA = {"summary":{"positions":10000,"top1":0.637,"agreement":{"model":{"n
 const CS = 20, ROWS = 20, COLS = 10;
 let idx = 0, sel = null, mode = "dens", hover = null, src = "attn", head = "all";
 // the selected candidate's values for the chosen head ("all" = the stored means over heads)
-const hv = (cand, key) => (head === "all" || !cand.H) ? cand[key] : cand.H[key][+head];
+// (SHAP has no per-head values: it always reads the move's own)
+const hv = (cand, key) => (head === "all" || !cand.H || !cand.H[key]) ? cand[key] : cand.H[key][+head];
 const firstSel = p => (p.top[0].i === p.chosen.i ? "chosen" : "0");   // default: the model's own top move
 const $ = id => document.getElementById(id);
 const X = c => c * CS, Y = r => (ROWS - 1 - r) * CS;
