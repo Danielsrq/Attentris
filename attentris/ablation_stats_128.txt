@@ -29,3 +29,13 @@ nosetup
   danger_d2g20  n=128  deaths   5 ->   4  b  4 c  5  p=1.0000
   danger_d2g50  n=128  deaths  18 ->  22  b 19 c 15  p=0.6076
   pooled        b 175 c 132  p=0.016
+nofitx
+  normal_g20    n=128  deaths  38 ->  67  b 43 c 14  p=0.0002
+  normal_g50    n=128  deaths  92 -> 114  b 31 c  9  p=0.0007
+  danger_g20    n=128  deaths  10 ->  17  b 14 c  7  p=0.1892
+  danger_g50    n=128  deaths  47 ->  65  b 37 c 19  p=0.0222
+  normal_d2g20  n=128  deaths  22 ->  33  b 24 c 13  p=0.0989
+  normal_d2g50  n=128  deaths  77 ->  98  b 34 c 13  p=0.0031
+  danger_d2g20  n=128  deaths   5 ->   1  b  1 c  5  p=0.2188
+  danger_d2g50  n=128  deaths  18 ->  22  b 17 c 13  p=0.5847
+  pooled        b 201 c  93  p=2.8e-10
