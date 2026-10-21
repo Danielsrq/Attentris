@@ -1,0 +1,51 @@
+== 64 more games per garbage setting, seeds 53001+ (v51_d128_dagger5b_ft v51_d128_noflat_dagger5b_ft v51_d128_nooverlay_dagger5b_ft v51_d128_nosetup_dagger5b_ft v51_d128_nofitx_dagger5b_ft) 10:04
+v51_d128_nofitx_dagger5b_ft normal g20 (seeds 53001+): APP 0.767 (APPfull 0.540), died 36/64, pieces 352 avg, TSD 863, TST 5, quads 1622, max height 22, illegal 0, 29.4 ms/move (p90 41.7) + search 30.1 ms, 19s
+v51_d128_nofitx_dagger5b_ft normal g50 (seeds 53001+): APP 0.511 (APPfull 0.233), died 54/64, pieces 228 avg, TSD 413, TST 2, quads 584, max height 21, illegal 0, 27.4 ms/move (p90 39.1) + search 28.1 ms, 14s
+v51_d128_nofitx_dagger5b_ft normal d2g20 (seeds 53001+): APP 0.840 (APPfull 0.728), died 18/64, pieces 434 avg, TSD 1197, TST 5, quads 2154, max height 21, illegal 0, 145.4 ms/move (p90 191.7) + search 146.3 ms, 79s
+v51_d128_nofitx_dagger5b_ft normal d2g50 (seeds 53001+): APP 0.573 (APPfull 0.330), died 48/64, pieces 287 avg, TSD 685, TST 5, quads 823, max height 22, illegal 0, 121.2 ms/move (p90 176.6) + search 122.0 ms, 51s
+v51_d128_nofitx_dagger5b_ft danger g20 (seeds 53001+): APP 0.721 (APPfull 0.682), died 8/64, pieces 473 avg, TSD 1184, TST 14, quads 2101, max height 22, illegal 0, 32.1 ms/move (p90 41.9) + search 32.9 ms, 22s
+v51_d128_nofitx_dagger5b_ft danger g50 (seeds 53001+): APP 0.503 (APPfull 0.389), died 32/64, pieces 387 avg, TSD 727, TST 7, quads 986, max height 22, illegal 0, 28.7 ms/move (p90 39.9) + search 29.4 ms, 18s
+v51_d128_nofitx_dagger5b_ft danger d2g20 (seeds 53001+): APP 0.786 (APPfull 0.786), died 0/64, pieces 500 avg, TSD 1426, TST 7, quads 2356, max height 19, illegal 0, 158.4 ms/move (p90 203.5) + search 159.4 ms, 89s
+v51_d128_nofitx_dagger5b_ft danger d2g50 (seeds 53001+): APP 0.566 (APPfull 0.529), died 8/64, pieces 467 avg, TSD 1036, TST 7, quads 1347, max height 21, illegal 0, 144.5 ms/move (p90 182.1) + search 145.3 ms, 81s
+paired deaths vs v51_d128_dagger5b_ft (exact McNemar; b = only the ablation died, c = only the baseline died)
+noflat
+  normal_g20    n=128  deaths  38 ->  53  b 40 c 25  p=0.0817
+  normal_g50    n=128  deaths  92 -> 112  b 32 c 12  p=0.0037
+  danger_g20    n=128  deaths  10 ->   9  b  7 c  8  p=1.0000
+  danger_g50    n=128  deaths  47 ->  57  b 29 c 19  p=0.1934
+  normal_d2g20  n=128  deaths  22 ->  31  b 25 c 16  p=0.2110
+  normal_d2g50  n=128  deaths  77 ->  83  b 29 c 23  p=0.4885
+  danger_d2g20  n=128  deaths   5 ->   5  b  4 c  4  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  25  b 20 c 13  p=0.2962
+  pooled        b 186 c 120  p=0.00019
+nooverlay
+  normal_g20    n=128  deaths  38 ->  69  b 47 c 16  p=0.0001
+  normal_g50    n=128  deaths  92 -> 118  b 33 c  7  p=0.0000
+  danger_g20    n=128  deaths  10 ->  25  b 21 c  6  p=0.0059
+  danger_g50    n=128  deaths  47 ->  70  b 41 c 18  p=0.0038
+  normal_d2g20  n=128  deaths  22 ->  45  b 34 c 11  p=0.0008
+  normal_d2g50  n=128  deaths  77 ->  93  b 32 c 16  p=0.0293
+  danger_d2g20  n=128  deaths   5 ->   4  b  4 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  27  b 24 c 15  p=0.1996
+  pooled        b 236 c  94  p=3.1e-15
+nosetup
+  normal_g20    n=128  deaths  38 ->  65  b 44 c 17  p=0.0007
+  normal_g50    n=128  deaths  92 -> 104  b 28 c 16  p=0.0961
+  danger_g20    n=128  deaths  10 ->  14  b 12 c  8  p=0.5034
+  danger_g50    n=128  deaths  47 ->  40  b 22 c 29  p=0.4011
+  normal_d2g20  n=128  deaths  22 ->  17  b 13 c 18  p=0.4731
+  normal_d2g50  n=128  deaths  77 ->  86  b 33 c 24  p=0.2892
+  danger_d2g20  n=128  deaths   5 ->   4  b  4 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  22  b 19 c 15  p=0.6076
+  pooled        b 175 c 132  p=0.016
+nofitx
+  normal_g20    n=128  deaths  38 ->  67  b 43 c 14  p=0.0002
+  normal_g50    n=128  deaths  92 -> 114  b 31 c  9  p=0.0007
+  danger_g20    n=128  deaths  10 ->  17  b 14 c  7  p=0.1892
+  danger_g50    n=128  deaths  47 ->  65  b 37 c 19  p=0.0222
+  normal_d2g20  n=128  deaths  22 ->  33  b 24 c 13  p=0.0989
+  normal_d2g50  n=128  deaths  77 ->  98  b 34 c 13  p=0.0031
+  danger_d2g20  n=128  deaths   5 ->   1  b  1 c  5  p=0.2188
+  danger_d2g50  n=128  deaths  18 ->  22  b 17 c 13  p=0.5847
+  pooled        b 201 c  93  p=2.8e-10
+ablation more done

@@ -124,7 +124,9 @@ def _rows_mask(r0, r1):
     return m
 
 
-def base_tokens(b, k_board=K_BOARD):
+def base_tokens(b, k_board=K_BOARD, wells=True):
+    """wells=False (analysis only, group_shap.py): no well tokens, the clean zone's rows are play rows
+    (then merged into bands by the budget as any rows)."""
     h = heights(b)
     top = int(h.max())
     toks = []
@@ -134,7 +136,7 @@ def base_tokens(b, k_board=K_BOARD):
     # Clean zone: bottom-up runs of single-hole rows, grouped by hole column.
     runs = []           # (r0, r1, hole col)
     r = 0
-    while r < top and (~b[r]).sum() == 1:
+    while wells and r < top and (~b[r]).sum() == 1:
         hole = int(np.nonzero(~b[r])[0][0])
         if runs and runs[-1][2] == hole and runs[-1][1] == r - 1:
             runs[-1] = (runs[-1][0], r, hole)
@@ -316,11 +318,11 @@ def overlay_priority(t):
     return (5, -t.extras["area"], t.extras["width"], 0)
 
 
-def tokenize(b, piece=None, queue=(), hold=None, structures=(), k_board=K_BOARD, p_max=P_MAX, version=TOK_VERSION):
+def tokenize(b, piece=None, queue=(), hold=None, structures=(), k_board=K_BOARD, p_max=P_MAX, version=TOK_VERSION, wells=True):
     """Board (20, 10) bool + pieces -> list of Tokens: base, then overlays, then pieces.
     version=4 reproduces the tokens pre-v5 checkpoints were trained on (T structures only,
     open fits without line clears, at most 8 overlays)."""
-    toks, h = base_tokens(b, k_board)
+    toks, h = base_tokens(b, k_board, wells)
     if version < 5:
         structures = [s for s in structures if s["kind"] in STRUCTURE_KINDS]
         p_max = min(p_max, 8)

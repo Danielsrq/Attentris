@@ -41,7 +41,7 @@ def readjson(proc):
             return json.loads(line)
 
 
-def arrays(states, teacher, version=T.TOK_VERSION, drop=()):
+def arrays(states, teacher, version=T.TOK_VERSION, drop=(), wells=True):
     """Model inputs for a list of (state, expand-result) pairs; returns the batch dict. drop: token-kind
     prefixes to blank after tokenizing (an ablation checkpoint's train.py --drop-kinds: same as training)."""
     import torch
@@ -54,7 +54,7 @@ def arrays(states, teacher, version=T.TOK_VERSION, drop=()):
          "teacher": np.full(n, teacher, np.int64)}
     for i, (st, ex) in enumerate(states):
         b = T.board_from_replay(P.rows_to_strings(st["rows"]))
-        toks = T.tokenize(b, st["piece"], st["queue"], st["hold"], ex["structures"], version=version)
+        toks = T.tokenize(b, st["piece"], st["queue"], st["hold"], ex["structures"], version=version, wells=wells)
         a["cells"][i] = b.reshape(-1)
         for j, t in enumerate(toks[:NT]):
             if drop and any(t.kind.startswith(p) for p in drop):
@@ -77,7 +77,7 @@ def arrays(states, teacher, version=T.TOK_VERSION, drop=()):
 
 class Player:
     def __init__(self, model_path, depth, beam, teacher, mode, policy="logit", propose=0, temp=0.0, seed=0, merge="", merge_override="",
-                 expand_args=(), cross_loops=0, drop_kinds=""):
+                 expand_args=(), cross_loops=0, drop_kinds="", wells=True):
         import torch
         import model as M
         torch.set_num_threads(1)
@@ -114,6 +114,7 @@ class Player:
         # drop_kinds: blank more token kinds at inference (group_shap.py), on top of the checkpoint's own
         self.drop = tuple(p for p in (ck["args"].get("drop_kinds", "") + "," + drop_kinds).split(",") if p)
         self.no_setups = "setup_" in self.drop
+        self.wells = wells       # False: --no-wells (the clean zone's rows as play rows, group_shap.py)
         self.policy = policy
         self.propose = propose
         self.temp, self.rng, self.last_entropy = temp, np.random.default_rng(seed), None
@@ -139,7 +140,7 @@ class Player:
         """Per position: the policy's log-probabilities, and Q in lines of attack from the
         chosen value head (None when moves are chosen by the policy)."""
         with self.torch.inference_mode():
-            a = arrays(pairs, self.teacher, self.tok_version, self.drop)
+            a = arrays(pairs, self.teacher, self.tok_version, self.drop, self.wells)
             if getattr(self.net, "pretok", False):      # ToMe v3: the rule pre-tokens of each position
                 import pretok as PT
                 a["pretok"] = self.torch.from_numpy(np.stack([PT.groups(a["cells"][i].numpy().astype(bool)) for i in range(len(pairs))]).astype(np.int64))
@@ -224,7 +225,7 @@ class Player:
         frame through the earlier planned clears). Returns [(hold, sorted cells)] for steps 2..K
         (shorter when the chain cannot go on: the known queue runs out)."""
         import torch
-        a = arrays([(st, root)], self.teacher, self.tok_version, self.drop)
+        a = arrays([(st, root)], self.teacher, self.tok_version, self.drop, self.wells)
         i = root["cands"].index(c)
         preds, pcs = [], []
         with torch.inference_mode():
@@ -325,7 +326,7 @@ class Player:
         if not root["cands"]:
             return None
         n = min(len(root["cands"]), P.NC)
-        a = arrays([(st, root)], self.teacher, self.tok_version, self.drop)
+        a = arrays([(st, root)], self.teacher, self.tok_version, self.drop, self.wells)
         with torch.inference_mode():
             out = self.net(a, heads=True, n_steps=6)
         c = root["cands"][int(out["logit"][0, :n].argmax())]
@@ -353,7 +354,7 @@ class Player:
         if not root["cands"]:
             return None
         n = min(len(root["cands"]), P.NC)
-        a = arrays([(st, root)], self.teacher, self.tok_version, self.drop)
+        a = arrays([(st, root)], self.teacher, self.tok_version, self.drop, self.wells)
         with torch.inference_mode():
             out, enc, _ = self.net.move1(a)
             lp1 = out["logit"][0, :n].log_softmax(-1)
@@ -395,7 +396,7 @@ class Player:
         if not root["cands"]:
             return None
         n = len(root["cands"])
-        a = arrays([(st, root)], self.teacher, self.tok_version, self.drop)
+        a = arrays([(st, root)], self.teacher, self.tok_version, self.drop, self.wells)
         with torch.inference_mode():
             out, enc, _ = self.net.move1(a)
             i = int(out["logit"][0, :min(n, P.NC)].argmax())
@@ -428,7 +429,7 @@ def play_game(args, seed):
         raise SystemExit("--commit: 2 for now (an N = 2 model)")
     pl = Player(args.model, args.depth, args.beam, STYLES["normal" if auto else args.style], args.mode, args.policy, args.propose,
                 temp=args.temp, seed=seed, merge=args.merge, merge_override=args.merge_override, expand_args=rule_args,
-                cross_loops=args.cross_loops, drop_kinds=args.drop_kinds)
+                cross_loops=args.cross_loops, drop_kinds=args.drop_kinds, wells=not args.no_wells)
     cmd = [BOT, "play-ext", "--mode", args.mode, *rule_args, "--pieces", str(args.pieces), "--seed", str(seed)]
     if auto and getattr(pl, "n_styles", 2) < 3:
         raise SystemExit("--style auto needs a model with a danger style (3 style rows)")
@@ -575,6 +576,8 @@ def main():
                     "comes from the same encoder pass as move 1, unless garbage changed the board)")
     ap.add_argument("--drop-kinds", default="", help="analysis: blank these token kinds at inference, by prefix, comma-separated "
                     "(as train.py --drop-kinds, but the model was trained with them; group_shap.py)")
+    ap.add_argument("--no-wells", action="store_true", help="analysis: no well tokens at inference, the clean zone's rows "
+                    "tokenized as play rows (tokenizer wells=False; group_shap.py)")
     ap.add_argument("--dump", default="", help="write every state reached (seed, n, rows, b2b) to this JSONL")
     args = ap.parse_args()
     n_p = pcores.pin() or 8
@@ -587,7 +590,7 @@ def main():
     full = attack / (args.games * args.pieces)
     line = ("AtTenTris %s%s%s%s%s depth %d%s style %s %s: APP %.3f (APPfull %.3f), died %d/%d, pieces %.0f avg, TSD %d, TST %d, quads %d, "
             "max height %d, illegal %d, %.1f ms/move (p90 %.1f) + search %.1f ms, %.0fs") % (
-        args.policy, (" drop " + args.drop_kinds) if args.drop_kinds else "", (" merge " + args.merge) if args.merge else "", (" top%d" % args.propose) if args.propose else "", (" shortlist %d + V search" % args.shortlist) if args.shortlist else "", args.depth, "" if args.depth <= 1 else " beam %d" % args.beam, args.style, ("garbage " + args.garbage) if args.garbage else "no garbage",
+        args.policy, ((" drop " + args.drop_kinds) if args.drop_kinds else "") + (" no-wells" if args.no_wells else ""), (" merge " + args.merge) if args.merge else "", (" top%d" % args.propose) if args.propose else "", (" shortlist %d + V search" % args.shortlist) if args.shortlist else "", args.depth, "" if args.depth <= 1 else " beam %d" % args.beam, args.style, ("garbage " + args.garbage) if args.garbage else "no garbage",
         attack / max(1, pieces), full, sum(r["died"] for r in res), args.games, pieces / args.games,
         sum(r["tsd"] for r in res), sum(r["tst"] for r in res), sum(r["quads"] for r in res),
         max(r["max_height"] for r in res), sum(r["illegal"] for r in res),

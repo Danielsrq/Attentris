@@ -7,6 +7,7 @@
 #   nosetup   = only the setup_* tokens blanked (the d64 setup ablation, setup_ablation.sh, at d128)
 #   nofitx    = the non-T slot tokens fit_s / z / l / j / i blanked (the d64 fit ablation, fit_ablation.sh, at d128)
 #   nofitt    = only the open T recess fit_t blanked (the T structures tsd / stsd / ... stay)
+#   nopit     = the negative-space tokens pit1-4 and rect12 blanked (group_shap.py "pitrect")
 # Stages, as v51_d128 -> dagger_ft -> dagger3_ft -> dagger5b_ft (capacity_d128.sh, d128_lineage.sh, dagger5b.sh):
 #   base: 8 epochs from scratch, lr 1.5e-3, train + dagger1 + train1m
 #   dagger_ft: 3 epochs, lr 3e-4, train / dagger1 / train1m at 0.19 + dagger2, val2 val_dagger2
@@ -46,7 +47,7 @@ rest = sum(len(np.load(d + f)['chosen']) for f in ('train.npz', 'dagger1.npz', '
 print('%.4f' % (7 / 3 * new / rest))")
 echo "== ablations at d=128 ($VARIANTS), full lineage $(date '+%Y-%m-%d %H:%M') (dagger5b mix F=$F)" | tee -a "$OUT"
 for v in $VARIANTS; do
-    case $v in noflat) FLAG="--no-flat" ;; nooverlay) FLAG="--drop-kinds $DK" ;; nosetup) FLAG="--drop-kinds setup_" ;; nofitx) FLAG="--drop-kinds fit_s,fit_z,fit_l,fit_j,fit_i" ;; nofitt) FLAG="--drop-kinds fit_t" ;; *) echo "unknown variant $v"; exit 1 ;; esac
+    case $v in noflat) FLAG="--no-flat" ;; nooverlay) FLAG="--drop-kinds $DK" ;; nosetup) FLAG="--drop-kinds setup_" ;; nofitx) FLAG="--drop-kinds fit_s,fit_z,fit_l,fit_j,fit_i" ;; nofitt) FLAG="--drop-kinds fit_t" ;; nopit) FLAG="--drop-kinds pit,rect12" ;; *) echo "unknown variant $v"; exit 1 ;; esac
     b=v51_d128_$v
     stage $b 8 --train train.npz,dagger1.npz,train1m.npz --epochs 8 --lr 1.5e-3 $FLAG
     stage ${b}_dagger_ft 3 --train train.npz@0.19,dagger1.npz@0.19,train1m.npz@0.19,dagger2.npz --epochs 3 --lr 3e-4 $FLAG \

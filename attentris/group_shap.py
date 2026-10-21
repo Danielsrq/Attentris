@@ -1,14 +1,15 @@
 """Shapley values of token groups for the game outcome (VS score, deaths) of one trained model.
 
 Players: token groups (GROUPS). A coalition S plays with the groups in S present and the rest blanked at
-inference (play.py --drop-kinds; the model was trained with all of them, as token_shap.py). v(S) = the
+inference (the well group is not blanked: without it the rows a well covers are play rows, so only the label,
+its extras and the grouping go) (play.py --drop-kinds; the model was trained with all of them, as token_shap.py). v(S) = the
 mean per-game VSfull ((attack + garbage cleared) / 500 pieces) over the same paired games: depth 1,
 normal / danger x 80/20, 50/50, seeds 33001+ and 53001+ (64 each). Exact Shapley over all 2^n
 coalitions, the pairwise Shapley interaction index, and a paired bootstrap over the seeds (the same
 seeds in every coalition) for 90% intervals. The all-present coalition is the baseline's own games
 (dagger3_eval, play is deterministic per seed).
 
-    # 31 coalitions x 4 settings x 128 games ~ 16k games, ~2 h CPU; resumable per game file
+    # 6 groups: 63 coalitions x 4 settings x 128 games ~ 32k games, ~2 h CPU; resumable per game file
     $CPUPY attentris/group_shap.py > attentris/group_shap.out 2>&1
     $CPUPY attentris/group_shap.py --report          # only the tables, from the game files
 """
@@ -30,6 +31,7 @@ GROUPS = {   # name -> token-kind prefixes
     "setup": "setup_",
     "tstruct": "imperial,stsd,cspin,fractal,tsd,vertical",
     "pitrect": "pit,rect12",
+    "well": None,   # a base kind: absent = no well tokens, the clean zone's rows tokenized as play rows (play.py --no-wells)
 }
 SETTINGS = {   # tag -> (style, garbage)
     "normal_g20": ("normal", "10,3-4,cheese0.2,0.2"),
@@ -60,10 +62,10 @@ def play(args, present, tag, sk):
     if finished(path):
         return
     style, garbage = SETTINGS[tag]
-    drop = ",".join(GROUPS[g] for g in GROUPS if g not in present)
+    drop = ",".join(GROUPS[g] for g in GROUPS if g not in present and GROUPS[g])
     cmd = [sys.executable, os.path.join(HERE, "play.py"), "--model", os.path.join(HERE, "data", "model_%s.pt" % args.base),
            "--style", style, "--games", str(args.games), "--depth", "1", "--seed", str(SEEDS[sk]), "--garbage", garbage,
-           "--drop-kinds", drop, "--out", path]
+           "--drop-kinds", drop, "--out", path] + ([] if "well" in present else ["--no-wells"])
     out = subprocess.run(cmd, capture_output=True, text=True).stdout
     line = [l for l in out.splitlines() if l.startswith("AtTenTris")]
     print("%-36s %s %s: %s" % (coalition_name(present), tag, sk, line[0].split(": ", 1)[1][:110] if line else "FAILED"), flush=True)

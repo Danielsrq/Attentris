@@ -49,3 +49,13 @@ nofitt
   danger_d2g20  n=128  deaths   5 ->   2  b  1 c  4  p=0.3750
   danger_d2g50  n=128  deaths  18 ->  19  b 14 c 13  p=1.0000
   pooled        b 170 c 128  p=0.017
+nopit
+  normal_g20    n=128  deaths  38 ->  46  b 31 c 23  p=0.3409
+  normal_g50    n=128  deaths  92 ->  98  b 24 c 18  p=0.4408
+  danger_g20    n=128  deaths  10 ->   8  b  7 c  9  p=0.8036
+  danger_g50    n=128  deaths  47 ->  43  b 28 c 32  p=0.6989
+  normal_d2g20  n=128  deaths  22 ->  31  b 24 c 15  p=0.1996
+  normal_d2g50  n=128  deaths  77 ->  74  b 31 c 34  p=0.8043
+  danger_d2g20  n=128  deaths   5 ->   1  b  0 c  4  p=0.1250
+  danger_d2g50  n=128  deaths  18 ->  19  b 14 c 13  p=1.0000
+  pooled        b 159 c 148  p=0.57
