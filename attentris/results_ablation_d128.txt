@@ -291,3 +291,111 @@ nofitx
   danger_d2g20  n=128  deaths   5 ->   1  b  1 c  5  p=0.2188
   danger_d2g50  n=128  deaths  18 ->  22  b 17 c 13  p=0.5847
   pooled        b 201 c  93  p=2.8e-10
+== ablations at d=128 (nofitt), full lineage 2026-10-21 10:36 (dagger5b mix F=0.6155)
+v51_d128_nofitt: training 10:36
+== v51_d128_nofitt
+epoch 8: train loss 2.057 | val normal top1 0.647 top3 0.866 | val gate4 top1 0.628 top3 0.854 | | 142s
+v51_d128_nofitt_dagger_ft: training 10:55
+== v51_d128_nofitt_dagger_ft
+epoch 3: train loss 2.255 | val normal top1 0.645 top3 0.864 | val gate4 top1 0.621 top3 0.851 | | 39s
+epoch 3: val2 (val_dagger2.npz, 9737) top1 0.414 top3 0.680 loss 2.775 | argmax Qs top1 0.370 | MAE Qs 7.00
+v51_d128_nofitt_dagger3_ft: training 10:57
+== v51_d128_nofitt_dagger3_ft
+epoch 3: train loss 2.256 | val normal top1 0.646 top3 0.863 | val gate4 top1 0.627 top3 0.851 | | 38s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.472 top3 0.734 loss 2.633 | argmax Qs top1 0.441 | MAE Qs 7.82
+v51_d128_nofitt_dagger5b_ft: training 10:59
+== v51_d128_nofitt_dagger5b_ft
+epoch 3: train loss 2.243 | val normal top1 0.646 top3 0.866 | val gate4 top1 0.625 top3 0.853 | | 136s
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.484 top3 0.741 loss 2.529 | argmax Qs top1 0.456 | MAE Qs 7.48
+v51_d128_nofitt_dagger5b_ft normal none: APP 0.728 (APPfull 0.728), died 0/256, pieces 500 avg, TSD 6682, TST 52, quads 3663, max height 17, illegal 0, 33.8 ms/move (p90 41.5) + search 34.6 ms, 78s
+v51_d128_nofitt_dagger5b_ft normal d2: APP 0.863 (APPfull 0.863), died 0/64, pieces 500 avg, TSD 1880, TST 9, quads 957, max height 16, illegal 0, 145.4 ms/move (p90 178.5) + search 146.3 ms, 84s
+v51_d128_nofitt_dagger5b_ft normal g20: APP 0.778 (APPfull 0.641), died 21/64, pieces 412 avg, TSD 1006, TST 8, quads 1956, max height 22, illegal 0, 28.6 ms/move (p90 38.7) + search 29.3 ms, 19s
+v51_d128_nofitt_dagger5b_ft normal g50: APP 0.519 (APPfull 0.256), died 56/64, pieces 246 avg, TSD 498, TST 2, quads 639, max height 22, illegal 0, 26.6 ms/move (p90 38.0) + search 27.2 ms, 15s
+v51_d128_nofitt_dagger5b_ft normal d2g20: APP 0.848 (APPfull 0.729), died 18/64, pieces 430 avg, TSD 1128, TST 6, quads 2168, max height 21, illegal 0, 133.0 ms/move (p90 174.6) + search 133.8 ms, 71s
+v51_d128_nofitt_dagger5b_ft normal d2g50: APP 0.596 (APPfull 0.431), died 40/64, pieces 362 avg, TSD 773, TST 2, quads 1186, max height 22, illegal 0, 124.0 ms/move (p90 173.5) + search 124.8 ms, 60s
+v51_d128_nofitt_dagger5b_ft danger g20: APP 0.746 (APPfull 0.723), died 3/64, pieces 485 avg, TSD 1278, TST 11, quads 2219, max height 20, illegal 0, 31.9 ms/move (p90 41.6) + search 32.7 ms, 22s
+v51_d128_nofitt_dagger5b_ft danger g50: APP 0.524 (APPfull 0.428), died 24/64, pieces 408 avg, TSD 816, TST 2, quads 1079, max height 21, illegal 0, 28.6 ms/move (p90 38.8) + search 29.3 ms, 19s
+v51_d128_nofitt_dagger5b_ft danger d2g20: APP 0.792 (APPfull 0.792), died 0/64, pieces 500 avg, TSD 1399, TST 8, quads 2379, max height 20, illegal 0, 148.0 ms/move (p90 182.5) + search 148.8 ms, 85s
+v51_d128_nofitt_dagger5b_ft danger d2g50: APP 0.578 (APPfull 0.545), died 8/64, pieces 471 avg, TSD 1098, TST 8, quads 1381, max height 22, illegal 0, 144.2 ms/move (p90 182.4) + search 145.0 ms, 80s
+== APP / VS: v5.1 d128 dagger5b-ft vs the ablations (nofitt), dagger5b-ft each (same lineage, same seeds)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_dagger5b_ft_normal_none     0/256      500   0.739    0.739   0.739    0.739         -
+v51_d128_dagger5b_ft_normal_d2       0/64      500   0.832    0.832   0.832    0.832         -
+v51_d128_dagger5b_ft_normal_g20     18/64      414   0.785    0.650   1.112    0.921 8653/9162
+v51_d128_dagger5b_ft_normal_g50     44/64      305   0.555    0.338   0.859    0.523 5917/6780
+v51_d128_dagger5b_ft_danger_g20      4/64      490   0.733    0.718   1.071    1.049 10608/10806
+v51_d128_dagger5b_ft_danger_g50     25/64      404   0.520    0.421   0.844    0.683 8378/8978
+v51_d128_dagger5b_ft_normal_d2g20   10/64      470   0.846    0.795   1.180    1.109 10044/10398
+v51_d128_dagger5b_ft_normal_d2g50   45/64      323   0.610    0.394   0.917    0.593 6360/7232
+v51_d128_dagger5b_ft_danger_d2g20    2/64      493   0.793    0.781   1.132    1.116 10701/10882
+v51_d128_dagger5b_ft_danger_d2g50   11/64      461   0.587    0.542   0.919    0.848 9788/10199
+v51_d128_nofitt_dagger5b_ft_normal_none   0/256      500   0.728    0.728   0.728    0.728         -
+v51_d128_nofitt_dagger5b_ft_normal_d2   0/64      500   0.863    0.863   0.863    0.863         -
+v51_d128_nofitt_dagger5b_ft_normal_g20  21/64      412   0.778    0.641   1.103    0.909 8571/9121
+v51_d128_nofitt_dagger5b_ft_normal_g50  56/64      246   0.519    0.256   0.806    0.397 4514/5505
+v51_d128_nofitt_dagger5b_ft_danger_g20   3/64      485   0.746    0.723   1.084    1.051 10495/10698
+v51_d128_nofitt_dagger5b_ft_danger_g50  24/64      408   0.524    0.428   0.846    0.691 8436/9049
+v51_d128_nofitt_dagger5b_ft_normal_d2g20  18/64      430   0.848    0.729   1.176    1.011 9020/9517
+v51_d128_nofitt_dagger5b_ft_normal_d2g50  40/64      362   0.596    0.431   0.908    0.656 7209/8055
+v51_d128_nofitt_dagger5b_ft_danger_d2g20   0/64      500   0.792    0.792   1.132    1.132 10885/11029
+v51_d128_nofitt_dagger5b_ft_danger_d2g50   8/64      471   0.578    0.545   0.911    0.858 10015/10414
+== 64 more games per garbage setting, seeds 53001+ (v51_d128_dagger5b_ft v51_d128_noflat_dagger5b_ft v51_d128_nooverlay_dagger5b_ft v51_d128_nosetup_dagger5b_ft v51_d128_nofitx_dagger5b_ft v51_d128_nofitt_dagger5b_ft) 11:16
+v51_d128_nofitt_dagger5b_ft normal g20 (seeds 53001+): APP 0.787 (APPfull 0.604), died 26/64, pieces 383 avg, TSD 966, TST 4, quads 1832, max height 22, illegal 0, 27.1 ms/move (p90 37.9) + search 27.8 ms, 18s
+v51_d128_nofitt_dagger5b_ft normal g50 (seeds 53001+): APP 0.530 (APPfull 0.291), died 54/64, pieces 275 avg, TSD 500, TST 3, quads 762, max height 23, illegal 0, 24.8 ms/move (p90 36.3) + search 25.5 ms, 15s
+v51_d128_nofitt_dagger5b_ft normal d2g20 (seeds 53001+): APP 0.840 (APPfull 0.730), died 16/64, pieces 434 avg, TSD 1211, TST 5, quads 2174, max height 21, illegal 0, 134.1 ms/move (p90 175.5) + search 134.9 ms, 72s
+v51_d128_nofitt_dagger5b_ft normal d2g50 (seeds 53001+): APP 0.582 (APPfull 0.403), died 42/64, pieces 347 avg, TSD 746, TST 5, quads 1077, max height 22, illegal 0, 118.1 ms/move (p90 168.3) + search 118.9 ms, 57s
+v51_d128_nofitt_dagger5b_ft danger g20 (seeds 53001+): APP 0.729 (APPfull 0.708), died 3/64, pieces 486 avg, TSD 1241, TST 6, quads 2180, max height 21, illegal 0, 31.7 ms/move (p90 41.1) + search 32.4 ms, 22s
+v51_d128_nofitt_dagger5b_ft danger g50 (seeds 53001+): APP 0.510 (APPfull 0.397), died 27/64, pieces 390 avg, TSD 742, TST 3, quads 1055, max height 22, illegal 0, 27.4 ms/move (p90 38.3) + search 28.1 ms, 18s
+v51_d128_nofitt_dagger5b_ft danger d2g20 (seeds 53001+): APP 0.787 (APPfull 0.775), died 2/64, pieces 493 avg, TSD 1397, TST 12, quads 2304, max height 20, illegal 0, 146.7 ms/move (p90 182.4) + search 147.5 ms, 84s
+v51_d128_nofitt_dagger5b_ft danger d2g50 (seeds 53001+): APP 0.573 (APPfull 0.544), died 11/64, pieces 475 avg, TSD 1110, TST 8, quads 1362, max height 21, illegal 0, 145.7 ms/move (p90 181.7) + search 146.5 ms, 81s
+paired deaths vs v51_d128_dagger5b_ft (exact McNemar; b = only the ablation died, c = only the baseline died)
+noflat
+  normal_g20    n=128  deaths  38 ->  53  b 40 c 25  p=0.0817
+  normal_g50    n=128  deaths  92 -> 112  b 32 c 12  p=0.0037
+  danger_g20    n=128  deaths  10 ->   9  b  7 c  8  p=1.0000
+  danger_g50    n=128  deaths  47 ->  57  b 29 c 19  p=0.1934
+  normal_d2g20  n=128  deaths  22 ->  31  b 25 c 16  p=0.2110
+  normal_d2g50  n=128  deaths  77 ->  83  b 29 c 23  p=0.4885
+  danger_d2g20  n=128  deaths   5 ->   5  b  4 c  4  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  25  b 20 c 13  p=0.2962
+  pooled        b 186 c 120  p=0.00019
+nooverlay
+  normal_g20    n=128  deaths  38 ->  69  b 47 c 16  p=0.0001
+  normal_g50    n=128  deaths  92 -> 118  b 33 c  7  p=0.0000
+  danger_g20    n=128  deaths  10 ->  25  b 21 c  6  p=0.0059
+  danger_g50    n=128  deaths  47 ->  70  b 41 c 18  p=0.0038
+  normal_d2g20  n=128  deaths  22 ->  45  b 34 c 11  p=0.0008
+  normal_d2g50  n=128  deaths  77 ->  93  b 32 c 16  p=0.0293
+  danger_d2g20  n=128  deaths   5 ->   4  b  4 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  27  b 24 c 15  p=0.1996
+  pooled        b 236 c  94  p=3.1e-15
+nosetup
+  normal_g20    n=128  deaths  38 ->  65  b 44 c 17  p=0.0007
+  normal_g50    n=128  deaths  92 -> 104  b 28 c 16  p=0.0961
+  danger_g20    n=128  deaths  10 ->  14  b 12 c  8  p=0.5034
+  danger_g50    n=128  deaths  47 ->  40  b 22 c 29  p=0.4011
+  normal_d2g20  n=128  deaths  22 ->  17  b 13 c 18  p=0.4731
+  normal_d2g50  n=128  deaths  77 ->  86  b 33 c 24  p=0.2892
+  danger_d2g20  n=128  deaths   5 ->   4  b  4 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  22  b 19 c 15  p=0.6076
+  pooled        b 175 c 132  p=0.016
+nofitx
+  normal_g20    n=128  deaths  38 ->  67  b 43 c 14  p=0.0002
+  normal_g50    n=128  deaths  92 -> 114  b 31 c  9  p=0.0007
+  danger_g20    n=128  deaths  10 ->  17  b 14 c  7  p=0.1892
+  danger_g50    n=128  deaths  47 ->  65  b 37 c 19  p=0.0222
+  normal_d2g20  n=128  deaths  22 ->  33  b 24 c 13  p=0.0989
+  normal_d2g50  n=128  deaths  77 ->  98  b 34 c 13  p=0.0031
+  danger_d2g20  n=128  deaths   5 ->   1  b  1 c  5  p=0.2188
+  danger_d2g50  n=128  deaths  18 ->  22  b 17 c 13  p=0.5847
+  pooled        b 201 c  93  p=2.8e-10
+nofitt
+  normal_g20    n=128  deaths  38 ->  47  b 32 c 23  p=0.2806
+  normal_g50    n=128  deaths  92 -> 110  b 29 c 11  p=0.0064
+  danger_g20    n=128  deaths  10 ->   6  b  5 c  9  p=0.4240
+  danger_g50    n=128  deaths  47 ->  51  b 31 c 27  p=0.6940
+  normal_d2g20  n=128  deaths  22 ->  34  b 28 c 16  p=0.0961
+  normal_d2g50  n=128  deaths  77 ->  82  b 30 c 25  p=0.5901
+  danger_d2g20  n=128  deaths   5 ->   2  b  1 c  4  p=0.3750
+  danger_d2g50  n=128  deaths  18 ->  19  b 14 c 13  p=1.0000
+  pooled        b 170 c 128  p=0.017

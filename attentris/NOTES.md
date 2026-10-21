@@ -49,7 +49,7 @@ The user's stated main contributions: an explainable model that considers Tetris
 | `data/bot/` | replays (`data/bot/versus/{fixed,2pps}` = 18 versus replays) |
 | `attentris/attn_viz.py`, `attn_template.html` | attention page (cross-attention per move, geometry vs content); SHAP view when the data has it |
 | `attentris/token_shap.py`, `shap_page.py` | token SHAP per position (`--top N` moves, `--keep PAGE`, `--summary`); merge into an attention page |
-| `attentris/ablation_d128.sh`, `ablation_more.sh`, `ablation_stats.py` | d128 ablation lineages (`VARIANTS=noflat nooverlay nosetup nofitx`), 64 more games on seeds 53001+, paired McNemar tests |
+| `attentris/ablation_d128.sh`, `ablation_more.sh`, `ablation_stats.py` | d128 ablation lineages (`VARIANTS=noflat nooverlay nosetup nofitx nofitt`), 64 more games on seeds 53001+, paired McNemar tests |
 | `bot/results/allspin_survive/run.sh`, `bot/results/allspin_cash/run.sh` | CEM all-spin survival tunes and evals (portable); `bot/tools/spin_stats.py` = spin / B2B / wound stats from `bot play --out` replays |
 
 ## Architecture (current best: v5.1 at d = 128)
@@ -138,7 +138,7 @@ The teachers above and every AtTenTris model so far use **normal** rules. All-sp
 `v51` (d64) -> `v51_dagger_ft` (DAgger 2) -> `v51_dagger3_ft`; the same lineage at `v51_d96*` and `v51_d128*`.
 **Best: `v51_d128_dagger5b_ft`**: d128 base -> dagger_ft -> dagger3_ft -> dagger5b_ft (rounds 4 + 5 + extension).
 
-Other checkpoints: `v51_d128_dagger5_ft`, ToMe `tome_v41*` / `tome_v42_{l4h,l4g,l6g}*`, `v52_{loop,untied}*` (d64), `v52_d128_{untied,loop}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage), ablations `v51_{nosetup,nofitx,not}*` (d64) and `v51_d128_{noflat,nooverlay,nosetup,nofitx}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage, 2026-10-20).
+Other checkpoints: `v51_d128_dagger5_ft`, ToMe `tome_v41*` / `tome_v42_{l4h,l4g,l6g}*`, `v52_{loop,untied}*` (d64), `v52_d128_{untied,loop}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage), ablations `v51_{nosetup,nofitx,not}*` (d64) and `v51_d128_{noflat,nooverlay,nosetup,nofitx,nofitt}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage, 2026-10-20).
 Strongest on the standard block since 2026-10-20: `v52_d128_untied_dagger5b_ft` (1.26M params; not yet re-tested at 128 games, deeper search or versus).
 Bot weights from 2026-10-20 (in git): `bot/results/allspin_survive/allspin_survive_e15.txt` (all-spin, survives garbage every 15 pieces), `bot/results/allspin_cash/allspin_cash_e15.txt` (the `allspin_cash` variant).
 Plan models (2026-10-16, all d128; "-ft" = fine-tuned from `v51_d128_dagger5b_ft` with the dagger5b recipe, 3 epochs):
@@ -230,29 +230,30 @@ Depth 2 beam 4 with garbage (deaths, VSfull): v5.1 10 (1.109) / 45 (0.593) / 2 (
 - Depth-2 search closes most of the gap at 50/50 and danger style, not at normal 80/20.
 - Side effect: both train ~45% faster per epoch (131-136 s vs 237 s at dagger5b), noflat from no pair features, nooverlay from fewer tokens.
 
-**128 paired games per garbage setting** (seeds 33001+ and 53001+, `ablation_more.sh`; `nosetup` = only the `setup_*` tokens blanked, val 0.635 / 0.629 / 0.487; `nofitx` (2026-10-21) = the non-T slots `fit_s,fit_z,fit_l,fit_j,fit_i` blanked together, the d64 fit ablation at d128, val 0.638 / 0.623 / 0.480). Deaths / 128, exact McNemar p in brackets (`ablation_stats.py`, `ablation_stats_128.txt`); APP none over 256 games:
+**128 paired games per garbage setting** (seeds 33001+ and 53001+, `ablation_more.sh`; `nosetup` = only the `setup_*` tokens blanked, val 0.635 / 0.629 / 0.487; `nofitx` (2026-10-21) = the non-T slots `fit_s,fit_z,fit_l,fit_j,fit_i` blanked together, the d64 fit ablation at d128, val 0.638 / 0.623 / 0.480; `nofitt` (2026-10-21) = only the open T recess `fit_t` blanked, the T structures stay, val 0.646 / 0.625 / 0.484). Deaths / 128, exact McNemar p in brackets (`ablation_stats.py`, `ablation_stats_128.txt`); APP none over 256 games:
 
-| setting | v5.1 dagger5b-ft | noflat | nooverlay | nosetup | nofitx |
-|---|---|---|---|---|---|
-| APP none (256) | 0.739 | 0.724 | 0.729 | 0.722 | 0.715 |
-| APP d2 (64) | 0.832 | 0.835 | 0.855 | 0.842 | 0.845 |
-| normal 80/20 | 38 | 53 (0.08) | **69** (0.0001) | **65** (0.0007) | **67** (0.0002) |
-| normal 50/50 | 92 | **112** (0.004) | **118** (<0.0001) | 104 (0.10) | **114** (0.0007) |
-| danger 80/20 | 10 | 9 (1.0) | **25** (0.006) | 14 (0.50) | 17 (0.19) |
-| danger 50/50 | 47 | 57 (0.19) | **70** (0.004) | 40 (0.40) | **65** (0.02) |
-| normal d2 80/20 | 22 | 31 (0.21) | **45** (0.0008) | 17 (0.47) | 33 (0.10) |
-| normal d2 50/50 | 77 | 83 (0.49) | **93** (0.03) | 86 (0.29) | **98** (0.003) |
-| danger d2 80/20 | 5 | 5 (1.0) | 4 (1.0) | 4 (1.0) | 1 (0.22) |
-| danger d2 50/50 | 18 | 25 (0.30) | 27 (0.20) | 22 (0.61) | 22 (0.58) |
-| **pooled, 8 settings** (games only one side lost) | | 186 vs 120, **p = 0.0002** | 236 vs 94, **p = 3e-15** | 175 vs 132, **p = 0.016** | 201 vs 93, **p = 3e-10** |
+| setting | v5.1 dagger5b-ft | noflat | nooverlay | nosetup | nofitx | nofitt |
+|---|---|---|---|---|---|---|
+| APP none (256) | 0.739 | 0.724 | 0.729 | 0.722 | 0.715 | 0.728 |
+| APP d2 (64) | 0.832 | 0.835 | 0.855 | 0.842 | 0.845 | 0.863 |
+| normal 80/20 | 38 | 53 (0.08) | **69** (0.0001) | **65** (0.0007) | **67** (0.0002) | 47 (0.28) |
+| normal 50/50 | 92 | **112** (0.004) | **118** (<0.0001) | 104 (0.10) | **114** (0.0007) | **110** (0.006) |
+| danger 80/20 | 10 | 9 (1.0) | **25** (0.006) | 14 (0.50) | 17 (0.19) | 6 (0.42) |
+| danger 50/50 | 47 | 57 (0.19) | **70** (0.004) | 40 (0.40) | **65** (0.02) | 51 (0.69) |
+| normal d2 80/20 | 22 | 31 (0.21) | **45** (0.0008) | 17 (0.47) | 33 (0.10) | 34 (0.10) |
+| normal d2 50/50 | 77 | 83 (0.49) | **93** (0.03) | 86 (0.29) | **98** (0.003) | 82 (0.59) |
+| danger d2 80/20 | 5 | 5 (1.0) | 4 (1.0) | 4 (1.0) | 1 (0.22) | 2 (0.38) |
+| danger d2 50/50 | 18 | 25 (0.30) | 27 (0.20) | 22 (0.61) | 22 (0.58) | 19 (1.0) |
+| **pooled, 8 settings** (games only one side lost) | | 186 vs 120, **p = 0.0002** | 236 vs 94, **p = 3e-15** | 175 vs 132, **p = 0.016** | 201 vs 93, **p = 3e-10** | 170 vs 128, **p = 0.017** |
 
-VSfull (128 games): normal 80/20 0.941 / 0.873 / 0.775 / 0.821 / 0.790; normal 50/50 0.516 / 0.389 / 0.352 / 0.479 / 0.370; danger 50/50 0.703 / 0.667 / 0.598 / 0.733 / 0.635.
+VSfull (128 games): normal 80/20 0.941 / 0.873 / 0.775 / 0.821 / 0.790 / 0.880; normal 50/50 0.516 / 0.389 / 0.352 / 0.479 / 0.370 / 0.425; danger 50/50 0.703 / 0.667 / 0.598 / 0.733 / 0.635 / 0.670.
 
-- **All four components help survival** (pooled, game noise only). Ranking: overlays (all of them) ≫ non-T slots > FLAT-2D > setup tokens.
+- **All five components help survival** (pooled, game noise only). Ranking: overlays (all of them) ≫ non-T slots > FLAT-2D > setup tokens ≈ fit_t.
 - **Overlays off** hurts in 6 of 8 settings individually, including danger style and depth 2: the rule tokens are the strongest single design element.
 - **FLAT-2D off** hurts mainly in normal style at depth 1 (50/50 92 → 112); search and danger style mostly absorb it.
 - **Setup tokens off** costs normal 80/20 (38 → 65) and is otherwise neutral, even slightly better at danger 50/50 (47 → 40, n.s.): setups matter to the attacking normal style, not to the survival style.
 - **Non-T slots off** (`nofitx`) is the second-largest cost: significant in 4 of 8 settings, in both styles (normal 50/50 92 → 114, danger 50/50 47 → 65, normal d2 50/50 77 → 98), so most of the overlay cost is the slots. Matches token SHAP, where `fit_s/z/l/j/i` carry 13% of all |φ|, second after the play rows; S, Z, L, J each about equal, `fit_i` almost never present (4% of positions). Val and clean APP again barely move (APP none 0.715).
+- **fit_t off** (`nofitt`; the idea: only a T fixes checkerboard parity, but a T recess is plain in the play-row cells): significant only at normal 50/50 (92 → 110); pooled p = 0.017 like the setup tokens; val and APP unchanged (none 0.728, d2 0.863). Token SHAP of `nofitt` on the same 300 positions (`data/shap/v51_d128_nofitt_dagger5b_ft.jsonl`): on the 18 T moves where the baseline sees a `fit_t` (4.6% of its |phi|), the move is the same in 13 and p(move) the same (0.42); the share does not move to the play rows (26.8% → 26.8%) but spreads mostly to the piece tokens (29.0% → 33.9%). Small n; the model replaces the token with little loss, not visibly by reading the rows.
 - Each model is one training run; a second training seed would test model-to-model noise (not done, the user's choice).
 
 ## Explainability: token SHAP (2026-10-20)
@@ -592,7 +593,7 @@ Reading:
   - **Per move, the two rule sets don't clash.** The candidates' spin / lines / attack inputs are computed under the active rules: an S-spin double arrives as mini, 0 attack under normal rules and as full, 4 attack under all-spin.
   - **For planning they do.** The value of building an S-spin slot, or of avoiding a repeated clear type, depends on the rules, but the board tokens are identical in both modes, and the style tag only reaches the candidates (never the board side). A mixed model needs a **rules input the board side sees**: a rules token, or a flag on every board token. It also needs the "last clear type" input.
 
-**2. Ablations not done yet** (done: setup tokens, non-T slots, T structures + fit_t, all trained at d64; FLAT-2D at inference only; capacity, cross passes, ToMe, registers, plan heads, value targets, data size; on 2026-10-20 at d128 through the full lineage: FLAT-2D trained off, all overlays off, setup tokens off, non-T slots off (2026-10-21), see "Ablations at d = 128"):
+**2. Ablations not done yet** (done: setup tokens, non-T slots, T structures + fit_t, all trained at d64; FLAT-2D at inference only; capacity, cross passes, ToMe, registers, plan heads, value targets, data size; on 2026-10-20 at d128 through the full lineage: FLAT-2D trained off, all overlays off, setup tokens off, non-T slots off, fit_t off (2026-10-21), see "Ablations at d = 128"):
 - A second training seed for the d128 ablations and the baseline (the user skipped it for now): the paired tests cover game noise only.
 - A plain **per-cell baseline** (200 cell tokens, no rule tokens, similar size), planned in DESIGN.md but never run. It's memory-heavy: attention and the FLAT-2D pair features grow with tokens², ~40× at 200 vs ~31 tokens. **20 row tokens** (DESIGN.md's other baseline) is the cheap structure-free alternative.
 - The candidates' **attack input only** (keep lines and spin type): does the model learn the attack table (T-spin double ≫ double) from the Qs targets? The spin flag stays: whether a move is a spin depends on how the piece got there (the last action a rotation, plus the corner rule), not on its final cells. The same 4 cells can be a plain double or a T-spin double, so removing it would hide information the model can't recover.
