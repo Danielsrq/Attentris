@@ -1,0 +1,394 @@
+group SHAP of v51_d128_dagger5b_ft: 5 groups, 31 coalitions to play, 248 runs of 64 games left (14:03)
+none                                 normal_g20 s33: APP 0.242 (APPfull 0.050), died 64/64, pieces 103 avg, TSD 12, TST 0, quads 207, max height 23, illegal 0, 26.
+none                                 normal_g20 s53: APP 0.211 (APPfull 0.039), died 64/64, pieces 93 avg, TSD 18, TST 0, quads 147, max height 23, illegal 0, 27.3
+none                                 normal_g50 s33: APP 0.157 (APPfull 0.024), died 64/64, pieces 78 avg, TSD 8, TST 0, quads 64, max height 23, illegal 0, 26.3 m
+none                                 normal_g50 s53: APP 0.151 (APPfull 0.024), died 64/64, pieces 78 avg, TSD 11, TST 0, quads 57, max height 23, illegal 0, 27.1 
+none                                 danger_g20 s33: APP 0.218 (APPfull 0.053), died 64/64, pieces 121 avg, TSD 24, TST 0, quads 197, max height 23, illegal 0, 27.
+none                                 danger_g20 s53: APP 0.233 (APPfull 0.061), died 63/64, pieces 131 avg, TSD 28, TST 0, quads 250, max height 23, illegal 0, 27.
+none                                 danger_g50 s33: APP 0.158 (APPfull 0.031), died 64/64, pieces 98 avg, TSD 16, TST 0, quads 80, max height 23, illegal 0, 28.1 
+none                                 danger_g50 s53: APP 0.143 (APPfull 0.027), died 64/64, pieces 95 avg, TSD 16, TST 0, quads 71, max height 23, illegal 0, 26.7 
+fitx                                 normal_g20 s33: APP 0.445 (APPfull 0.275), died 46/64, pieces 309 avg, TSD 120, TST 0, quads 1127, max height 22, illegal 0, 2
+fitx                                 normal_g20 s53: APP 0.453 (APPfull 0.289), died 45/64, pieces 319 avg, TSD 105, TST 1, quads 1180, max height 23, illegal 0, 2
+fitx                                 normal_g50 s33: APP 0.306 (APPfull 0.128), died 59/64, pieces 210 avg, TSD 50, TST 0, quads 385, max height 23, illegal 0, 27.
+fitx                                 normal_g50 s53: APP 0.310 (APPfull 0.128), died 61/64, pieces 206 avg, TSD 64, TST 1, quads 374, max height 23, illegal 0, 25.
+fitx                                 danger_g20 s33: APP 0.417 (APPfull 0.363), died 18/64, pieces 434 avg, TSD 160, TST 1, quads 1426, max height 22, illegal 0, 3
+fitx                                 danger_g20 s53: APP 0.418 (APPfull 0.374), died 18/64, pieces 447 avg, TSD 175, TST 2, quads 1453, max height 23, illegal 0, 3
+fitx                                 danger_g50 s33: APP 0.296 (APPfull 0.176), died 50/64, pieces 297 avg, TSD 99, TST 0, quads 498, max height 23, illegal 0, 26.
+fitx                                 danger_g50 s53: APP 0.300 (APPfull 0.181), died 45/64, pieces 302 avg, TSD 116, TST 0, quads 503, max height 23, illegal 0, 27
+fitt                                 normal_g20 s33: APP 0.304 (APPfull 0.070), died 64/64, pieces 115 avg, TSD 55, TST 0, quads 241, max height 23, illegal 0, 25.
+fitt                                 normal_g20 s53: APP 0.266 (APPfull 0.047), died 64/64, pieces 88 avg, TSD 31, TST 0, quads 148, max height 22, illegal 0, 25.5
+fitt                                 normal_g50 s33: APP 0.222 (APPfull 0.036), died 64/64, pieces 82 avg, TSD 35, TST 0, quads 77, max height 23, illegal 0, 27.1 
+fitt                                 normal_g50 s53: APP 0.197 (APPfull 0.028), died 64/64, pieces 71 avg, TSD 28, TST 0, quads 55, max height 22, illegal 0, 27.0 
+fitt                                 danger_g20 s33: APP 0.300 (APPfull 0.096), died 61/64, pieces 160 avg, TSD 89, TST 0, quads 316, max height 22, illegal 0, 25.
+fitt                                 danger_g20 s53: APP 0.296 (APPfull 0.095), died 64/64, pieces 160 avg, TSD 84, TST 0, quads 297, max height 22, illegal 0, 27.
+fitt                                 danger_g50 s33: APP 0.211 (APPfull 0.045), died 64/64, pieces 106 avg, TSD 41, TST 0, quads 95, max height 22, illegal 0, 26.3
+fitt                                 danger_g50 s53: APP 0.206 (APPfull 0.044), died 64/64, pieces 106 avg, TSD 52, TST 0, quads 96, max height 22, illegal 0, 26.6
+setup                                normal_g20 s33: APP 0.253 (APPfull 0.050), died 64/64, pieces 98 avg, TSD 47, TST 0, quads 186, max height 23, illegal 0, 25.8
+setup                                normal_g20 s53: APP 0.231 (APPfull 0.043), died 64/64, pieces 93 avg, TSD 41, TST 0, quads 159, max height 23, illegal 0, 26.4
+setup                                normal_g50 s33: APP 0.172 (APPfull 0.027), died 64/64, pieces 77 avg, TSD 31, TST 0, quads 64, max height 23, illegal 0, 27.9 
+setup                                normal_g50 s53: APP 0.160 (APPfull 0.023), died 64/64, pieces 72 avg, TSD 34, TST 0, quads 51, max height 23, illegal 0, 26.2 
+setup                                danger_g20 s33: APP 0.249 (APPfull 0.070), died 63/64, pieces 140 avg, TSD 52, TST 0, quads 269, max height 22, illegal 0, 25.
+setup                                danger_g20 s53: APP 0.234 (APPfull 0.051), died 64/64, pieces 110 avg, TSD 55, TST 0, quads 185, max height 22, illegal 0, 26.
+setup                                danger_g50 s33: APP 0.165 (APPfull 0.030), died 64/64, pieces 92 avg, TSD 37, TST 0, quads 69, max height 23, illegal 0, 28.0 
+setup                                danger_g50 s53: APP 0.164 (APPfull 0.031), died 64/64, pieces 94 avg, TSD 40, TST 0, quads 72, max height 23, illegal 0, 26.7 
+tstruct                              normal_g20 s33: APP 0.241 (APPfull 0.045), died 64/64, pieces 94 avg, TSD 29, TST 0, quads 176, max height 23, illegal 0, 26.9
+tstruct                              normal_g20 s53: APP 0.239 (APPfull 0.049), died 64/64, pieces 103 avg, TSD 32, TST 0, quads 178, max height 23, illegal 0, 25.
+tstruct                              normal_g50 s33: APP 0.157 (APPfull 0.023), died 64/64, pieces 73 avg, TSD 22, TST 0, quads 54, max height 23, illegal 0, 27.5 
+tstruct                              normal_g50 s53: APP 0.162 (APPfull 0.025), died 64/64, pieces 79 avg, TSD 22, TST 0, quads 60, max height 23, illegal 0, 27.1 
+tstruct                              danger_g20 s33: APP 0.241 (APPfull 0.064), died 63/64, pieces 134 avg, TSD 36, TST 0, quads 243, max height 22, illegal 0, 26.
+tstruct                              danger_g20 s53: APP 0.257 (APPfull 0.076), died 64/64, pieces 148 avg, TSD 51, TST 0, quads 292, max height 23, illegal 0, 25.
+tstruct                              danger_g50 s33: APP 0.155 (APPfull 0.029), died 64/64, pieces 93 avg, TSD 16, TST 0, quads 74, max height 23, illegal 0, 26.7 
+tstruct                              danger_g50 s53: APP 0.164 (APPfull 0.033), died 64/64, pieces 102 avg, TSD 27, TST 0, quads 79, max height 23, illegal 0, 26.0
+pitrect                              normal_g20 s33: APP 0.422 (APPfull 0.134), died 64/64, pieces 159 avg, TSD 94, TST 1, quads 496, max height 22, illegal 0, 25.
+pitrect                              normal_g20 s53: APP 0.414 (APPfull 0.127), died 62/64, pieces 153 avg, TSD 96, TST 1, quads 445, max height 22, illegal 0, 26.
+pitrect                              normal_g50 s33: APP 0.305 (APPfull 0.062), died 64/64, pieces 102 avg, TSD 42, TST 0, quads 175, max height 23, illegal 0, 26.
+pitrect                              normal_g50 s53: APP 0.294 (APPfull 0.068), died 64/64, pieces 116 avg, TSD 45, TST 0, quads 193, max height 22, illegal 0, 25.
+pitrect                              danger_g20 s33: APP 0.395 (APPfull 0.175), died 57/64, pieces 222 avg, TSD 134, TST 0, quads 669, max height 22, illegal 0, 25
+pitrect                              danger_g20 s53: APP 0.416 (APPfull 0.217), died 52/64, pieces 261 avg, TSD 165, TST 0, quads 858, max height 22, illegal 0, 25
+pitrect                              danger_g50 s33: APP 0.284 (APPfull 0.089), died 64/64, pieces 156 avg, TSD 64, TST 0, quads 272, max height 23, illegal 0, 27.
+pitrect                              danger_g50 s53: APP 0.261 (APPfull 0.074), died 64/64, pieces 141 avg, TSD 50, TST 0, quads 224, max height 23, illegal 0, 26.
+fitx+fitt                            normal_g20 s33: APP 0.498 (APPfull 0.321), died 45/64, pieces 322 avg, TSD 233, TST 0, quads 1194, max height 22, illegal 0, 2
+fitx+fitt                            normal_g20 s53: APP 0.507 (APPfull 0.260), died 50/64, pieces 256 avg, TSD 218, TST 0, quads 926, max height 23, illegal 0, 24
+fitx+fitt                            normal_g50 s33: APP 0.363 (APPfull 0.131), died 61/64, pieces 180 avg, TSD 114, TST 0, quads 354, max height 22, illegal 0, 26
+fitx+fitt                            normal_g50 s53: APP 0.345 (APPfull 0.124), died 62/64, pieces 180 avg, TSD 114, TST 0, quads 321, max height 23, illegal 0, 26
+fitx+fitt                            danger_g20 s33: APP 0.462 (APPfull 0.379), died 21/64, pieces 411 avg, TSD 311, TST 2, quads 1308, max height 22, illegal 0, 2
+fitx+fitt                            danger_g20 s53: APP 0.457 (APPfull 0.397), died 17/64, pieces 434 avg, TSD 341, TST 0, quads 1371, max height 21, illegal 0, 3
+fitx+fitt                            danger_g50 s33: APP 0.333 (APPfull 0.180), died 54/64, pieces 271 avg, TSD 164, TST 1, quads 459, max height 23, illegal 0, 26
+fitx+fitt                            danger_g50 s53: APP 0.324 (APPfull 0.177), died 55/64, pieces 273 avg, TSD 173, TST 0, quads 442, max height 23, illegal 0, 26
+fitx+setup                           normal_g20 s33: APP 0.475 (APPfull 0.299), died 43/64, pieces 315 avg, TSD 210, TST 2, quads 1178, max height 22, illegal 0, 2
+fitx+setup                           normal_g20 s53: APP 0.490 (APPfull 0.303), died 44/64, pieces 310 avg, TSD 239, TST 2, quads 1176, max height 23, illegal 0, 2
+fitx+setup                           normal_g50 s33: APP 0.331 (APPfull 0.131), died 62/64, pieces 198 avg, TSD 123, TST 4, quads 370, max height 23, illegal 0, 25
+fitx+setup                           normal_g50 s53: APP 0.321 (APPfull 0.141), died 60/64, pieces 219 avg, TSD 118, TST 4, quads 409, max height 23, illegal 0, 25
+fitx+setup                           danger_g20 s33: APP 0.437 (APPfull 0.379), died 19/64, pieces 434 avg, TSD 290, TST 3, quads 1404, max height 21, illegal 0, 2
+fitx+setup                           danger_g20 s53: APP 0.434 (APPfull 0.373), died 22/64, pieces 429 avg, TSD 292, TST 7, quads 1371, max height 23, illegal 0, 2
+fitx+setup                           danger_g50 s33: APP 0.310 (APPfull 0.202), died 47/64, pieces 326 avg, TSD 153, TST 2, quads 590, max height 23, illegal 0, 26
+fitx+setup                           danger_g50 s53: APP 0.300 (APPfull 0.169), died 51/64, pieces 283 avg, TSD 144, TST 2, quads 465, max height 22, illegal 0, 24
+fitx+tstruct                         normal_g20 s33: APP 0.474 (APPfull 0.286), died 47/64, pieces 301 avg, TSD 222, TST 1, quads 1115, max height 23, illegal 0, 2
+fitx+tstruct                         normal_g20 s53: APP 0.473 (APPfull 0.294), died 49/64, pieces 310 avg, TSD 217, TST 0, quads 1157, max height 23, illegal 0, 2
+fitx+tstruct                         normal_g50 s33: APP 0.347 (APPfull 0.144), died 59/64, pieces 208 avg, TSD 147, TST 0, quads 416, max height 22, illegal 0, 25
+fitx+tstruct                         normal_g50 s53: APP 0.328 (APPfull 0.136), died 61/64, pieces 208 avg, TSD 134, TST 0, quads 376, max height 23, illegal 0, 25
+fitx+tstruct                         danger_g20 s33: APP 0.440 (APPfull 0.384), died 16/64, pieces 436 avg, TSD 340, TST 2, quads 1417, max height 22, illegal 0, 2
+fitx+tstruct                         danger_g20 s53: APP 0.435 (APPfull 0.375), died 18/64, pieces 431 avg, TSD 270, TST 1, quads 1417, max height 21, illegal 0, 3
+fitx+tstruct                         danger_g50 s33: APP 0.314 (APPfull 0.165), died 55/64, pieces 262 avg, TSD 169, TST 1, quads 424, max height 22, illegal 0, 27
+fitx+tstruct                         danger_g50 s53: APP 0.306 (APPfull 0.195), died 49/64, pieces 318 avg, TSD 167, TST 0, quads 543, max height 22, illegal 0, 26
+fitx+pitrect                         normal_g20 s33: APP 0.689 (APPfull 0.587), died 20/64, pieces 426 avg, TSD 522, TST 3, quads 2108, max height 22, illegal 0, 2
+fitx+pitrect                         normal_g20 s53: APP 0.683 (APPfull 0.605), died 15/64, pieces 443 avg, TSD 577, TST 3, quads 2168, max height 21, illegal 0, 3
+fitx+pitrect                         normal_g50 s33: APP 0.465 (APPfull 0.295), died 48/64, pieces 317 avg, TSD 274, TST 2, quads 936, max height 22, illegal 0, 26
+fitx+pitrect                         normal_g50 s53: APP 0.461 (APPfull 0.291), died 45/64, pieces 316 avg, TSD 274, TST 2, quads 913, max height 22, illegal 0, 26
+fitx+pitrect                         danger_g20 s33: APP 0.633 (APPfull 0.625), died 2/64, pieces 494 avg, TSD 663, TST 3, quads 2291, max height 19, illegal 0, 32
+fitx+pitrect                         danger_g20 s53: APP 0.616 (APPfull 0.587), died 5/64, pieces 476 avg, TSD 605, TST 3, quads 2143, max height 20, illegal 0, 31
+fitx+pitrect                         danger_g50 s33: APP 0.446 (APPfull 0.370), died 23/64, pieces 415 avg, TSD 389, TST 1, quads 1123, max height 23, illegal 0, 2
+fitx+pitrect                         danger_g50 s53: APP 0.433 (APPfull 0.363), died 24/64, pieces 419 avg, TSD 339, TST 5, quads 1113, max height 21, illegal 0, 2
+fitt+setup                           normal_g20 s33: APP 0.316 (APPfull 0.072), died 63/64, pieces 114 avg, TSD 71, TST 1, quads 241, max height 23, illegal 0, 25.
+fitt+setup                           normal_g20 s53: APP 0.288 (APPfull 0.056), died 63/64, pieces 97 avg, TSD 70, TST 0, quads 173, max height 22, illegal 0, 25.0
+fitt+setup                           normal_g50 s33: APP 0.220 (APPfull 0.036), died 64/64, pieces 82 avg, TSD 52, TST 1, quads 64, max height 23, illegal 0, 28.6 
+fitt+setup                           normal_g50 s53: APP 0.219 (APPfull 0.034), died 64/64, pieces 79 avg, TSD 51, TST 0, quads 64, max height 23, illegal 0, 27.2 
+fitt+setup                           danger_g20 s33: APP 0.289 (APPfull 0.080), died 64/64, pieces 139 avg, TSD 83, TST 0, quads 255, max height 23, illegal 0, 26.
+fitt+setup                           danger_g20 s53: APP 0.308 (APPfull 0.098), died 61/64, pieces 158 avg, TSD 124, TST 1, quads 303, max height 22, illegal 0, 24
+fitt+setup                           danger_g50 s33: APP 0.209 (APPfull 0.041), died 64/64, pieces 99 avg, TSD 58, TST 0, quads 88, max height 22, illegal 0, 26.7 
+fitt+setup                           danger_g50 s53: APP 0.206 (APPfull 0.044), died 64/64, pieces 106 avg, TSD 61, TST 0, quads 79, max height 23, illegal 0, 27.2
+fitt+tstruct                         normal_g20 s33: APP 0.328 (APPfull 0.073), died 63/64, pieces 112 avg, TSD 94, TST 0, quads 208, max height 23, illegal 0, 25.
+fitt+tstruct                         normal_g20 s53: APP 0.318 (APPfull 0.065), died 64/64, pieces 102 avg, TSD 83, TST 0, quads 179, max height 23, illegal 0, 25.
+fitt+tstruct                         normal_g50 s33: APP 0.237 (APPfull 0.040), died 64/64, pieces 84 avg, TSD 64, TST 0, quads 67, max height 23, illegal 0, 26.9 
+fitt+tstruct                         normal_g50 s53: APP 0.225 (APPfull 0.036), died 64/64, pieces 80 avg, TSD 52, TST 0, quads 60, max height 23, illegal 0, 26.8 
+fitt+tstruct                         danger_g20 s33: APP 0.349 (APPfull 0.130), died 60/64, pieces 186 avg, TSD 148, TST 0, quads 381, max height 22, illegal 0, 25
+fitt+tstruct                         danger_g20 s53: APP 0.350 (APPfull 0.125), died 64/64, pieces 179 avg, TSD 179, TST 0, quads 375, max height 22, illegal 0, 25
+fitt+tstruct                         danger_g50 s33: APP 0.238 (APPfull 0.048), died 64/64, pieces 101 avg, TSD 77, TST 0, quads 81, max height 22, illegal 0, 24.7
+fitt+tstruct                         danger_g50 s53: APP 0.248 (APPfull 0.061), died 63/64, pieces 123 avg, TSD 104, TST 0, quads 134, max height 23, illegal 0, 26
+fitt+pitrect                         normal_g20 s33: APP 0.533 (APPfull 0.242), died 60/64, pieces 227 avg, TSD 235, TST 0, quads 852, max height 22, illegal 0, 25
+fitt+pitrect                         normal_g20 s53: APP 0.501 (APPfull 0.215), died 60/64, pieces 214 avg, TSD 212, TST 1, quads 741, max height 23, illegal 0, 23
+fitt+pitrect                         normal_g50 s33: APP 0.352 (APPfull 0.079), died 64/64, pieces 112 avg, TSD 92, TST 0, quads 196, max height 23, illegal 0, 26.
+fitt+pitrect                         normal_g50 s53: APP 0.312 (APPfull 0.066), died 64/64, pieces 105 avg, TSD 74, TST 0, quads 160, max height 23, illegal 0, 26.
+fitt+pitrect                         danger_g20 s33: APP 0.483 (APPfull 0.278), died 51/64, pieces 287 avg, TSD 290, TST 1, quads 971, max height 22, illegal 0, 26
+fitt+pitrect                         danger_g20 s53: APP 0.477 (APPfull 0.278), died 49/64, pieces 291 avg, TSD 313, TST 2, quads 955, max height 23, illegal 0, 25
+fitt+pitrect                         danger_g50 s33: APP 0.341 (APPfull 0.125), died 61/64, pieces 183 avg, TSD 139, TST 1, quads 326, max height 22, illegal 0, 27
+fitt+pitrect                         danger_g50 s53: APP 0.325 (APPfull 0.113), died 63/64, pieces 173 avg, TSD 129, TST 1, quads 284, max height 23, illegal 0, 26
+setup+tstruct                        normal_g20 s33: APP 0.282 (APPfull 0.060), died 64/64, pieces 107 avg, TSD 82, TST 0, quads 208, max height 23, illegal 0, 26.
+setup+tstruct                        normal_g20 s53: APP 0.249 (APPfull 0.048), died 64/64, pieces 96 avg, TSD 55, TST 0, quads 169, max height 23, illegal 0, 27.2
+setup+tstruct                        normal_g50 s33: APP 0.194 (APPfull 0.032), died 64/64, pieces 83 avg, TSD 55, TST 0, quads 77, max height 23, illegal 0, 27.8 
+setup+tstruct                        normal_g50 s53: APP 0.166 (APPfull 0.024), died 64/64, pieces 72 avg, TSD 42, TST 0, quads 47, max height 23, illegal 0, 27.5 
+setup+tstruct                        danger_g20 s33: APP 0.252 (APPfull 0.069), died 64/64, pieces 136 avg, TSD 79, TST 0, quads 246, max height 22, illegal 0, 25.
+setup+tstruct                        danger_g20 s53: APP 0.242 (APPfull 0.057), died 64/64, pieces 118 avg, TSD 62, TST 0, quads 200, max height 23, illegal 0, 24.
+setup+tstruct                        danger_g50 s33: APP 0.179 (APPfull 0.035), died 64/64, pieces 97 avg, TSD 53, TST 0, quads 80, max height 23, illegal 0, 27.2 
+setup+tstruct                        danger_g50 s53: APP 0.182 (APPfull 0.036), died 64/64, pieces 100 avg, TSD 60, TST 0, quads 83, max height 22, illegal 0, 26.0
+setup+pitrect                        normal_g20 s33: APP 0.442 (APPfull 0.147), died 64/64, pieces 167 avg, TSD 159, TST 0, quads 530, max height 22, illegal 0, 25
+setup+pitrect                        normal_g20 s53: APP 0.418 (APPfull 0.131), died 61/64, pieces 156 avg, TSD 154, TST 0, quads 444, max height 23, illegal 0, 25
+setup+pitrect                        normal_g50 s33: APP 0.292 (APPfull 0.062), died 64/64, pieces 106 avg, TSD 62, TST 0, quads 164, max height 22, illegal 0, 27.
+setup+pitrect                        normal_g50 s53: APP 0.283 (APPfull 0.057), died 64/64, pieces 101 avg, TSD 76, TST 1, quads 140, max height 22, illegal 0, 25.
+setup+pitrect                        danger_g20 s33: APP 0.417 (APPfull 0.211), died 57/64, pieces 253 avg, TSD 225, TST 2, quads 800, max height 22, illegal 0, 26
+setup+pitrect                        danger_g20 s53: APP 0.428 (APPfull 0.225), died 49/64, pieces 263 avg, TSD 251, TST 0, quads 835, max height 23, illegal 0, 24
+setup+pitrect                        danger_g50 s33: APP 0.296 (APPfull 0.094), died 63/64, pieces 159 avg, TSD 100, TST 0, quads 278, max height 22, illegal 0, 26
+setup+pitrect                        danger_g50 s53: APP 0.279 (APPfull 0.081), died 64/64, pieces 145 avg, TSD 101, TST 0, quads 232, max height 23, illegal 0, 26
+tstruct+pitrect                      normal_g20 s33: APP 0.465 (APPfull 0.164), died 63/64, pieces 177 avg, TSD 178, TST 1, quads 572, max height 22, illegal 0, 25
+tstruct+pitrect                      normal_g20 s53: APP 0.447 (APPfull 0.142), died 63/64, pieces 159 avg, TSD 191, TST 0, quads 463, max height 23, illegal 0, 27
+tstruct+pitrect                      normal_g50 s33: APP 0.321 (APPfull 0.065), died 64/64, pieces 101 avg, TSD 78, TST 0, quads 163, max height 22, illegal 0, 27.
+tstruct+pitrect                      normal_g50 s53: APP 0.308 (APPfull 0.062), died 64/64, pieces 101 avg, TSD 89, TST 0, quads 154, max height 23, illegal 0, 27.
+tstruct+pitrect                      danger_g20 s33: APP 0.429 (APPfull 0.227), died 54/64, pieces 265 avg, TSD 249, TST 0, quads 859, max height 23, illegal 0, 27
+tstruct+pitrect                      danger_g20 s53: APP 0.434 (APPfull 0.242), died 54/64, pieces 278 avg, TSD 272, TST 0, quads 887, max height 22, illegal 0, 26
+tstruct+pitrect                      danger_g50 s33: APP 0.298 (APPfull 0.106), died 64/64, pieces 178 avg, TSD 116, TST 0, quads 319, max height 22, illegal 0, 27
+tstruct+pitrect                      danger_g50 s53: APP 0.286 (APPfull 0.090), died 64/64, pieces 158 avg, TSD 90, TST 0, quads 257, max height 22, illegal 0, 25.
+fitx+fitt+setup                      normal_g20 s33: APP 0.514 (APPfull 0.302), died 48/64, pieces 294 avg, TSD 314, TST 1, quads 1042, max height 23, illegal 0, 2
+fitx+fitt+setup                      normal_g20 s53: APP 0.517 (APPfull 0.312), died 46/64, pieces 302 avg, TSD 319, TST 2, quads 1079, max height 22, illegal 0, 2
+fitx+fitt+setup                      normal_g50 s33: APP 0.362 (APPfull 0.114), died 64/64, pieces 158 avg, TSD 130, TST 2, quads 288, max height 22, illegal 0, 25
+fitx+fitt+setup                      normal_g50 s53: APP 0.357 (APPfull 0.116), died 63/64, pieces 162 avg, TSD 145, TST 3, quads 267, max height 23, illegal 0, 25
+fitx+fitt+setup                      danger_g20 s33: APP 0.470 (APPfull 0.348), died 34/64, pieces 370 avg, TSD 345, TST 5, quads 1190, max height 22, illegal 0, 2
+fitx+fitt+setup                      danger_g20 s53: APP 0.481 (APPfull 0.403), died 22/64, pieces 419 avg, TSD 454, TST 3, quads 1326, max height 21, illegal 0, 2
+fitx+fitt+setup                      danger_g50 s33: APP 0.339 (APPfull 0.201), died 51/64, pieces 297 avg, TSD 239, TST 4, quads 487, max height 23, illegal 0, 26
+fitx+fitt+setup                      danger_g50 s53: APP 0.335 (APPfull 0.195), died 51/64, pieces 291 avg, TSD 238, TST 2, quads 469, max height 23, illegal 0, 26
+fitx+fitt+tstruct                    normal_g20 s33: APP 0.551 (APPfull 0.334), died 45/64, pieces 303 avg, TSD 413, TST 0, quads 1126, max height 23, illegal 0, 2
+fitx+fitt+tstruct                    normal_g20 s53: APP 0.535 (APPfull 0.332), died 45/64, pieces 310 avg, TSD 400, TST 0, quads 1113, max height 23, illegal 0, 2
+fitx+fitt+tstruct                    normal_g50 s33: APP 0.395 (APPfull 0.147), died 62/64, pieces 186 avg, TSD 237, TST 1, quads 330, max height 23, illegal 0, 27
+fitx+fitt+tstruct                    normal_g50 s53: APP 0.382 (APPfull 0.133), died 62/64, pieces 175 avg, TSD 192, TST 0, quads 303, max height 22, illegal 0, 27
+fitx+fitt+tstruct                    danger_g20 s33: APP 0.499 (APPfull 0.383), died 27/64, pieces 383 avg, TSD 517, TST 1, quads 1249, max height 22, illegal 0, 2
+fitx+fitt+tstruct                    danger_g20 s53: APP 0.513 (APPfull 0.426), died 24/64, pieces 415 avg, TSD 592, TST 2, quads 1346, max height 22, illegal 0, 2
+fitx+fitt+tstruct                    danger_g50 s33: APP 0.365 (APPfull 0.216), died 50/64, pieces 295 avg, TSD 343, TST 0, quads 507, max height 22, illegal 0, 26
+fitx+fitt+tstruct                    danger_g50 s53: APP 0.362 (APPfull 0.214), died 52/64, pieces 295 avg, TSD 328, TST 0, quads 485, max height 22, illegal 0, 25
+fitx+fitt+pitrect                    normal_g20 s33: APP 0.720 (APPfull 0.620), died 15/64, pieces 431 avg, TSD 642, TST 4, quads 2138, max height 22, illegal 0, 2
+fitx+fitt+pitrect                    normal_g20 s53: APP 0.716 (APPfull 0.598), died 22/64, pieces 417 avg, TSD 676, TST 2, quads 2026, max height 21, illegal 0, 2
+fitx+fitt+pitrect                    normal_g50 s33: APP 0.507 (APPfull 0.284), died 48/64, pieces 280 avg, TSD 291, TST 2, quads 849, max height 23, illegal 0, 27
+fitx+fitt+pitrect                    normal_g50 s53: APP 0.496 (APPfull 0.277), died 50/64, pieces 279 avg, TSD 354, TST 1, quads 785, max height 23, illegal 0, 25
+fitx+fitt+pitrect                    danger_g20 s33: APP 0.663 (APPfull 0.615), died 7/64, pieces 464 avg, TSD 756, TST 5, quads 2095, max height 20, illegal 0, 30
+fitx+fitt+pitrect                    danger_g20 s53: APP 0.661 (APPfull 0.647), died 3/64, pieces 489 avg, TSD 826, TST 4, quads 2197, max height 22, illegal 0, 31
+fitx+fitt+pitrect                    danger_g50 s33: APP 0.489 (APPfull 0.451), died 10/64, pieces 461 avg, TSD 578, TST 2, quads 1259, max height 21, illegal 0, 3
+fitx+fitt+pitrect                    danger_g50 s53: APP 0.473 (APPfull 0.376), died 27/64, pieces 398 avg, TSD 502, TST 1, quads 1058, max height 22, illegal 0, 2
+fitx+setup+tstruct                   normal_g20 s33: APP 0.491 (APPfull 0.272), died 51/64, pieces 277 avg, TSD 318, TST 6, quads 987, max height 22, illegal 0, 25
+fitx+setup+tstruct                   normal_g20 s53: APP 0.515 (APPfull 0.339), died 45/64, pieces 330 avg, TSD 400, TST 5, quads 1204, max height 23, illegal 0, 2
+fitx+setup+tstruct                   normal_g50 s33: APP 0.352 (APPfull 0.152), died 62/64, pieces 216 avg, TSD 203, TST 1, quads 409, max height 22, illegal 0, 27
+fitx+setup+tstruct                   normal_g50 s53: APP 0.343 (APPfull 0.145), died 61/64, pieces 212 avg, TSD 182, TST 3, quads 389, max height 22, illegal 0, 25
+fitx+setup+tstruct                   danger_g20 s33: APP 0.461 (APPfull 0.405), died 16/64, pieces 439 avg, TSD 473, TST 2, quads 1453, max height 22, illegal 0, 2
+fitx+setup+tstruct                   danger_g20 s53: APP 0.454 (APPfull 0.369), died 24/64, pieces 407 avg, TSD 434, TST 6, quads 1290, max height 22, illegal 0, 2
+fitx+setup+tstruct                   danger_g50 s33: APP 0.336 (APPfull 0.216), died 47/64, pieces 321 avg, TSD 279, TST 2, quads 588, max height 23, illegal 0, 25
+fitx+setup+tstruct                   danger_g50 s53: APP 0.322 (APPfull 0.189), died 47/64, pieces 293 avg, TSD 233, TST 2, quads 498, max height 22, illegal 0, 24
+fitx+setup+pitrect                   normal_g20 s33: APP 0.700 (APPfull 0.578), died 23/64, pieces 413 avg, TSD 576, TST 7, quads 2034, max height 23, illegal 0, 2
+fitx+setup+pitrect                   normal_g20 s53: APP 0.699 (APPfull 0.573), died 22/64, pieces 410 avg, TSD 660, TST 9, quads 1977, max height 21, illegal 0, 2
+fitx+setup+pitrect                   normal_g50 s33: APP 0.469 (APPfull 0.289), died 47/64, pieces 308 avg, TSD 323, TST 7, quads 882, max height 23, illegal 0, 25
+fitx+setup+pitrect                   normal_g50 s53: APP 0.455 (APPfull 0.268), died 50/64, pieces 295 avg, TSD 321, TST 3, quads 803, max height 23, illegal 0, 25
+fitx+setup+pitrect                   danger_g20 s33: APP 0.636 (APPfull 0.629), died 2/64, pieces 494 avg, TSD 776, TST 7, quads 2250, max height 21, illegal 0, 31
+fitx+setup+pitrect                   danger_g20 s53: APP 0.635 (APPfull 0.608), died 4/64, pieces 478 avg, TSD 772, TST 6, quads 2151, max height 20, illegal 0, 30
+fitx+setup+pitrect                   danger_g50 s33: APP 0.448 (APPfull 0.354), died 29/64, pieces 395 avg, TSD 452, TST 5, quads 1048, max height 21, illegal 0, 2
+fitx+setup+pitrect                   danger_g50 s53: APP 0.449 (APPfull 0.384), died 21/64, pieces 428 avg, TSD 497, TST 4, quads 1139, max height 22, illegal 0, 2
+fitx+tstruct+pitrect                 normal_g20 s33: APP 0.739 (APPfull 0.618), died 20/64, pieces 419 avg, TSD 778, TST 2, quads 2079, max height 21, illegal 0, 2
+fitx+tstruct+pitrect                 normal_g20 s53: APP 0.727 (APPfull 0.528), died 29/64, pieces 363 avg, TSD 728, TST 0, quads 1704, max height 22, illegal 0, 2
+fitx+tstruct+pitrect                 normal_g50 s33: APP 0.503 (APPfull 0.291), died 47/64, pieces 289 avg, TSD 392, TST 5, quads 875, max height 22, illegal 0, 26
+fitx+tstruct+pitrect                 normal_g50 s53: APP 0.491 (APPfull 0.286), died 50/64, pieces 292 avg, TSD 376, TST 1, quads 830, max height 22, illegal 0, 25
+fitx+tstruct+pitrect                 danger_g20 s33: APP 0.670 (APPfull 0.635), died 8/64, pieces 474 avg, TSD 954, TST 3, quads 2143, max height 22, illegal 0, 31
+fitx+tstruct+pitrect                 danger_g20 s53: APP 0.687 (APPfull 0.668), died 3/64, pieces 487 avg, TSD 1010, TST 4, quads 2223, max height 19, illegal 0, 3
+fitx+tstruct+pitrect                 danger_g50 s33: APP 0.478 (APPfull 0.409), died 22/64, pieces 428 avg, TSD 585, TST 3, quads 1165, max height 22, illegal 0, 3
+fitx+tstruct+pitrect                 danger_g50 s53: APP 0.466 (APPfull 0.378), died 25/64, pieces 406 avg, TSD 582, TST 4, quads 1056, max height 21, illegal 0, 2
+fitt+setup+tstruct                   normal_g20 s33: APP 0.360 (APPfull 0.083), died 64/64, pieces 115 avg, TSD 128, TST 1, quads 237, max height 22, illegal 0, 25
+fitt+setup+tstruct                   normal_g20 s53: APP 0.342 (APPfull 0.077), died 64/64, pieces 113 avg, TSD 132, TST 1, quads 214, max height 22, illegal 0, 26
+fitt+setup+tstruct                   normal_g50 s33: APP 0.269 (APPfull 0.046), died 64/64, pieces 86 avg, TSD 100, TST 0, quads 84, max height 22, illegal 0, 26.3
+fitt+setup+tstruct                   normal_g50 s53: APP 0.250 (APPfull 0.040), died 64/64, pieces 80 avg, TSD 90, TST 1, quads 54, max height 23, illegal 0, 27.6 
+fitt+setup+tstruct                   danger_g20 s33: APP 0.351 (APPfull 0.130), died 61/64, pieces 185 avg, TSD 203, TST 0, quads 380, max height 22, illegal 0, 26
+fitt+setup+tstruct                   danger_g20 s53: APP 0.358 (APPfull 0.121), died 64/64, pieces 169 avg, TSD 193, TST 0, quads 352, max height 23, illegal 0, 25
+fitt+setup+tstruct                   danger_g50 s33: APP 0.255 (APPfull 0.058), died 64/64, pieces 115 avg, TSD 120, TST 0, quads 116, max height 22, illegal 0, 27
+fitt+setup+tstruct                   danger_g50 s53: APP 0.249 (APPfull 0.053), died 64/64, pieces 106 avg, TSD 118, TST 0, quads 98, max height 22, illegal 0, 26.
+fitt+setup+pitrect                   normal_g20 s33: APP 0.517 (APPfull 0.228), died 59/64, pieces 221 avg, TSD 259, TST 1, quads 761, max height 22, illegal 0, 26
+fitt+setup+pitrect                   normal_g20 s53: APP 0.503 (APPfull 0.206), died 59/64, pieces 205 avg, TSD 258, TST 3, quads 679, max height 23, illegal 0, 25
+fitt+setup+pitrect                   normal_g50 s33: APP 0.359 (APPfull 0.088), died 64/64, pieces 122 avg, TSD 106, TST 0, quads 212, max height 22, illegal 0, 27
+fitt+setup+pitrect                   normal_g50 s53: APP 0.339 (APPfull 0.079), died 64/64, pieces 116 avg, TSD 108, TST 3, quads 177, max height 23, illegal 0, 26
+fitt+setup+pitrect                   danger_g20 s33: APP 0.500 (APPfull 0.325), died 43/64, pieces 325 avg, TSD 396, TST 2, quads 1134, max height 22, illegal 0, 2
+fitt+setup+pitrect                   danger_g20 s53: APP 0.493 (APPfull 0.310), died 48/64, pieces 314 avg, TSD 390, TST 7, quads 1079, max height 22, illegal 0, 2
+fitt+setup+pitrect                   danger_g50 s33: APP 0.347 (APPfull 0.119), died 64/64, pieces 171 avg, TSD 152, TST 1, quads 309, max height 23, illegal 0, 27
+fitt+setup+pitrect                   danger_g50 s53: APP 0.327 (APPfull 0.115), died 61/64, pieces 175 avg, TSD 158, TST 3, quads 298, max height 23, illegal 0, 26
+fitt+tstruct+pitrect                 normal_g20 s33: APP 0.552 (APPfull 0.238), died 59/64, pieces 215 avg, TSD 336, TST 0, quads 753, max height 22, illegal 0, 26
+fitt+tstruct+pitrect                 normal_g20 s53: APP 0.552 (APPfull 0.236), died 60/64, pieces 214 avg, TSD 387, TST 1, quads 731, max height 23, illegal 0, 26
+fitt+tstruct+pitrect                 normal_g50 s33: APP 0.395 (APPfull 0.101), died 64/64, pieces 128 avg, TSD 177, TST 0, quads 242, max height 22, illegal 0, 27
+fitt+tstruct+pitrect                 normal_g50 s53: APP 0.386 (APPfull 0.095), died 64/64, pieces 123 avg, TSD 173, TST 1, quads 213, max height 22, illegal 0, 26
+fitt+tstruct+pitrect                 danger_g20 s33: APP 0.544 (APPfull 0.338), died 43/64, pieces 311 avg, TSD 570, TST 2, quads 1065, max height 21, illegal 0, 2
+fitt+tstruct+pitrect                 danger_g20 s53: APP 0.535 (APPfull 0.372), died 42/64, pieces 347 avg, TSD 611, TST 2, quads 1191, max height 22, illegal 0, 2
+fitt+tstruct+pitrect                 danger_g50 s33: APP 0.371 (APPfull 0.133), died 63/64, pieces 179 avg, TSD 228, TST 0, quads 320, max height 23, illegal 0, 28
+fitt+tstruct+pitrect                 danger_g50 s53: APP 0.370 (APPfull 0.134), died 61/64, pieces 180 avg, TSD 247, TST 1, quads 313, max height 23, illegal 0, 26
+setup+tstruct+pitrect                normal_g20 s33: APP 0.473 (APPfull 0.160), died 64/64, pieces 169 avg, TSD 230, TST 0, quads 531, max height 22, illegal 0, 24
+setup+tstruct+pitrect                normal_g20 s53: APP 0.451 (APPfull 0.147), died 62/64, pieces 162 avg, TSD 220, TST 3, quads 477, max height 22, illegal 0, 25
+setup+tstruct+pitrect                normal_g50 s33: APP 0.332 (APPfull 0.073), died 64/64, pieces 110 avg, TSD 127, TST 0, quads 178, max height 23, illegal 0, 26
+setup+tstruct+pitrect                normal_g50 s53: APP 0.306 (APPfull 0.064), died 64/64, pieces 105 avg, TSD 111, TST 1, quads 149, max height 22, illegal 0, 26
+setup+tstruct+pitrect                danger_g20 s33: APP 0.454 (APPfull 0.251), died 50/64, pieces 276 avg, TSD 335, TST 3, quads 909, max height 22, illegal 0, 25
+setup+tstruct+pitrect                danger_g20 s53: APP 0.440 (APPfull 0.243), died 52/64, pieces 276 avg, TSD 334, TST 1, quads 874, max height 22, illegal 0, 25
+setup+tstruct+pitrect                danger_g50 s33: APP 0.308 (APPfull 0.098), died 64/64, pieces 160 avg, TSD 135, TST 2, quads 283, max height 22, illegal 0, 27
+setup+tstruct+pitrect                danger_g50 s53: APP 0.308 (APPfull 0.104), died 63/64, pieces 169 avg, TSD 150, TST 2, quads 291, max height 23, illegal 0, 26
+fitx+fitt+setup+tstruct              normal_g20 s33: APP 0.554 (APPfull 0.309), died 48/64, pieces 279 avg, TSD 467, TST 2, quads 1002, max height 23, illegal 0, 2
+fitx+fitt+setup+tstruct              normal_g20 s53: APP 0.563 (APPfull 0.351), died 48/64, pieces 312 avg, TSD 509, TST 7, quads 1157, max height 23, illegal 0, 2
+fitx+fitt+setup+tstruct              normal_g50 s33: APP 0.414 (APPfull 0.145), died 63/64, pieces 175 avg, TSD 283, TST 3, quads 320, max height 23, illegal 0, 26
+fitx+fitt+setup+tstruct              normal_g50 s53: APP 0.381 (APPfull 0.126), died 64/64, pieces 165 avg, TSD 241, TST 5, quads 268, max height 23, illegal 0, 26
+fitx+fitt+setup+tstruct              danger_g20 s33: APP 0.528 (APPfull 0.424), died 25/64, pieces 402 avg, TSD 641, TST 9, quads 1331, max height 22, illegal 0, 2
+fitx+fitt+setup+tstruct              danger_g20 s53: APP 0.540 (APPfull 0.464), died 17/64, pieces 430 avg, TSD 764, TST 7, quads 1426, max height 22, illegal 0, 2
+fitx+fitt+setup+tstruct              danger_g50 s33: APP 0.385 (APPfull 0.236), died 46/64, pieces 307 avg, TSD 417, TST 4, quads 547, max height 22, illegal 0, 27
+fitx+fitt+setup+tstruct              danger_g50 s53: APP 0.388 (APPfull 0.239), died 44/64, pieces 307 avg, TSD 440, TST 7, quads 525, max height 22, illegal 0, 25
+fitx+fitt+setup+pitrect              normal_g20 s33: APP 0.713 (APPfull 0.599), died 24/64, pieces 420 avg, TSD 622, TST 9, quads 2009, max height 22, illegal 0, 2
+fitx+fitt+setup+pitrect              normal_g20 s53: APP 0.713 (APPfull 0.616), died 21/64, pieces 432 avg, TSD 733, TST 7, quads 2041, max height 23, illegal 0, 3
+fitx+fitt+setup+pitrect              normal_g50 s33: APP 0.497 (APPfull 0.301), died 44/64, pieces 303 avg, TSD 364, TST 2, quads 874, max height 22, illegal 0, 25
+fitx+fitt+setup+pitrect              normal_g50 s53: APP 0.500 (APPfull 0.304), died 51/64, pieces 304 avg, TSD 388, TST 3, quads 873, max height 22, illegal 0, 26
+fitx+fitt+setup+pitrect              danger_g20 s33: APP 0.663 (APPfull 0.652), died 2/64, pieces 492 avg, TSD 814, TST 14, quads 2207, max height 20, illegal 0, 3
+fitx+fitt+setup+pitrect              danger_g20 s53: APP 0.667 (APPfull 0.635), died 8/64, pieces 477 avg, TSD 881, TST 4, quads 2146, max height 22, illegal 0, 31
+fitx+fitt+setup+pitrect              danger_g50 s33: APP 0.483 (APPfull 0.390), died 28/64, pieces 404 avg, TSD 547, TST 7, quads 1085, max height 22, illegal 0, 2
+fitx+fitt+setup+pitrect              danger_g50 s53: APP 0.476 (APPfull 0.394), died 23/64, pieces 414 avg, TSD 549, TST 2, quads 1098, max height 21, illegal 0, 2
+fitx+fitt+tstruct+pitrect            normal_g20 s33: APP 0.791 (APPfull 0.649), died 27/64, pieces 410 avg, TSD 984, TST 2, quads 1976, max height 22, illegal 0, 2
+fitx+fitt+tstruct+pitrect            normal_g20 s53: APP 0.768 (APPfull 0.638), died 22/64, pieces 415 avg, TSD 954, TST 4, quads 2002, max height 21, illegal 0, 2
+fitx+fitt+tstruct+pitrect            normal_g50 s33: APP 0.547 (APPfull 0.321), died 51/64, pieces 293 avg, TSD 550, TST 1, quads 851, max height 22, illegal 0, 26
+fitx+fitt+tstruct+pitrect            normal_g50 s53: APP 0.539 (APPfull 0.341), died 46/64, pieces 316 avg, TSD 549, TST 2, quads 926, max height 22, illegal 0, 26
+fitx+fitt+tstruct+pitrect            danger_g20 s33: APP 0.726 (APPfull 0.695), died 5/64, pieces 479 avg, TSD 1162, TST 2, quads 2156, max height 20, illegal 0, 3
+fitx+fitt+tstruct+pitrect            danger_g20 s53: APP 0.730 (APPfull 0.703), died 6/64, pieces 482 avg, TSD 1233, TST 4, quads 2151, max height 22, illegal 0, 3
+fitx+fitt+tstruct+pitrect            danger_g50 s33: APP 0.524 (APPfull 0.423), died 24/64, pieces 403 avg, TSD 756, TST 0, quads 1113, max height 21, illegal 0, 2
+fitx+fitt+tstruct+pitrect            danger_g50 s53: APP 0.521 (APPfull 0.434), died 25/64, pieces 416 avg, TSD 800, TST 1, quads 1090, max height 22, illegal 0, 3
+fitx+setup+tstruct+pitrect           normal_g20 s33: APP 0.747 (APPfull 0.614), died 21/64, pieces 411 avg, TSD 888, TST 5, quads 1995, max height 21, illegal 0, 2
+fitx+setup+tstruct+pitrect           normal_g20 s53: APP 0.753 (APPfull 0.595), died 26/64, pieces 395 avg, TSD 854, TST 3, quads 1924, max height 22, illegal 0, 2
+fitx+setup+tstruct+pitrect           normal_g50 s33: APP 0.499 (APPfull 0.261), died 54/64, pieces 261 avg, TSD 393, TST 3, quads 740, max height 22, illegal 0, 26
+fitx+setup+tstruct+pitrect           normal_g50 s53: APP 0.498 (APPfull 0.267), died 51/64, pieces 268 avg, TSD 402, TST 3, quads 780, max height 22, illegal 0, 25
+fitx+setup+tstruct+pitrect           danger_g20 s33: APP 0.684 (APPfull 0.662), died 3/64, pieces 484 avg, TSD 1047, TST 6, quads 2215, max height 20, illegal 0, 3
+fitx+setup+tstruct+pitrect           danger_g20 s53: APP 0.686 (APPfull 0.647), died 7/64, pieces 471 avg, TSD 1064, TST 5, quads 2102, max height 21, illegal 0, 3
+fitx+setup+tstruct+pitrect           danger_g50 s33: APP 0.489 (APPfull 0.434), died 17/64, pieces 443 avg, TSD 721, TST 5, quads 1243, max height 22, illegal 0, 3
+fitx+setup+tstruct+pitrect           danger_g50 s53: APP 0.482 (APPfull 0.394), died 24/64, pieces 408 avg, TSD 645, TST 6, quads 1115, max height 21, illegal 0, 2
+fitt+setup+tstruct+pitrect           normal_g20 s33: APP 0.544 (APPfull 0.212), died 61/64, pieces 195 avg, TSD 340, TST 0, quads 649, max height 22, illegal 0, 26
+fitt+setup+tstruct+pitrect           normal_g20 s53: APP 0.565 (APPfull 0.214), died 61/64, pieces 189 avg, TSD 381, TST 4, quads 651, max height 23, illegal 0, 24
+fitt+setup+tstruct+pitrect           normal_g50 s33: APP 0.412 (APPfull 0.105), died 64/64, pieces 128 avg, TSD 203, TST 2, quads 250, max height 22, illegal 0, 25
+fitt+setup+tstruct+pitrect           normal_g50 s53: APP 0.398 (APPfull 0.093), died 64/64, pieces 117 avg, TSD 210, TST 2, quads 201, max height 23, illegal 0, 25
+fitt+setup+tstruct+pitrect           danger_g20 s33: APP 0.559 (APPfull 0.327), died 44/64, pieces 292 avg, TSD 622, TST 1, quads 1003, max height 21, illegal 0, 2
+fitt+setup+tstruct+pitrect           danger_g20 s53: APP 0.555 (APPfull 0.415), died 34/64, pieces 374 avg, TSD 731, TST 8, quads 1304, max height 22, illegal 0, 2
+fitt+setup+tstruct+pitrect           danger_g50 s33: APP 0.392 (APPfull 0.141), died 61/64, pieces 180 avg, TSD 275, TST 1, quads 327, max height 22, illegal 0, 26
+fitt+setup+tstruct+pitrect           danger_g50 s53: APP 0.386 (APPfull 0.164), died 60/64, pieces 212 avg, TSD 308, TST 1, quads 404, max height 23, illegal 0, 26
+played (15:07)
+
+== normal_g20, VSfull (128 paired games; all present 0.941, none 0.080, sum of phi 0.861)
+  group          phi       90% interval  leave-out
+  fitx        +0.500   [ +0.481,  +0.520]     +0.624
+  fitt        +0.049   [ +0.032,  +0.064]     +0.074
+  setup       +0.008   [ -0.009,  +0.024]     +0.029
+  tstruct     +0.018   [ +0.003,  +0.033]     +0.055
+  pitrect     +0.286   [ +0.268,  +0.303]     +0.433
+  interactions (Shapley interaction index; < 0: substitutes, > 0: complements):
+    fitx     x pitrect   +0.224 [+0.196, +0.253]
+    fitt     x pitrect   +0.074 [+0.042, +0.101]
+    fitx     x fitt      -0.030 [-0.059, +0.001]
+    fitx     x setup     +0.022 [-0.007, +0.050]
+
+== normal_g20, deaths (128 paired games; all present 38.000, none 128.000, sum of phi -90.000)
+  group          phi       90% interval  leave-out
+  fitx       -58.117   [-61.551, -54.799]    -84.000
+  fitt        -2.617   [ -5.117,  +0.017]     -9.000
+  setup       -1.533   [ -4.501,  +1.285]    -11.000
+  tstruct     +0.467   [ -2.300,  +3.150]     -7.000
+  pitrect    -28.200   [-31.000, -25.465]    -58.000
+
+== normal_g50, VSfull (128 paired games; all present 0.516, none 0.045, sum of phi 0.471)
+  group          phi       90% interval  leave-out
+  fitx        +0.272   [ +0.256,  +0.287]     +0.364
+  fitt        +0.025   [ +0.011,  +0.039]     +0.097
+  setup       -0.001   [ -0.012,  +0.011]     +0.001
+  tstruct     +0.013   [ +0.001,  +0.025]     +0.030
+  pitrect     +0.162   [ +0.149,  +0.175]     +0.295
+  interactions (Shapley interaction index; < 0: substitutes, > 0: complements):
+    fitx     x pitrect   +0.179 [+0.157, +0.204]
+    fitt     x pitrect   +0.053 [+0.032, +0.074]
+    fitt     x tstruct   +0.033 [+0.012, +0.056]
+    fitt     x setup     +0.015 [-0.006, +0.034]
+
+== normal_g50, deaths (128 paired games; all present 92.000, none 128.000, sum of phi -36.000)
+  group          phi       90% interval  leave-out
+  fitx       -19.300   [-22.121, -16.583]    -36.000
+  fitt        -1.883   [ -4.117,  +0.267]    -13.000
+  setup       -0.133   [ -2.267,  +1.984]     -5.000
+  tstruct     -0.050   [ -2.587,  +2.517]     -3.000
+  pitrect    -14.633   [-16.833, -12.549]    -35.000
+
+== danger_g20, VSfull (128 paired games; all present 1.048, none 0.112, sum of phi 0.936)
+  group          phi       90% interval  leave-out
+  fitx        +0.515   [ +0.501,  +0.529]     +0.470
+  fitt        +0.067   [ +0.055,  +0.078]     +0.072
+  setup       +0.012   [ +0.003,  +0.022]     +0.026
+  tstruct     +0.047   [ +0.037,  +0.057]     +0.078
+  pitrect     +0.295   [ +0.278,  +0.312]     +0.332
+  interactions (Shapley interaction index; < 0: substitutes, > 0: complements):
+    fitx     x fitt      -0.084 [-0.112, -0.058]
+    fitt     x pitrect   +0.049 [+0.021, +0.075]
+    fitt     x tstruct   +0.037 [+0.018, +0.057]
+    tstruct  x pitrect   +0.027 [+0.003, +0.050]
+
+== danger_g20, deaths (128 paired games; all present 10.000, none 127.000, sum of phi -117.000)
+  group          phi       90% interval  leave-out
+  fitx       -83.933   [-86.703, -81.183]    -68.000
+  fitt        -2.100   [ -4.034,  -0.000]     +0.000
+  setup       -0.600   [ -2.618,  +1.417]     -1.000
+  tstruct     -1.350   [ -3.200,  +0.633]     +0.000
+  pitrect    -29.017   [-32.133, -25.915]    -32.000
+
+== danger_g50, VSfull (128 paired games; all present 0.703, none 0.062, sum of phi 0.640)
+  group          phi       90% interval  leave-out
+  fitx        +0.381   [ +0.366,  +0.397]     +0.446
+  fitt        +0.026   [ +0.015,  +0.038]     +0.011
+  setup       +0.008   [ -0.003,  +0.017]     +0.009
+  tstruct     +0.025   [ +0.014,  +0.037]     +0.046
+  pitrect     +0.200   [ +0.186,  +0.215]     +0.279
+  interactions (Shapley interaction index; < 0: substitutes, > 0: complements):
+    fitx     x pitrect   +0.171 [+0.149, +0.195]
+    fitx     x fitt      -0.030 [-0.051, -0.008]
+    setup    x tstruct   +0.020 [+0.003, +0.038]
+    fitt     x pitrect   +0.017 [-0.003, +0.039]
+
+== danger_g50, deaths (128 paired games; all present 47.000, none 128.000, sum of phi -81.000)
+  group          phi       90% interval  leave-out
+  fitx       -53.750   [-57.633, -49.783]    -74.000
+  fitt        +0.833   [ -1.950,  +3.402]     +6.000
+  setup       -1.083   [ -3.668,  +1.751]     -2.000
+  tstruct     -1.417   [ -3.985,  +1.183]     -4.000
+  pitrect    -25.583   [-28.318, -22.898]    -43.000
+
+== pooled (mean of the 4), VSfull (128 paired games; all present 0.802, none 0.075, sum of phi 0.727)
+  group          phi       90% interval  leave-out
+  fitx        +0.417   [ +0.406,  +0.427]     +0.476
+  fitt        +0.042   [ +0.035,  +0.049]     +0.064
+  setup       +0.007   [ +0.001,  +0.013]     +0.016
+  tstruct     +0.026   [ +0.019,  +0.032]     +0.052
+  pitrect     +0.236   [ +0.227,  +0.244]     +0.335
+  interactions (Shapley interaction index; < 0: substitutes, > 0: complements):
+    fitx     x pitrect   +0.148 [+0.133, +0.162]
+    fitt     x pitrect   +0.048 [+0.034, +0.061]
+    fitx     x fitt      -0.039 [-0.052, -0.025]
+    fitt     x tstruct   +0.025 [+0.013, +0.036]
+
+== pooled (mean of the 4), deaths (128 paired games; all present 46.750, none 127.750, sum of phi -81.000)
+  group          phi       90% interval  leave-out
+  fitx       -53.775   [-55.785, -51.779]    -65.500
+  fitt        -1.442   [ -2.613,  -0.242]     -4.000
+  setup       -0.838   [ -2.104,  +0.338]     -4.750
+  tstruct     -0.588   [ -1.850,  +0.692]     -3.500
+  pitrect    -24.358   [-25.688, -23.017]    -42.000
+  interactions (Shapley interaction index; < 0: substitutes, > 0: complements):
+    fitx     x pitrect  -31.437 [-33.709, -29.250]
+    fitx     x fitt      +5.604 [+3.415, +7.812]
+    fitt     x pitrect   -5.146 [-7.458, -2.624]
+    setup    x tstruct   -3.229 [-5.562, -0.917]
+
+value of every coalition, pooled: VSfull / deaths (of the paired games per setting):
+  none                                 0.075  127.8
+  fitx                                 0.433   85.5
+  fitt                                 0.102  127.2
+  setup                                0.075  127.8
+  tstruct                              0.082  127.8
+  pitrect                              0.200  122.8
+  fitx+fitt                            0.422   91.2
+  fitx+setup                           0.442   87.0
+  fitx+tstruct                         0.436   88.5
+  fitx+pitrect                         0.734   45.5
+  fitt+setup                           0.101  126.8
+  fitt+tstruct                         0.123  126.5
+  fitt+pitrect                         0.282  118.0
+  setup+tstruct                        0.082  128.0
+  setup+pitrect                        0.212  121.5
+  tstruct+pitrect                      0.229  122.5
+  fitx+fitt+setup                      0.421   94.8
+  fitx+fitt+tstruct                    0.452   91.8
+  fitx+fitt+pitrect                    0.745   45.5
+  fitx+setup+tstruct                   0.452   88.2
+  fitx+setup+pitrect                   0.721   49.5
+  fitx+tstruct+pitrect                 0.732   51.0
+  fitt+setup+tstruct                   0.127  127.2
+  fitt+setup+pitrect                   0.296  115.5
+  fitt+tstruct+pitrect                 0.323  114.0
+  setup+tstruct+pitrect                0.235  120.8
+  fitx+fitt+setup+tstruct              0.467   88.8
+  fitx+fitt+setup+pitrect              0.749   50.2
+  fitx+fitt+tstruct+pitrect            0.785   51.5
+  fitx+setup+tstruct+pitrect           0.738   50.8
+  fitt+setup+tstruct+pitrect           0.326  112.2
+  fitx+fitt+setup+tstruct+pitrect      0.802   46.8

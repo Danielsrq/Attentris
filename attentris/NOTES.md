@@ -50,6 +50,7 @@ The user's stated main contributions: an explainable model that considers Tetris
 | `attentris/attn_viz.py`, `attn_template.html` | attention page (cross-attention per move, geometry vs content); SHAP view when the data has it |
 | `attentris/token_shap.py`, `shap_page.py` | token SHAP per position (`--top N` moves, `--keep PAGE`, `--summary`); merge into an attention page |
 | `attentris/ablation_d128.sh`, `ablation_more.sh`, `ablation_stats.py` | d128 ablation lineages (`VARIANTS=noflat nooverlay nosetup nofitx nofitt`), 64 more games on seeds 53001+, paired McNemar tests |
+| `attentris/group_shap.py` | Shapley values of token groups for VS / deaths at play time (one model, groups blanked with `play.py --drop-kinds`, all coalitions) |
 | `bot/results/allspin_survive/run.sh`, `bot/results/allspin_cash/run.sh` | CEM all-spin survival tunes and evals (portable); `bot/tools/spin_stats.py` = spin / B2B / wound stats from `bot play --out` replays |
 
 ## Architecture (current best: v5.1 at d = 128)
@@ -255,6 +256,23 @@ VSfull (128 games): normal 80/20 0.941 / 0.873 / 0.775 / 0.821 / 0.790 / 0.880; 
 - **Non-T slots off** (`nofitx`) is the second-largest cost: significant in 4 of 8 settings, in both styles (normal 50/50 92 → 114, danger 50/50 47 → 65, normal d2 50/50 77 → 98), so most of the overlay cost is the slots. Matches token SHAP, where `fit_s/z/l/j/i` carry 13% of all |φ|, second after the play rows; S, Z, L, J each about equal, `fit_i` almost never present (4% of positions). Val and clean APP again barely move (APP none 0.715).
 - **fit_t off** (`nofitt`; the idea: only a T fixes checkerboard parity, but a T recess is plain in the play-row cells): significant only at normal 50/50 (92 → 110); pooled p = 0.017 like the setup tokens; val and APP unchanged (none 0.728, d2 0.863). Token SHAP of `nofitt` on the same 300 positions (`data/shap/v51_d128_nofitt_dagger5b_ft.jsonl`): on the 18 T moves where the baseline sees a `fit_t` (4.6% of its |phi|), the move is the same in 13 and p(move) the same (0.42); the share does not move to the play rows (26.8% → 26.8%) but spreads mostly to the piece tokens (29.0% → 33.9%). Small n; the model replaces the token with little loss, not visibly by reading the rows.
 - Each model is one training run; a second training seed would test model-to-model noise (not done, the user's choice).
+
+**Group SHAP at play time** (2026-10-21, `group_shap.py`, `group_shap.out`, games in `data/group_shap/`). Players = 5 token groups: `fitx` (`fit_s/z/l/j/i`), `fitt`, `setup` (`setup_*`), `tstruct` (tsd, stsd, fractal, imperial, cspin, vertical), `pitrect` (pit1-4, rect12). One model, v5.1 d128 dagger5b-ft (trained with all tokens), with the absent groups blanked at inference (`play.py --drop-kinds`); v(S) = mean VSfull or deaths over the 128 paired games of each depth-1 garbage setting (normal / danger x 80/20, 50/50); exact Shapley over all 32 coalitions (31 played, 16k games, ~1 h; all present = the baseline's own games, play is deterministic per seed), 90% bootstrap over the paired seeds. Pooled over the 4 settings (all present 0.802 VSfull / 46.8 deaths per 128, none 0.075 / 127.8):
+
+| group | phi VSfull [90%] | phi deaths [90%] | play-time leave-out, deaths | retrained ablation, deaths (mean of the 4 depth-1 settings) |
+|---|---|---|---|---|
+| fitx | +0.417 [0.406, 0.427] | −53.8 [−55.8, −51.8] | +65.5 | +19.0 (nofitx) |
+| pitrect | +0.236 [0.227, 0.244] | −24.4 [−25.7, −23.0] | +42.0 | not trained |
+| fitt | +0.042 [0.035, 0.049] | −1.4 [−2.6, −0.2] | +4.0 | +6.8 (nofitt) |
+| tstruct | +0.026 [0.019, 0.032] | −0.6 [−1.9, +0.7] | +3.5 | not trained at d128 |
+| setup | +0.007 [0.001, 0.013] | −0.8 [−2.1, +0.3] | +4.8 | +9.0 (nosetup) |
+| (all overlays) | | | +81.0 (none) | +23.8 (nooverlay) |
+
+- **The trained model leans on two groups:** the non-T slots and the pits. `fitx + pitrect` alone gives 0.734 VSfull / 45.5 deaths (all five: 0.802 / 46.8): the other three add attack (+0.07 VSfull) but no survival. Either one alone collapses (fitx 0.433 / 85.5, pitrect 0.200 / 122.8): strongly complementary (interaction +0.148 VSfull, −31 deaths).
+- **Play-time blanking ≫ retraining** for fitx (65 vs 19 deaths) and the whole overlay set (81 vs 24): the model reads its slots and pits rather than the cells; trained without them it learns to read the cells, at a smaller cost. For fitt and setup the two are both small (and within training-seed noise of each other).
+- **T structures matter little at play time** (−0.6 deaths, +0.026 VSfull) in these garbage tests; their value is attack on clean boards (not measured here).
+- **fitx × fitt substitute** in VSfull (−0.039): both describe resting places for a piece.
+- **Pits have not been ablated with retraining** at d128 (the next candidate after this).
 
 ## Explainability: token SHAP (2026-10-20)
 

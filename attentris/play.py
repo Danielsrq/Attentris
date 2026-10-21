@@ -77,7 +77,7 @@ def arrays(states, teacher, version=T.TOK_VERSION, drop=()):
 
 class Player:
     def __init__(self, model_path, depth, beam, teacher, mode, policy="logit", propose=0, temp=0.0, seed=0, merge="", merge_override="",
-                 expand_args=(), cross_loops=0):
+                 expand_args=(), cross_loops=0, drop_kinds=""):
         import torch
         import model as M
         torch.set_num_threads(1)
@@ -111,8 +111,9 @@ class Player:
             raise SystemExit("%s has no %s head (a v1 checkpoint?)" % (model_path, policy))
         self.net.eval()
         self.tok_version = 4 if tome else ck.get("tok_version", 5 if ck["model"]["kind.weight"].shape[0] > 31 else 4)
-        self.no_setups = "setup_" in ck["args"].get("drop_kinds", "")
-        self.drop = tuple(p for p in ck["args"].get("drop_kinds", "").split(",") if p)
+        # drop_kinds: blank more token kinds at inference (group_shap.py), on top of the checkpoint's own
+        self.drop = tuple(p for p in (ck["args"].get("drop_kinds", "") + "," + drop_kinds).split(",") if p)
+        self.no_setups = "setup_" in self.drop
         self.policy = policy
         self.propose = propose
         self.temp, self.rng, self.last_entropy = temp, np.random.default_rng(seed), None
@@ -427,7 +428,7 @@ def play_game(args, seed):
         raise SystemExit("--commit: 2 for now (an N = 2 model)")
     pl = Player(args.model, args.depth, args.beam, STYLES["normal" if auto else args.style], args.mode, args.policy, args.propose,
                 temp=args.temp, seed=seed, merge=args.merge, merge_override=args.merge_override, expand_args=rule_args,
-                cross_loops=args.cross_loops)
+                cross_loops=args.cross_loops, drop_kinds=args.drop_kinds)
     cmd = [BOT, "play-ext", "--mode", args.mode, *rule_args, "--pieces", str(args.pieces), "--seed", str(seed)]
     if auto and getattr(pl, "n_styles", 2) < 3:
         raise SystemExit("--style auto needs a model with a danger style (3 style rows)")
@@ -572,6 +573,8 @@ def main():
                     "this many times instead of the trained count (0 = as trained)")
     ap.add_argument("--commit", type=int, default=1, help="attentris-autoreg: moves played per decision (2: move 2 "
                     "comes from the same encoder pass as move 1, unless garbage changed the board)")
+    ap.add_argument("--drop-kinds", default="", help="analysis: blank these token kinds at inference, by prefix, comma-separated "
+                    "(as train.py --drop-kinds, but the model was trained with them; group_shap.py)")
     ap.add_argument("--dump", default="", help="write every state reached (seed, n, rows, b2b) to this JSONL")
     args = ap.parse_args()
     n_p = pcores.pin() or 8
@@ -582,9 +585,9 @@ def main():
     pieces = sum(r["pieces"] for r in res)
     attack = sum(r["attack"] for r in res)
     full = attack / (args.games * args.pieces)
-    line = ("AtTenTris %s%s%s%s depth %d%s style %s %s: APP %.3f (APPfull %.3f), died %d/%d, pieces %.0f avg, TSD %d, TST %d, quads %d, "
+    line = ("AtTenTris %s%s%s%s%s depth %d%s style %s %s: APP %.3f (APPfull %.3f), died %d/%d, pieces %.0f avg, TSD %d, TST %d, quads %d, "
             "max height %d, illegal %d, %.1f ms/move (p90 %.1f) + search %.1f ms, %.0fs") % (
-        args.policy, (" merge " + args.merge) if args.merge else "", (" top%d" % args.propose) if args.propose else "", (" shortlist %d + V search" % args.shortlist) if args.shortlist else "", args.depth, "" if args.depth <= 1 else " beam %d" % args.beam, args.style, ("garbage " + args.garbage) if args.garbage else "no garbage",
+        args.policy, (" drop " + args.drop_kinds) if args.drop_kinds else "", (" merge " + args.merge) if args.merge else "", (" top%d" % args.propose) if args.propose else "", (" shortlist %d + V search" % args.shortlist) if args.shortlist else "", args.depth, "" if args.depth <= 1 else " beam %d" % args.beam, args.style, ("garbage " + args.garbage) if args.garbage else "no garbage",
         attack / max(1, pieces), full, sum(r["died"] for r in res), args.games, pieces / args.games,
         sum(r["tsd"] for r in res), sum(r["tst"] for r in res), sum(r["quads"] for r in res),
         max(r["max_height"] for r in res), sum(r["illegal"] for r in res),
