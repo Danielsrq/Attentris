@@ -1,0 +1,50 @@
+pinned to 64 performance logical processors (mask 0xffffffffffffffff)
+device cuda NVIDIA GeForce RTX 3080 Ti
+style table grown 2 -> 3 rows (new rows = normal)
+warm start from /home/sruiqi/Desktop/LLMplayground/Attentris/attentris/data/model_mtris_d128_dagger_ft.pt (3 epochs)
+params 1203516, train 1261044 positions (287329 per epoch: train.npz 15394, dagger1.npz 4121, train1m.npz 166531, dagger2.npz 15088, danger.npz 86195), val 10000 + val2 8812, 3 epochs x 562 batches
+  epoch 1 batch 0/562 loss 3.224, blobs per stream 62.9 -> 28.6  (1s, epoch ETA 527s)
+  epoch 1 batch 50/562 loss 2.661, blobs per stream 43.5 -> 22.4  (14s, epoch ETA 141s)
+  epoch 1 batch 100/562 loss 2.636, blobs per stream 42.2 -> 22.5  (27s, epoch ETA 125s)
+  epoch 1 batch 150/562 loss 2.613, blobs per stream 38.1 -> 21.0  (40s, epoch ETA 109s)
+  epoch 1 batch 200/562 loss 2.610, blobs per stream 42.7 -> 22.7  (53s, epoch ETA 96s)
+  epoch 1 batch 250/562 loss 2.605, blobs per stream 40.7 -> 22.6  (67s, epoch ETA 83s)
+  epoch 1 batch 300/562 loss 2.605, blobs per stream 44.4 -> 23.0  (82s, epoch ETA 71s)
+  epoch 1 batch 350/562 loss 2.596, blobs per stream 37.9 -> 21.1  (96s, epoch ETA 58s)
+  epoch 1 batch 400/562 loss 2.592, blobs per stream 42.6 -> 21.7  (110s, epoch ETA 44s)
+  epoch 1 batch 450/562 loss 2.587, blobs per stream 42.2 -> 22.6  (124s, epoch ETA 31s)
+  epoch 1 batch 500/562 loss 2.584, blobs per stream 42.1 -> 22.7  (138s, epoch ETA 17s)
+  epoch 1 batch 550/562 loss 2.580, blobs per stream 42.9 -> 22.8  (152s, epoch ETA 3s)
+epoch 1: merge gate, val board blobs per stream 36.8 -> 20.2
+epoch 1: train loss 2.580 | val normal top1 0.600 top3 0.838 | val gate4 top1 0.583 top3 0.818 | argmax Qs top1 0.486 / 0.494, Q1 top1 0.022 / 0.019 | MAE Q1 16.58 Qs 6.45 | 163s
+epoch 1: val2 (val_danger.npz, 8812) top1 0.435 top3 0.691 loss 2.893 | argmax Qs top1 0.378 | MAE Qs 9.08
+  epoch 2 batch 0/562 loss 2.466, blobs per stream 48.3 -> 24.3  (0s, epoch ETA 160s)
+  epoch 2 batch 50/562 loss 2.518, blobs per stream 42.1 -> 22.2  (13s, epoch ETA 134s)
+  epoch 2 batch 100/562 loss 2.525, blobs per stream 42.4 -> 22.1  (26s, epoch ETA 119s)
+  epoch 2 batch 150/562 loss 2.523, blobs per stream 40.5 -> 21.9  (38s, epoch ETA 103s)
+  epoch 2 batch 200/562 loss 2.523, blobs per stream 42.4 -> 22.4  (50s, epoch ETA 90s)
+  epoch 2 batch 250/562 loss 2.521, blobs per stream 40.4 -> 22.0  (63s, epoch ETA 78s)
+  epoch 2 batch 300/562 loss 2.521, blobs per stream 42.3 -> 22.3  (76s, epoch ETA 66s)
+  epoch 2 batch 350/562 loss 2.519, blobs per stream 42.0 -> 22.3  (90s, epoch ETA 54s)
+  epoch 2 batch 400/562 loss 2.521, blobs per stream 42.0 -> 21.9  (104s, epoch ETA 42s)
+  epoch 2 batch 450/562 loss 2.522, blobs per stream 43.4 -> 22.8  (118s, epoch ETA 29s)
+  epoch 2 batch 500/562 loss 2.521, blobs per stream 40.8 -> 22.1  (133s, epoch ETA 16s)
+  epoch 2 batch 550/562 loss 2.520, blobs per stream 42.6 -> 22.3  (147s, epoch ETA 3s)
+epoch 2: merge gate, val board blobs per stream 36.8 -> 20.6
+epoch 2: train loss 2.520 | val normal top1 0.602 top3 0.841 | val gate4 top1 0.593 top3 0.818 | argmax Qs top1 0.507 / 0.505, Q1 top1 0.020 / 0.017 | MAE Q1 16.51 Qs 6.39 | 158s
+epoch 2: val2 (val_danger.npz, 8812) top1 0.436 top3 0.695 loss 2.859 | argmax Qs top1 0.387 | MAE Qs 8.78
+  epoch 3 batch 0/562 loss 2.439, blobs per stream 47.9 -> 24.4  (0s, epoch ETA 148s)
+  epoch 3 batch 50/562 loss 2.513, blobs per stream 44.0 -> 23.3  (14s, epoch ETA 143s)
+  epoch 3 batch 100/562 loss 2.513, blobs per stream 42.0 -> 22.1  (27s, epoch ETA 125s)
+  epoch 3 batch 150/562 loss 2.508, blobs per stream 42.0 -> 22.1  (40s, epoch ETA 110s)
+  epoch 3 batch 200/562 loss 2.500, blobs per stream 42.0 -> 22.6  (54s, epoch ETA 97s)
+  epoch 3 batch 250/562 loss 2.499, blobs per stream 43.4 -> 23.0  (68s, epoch ETA 84s)
+  epoch 3 batch 300/562 loss 2.497, blobs per stream 41.9 -> 22.5  (81s, epoch ETA 71s)
+  epoch 3 batch 350/562 loss 2.499, blobs per stream 43.8 -> 22.8  (95s, epoch ETA 57s)
+  epoch 3 batch 400/562 loss 2.497, blobs per stream 41.0 -> 21.8  (110s, epoch ETA 44s)
+  epoch 3 batch 450/562 loss 2.496, blobs per stream 40.1 -> 21.9  (123s, epoch ETA 30s)
+  epoch 3 batch 500/562 loss 2.497, blobs per stream 39.6 -> 21.6  (137s, epoch ETA 17s)
+  epoch 3 batch 550/562 loss 2.497, blobs per stream 41.8 -> 22.2  (151s, epoch ETA 3s)
+epoch 3: merge gate, val board blobs per stream 36.8 -> 20.5
+epoch 3: train loss 2.497 | val normal top1 0.605 top3 0.838 | val gate4 top1 0.591 top3 0.823 | argmax Qs top1 0.513 / 0.509, Q1 top1 0.019 / 0.018 | MAE Q1 16.57 Qs 6.36 | 161s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.435 top3 0.692 loss 2.852 | argmax Qs top1 0.394 | MAE Qs 8.70

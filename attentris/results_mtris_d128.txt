@@ -1,0 +1,128 @@
+== MergeTris (l4g + FiLM merge gate, lambda 3) at d=128, full lineage 2026-10-22 13:54 (dagger5b mix F=0.6155)
+mtris_d128: training, --micro 4 13:54
+== mtris_d128
+epoch 8: merge gate, val board blobs per stream 36.8 -> 20.6
+epoch 8: train loss 2.286 | val normal top1 0.602 top3 0.842 | val gate4 top1 0.592 top3 0.824 | | 540s
+mtris_d128_dagger_ft: training, --micro 4 15:09
+== mtris_d128_dagger_ft
+epoch 3: merge gate, val board blobs per stream 36.8 -> 20.5
+epoch 3: train loss 2.499 | val normal top1 0.595 top3 0.842 | val gate4 top1 0.587 top3 0.820 | | 177s
+epoch 3: val2 (val_dagger2.npz, 9737) top1 0.386 top3 0.645 loss 2.968 | argmax Qs top1 0.333 | MAE Qs 7.84
+mtris_d128_dagger3_ft: training, --micro 4 15:18
+== mtris_d128_dagger3_ft
+epoch 3: merge gate, val board blobs per stream 36.8 -> 20.5
+epoch 3: train loss 2.497 | val normal top1 0.605 top3 0.838 | val gate4 top1 0.591 top3 0.823 | | 161s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.435 top3 0.692 loss 2.852 | argmax Qs top1 0.394 | MAE Qs 8.70
+mtris_d128_dagger5b_ft: training, --micro 4 15:26
+== mtris_d128_dagger5b_ft
+epoch 3: merge gate, val board blobs per stream 36.8 -> 20.8
+epoch 3: train loss 2.472 | val normal top1 0.605 top3 0.846 | val gate4 top1 0.592 top3 0.828 | | 554s
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.453 top3 0.707 loss 2.743 | argmax Qs top1 0.421 | MAE Qs 8.35
+== mtris_d128_dagger5b_ft: rule-token recovery
+pinned to 64 performance logical processors (mask 0xffffffffffffffff)
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.22     0%                     0.21     0%            L2:63% L3:36%
+  sky                  2000      1.00   100%                     1.00   100%            L2:100%
+  pit2                 1750      0.48    44%                     0.43    38%            L2:64% L3:35%
+  well                 1685      0.48    40%                     0.47    40%            L2:93% L3:6%
+  pit1                 1385      0.49    47%                     0.43    37%            L2:70% L3:29%
+  fit_j open           1289      0.46    70%                     0.39    56%            L2:70% L3:29%
+  fit_l open           1284      0.46    69%                     0.39    55%            L2:68% L3:31%
+  tsd                  1150      0.60    96%                     0.58    92%            L2:8% L3:91%
+  pit3                 1135      0.35    24%                     0.29    15%            L2:53% L3:46%
+  fit_z open           1065      0.48    77%                     0.41    62%            L2:64% L3:35%
+  fit_s open            993      0.48    79%                     0.41    63%            L2:64% L3:35%
+  pit4                  740      0.27    10%                     0.20     3%            L2:41% L3:58%
+  fit_j covered         690      0.56    91%                     0.55    88%            L2:34% L3:65%
+  fit_l covered         628      0.58    93%                     0.56    89%            L2:28% L3:71%
+  fit_t open            590      0.44    63%                     0.38    52%            L2:70% L3:29%
+  fit_z covered         328      0.60    95%                     0.58    94%            L2:28% L3:71%
+  fit_s covered         272      0.56    90%                     0.54    89%            L2:35% L3:64%
+  setup_t               207      0.45    66%                     0.38    57%            L2:64% L3:35%
+  fit_i covered         135      0.55    91%                     0.53    84%            L2:37% L3:62%
+  fractal                98      0.35     1%                     0.34     0%            L2:2% L3:97%
+  setup_j                84      0.47    74%                     0.41    57%            L2:58% L3:41%
+  imperial               77      0.32    12%                     0.31    10%            L3:100%
+  setup_l                72      0.52    90%                     0.45    75%            L2:61% L3:38%
+  setup_s                71      0.50    85%                     0.45    79%            L2:59% L3:40%
+  setup_z                60      0.52    92%                     0.48    88%            L2:71% L3:28%
+  setup_i                28      0.38    46%                     0.34    39%            L2:75% L3:25%
+  rect12                 12      0.28     0%                     0.19     0%            L2:8% L3:91%
+  vertical               11      0.57    91%                     0.52    73%            L2:18% L3:81%
+  stsd                    8      0.30    12%                     0.28    12%            L2:12% L3:87%
+  cspin                   4      0.47    75%                     0.46    75%            L3:100%
+  band                    4      0.25     0%                     0.25     0%            L2:50% L3:50%
+mtris_d128_dagger5b_ft normal none: APP 0.582 (APPfull 0.582), died 0/256, pieces 500 avg, TSD 4836, TST 2, quads 3441, max height 18, illegal 0, 122.1 ms/move (p90 157.0) + search 123.4 ms, 262s
+mtris_d128_dagger5b_ft normal d2: APP 0.709 (APPfull 0.709), died 0/64, pieces 500 avg, TSD 1417, TST 2, quads 964, max height 16, illegal 0, 721.3 ms/move (p90 992.0) + search 723.0 ms, 379s
+mtris_d128_dagger5b_ft normal g20: APP 0.629 (APPfull 0.283), died 57/64, pieces 225 avg, TSD 356, TST 0, quads 912, max height 22, illegal 0, 89.2 ms/move (p90 128.3) + search 90.2 ms, 31s
+mtris_d128_dagger5b_ft normal g50: APP 0.424 (APPfull 0.119), died 63/64, pieces 140 avg, TSD 160, TST 0, quads 329, max height 23, illegal 0, 104.9 ms/move (p90 152.0) + search 106.0 ms, 27s
+mtris_d128_dagger5b_ft normal d2g20: APP 0.729 (APPfull 0.529), died 36/64, pieces 362 avg, TSD 735, TST 0, quads 1682, max height 22, illegal 0, 592.5 ms/move (p90 854.3) + search 593.9 ms, 261s
+mtris_d128_dagger5b_ft normal d2g50: APP 0.495 (APPfull 0.194), died 62/64, pieces 196 avg, TSD 294, TST 0, quads 535, max height 23, illegal 0, 632.2 ms/move (p90 955.0) + search 633.6 ms, 159s
+mtris_d128_dagger5b_ft danger g20: APP 0.621 (APPfull 0.545), died 17/64, pieces 439 avg, TSD 759, TST 0, quads 1877, max height 22, illegal 0, 96.2 ms/move (p90 127.8) + search 97.2 ms, 53s
+mtris_d128_dagger5b_ft danger g50: APP 0.408 (APPfull 0.176), died 59/64, pieces 216 avg, TSD 252, TST 0, quads 480, max height 21, illegal 0, 93.3 ms/move (p90 132.7) + search 94.3 ms, 31s
+mtris_d128_dagger5b_ft danger d2g20: APP 0.683 (APPfull 0.640), died 7/64, pieces 469 avg, TSD 938, TST 0, quads 2156, max height 19, illegal 0, 587.1 ms/move (p90 786.6) + search 588.6 ms, 303s
+mtris_d128_dagger5b_ft danger d2g50: APP 0.471 (APPfull 0.325), died 41/64, pieces 345 avg, TSD 502, TST 0, quads 903, max height 23, illegal 0, 589.7 ms/move (p90 861.4) + search 591.1 ms, 249s
+== APP / VS: v5.1 d128 vs ToMe l4g d128 vs MergeTris d128, dagger5b-ft (same lineage, same seeds)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_dagger5b_ft_normal_none     0/256      500   0.739    0.739   0.739    0.739         -
+v51_d128_dagger5b_ft_normal_d2       0/64      500   0.832    0.832   0.832    0.832         -
+v51_d128_dagger5b_ft_normal_g20     18/64      414   0.785    0.650   1.112    0.921 8653/9162
+v51_d128_dagger5b_ft_normal_g50     44/64      305   0.555    0.338   0.859    0.523 5917/6780
+v51_d128_dagger5b_ft_danger_g20      4/64      490   0.733    0.718   1.071    1.049 10608/10806
+v51_d128_dagger5b_ft_danger_g50     25/64      404   0.520    0.421   0.844    0.683 8378/8978
+v51_d128_dagger5b_ft_normal_d2g20   10/64      470   0.846    0.795   1.180    1.109 10044/10398
+v51_d128_dagger5b_ft_normal_d2g50   45/64      323   0.610    0.394   0.917    0.593 6360/7232
+v51_d128_dagger5b_ft_danger_d2g20    2/64      493   0.793    0.781   1.132    1.116 10701/10882
+v51_d128_dagger5b_ft_danger_d2g50   11/64      461   0.587    0.542   0.919    0.848 9788/10199
+tome_d128_l4g_dagger5b_ft_normal_none   0/256      500   0.755    0.755   0.755    0.755         -
+tome_d128_l4g_dagger5b_ft_normal_d2   0/64      500   0.901    0.901   0.901    0.901         -
+tome_d128_l4g_dagger5b_ft_normal_g20  35/64      361   0.762    0.550   1.077    0.778 7290/8006
+tome_d128_l4g_dagger5b_ft_normal_g50  63/64      200   0.506    0.202   0.774    0.309 3431/4484
+tome_d128_l4g_dagger5b_ft_danger_g20   9/64      470   0.737    0.693   1.073    1.008 10103/10388
+tome_d128_l4g_dagger5b_ft_danger_g50  40/64      351   0.509    0.357   0.821    0.577 7033/7824
+tome_d128_l4g_dagger5b_ft_normal_d2g20  20/64      439   0.865    0.760   1.195    1.050 9261/9736
+tome_d128_l4g_dagger5b_ft_normal_d2g50  45/64      323   0.592    0.382   0.899    0.581 6355/7214
+tome_d128_l4g_dagger5b_ft_danger_d2g20   3/64      490   0.801    0.785   1.140    1.117 10632/10823
+tome_d128_l4g_dagger5b_ft_danger_d2g50  15/64      451   0.580    0.523   0.910    0.821 9539/10005
+mtris_d128_dagger5b_ft_normal_none   0/256      500   0.582    0.582   0.582    0.582         -
+mtris_d128_dagger5b_ft_normal_d2     0/64      500   0.709    0.709   0.709    0.709         -
+mtris_d128_dagger5b_ft_normal_g20   57/64      225   0.629    0.283   0.912    0.410 4074/5020
+mtris_d128_dagger5b_ft_normal_g50   63/64      140   0.424    0.119   0.654    0.183 2059/3125
+mtris_d128_dagger5b_ft_danger_g20   17/64      439   0.621    0.545   0.952    0.835 9285/9723
+mtris_d128_dagger5b_ft_danger_g50   59/64      216   0.408    0.176   0.682    0.295 3797/4826
+mtris_d128_dagger5b_ft_normal_d2g20  36/64      362   0.729    0.529   1.045    0.757 7315/8040
+mtris_d128_dagger5b_ft_normal_d2g50  62/64      196   0.495    0.194   0.762    0.298 3349/4392
+mtris_d128_dagger5b_ft_danger_d2g20   7/64      469   0.683    0.640   1.018    0.955 10067/10352
+mtris_d128_dagger5b_ft_danger_d2g50  41/64      345   0.471    0.325   0.783    0.540 6889/7701
+== 64 more games per garbage setting, seeds 53001+ (v51_d128_dagger5b_ft tome_d128_l4g_dagger5b_ft mtris_d128_dagger5b_ft) 16:25
+mtris_d128_dagger5b_ft normal g20 (seeds 53001+): APP 0.610 (APPfull 0.272), died 61/64, pieces 223 avg, TSD 400, TST 0, quads 848, max height 22, illegal 0, 89.1 ms/move (p90 130.4) + search 90.1 ms, 31s
+mtris_d128_dagger5b_ft normal g50 (seeds 53001+): APP 0.407 (APPfull 0.101), died 64/64, pieces 124 avg, TSD 175, TST 0, quads 255, max height 22, illegal 0, 99.7 ms/move (p90 144.3) + search 100.7 ms, 22s
+mtris_d128_dagger5b_ft normal d2g20 (seeds 53001+): APP 0.706 (APPfull 0.482), died 40/64, pieces 341 avg, TSD 663, TST 0, quads 1520, max height 23, illegal 0, 575.9 ms/move (p90 842.9) + search 577.3 ms, 239s
+mtris_d128_dagger5b_ft normal d2g50 (seeds 53001+): APP 0.456 (APPfull 0.187), died 63/64, pieces 205 avg, TSD 281, TST 0, quads 503, max height 23, illegal 0, 620.4 ms/move (p90 946.9) + search 621.7 ms, 160s
+mtris_d128_dagger5b_ft danger g20 (seeds 53001+): APP 0.601 (APPfull 0.469), died 31/64, pieces 390 avg, TSD 628, TST 0, quads 1626, max height 22, illegal 0, 86.9 ms/move (p90 121.0) + search 87.9 ms, 47s
+mtris_d128_dagger5b_ft danger g50 (seeds 53001+): APP 0.406 (APPfull 0.195), died 52/64, pieces 240 avg, TSD 306, TST 0, quads 519, max height 23, illegal 0, 92.5 ms/move (p90 134.0) + search 93.5 ms, 32s
+mtris_d128_dagger5b_ft danger d2g20 (seeds 53001+): APP 0.685 (APPfull 0.622), died 10/64, pieces 454 avg, TSD 947, TST 0, quads 2055, max height 22, illegal 0, 582.5 ms/move (p90 784.6) + search 583.9 ms, 296s
+mtris_d128_dagger5b_ft danger d2g50 (seeds 53001+): APP 0.472 (APPfull 0.336), died 37/64, pieces 356 avg, TSD 532, TST 0, quads 924, max height 22, illegal 0, 615.1 ms/move (p90 893.8) + search 616.5 ms, 261s
+paired deaths vs v51_d128_dagger5b_ft (exact McNemar; b = only the ablation died, c = only the baseline died)
+tome_d128_l4g
+  normal_g20    n=128  deaths  38 ->  68  b 48 c 18  p=0.0003
+  normal_g50    n=128  deaths  92 -> 120  b 31 c  3  p=0.0000
+  danger_g20    n=128  deaths  10 ->  17  b 15 c  8  p=0.2100
+  danger_g50    n=128  deaths  47 ->  74  b 39 c 12  p=0.0002
+  normal_d2g20  n=128  deaths  22 ->  33  b 26 c 15  p=0.1173
+  normal_d2g50  n=128  deaths  77 ->  98  b 38 c 17  p=0.0065
+  danger_d2g20  n=128  deaths   5 ->   5  b  5 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  29  b 22 c 11  p=0.0801
+  pooled        b 224 c  89  p=1.4e-14
+mtris_d128
+  normal_g20    n=128  deaths  38 -> 118  b 83 c  3  p=0.0000
+  normal_g50    n=128  deaths  92 -> 127  b 36 c  1  p=0.0000
+  danger_g20    n=128  deaths  10 ->  48  b 44 c  6  p=0.0000
+  danger_g50    n=128  deaths  47 -> 111  b 67 c  3  p=0.0000
+  normal_d2g20  n=128  deaths  22 ->  76  b 60 c  6  p=0.0000
+  normal_d2g50  n=128  deaths  77 -> 125  b 49 c  1  p=0.0000
+  danger_d2g20  n=128  deaths   5 ->  17  b 15 c  3  p=0.0075
+  danger_d2g50  n=128  deaths  18 ->  78  b 66 c  6  p=0.0000
+  pooled        b 420 c  29  p=5.5e-90
+ablation more done

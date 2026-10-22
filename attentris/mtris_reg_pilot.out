@@ -1,0 +1,15 @@
+== registers 2 15:55
+params 1228220, train 200000 positions (200000 per epoch: train.npz 89920, dagger1.npz 24074, train1m.npz 972726), val 10000, 1 epochs x 391 batches
+  epoch 1 batch 0/391 loss 6.653, blobs per stream 33.7 -> 8.7  (7s, epoch ETA 2750s)
+  epoch 1 batch 200/391 loss 3.983, blobs per stream 37.7 -> 23.0  (299s, epoch ETA 282s)
+  epoch 1 batch 300/391 loss 3.759, blobs per stream 36.1 -> 19.6  (513s, epoch ETA 153s)
+epoch 1: merge gate, val board blobs per stream 36.8 -> 20.6
+epoch 1: train loss 3.630 | val normal top1 0.428 top3 0.646 | val gate4 top1 0.414 top3 0.638 | argmax Qs top1 0.247 / 0.287, Q1 top1 0.072 / 0.069 | MAE Q1 31.02 Qs 8.73 | 607s
+== registers 4 16:07
+params 1277628, train 200000 positions (200000 per epoch: train.npz 89920, dagger1.npz 24074, train1m.npz 972726), val 10000, 1 epochs x 391 batches
+  epoch 1 batch 0/391 loss 7.178, blobs per stream 33.7 -> 8.5  (1s, epoch ETA 321s)
+  epoch 1 batch 200/391 loss 3.940, blobs per stream 37.7 -> 21.6  (260s, epoch ETA 246s)
+  epoch 1 batch 300/391 loss 3.732, blobs per stream 36.1 -> 20.4  (387s, epoch ETA 116s)
+epoch 1: merge gate, val board blobs per stream 36.8 -> 19.9
+epoch 1: train loss 3.604 | val normal top1 0.445 top3 0.665 | val gate4 top1 0.423 top3 0.643 | argmax Qs top1 0.229 / 0.296, Q1 top1 0.053 / 0.070 | MAE Q1 13.88 Qs 8.67 | 425s
+pilot done

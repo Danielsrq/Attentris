@@ -37,6 +37,17 @@ with attention head s's keys, so the board ends up tiled K different ways and on
 to a blob in every stream (a TSD and the well under it can both be blobs). The streams never
 branch further; all their tokens attend to each other (FLAT-2D's overlap feature then sees blobs of
 different streams sharing cells), and the candidates cross-attend to the blobs of every stream.
+
+gate={"lambda": L} (MergeTris): no merge budget. At each merging layer a learned scorer (MergeGate) gives every
+adjacent same-stream pair a merge score s(i, j) from the two blobs (projected features: sum, |difference|,
+product), their geometry and their key cosine; FiLM from the board context (mean board blob, current, hold,
+preview 1, preview 2) scales and shifts the scorer's hidden units per position. Greedy matching on s, and the
+pairs with s > 0 merge. gate["registers"] = R > 0: the context is R learned register tokens instead of the mean
+board blob (they join the self-attention from layer 1 like the piece tokens, never merge, one copy for all
+streams, and are kept out of the candidates' cross-attention: their only job is the gate's context). Trained straight-through: forward a hard merge, backward the merge weight acts as
+sigmoid(s). The loss adds L x ((board blobs left - T) / board blobs at the first merge)^2, T = the budget's target
+(--tome-budget, as l4g: 20 + (n0 - 36) / 4 per stream): a soft budget on how many, the gate learns which. (A linear
+cost L x blobs left, without T, is all-or-nothing in pilots: L = 0 stops merging, L >= 0.1 merges every matched pair.)
 """
 import math
 
@@ -92,6 +103,57 @@ def hash_side(cells, anchor, step, stream):
     key = (cells.long().reshape(cells.shape[0], -1) * _W.to(cells.device)).sum(-1) & ((1 << 24) - 1)     # (B,)
     x = _mix(key[:, None] * 64 + step * 4 + stream)
     return (_mix(x * 256 + anchor) >> 11) & 1
+
+
+class MergeGate(nn.Module):
+    """MergeTris: s(i, j) = w . ReLU(gamma * (W u + b) + beta) + alpha * cos(keys) + c0, for an adjacent pair
+    with u = [p_i + p_j, |p_i - p_j|, p_i * p_j, geometry] (symmetric in i, j) and p = a projection of the
+    blob; (gamma, beta) = FiLM(board context). Starts as ToMe's cosine rule: FiLM gives gamma = 1, beta = 0
+    and w = 0, so s = 4 cos - 2 (merge above cosine 0.5) until training moves it.
+    Context: [mean board blob or the R registers ; current ; hold ; preview 1 ; preview 2]."""
+    N_GEO = 6
+
+    def __init__(self, d, hid=64, proj=32, registers=0):
+        super().__init__()
+        self.hid, self.n_reg = hid, registers
+        self.N_CTX = 4 + max(1, registers)
+        self.norm = nn.LayerNorm(d)
+        self.proj = nn.Linear(d, proj)
+        self.film = nn.Sequential(nn.Linear(self.N_CTX * d, hid), nn.ReLU(), nn.Linear(hid, 2 * hid))
+        nn.init.zeros_(self.film[2].weight)
+        nn.init.zeros_(self.film[2].bias)
+        self.w_in = nn.Linear(3 * proj + self.N_GEO, hid)
+        self.w_out = nn.Linear(hid, 1)
+        nn.init.zeros_(self.w_out.weight)
+        nn.init.zeros_(self.w_out.bias)
+        self.alpha = nn.Parameter(torch.tensor(4.0))
+        self.c0 = nn.Parameter(torch.tensor(-2.0))
+
+    def context(self, x, alive, is_cell, slot):
+        """slot: 0.. the piece tokens (current, hold, previews), 10.. the registers, -1 board tokens."""
+        h = self.norm(x)
+        if self.n_reg:
+            ctx = [(h * (alive & (slot == 10 + k)).float()[..., None]).sum(1) for k in range(self.n_reg)]
+        else:
+            board = (alive & is_cell).float()[..., None]
+            ctx = [(h * board).sum(1) / board.sum(1).clamp(min=1.0)]
+        for k in range(4):                                        # current, hold, preview 1, preview 2 (0 if absent)
+            ctx.append((h * (alive & (slot == k)).float()[..., None]).sum(1))
+        return torch.cat(ctx, -1)
+
+    def forward(self, x, ctx, bi, ii, jj, geo, cos):
+        g = self.film(ctx)
+        gamma, beta = 1.0 + g[:, :self.hid], g[:, self.hid:]
+        p = self.proj(self.norm(x))
+        pi, pj = p[bi, ii], p[bi, jj]
+        a = gamma[bi] * self.w_in(torch.cat([pi + pj, (pi - pj).abs(), pi * pj, geo], -1)) + beta[bi]
+        return self.w_out(F.relu(a)).squeeze(-1) + self.alpha * cos + self.c0
+
+
+def gate_of(a):
+    """A checkpoint's args (dict) -> the `gate` dict (None for budgeted ToMe)."""
+    return {"lambda": a.get("gate_lambda", 1.0), "target": budget_of(a.get("tome_budget", "")),
+            "registers": a.get("gate_registers", 0)} if a.get("tome_gate") else None
 
 
 def greedy_match(S, valid, r, stream, anchor, n_streams):
@@ -238,7 +300,7 @@ def budget_of(s):
 
 class AtTenTrisToMe(nn.Module):
     def __init__(self, d=64, heads=4, layers=4, merge=(0.0, 0.45, 0.45, 0.45), n_teachers=2, sky=False,
-                 pretok=False, flat_bias=False, streams=1, budget=None, split="token", pure=False):
+                 pretok=False, flat_bias=False, streams=1, budget=None, split="token", pure=False, gate=None):
         super().__init__()
         assert split in ("token", "hash", "greedy")
         self.split = self.trained_split = split
@@ -252,6 +314,14 @@ class AtTenTrisToMe(nn.Module):
         # tokens, the rest reach T in equal-ratio steps at the last merging layer; no merging if
         # n0 <= T. E.g. {"base": 20, "at": 36, "slope": 0.25, "first": 0.10}.
         self.budget = budget
+        self.gate = gate
+        if gate is not None:
+            assert split == "greedy", "the merge gate scores pairs for the greedy matching"
+            nr = gate.get("registers", 0)
+            self.gates = nn.ModuleList(MergeGate(d, registers=nr) for f in merge if f > 0)
+            if nr:
+                self.registers = nn.Parameter(torch.randn(nr, d) * 0.02)
+        self.aux_loss, self.gate_log = None, []
         # inference-time override (analysis): {layer (1-based): fraction} -- that layer merges this share
         # of each stream's board tokens instead of its scheduled / budgeted step. Not saved, not trained.
         self.frac_override = {}
@@ -302,7 +372,7 @@ class AtTenTrisToMe(nn.Module):
 
     @staticmethod
     def _merge(x, size, mask, box, alive, is_cell, keys, frac, first, adj, par0, stream=None, n_streams=1, heads=4, r_plan=None,
-               split="token", step=0, cells=None, pure=False):
+               split="token", step=0, cells=None, pure=False, gate=None, gstats=None):
         B, N, d = x.shape
         dev = x.device
         split = SPLIT_MODE or split
@@ -339,6 +409,21 @@ class AtTenTrisToMe(nn.Module):
             A = Bs = None
             eye = torch.eye(N, dtype=torch.bool, device=dev)[None]
             valid = cand[:, :, None] & cand[:, None, :] & adj & same & ~eye
+            if gate is not None:
+                # MergeTris: the learned score replaces the cosine; every matched pair with s > 0 merges
+                gmod, ctx = gate
+                bi, ii, jj = valid.nonzero(as_tuple=True)
+                rr = torch.arange(mask.shape[-1], device=dev)
+                sz = size.clamp(min=1.0)
+                cr, ccol = (mask @ (rr // 10).float()) / sz, (mask @ (rr % 10).float()) / sz
+                ls = sz.log()
+                filled = (mask * cells.float().reshape(B, 1, -1)).sum(-1) > 0.5
+                geo = torch.stack([(cr[bi, ii] - cr[bi, jj]).abs() / 4, (ccol[bi, ii] - ccol[bi, jj]).abs() / 4,
+                                   (ls[bi, ii] + ls[bi, jj]) / 4, (ls[bi, ii] - ls[bi, jj]).abs() / 4,
+                                   (filled[bi, ii] & filled[bi, jj]).float(), (filled[bi, ii] != filled[bi, jj]).float()], -1)
+                sc = gmod(x, ctx, bi, ii, jj, geo, S[bi, ii, jj])
+                S = torch.full_like(S, float("-inf")).index_put((bi, ii, jj), sc)
+                r_all = torch.full_like(r_all, N)
             sel, dst, score = greedy_match(S, valid, r_all, stream, mask.argmax(-1), n_streams)
         else:
             if first:
@@ -377,12 +462,21 @@ class AtTenTrisToMe(nn.Module):
         if MERGE_HOOK is not None:
             MERGE_HOOK(dict(A=A, Bs=Bs, S=S0, dst=dst, sel=sel, mask=mask, size=size, cand=cand, stream=stream, first=first, keys=keys,
                             adj=adj, r=r_all, split=split))
-        self_w = size * sel
+        if gate is not None:
+            # straight-through: forward the hard merge (s > 0), backward the weight acts as sigmoid(s)
+            hard = sel & (score > 0)
+            soft = torch.sigmoid(score.masked_fill(~sel, 0.0))
+            mw = torch.where(sel, hard.float() + soft - soft.detach(), torch.zeros_like(soft))
+            sel = hard
+            gstats.append(mw.sum(1))
+        else:
+            mw = sel.float()
         xs = x * size[..., None]
-        add = torch.zeros_like(xs).scatter_add(1, dst[..., None].expand(-1, -1, d), xs * sel[..., None])
-        add_s = torch.zeros_like(size).scatter_add(1, dst, self_w)
+        add = torch.zeros_like(xs).scatter_add(1, dst[..., None].expand(-1, -1, d), xs * mw[..., None])
+        add_s = torch.zeros_like(size).scatter_add(1, dst, size * mw)
         new_size = size + add_s
         x = torch.where(sel[..., None], x, (xs + add) / new_size.clamp(min=1e-6)[..., None])
+        new_size = new_size.detach()
         mask = mask + torch.zeros_like(mask).scatter_add(1, dst[..., None].expand(-1, -1, mask.shape[-1]), mask * sel[..., None])
         big = torch.full_like(box, 1000)
         lo = torch.where(sel[..., None], box, big)
@@ -420,19 +514,28 @@ class AtTenTrisToMe(nn.Module):
         pp = torch.gather(batch["tok_piece"], 1, po).clamp(min=0)
         pvalid = torch.gather(is_p, 1, po)
         xp = self.slot(pk.clamp(0, N_PIECE_TOK - 1)) + self.piece(pp)
-        x = torch.cat([phi + self.is_cell, xp], 1)                # (B, 207, d)
+        pslot = torch.where(pvalid, pk, -1)
+        nr = 0 if self.gate is None else self.gate.get("registers", 0)
+        if nr:      # MergeTris registers: after the pieces, slot 10.. (par0 20..)
+            xp = torch.cat([xp, self.registers.expand(B, nr, self.d)], 1)
+            pslot = torch.cat([pslot, 10 + torch.arange(nr, device=dev).expand(B, nr)], 1)
+            pvalid = torch.cat([pvalid, torch.ones(B, nr, dtype=torch.bool, device=dev)], 1)
+        NP = xp.shape[1]
+        x = torch.cat([phi + self.is_cell, xp], 1)                # (B, 207 + R, d)
         N = x.shape[1]
         size = torch.ones(B, N, device=dev)
         eye = torch.eye(200, device=dev)
-        mask = torch.cat([eye.expand(B, 200, 200), torch.zeros(B, N_PIECE_TOK, 200, device=dev)], 1)
+        mask = torch.cat([eye.expand(B, 200, 200), torch.zeros(B, NP, 200, device=dev)], 1)
         r = torch.arange(200, device=dev) // 10
         c = torch.arange(200, device=dev) % 10
         cbox = torch.stack([r, r, c, c], -1).expand(B, 200, 4)
-        box = torch.cat([cbox, torch.full((B, N_PIECE_TOK, 4), -1, device=dev, dtype=torch.long)], 1)
+        box = torch.cat([cbox, torch.full((B, NP, 4), -1, device=dev, dtype=torch.long)], 1)
         alive = torch.cat([torch.ones(B, 200, dtype=torch.bool, device=dev), pvalid], 1)
         is_cell = torch.cat([torch.ones(B, 200, dtype=torch.bool, device=dev),
-                             torch.zeros(B, N_PIECE_TOK, dtype=torch.bool, device=dev)], 1)
-        par0 = torch.cat([((r + c) % 2).expand(B, 200), torch.zeros(B, N_PIECE_TOK, dtype=torch.long, device=dev)], 1)
+                             torch.zeros(B, NP, dtype=torch.bool, device=dev)], 1)
+        # par0: the cells' checkerboard side; for the piece tokens (never merge candidates) 10 + their slot
+        # (0 current, 1 hold, 2.. previews; registers 20..), which the merge gate's context reads
+        par0 = torch.cat([((r + c) % 2).expand(B, 200), 10 + pslot], 1)
         if self.sky:
             g = cells.view(B, 20, 10).bool()
             rows = torch.arange(1, 21, device=dev).view(1, 20, 1)
@@ -482,6 +585,7 @@ class AtTenTrisToMe(nn.Module):
         stream = torch.zeros(B, x.shape[1], dtype=torch.long, device=dev)
         attn, trace = [], []
         plan, step, n_steps = None, 0, sum(1 for f in self.merge if f > 0)
+        gstats, n0 = [], None
         for li, (blk, frac) in enumerate(zip(self.blocks, self.merge)):
             adj = adjacency(mask)
             if self.flat_bias:
@@ -505,8 +609,16 @@ class AtTenTrisToMe(nn.Module):
                     stream = torch.cat([torch.full_like(stream, st) for st in range(K)], 1)
                     alive, x, size, mask, box, is_cell, par0, stream, keys = self._compact(alive, x, size, mask, box, is_cell, par0, stream, keys)
                     adj = adjacency(mask)
-                r_plan = None
-                if self.budget is not None or (li + 1) in self.frac_override or (li + 1) in self.r_scale:
+                r_plan, gate = None, None
+                if self.gate is not None:
+                    gm = self.gates[step]
+                    if n0 is None:
+                        cnt = torch.stack([(alive & is_cell & (stream == s_)).sum(1) for s_ in range(self.streams)], 1).float()
+                        n0 = cnt.sum(1)
+                        tg = self.gate["target"]
+                        T = n0 * 0 if tg is None else torch.minimum(tg["base"] + ((cnt - tg["at"]) * tg["slope"]).clamp(min=0), cnt).sum(1)
+                    gate = (gm, gm.context(x, alive, is_cell, torch.where(is_cell, -1, par0 - 10)))
+                elif self.budget is not None or (li + 1) in self.frac_override or (li + 1) in self.r_scale:
                     cand = alive & is_cell
                     cnt = torch.stack([(cand & (stream == s_)).sum(1) for s_ in range(self.streams)], 1).float()   # (B, S)
                     if (li + 1) in self.frac_override:
@@ -519,13 +631,19 @@ class AtTenTrisToMe(nn.Module):
                         r_plan = (r_plan.float() * self.r_scale[li + 1]).floor().long()
                 x, size, mask, box, alive, is_cell, par0, stream = self._merge(
                     x, size, mask, box, alive, is_cell, keys, frac, not merged_yet, adj, par0, stream, self.streams, self.heads, r_plan,
-                    self.split, step, cells, self.pure)
+                    self.split, step, cells, self.pure, gate, gstats)
                 step += 1
                 merged_yet = True
             x = x + blk.ff(blk.n2(x))
             if return_attn:
                 trace.append({"mask": mask.detach(), "alive": alive.detach(), "size": size.detach(), "stream": stream.detach()})
         hb, pad = x, ~alive
+        if nr:
+            pad = pad | (~is_cell & (par0 >= 20))                     # registers: not in the cross-attention
+        if self.gate is not None and n0 is not None:
+            left = n0 - torch.stack(gstats, 0).sum(0)                  # board blobs left, soft (straight-through)
+            self.aux_loss = self.gate["lambda"] * ((left - T) / n0.clamp(min=1.0)) ** 2     # (B,): per position
+            self.gate_log.append((float(n0.sum()) / self.streams, float((alive & is_cell).sum()) / self.streams, B))
 
         # --- candidates (as AtTenTris) ---
         cc = batch["cand_cells"]

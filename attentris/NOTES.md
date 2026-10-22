@@ -7,6 +7,7 @@ CEM commit-K) is in "Multi-move (plan) models" below, with its results and the n
 - v5.2 (two cross passes) at d128 through the full lineage: untied beats v5.1 dagger5b-ft (APP 0.780 vs 0.739), the best model on the standard block; "Latest results", "v5.2 at d = 128".
 - d128 ablations through the full lineage (FLAT-2D trained off, all overlay tokens off, setup tokens off) all three lose survival under garbage over 128 paired games (pooled McNemar p = 0.0002 / 3e-15 / 0.016; overlays matter most): "Latest results", "Ablations at d = 128".
 - ToMe l4g at d128 through the full lineage (2026-10-22): val equal to v5.1 d128, clean APP above v5.1 (0.755 / d2 0.901 vs 0.739 / 0.832), but loses survival under garbage like removing all overlays (pooled 224 vs 89, p = 1e-14): "ToMe at d = 128".
+- MergeTris (a learned, FiLM-conditioned merge gate in ToMe l4g, d128 full lineage): much worse than ToMe (APP 0.582, pooled deaths vs v5.1 420 vs 29); the straight-through merge signal is the suspect: "MergeTris at d = 128".
 - Token SHAP (which tokens drove a move) and a SHAP view on the attention page: "Explainability: token SHAP".
 - All-spin: rule sets documented ("Teachers and styles", "Rule sets"); CEM-allspins-survival (survives only with garbage every 15 pieces); rule variants for game design (`allspin_s1`, `allspin_cash`): "Next plan", item 1. Machine setup and data sync are in `../SETUP.md`; the model and tokenizer in depth in `DESIGN.md`.
 Results live in `results_*.txt` (one file per experiment, appended by the run scripts).
@@ -140,7 +141,7 @@ The teachers above and every AtTenTris model so far use **normal** rules. All-sp
 `v51` (d64) -> `v51_dagger_ft` (DAgger 2) -> `v51_dagger3_ft`; the same lineage at `v51_d96*` and `v51_d128*`.
 **Best: `v51_d128_dagger5b_ft`**: d128 base -> dagger_ft -> dagger3_ft -> dagger5b_ft (rounds 4 + 5 + extension).
 
-Other checkpoints: `v51_d128_dagger5_ft`, ToMe `tome_v41*` / `tome_v42_{l4h,l4g,l6g}*` (d64), `tome_d128_l4g{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage, 2026-10-22), `v52_{loop,untied}*` (d64), `v52_d128_{untied,loop}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage), ablations `v51_{nosetup,nofitx,not}*` (d64) and `v51_d128_{noflat,nooverlay,nosetup,nofitx,nofitt,nopit}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage, 2026-10-20).
+Other checkpoints: `v51_d128_dagger5_ft`, ToMe `tome_v41*` / `tome_v42_{l4h,l4g,l6g}*` (d64), `tome_d128_l4g{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` and MergeTris `mtris_d128{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage, 2026-10-22), `v52_{loop,untied}*` (d64), `v52_d128_{untied,loop}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage), ablations `v51_{nosetup,nofitx,not}*` (d64) and `v51_d128_{noflat,nooverlay,nosetup,nofitx,nofitt,nopit}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage, 2026-10-20).
 Strongest on the standard block since 2026-10-20: `v52_d128_untied_dagger5b_ft` (1.26M params; not yet re-tested at 128 games, deeper search or versus).
 Bot weights from 2026-10-20 (in git): `bot/results/allspin_survive/allspin_survive_e15.txt` (all-spin, survives garbage every 15 pieces), `bot/results/allspin_cash/allspin_cash_e15.txt` (the `allspin_cash` variant).
 Plan models (2026-10-16, all d128; "-ft" = fine-tuned from `v51_d128_dagger5b_ft` with the dagger5b recipe, 3 epochs):
@@ -296,6 +297,25 @@ phi = the group's average marginal effect over all orders of adding the groups (
 - **Survival under garbage is still lost,** about as badly as removing all overlays (nooverlay pooled 236 vs 94; ToMe 224 vs 89): the learned merges do not recover what the slot and pit tokens give under garbage. Depth 2 and danger style absorb part of it, as for the ablations. Compared with d64 (normal 50/50 64 / 64, danger 50/50 61 / 64 dead) the larger model survives far better, so part of the d64 gap was capacity.
 - **Rule-token recovery** (`data/tome_d128/tome_d128_l4g_dagger5b_ft_iou.txt`, 2000 positions) is no better than random merges for most kinds: pit1 0.80 (random 0.60), pit2 0.61 (0.53), vertical 0.77 (0.62) recovered; slots (fit_X open / covered 0.47-0.53), wells (0.48), tsd (0.46 vs random 0.60) and play rows (0.22) at or below random. The merges compress (from ~36 to 20 blobs per stream) without finding the structures; the model does its work in attention instead. Same picture as d64 (play 0.23 there).
 - Reading: ToMe is a lossless compressor for the clean-board policy, not a substitute for the rule tokens where survival matters. Next idea under discussion: a learned merge gate (a small FiLM-conditioned MLP scorer per merge layer, conditioned on the queue, straight-through hard merges, a token cost λ), not started.
+
+**MergeTris at d = 128** (2026-10-22, `mtris_d128.sh`, `results_mtris_d128.txt`): ToMe l4g with the merge choice learned. `model_tome.py` `MergeGate` (`--tome-gate`): per merge layer a scorer for every adjacent same-stream pair, s = w · ReLU(γ ⊙ (W u + b) + β) + α cos(keys) + c0, u = [p_i + p_j, |p_i − p_j|, p_i ⊙ p_j, 6 geometry numbers] (p = the blob projected to 32); (γ, β) = FiLM(mean board blob, current, hold, preview 1, preview 2) per position; greedy matching on s, pairs with s > 0 merge; straight-through (forward hard, backward sigmoid(s)); starts as ToMe's rule (s = 4 cos − 2). 181k parameters (1.20M total). Pilots (200k positions, 1 epoch): a linear token cost λ · blobs left is all-or-nothing (λ = 0: no merging, 36.5 blobs per stream, val 0.464; λ ≥ 0.1: every matched pair, 8.8); used instead λ · ((blobs left − T) / n0)², T = l4g's budget, λ = 3 (20.9 blobs, val 0.450 vs budgeted l4g 0.443; λ = 30 0.418). Full lineage as ToMe d128, base epoch ~560 s.
+
+| | v5.1 d128 | ToMe l4g d128 | MergeTris d128 |
+|---|---|---|---|
+| val normal / gate4 / val_dagger5all | 0.645 / 0.629 / 0.483 | 0.641 / 0.632 / 0.478 | 0.605 / 0.592 / 0.453 |
+| APP none (256) / d2 (64) | 0.739 / 0.832 | 0.755 / 0.901 | **0.582 / 0.709** |
+| normal 80/20 deaths / 128 (VSfull) | 38 (0.941) | 68 (0.792) | **118** (0.403) |
+| normal 50/50 | 92 (0.516) | 120 (0.336) | **127** (0.169) |
+| danger 80/20 | 10 (1.048) | 17 (1.010) | **48** (0.777) |
+| danger 50/50 | 47 (0.703) | 74 (0.588) | **111** (0.313) |
+| normal d2 80/20 / 50/50 | 22 / 77 | 33 / 98 | **76 / 125** |
+| danger d2 80/20 / 50/50 | 5 / 18 | 5 / 29 | **17 / 78** |
+| pooled vs v5.1, 8 settings | | 224 vs 89, p = 1e-14 | **420 vs 29, p = 6e-90** |
+
+- **The learned merge is worse than ToMe's cosine rule everywhere:** val −0.04 from base epoch 1 on (the gap grew during the base stage), clean APP −0.17, and far more deaths (TST 0, TSDs down a third). The gate holds the budget exactly (20.5-20.8 blobs per stream), so it is the choice of pairs, not their number.
+- **Recovery** (`data/mtris_d128/`): open slots now above random merges (fit_S/Z/L/J open 0.46-0.48 vs 0.39-0.41; ToMe at random), fit_t 0.44 vs 0.38; but pit1 0.49 (ToMe 0.80). Slightly more recess shape, much worse play: the hypothesis (blobs that keep the holes would survive garbage) is not supported by this version.
+- **Likely cause: the training signal, not the context.** ToMe gets no gradient on its merge choice but keeps a sensible rule (merge what attention treats alike); the gate gets a biased one (straight-through: the gradient of a partial merge that never happens, blind to the matching and to unmatched pairs) plus a strong, uniform budget gradient, and drifts away from the cosine rule. Context pilot (`mtris_reg_pilot.sh`, `--gate-registers R`: R learned register tokens in the self-attention, out of the cross-attention, as FiLM's board context instead of the mean): R = 2 val 0.428 / 0.414, R = 4 0.445 / 0.423, mean 0.450 / 0.430: the context is not the bottleneck.
+- Next, if MergeTris continues: DTEM (Lee & Hong, NeurIPS 2024, arXiv 2412.10569) is the fix for exactly these points: the merge scorer reads detached features, is trained with soft grouping (a differentiable top-r: r rounds of softmax(S / 0.1), picked rows suppressed by log(1 − weight)) and soft merging (A keeps its feature, its mass shrinks; proportional attention), in its own steps (backbone frozen), while the backbone trains with hard merges (~9 : 1). Gains over ToMe there are small (+0.2 to +1% ImageNet top-1 at equal FLOPs).
 
 ## Explainability: token SHAP (2026-10-20)
 
@@ -664,4 +684,4 @@ Reading:
 - MisaMino integration (needs a bridge).
 - A guideline spawn rule for fairness vs CC2.
 - A DAgger 4-only ablation.
-- ToMe direction: merge network vs hybrid (the user is deciding).
+- ToMe direction: the merge network (MergeTris, straight-through) failed at d128; next options: a DTEM-style gate (soft grouping, decoupled, alternating steps) or the hybrid (the user is deciding).

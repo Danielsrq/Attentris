@@ -537,3 +537,33 @@ tome_d128_l4g
   danger_d2g20  n=128  deaths   5 ->   5  b  5 c  5  p=1.0000
   danger_d2g50  n=128  deaths  18 ->  29  b 22 c 11  p=0.0801
   pooled        b 224 c  89  p=1.4e-14
+== 64 more games per garbage setting, seeds 53001+ (v51_d128_dagger5b_ft tome_d128_l4g_dagger5b_ft mtris_d128_dagger5b_ft) 16:25
+mtris_d128_dagger5b_ft normal g20 (seeds 53001+): APP 0.610 (APPfull 0.272), died 61/64, pieces 223 avg, TSD 400, TST 0, quads 848, max height 22, illegal 0, 89.1 ms/move (p90 130.4) + search 90.1 ms, 31s
+mtris_d128_dagger5b_ft normal g50 (seeds 53001+): APP 0.407 (APPfull 0.101), died 64/64, pieces 124 avg, TSD 175, TST 0, quads 255, max height 22, illegal 0, 99.7 ms/move (p90 144.3) + search 100.7 ms, 22s
+mtris_d128_dagger5b_ft normal d2g20 (seeds 53001+): APP 0.706 (APPfull 0.482), died 40/64, pieces 341 avg, TSD 663, TST 0, quads 1520, max height 23, illegal 0, 575.9 ms/move (p90 842.9) + search 577.3 ms, 239s
+mtris_d128_dagger5b_ft normal d2g50 (seeds 53001+): APP 0.456 (APPfull 0.187), died 63/64, pieces 205 avg, TSD 281, TST 0, quads 503, max height 23, illegal 0, 620.4 ms/move (p90 946.9) + search 621.7 ms, 160s
+mtris_d128_dagger5b_ft danger g20 (seeds 53001+): APP 0.601 (APPfull 0.469), died 31/64, pieces 390 avg, TSD 628, TST 0, quads 1626, max height 22, illegal 0, 86.9 ms/move (p90 121.0) + search 87.9 ms, 47s
+mtris_d128_dagger5b_ft danger g50 (seeds 53001+): APP 0.406 (APPfull 0.195), died 52/64, pieces 240 avg, TSD 306, TST 0, quads 519, max height 23, illegal 0, 92.5 ms/move (p90 134.0) + search 93.5 ms, 32s
+mtris_d128_dagger5b_ft danger d2g20 (seeds 53001+): APP 0.685 (APPfull 0.622), died 10/64, pieces 454 avg, TSD 947, TST 0, quads 2055, max height 22, illegal 0, 582.5 ms/move (p90 784.6) + search 583.9 ms, 296s
+mtris_d128_dagger5b_ft danger d2g50 (seeds 53001+): APP 0.472 (APPfull 0.336), died 37/64, pieces 356 avg, TSD 532, TST 0, quads 924, max height 22, illegal 0, 615.1 ms/move (p90 893.8) + search 616.5 ms, 261s
+paired deaths vs v51_d128_dagger5b_ft (exact McNemar; b = only the ablation died, c = only the baseline died)
+tome_d128_l4g
+  normal_g20    n=128  deaths  38 ->  68  b 48 c 18  p=0.0003
+  normal_g50    n=128  deaths  92 -> 120  b 31 c  3  p=0.0000
+  danger_g20    n=128  deaths  10 ->  17  b 15 c  8  p=0.2100
+  danger_g50    n=128  deaths  47 ->  74  b 39 c 12  p=0.0002
+  normal_d2g20  n=128  deaths  22 ->  33  b 26 c 15  p=0.1173
+  normal_d2g50  n=128  deaths  77 ->  98  b 38 c 17  p=0.0065
+  danger_d2g20  n=128  deaths   5 ->   5  b  5 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  29  b 22 c 11  p=0.0801
+  pooled        b 224 c  89  p=1.4e-14
+mtris_d128
+  normal_g20    n=128  deaths  38 -> 118  b 83 c  3  p=0.0000
+  normal_g50    n=128  deaths  92 -> 127  b 36 c  1  p=0.0000
+  danger_g20    n=128  deaths  10 ->  48  b 44 c  6  p=0.0000
+  danger_g50    n=128  deaths  47 -> 111  b 67 c  3  p=0.0000
+  normal_d2g20  n=128  deaths  22 ->  76  b 60 c  6  p=0.0000
+  normal_d2g50  n=128  deaths  77 -> 125  b 49 c  1  p=0.0000
+  danger_d2g20  n=128  deaths   5 ->  17  b 15 c  3  p=0.0075
+  danger_d2g50  n=128  deaths  18 ->  78  b 66 c  6  p=0.0000
+  pooled        b 420 c  29  p=5.5e-90

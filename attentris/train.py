@@ -240,6 +240,9 @@ def main():
                          "hash = a hashed bit per (board, step, stream, first cell), direction-blind; "
                          "greedy = no A/B sets, a greedy matching over all adjacent pairs")
     ap.add_argument("--tome-pure", action="store_true", help="blobs merge only with blobs of the same kind (all empty / all filled)")
+    ap.add_argument("--tome-gate", action="store_true", help="MergeTris: a learned FiLM merge gate decides every merge (no budget; needs --tome-split greedy)")
+    ap.add_argument("--gate-lambda", type=float, default=1.0, help="MergeTris: loss weight of the board blobs left / blobs at the first merge")
+    ap.add_argument("--gate-registers", type=int, default=0, help="MergeTris: R register tokens as the gate's board context (instead of the mean board blob)")
     ap.add_argument("--tome-streams", type=int, default=1, help="tome v4: merging streams (partitions), stream s merges by head s's keys")
     ap.add_argument("--micro", type=int, default=1, help="split each batch into this many micro-batches (same gradient, less GPU memory)")
     ap.add_argument("--bucket", type=int, default=0, help="group batches by token count within chunks of this many batches (0 = off)")
@@ -341,7 +344,8 @@ def main():
     if args.arch == "tome":
         net = MT.AtTenTrisToMe(d=args.d, layers=args.layers, merge=[float(f) for f in args.merge.split(",")],
                                sky=args.tome_sky, pretok=args.tome_pretok, flat_bias=args.tome_flat,
-                               streams=args.tome_streams, n_teachers=args.n_teachers, budget=MT.budget_of(args.tome_budget), split=args.tome_split, pure=args.tome_pure).to(args.device)
+                               streams=args.tome_streams, n_teachers=args.n_teachers, budget=MT.budget_of(args.tome_budget), split=args.tome_split, pure=args.tome_pure,
+                               gate=MT.gate_of(vars(args))).to(args.device)
     elif args.plan_variant:
         net = MP.AtTenTrisPlan(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops,
                                n_teachers=args.n_teachers, variant=args.plan_variant, plan_layers=args.plan_layers).to(args.device)
@@ -462,6 +466,8 @@ def main():
             for part in np.array_split(idx, args.micro):        # same batch, less memory: gradients add up
                 o = net(batch_of(tr, part, args.device), heads=True, **({"n_steps": args.plan_steps} if args.plan_variant else {}))
                 lp = compute_loss(o, tr, part, args, args.device)[0].sum() / len(idx)
+                if getattr(net, "aux_loss", None) is not None:      # MergeTris token cost
+                    lp = lp + net.aux_loss.sum() / len(idx)
                 lp.backward()
                 loss = loss + lp.detach()
             torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)
@@ -470,12 +476,24 @@ def main():
             tot += loss.item() * len(idx); cnt += len(idx)
             if bi % 50 == 0:
                 el = time.time() - t0
-                print("  epoch %d batch %d/%d loss %.3f  (%.0fs, epoch ETA %.0fs)" % (
-                    ep + 1, bi, nb, tot / cnt, el, el / (bi - first + 1) * (nb - bi - 1)), flush=True)
+                gl = getattr(net, "gate_log", None)
+                gs = ""
+                if gl:
+                    gs = ", blobs per stream %.1f -> %.1f" % (sum(g[0] for g in gl) / sum(g[2] for g in gl), sum(g[1] for g in gl) / sum(g[2] for g in gl))
+                    gl.clear()
+                print("  epoch %d batch %d/%d loss %.3f%s  (%.0fs, epoch ETA %.0fs)" % (
+                    ep + 1, bi, nb, tot / cnt, gs, el, el / (bi - first + 1) * (nb - bi - 1)), flush=True)
             if args.save_every and bi % args.save_every == args.save_every - 1 and bi < nb - 1:
                 save(out, ep, {"batch": bi, "perm": perm, "tot": tot, "cnt": cnt})
         eb = max(64, 512 // args.micro)       # validation in micro-batches too (sums per position: same numbers)
+        if getattr(net, "gate_log", None) is not None:
+            net.gate_log.clear()
         ev = evaluate(net, va, eb, args, args.device)
+        if getattr(net, "gate", None) is not None:
+            gl = net.gate_log
+            print("epoch %d: merge gate, val board blobs per stream %.1f -> %.1f" % (
+                ep + 1, sum(g[0] for g in gl) / sum(g[2] for g in gl), sum(g[1] for g in gl) / sum(g[2] for g in gl)), flush=True)
+            gl.clear()
         rec = {"epoch": ep + 1, "train_loss": tot / cnt, "val": ev, "secs": time.time() - t0}
         if va2 is not None:
             rec["val2"] = evaluate(net, va2, eb, args, args.device)
