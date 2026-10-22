@@ -6,6 +6,7 @@ CEM commit-K) is in "Multi-move (plan) models" below, with its results and the n
 **2026-10-20 (Ubuntu box), where to find it:**
 - v5.2 (two cross passes) at d128 through the full lineage: untied beats v5.1 dagger5b-ft (APP 0.780 vs 0.739), the best model on the standard block; "Latest results", "v5.2 at d = 128".
 - d128 ablations through the full lineage (FLAT-2D trained off, all overlay tokens off, setup tokens off) all three lose survival under garbage over 128 paired games (pooled McNemar p = 0.0002 / 3e-15 / 0.016; overlays matter most): "Latest results", "Ablations at d = 128".
+- ToMe l4g at d128 through the full lineage (2026-10-22): val equal to v5.1 d128, clean APP above v5.1 (0.755 / d2 0.901 vs 0.739 / 0.832), but loses survival under garbage like removing all overlays (pooled 224 vs 89, p = 1e-14): "ToMe at d = 128".
 - Token SHAP (which tokens drove a move) and a SHAP view on the attention page: "Explainability: token SHAP".
 - All-spin: rule sets documented ("Teachers and styles", "Rule sets"); CEM-allspins-survival (survives only with garbage every 15 pieces); rule variants for game design (`allspin_s1`, `allspin_cash`): "Next plan", item 1. Machine setup and data sync are in `../SETUP.md`; the model and tokenizer in depth in `DESIGN.md`.
 Results live in `results_*.txt` (one file per experiment, appended by the run scripts).
@@ -139,7 +140,7 @@ The teachers above and every AtTenTris model so far use **normal** rules. All-sp
 `v51` (d64) -> `v51_dagger_ft` (DAgger 2) -> `v51_dagger3_ft`; the same lineage at `v51_d96*` and `v51_d128*`.
 **Best: `v51_d128_dagger5b_ft`**: d128 base -> dagger_ft -> dagger3_ft -> dagger5b_ft (rounds 4 + 5 + extension).
 
-Other checkpoints: `v51_d128_dagger5_ft`, ToMe `tome_v41*` / `tome_v42_{l4h,l4g,l6g}*`, `v52_{loop,untied}*` (d64), `v52_d128_{untied,loop}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage), ablations `v51_{nosetup,nofitx,not}*` (d64) and `v51_d128_{noflat,nooverlay,nosetup,nofitx,nofitt,nopit}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage, 2026-10-20).
+Other checkpoints: `v51_d128_dagger5_ft`, ToMe `tome_v41*` / `tome_v42_{l4h,l4g,l6g}*` (d64), `tome_d128_l4g{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage, 2026-10-22), `v52_{loop,untied}*` (d64), `v52_d128_{untied,loop}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage), ablations `v51_{nosetup,nofitx,not}*` (d64) and `v51_d128_{noflat,nooverlay,nosetup,nofitx,nofitt,nopit}{,_dagger_ft,_dagger3_ft,_dagger5b_ft}` (d128, full lineage, 2026-10-20).
 Strongest on the standard block since 2026-10-20: `v52_d128_untied_dagger5b_ft` (1.26M params; not yet re-tested at 128 games, deeper search or versus).
 Bot weights from 2026-10-20 (in git): `bot/results/allspin_survive/allspin_survive_e15.txt` (all-spin, survives garbage every 15 pieces), `bot/results/allspin_cash/allspin_cash_e15.txt` (the `allspin_cash` variant).
 Plan models (2026-10-16, all d128; "-ft" = fine-tuned from `v51_d128_dagger5b_ft` with the dagger5b recipe, 3 epochs):
@@ -276,6 +277,25 @@ phi = the group's average marginal effect over all orders of adding the groups (
 - **The well label is modest:** −3.3 deaths, most at danger 50/50 (−6.8; normal 80/20 +0.4, n.s.), complementary with fitx (+0.044 VSfull). The model reads cheese holes mostly from the cells.
 - **T structures and setups matter little at play time** in these garbage tests; their value is attack on clean boards (not measured here). Per-piece VS (attack per piece played, which removes the dead pieces but not all of survival) gives fitt and tstruct about twice their VSfull share.
 - **fitx × fitt substitute** in VSfull (−0.028): both describe resting places for a piece.
+
+**ToMe at d = 128** (2026-10-22, `tome_d128.sh`, `results_tome_d128.txt`): the l4g architecture (4 layers, merges in layers 2-4, 2 streams, pre-tokens, FLAT-2D, pure merges, budget 20 + (n0 − 36) / 4, greedy) through the full v5.1 d128 lineage (same mixes, seeds, recipes; `--micro 4`, base epoch 423 s on the 3080 Ti). The learned merges replace all rule tokens; it is the d64 `tome_v42_l4g` at d128 and one step further (dagger5b-ft).
+
+| | v5.1 d128 dagger5b-ft | ToMe l4g d128 dagger5b-ft | (d64 ToMe l4g dagger3-ft) |
+|---|---|---|---|
+| val normal / gate4 / val_dagger5all | 0.645 / 0.629 / 0.483 | 0.641 / 0.632 / 0.478 | 0.613 / 0.609 / – |
+| APP none (256) / d2 (64) | 0.739 / 0.832 | **0.755 / 0.901** | 0.606 / 0.745 (64 games) |
+| normal 80/20 deaths / 128 (VSfull) | 38 (0.941) | **68** (0.792), p = 0.0003 | 56 / 64 |
+| normal 50/50 | 92 (0.516) | **120** (0.336), p < 0.0001 | 64 / 64 |
+| danger 80/20 | 10 (1.048) | 17 (1.010), p = 0.21 | 26 / 64 |
+| danger 50/50 | 47 (0.703) | **74** (0.588), p = 0.0002 | 61 / 64 |
+| normal d2 80/20 / 50/50 | 22 / 77 | 33 (p = 0.12) / **98** (p = 0.007) | |
+| danger d2 80/20 / 50/50 | 5 / 18 | 5 (1.0) / 29 (p = 0.08) | |
+| **pooled, 8 settings** | | 224 vs 89, **p = 1e-14** | |
+
+- **d128 closes the clean-board gap and more:** val equals the rule-token model, APP none 0.755 and d2 0.901 beat v5.1 and every ablation; only v5.2 untied is level or higher (0.780 / 0.902). At d64 ToMe was 0.03 behind on val and far behind on APP.
+- **Survival under garbage is still lost,** about as badly as removing all overlays (nooverlay pooled 236 vs 94; ToMe 224 vs 89): the learned merges do not recover what the slot and pit tokens give under garbage. Depth 2 and danger style absorb part of it, as for the ablations. Compared with d64 (normal 50/50 64 / 64, danger 50/50 61 / 64 dead) the larger model survives far better, so part of the d64 gap was capacity.
+- **Rule-token recovery** (`data/tome_d128/tome_d128_l4g_dagger5b_ft_iou.txt`, 2000 positions) is no better than random merges for most kinds: pit1 0.80 (random 0.60), pit2 0.61 (0.53), vertical 0.77 (0.62) recovered; slots (fit_X open / covered 0.47-0.53), wells (0.48), tsd (0.46 vs random 0.60) and play rows (0.22) at or below random. The merges compress (from ~36 to 20 blobs per stream) without finding the structures; the model does its work in attention instead. Same picture as d64 (play 0.23 there).
+- Reading: ToMe is a lossless compressor for the clean-board policy, not a substitute for the rule tokens where survival matters. Next idea under discussion: a learned merge gate (a small FiLM-conditioned MLP scorer per merge layer, conditioned on the queue, straight-through hard merges, a token cost λ), not started.
 
 ## Explainability: token SHAP (2026-10-20)
 

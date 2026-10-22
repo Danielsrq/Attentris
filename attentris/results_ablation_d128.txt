@@ -517,3 +517,23 @@ nopit
   danger_d2g20  n=128  deaths   5 ->   1  b  0 c  4  p=0.1250
   danger_d2g50  n=128  deaths  18 ->  19  b 14 c 13  p=1.0000
   pooled        b 159 c 148  p=0.57
+== 64 more games per garbage setting, seeds 53001+ (v51_d128_dagger5b_ft tome_d128_l4g_dagger5b_ft) 13:04
+tome_d128_l4g_dagger5b_ft normal g20 (seeds 53001+): APP 0.762 (APPfull 0.569), died 33/64, pieces 373 avg, TSD 935, TST 3, quads 1690, max height 21, illegal 0, 94.0 ms/move (p90 135.0) + search 95.1 ms, 49s
+tome_d128_l4g_dagger5b_ft normal g50 (seeds 53001+): APP 0.525 (APPfull 0.237), died 57/64, pieces 226 avg, TSD 448, TST 4, quads 607, max height 22, illegal 0, 101.3 ms/move (p90 153.1) + search 102.4 ms, 33s
+tome_d128_l4g_dagger5b_ft normal d2g20 (seeds 53001+): APP 0.851 (APPfull 0.764), died 13/64, pieces 449 avg, TSD 1295, TST 4, quads 2220, max height 23, illegal 0, 717.8 ms/move (p90 1017.2) + search 719.3 ms, 364s
+tome_d128_l4g_dagger5b_ft normal d2g50 (seeds 53001+): APP 0.574 (APPfull 0.319), died 53/64, pieces 277 avg, TSD 591, TST 3, quads 820, max height 22, illegal 0, 687.5 ms/move (p90 1053.0) + search 688.9 ms, 242s
+tome_d128_l4g_dagger5b_ft danger g20 (seeds 53001+): APP 0.731 (APPfull 0.694), died 8/64, pieces 474 avg, TSD 1197, TST 4, quads 2153, max height 20, illegal 0, 94.8 ms/move (p90 124.8) + search 95.9 ms, 55s
+tome_d128_l4g_dagger5b_ft danger g50 (seeds 53001+): APP 0.505 (APPfull 0.369), died 34/64, pieces 366 avg, TSD 635, TST 4, quads 982, max height 22, illegal 0, 93.2 ms/move (p90 132.7) + search 94.3 ms, 46s
+tome_d128_l4g_dagger5b_ft danger d2g20 (seeds 53001+): APP 0.818 (APPfull 0.809), died 2/64, pieces 495 avg, TSD 1504, TST 4, quads 2384, max height 20, illegal 0, 644.6 ms/move (p90 894.3) + search 646.1 ms, 339s
+tome_d128_l4g_dagger5b_ft danger d2g50 (seeds 53001+): APP 0.581 (APPfull 0.521), died 14/64, pieces 448 avg, TSD 1037, TST 4, quads 1315, max height 23, illegal 0, 698.3 ms/move (p90 994.0) + search 699.8 ms, 346s
+paired deaths vs v51_d128_dagger5b_ft (exact McNemar; b = only the ablation died, c = only the baseline died)
+tome_d128_l4g
+  normal_g20    n=128  deaths  38 ->  68  b 48 c 18  p=0.0003
+  normal_g50    n=128  deaths  92 -> 120  b 31 c  3  p=0.0000
+  danger_g20    n=128  deaths  10 ->  17  b 15 c  8  p=0.2100
+  danger_g50    n=128  deaths  47 ->  74  b 39 c 12  p=0.0002
+  normal_d2g20  n=128  deaths  22 ->  33  b 26 c 15  p=0.1173
+  normal_d2g50  n=128  deaths  77 ->  98  b 38 c 17  p=0.0065
+  danger_d2g20  n=128  deaths   5 ->   5  b  5 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  29  b 22 c 11  p=0.0801
+  pooled        b 224 c  89  p=1.4e-14

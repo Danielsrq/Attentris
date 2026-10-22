@@ -1,0 +1,116 @@
+== ToMe l4g at d=128, full lineage 2026-10-22 10:53 (dagger5b mix F=0.6155)
+tome_d128_l4g: training, --micro 4 10:53
+== tome_d128_l4g
+epoch 8: train loss 2.080 | val normal top1 0.647 top3 0.870 | val gate4 top1 0.634 top3 0.853 | | 423s
+tome_d128_l4g_dagger_ft: training, --micro 4 11:51
+== tome_d128_l4g_dagger_ft
+epoch 3: train loss 2.276 | val normal top1 0.639 top3 0.868 | val gate4 top1 0.630 top3 0.851 | | 135s
+epoch 3: val2 (val_dagger2.npz, 9737) top1 0.415 top3 0.679 loss 2.785 | argmax Qs top1 0.370 | MAE Qs 7.05
+tome_d128_l4g_dagger3_ft: training, --micro 4 11:58
+== tome_d128_l4g_dagger3_ft
+epoch 3: train loss 2.287 | val normal top1 0.643 top3 0.872 | val gate4 top1 0.634 top3 0.851 | | 127s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.461 top3 0.726 loss 2.668 | argmax Qs top1 0.419 | MAE Qs 7.98
+tome_d128_l4g_dagger5b_ft: training, --micro 4 12:05
+tome_d128_l4g_dagger5b_ft: training did not finish (see /home/sruiqi/Desktop/LLMplayground/Attentris/attentris/train_tome_d128_l4g_dagger5b_ft.out)
+== ToMe l4g at d=128, full lineage 2026-10-22 12:06 (dagger5b mix F=0.6155)
+== tome_d128_l4g
+epoch 8: train loss 2.080 | val normal top1 0.647 top3 0.870 | val gate4 top1 0.634 top3 0.853 | | 423s
+== tome_d128_l4g_dagger_ft
+epoch 3: train loss 2.276 | val normal top1 0.639 top3 0.868 | val gate4 top1 0.630 top3 0.851 | | 135s
+epoch 3: val2 (val_dagger2.npz, 9737) top1 0.415 top3 0.679 loss 2.785 | argmax Qs top1 0.370 | MAE Qs 7.05
+== tome_d128_l4g_dagger3_ft
+epoch 3: train loss 2.287 | val normal top1 0.643 top3 0.872 | val gate4 top1 0.634 top3 0.851 | | 127s
+epoch 3: val2 (val_danger.npz, 8812) top1 0.461 top3 0.726 loss 2.668 | argmax Qs top1 0.419 | MAE Qs 7.98
+tome_d128_l4g_dagger5b_ft: training, --micro 4 12:06
+== tome_d128_l4g_dagger5b_ft
+epoch 3: train loss 2.274 | val normal top1 0.641 top3 0.874 | val gate4 top1 0.632 top3 0.854 | | 430s
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.478 top3 0.737 loss 2.564 | argmax Qs top1 0.441 | MAE Qs 7.62
+== tome_d128_l4g_dagger5b_ft: rule-token recovery
+pinned to 64 performance logical processors (mask 0xffffffffffffffff)
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.22     0%                     0.23     0%            L2:58% L3:4% L4:37%
+  sky                  2000      1.00   100%                     1.00   100%            L2:100%
+  pit2                 1750      0.61    75%                     0.53    58%            L2:35% L3:17% L4:46%
+  well                 1685      0.48    41%                     0.49    43%            L2:88% L3:3% L4:7%
+  pit1                 1385      0.80    93%                     0.60    75%            L2:14% L3:27% L4:57%
+  fit_j open           1289      0.49    77%                     0.48    70%            L2:44% L3:32% L4:23%
+  fit_l open           1284      0.49    75%                     0.48    70%            L2:47% L3:31% L4:20%
+  tsd                  1150      0.46    60%                     0.60    88%            L2:43% L3:18% L4:37%
+  pit3                 1135      0.42    31%                     0.41    34%            L2:31% L3:17% L4:51%
+  fit_z open           1065      0.47    80%                     0.50    75%            L2:50% L3:31% L4:18%
+  fit_s open            993      0.48    82%                     0.51    76%            L2:47% L3:34% L4:18%
+  pit4                  740      0.33    11%                     0.33    13%            L2:21% L3:16% L4:62%
+  fit_j covered         690      0.52    81%                     0.56    86%            L2:23% L3:41% L4:34%
+  fit_l covered         628      0.52    81%                     0.55    85%            L2:26% L3:42% L4:31%
+  fit_t open            590      0.42    56%                     0.48    64%            L2:66% L3:19% L4:13%
+  fit_z covered         328      0.53    91%                     0.54    84%            L2:33% L3:40% L4:26%
+  fit_s covered         272      0.51    86%                     0.53    82%            L2:40% L3:37% L4:21%
+  setup_t               207      0.48    71%                     0.48    71%            L2:39% L3:28% L4:32%
+  fit_i covered         135      0.48    56%                     0.54    86%            L2:48% L3:11% L4:40%
+  fractal                98      0.41    21%                     0.42    37%            L2:1% L3:12% L4:86%
+  setup_j                84      0.48    71%                     0.49    71%            L2:41% L3:27% L4:30%
+  imperial               77      0.42    39%                     0.41    32%            L3:2% L4:97%
+  setup_l                72      0.50    81%                     0.51    75%            L2:43% L3:27% L4:29%
+  setup_s                71      0.46    69%                     0.49    68%            L2:45% L3:36% L4:18%
+  setup_z                60      0.49    80%                     0.52    82%            L2:28% L3:48% L4:23%
+  setup_i                28      0.40    61%                     0.39    54%            L2:57% L3:25% L4:17%
+  rect12                 12      0.31     0%                     0.33     8%            L3:16% L4:83%
+  vertical               11      0.77   100%                     0.62   100%            L3:54% L4:45%
+  stsd                    8      0.48    88%                     0.39    50%            L2:12% L3:12% L4:75%
+  cspin                   4      0.47    75%                     0.41    25%            L2:25% L4:75%
+  band                    4      0.25     0%                     0.26     0%            L2:75% L3:25%
+tome_d128_l4g_dagger5b_ft normal none: APP 0.755 (APPfull 0.755), died 0/256, pieces 500 avg, TSD 7104, TST 40, quads 3544, max height 17, illegal 0, 114.2 ms/move (p90 147.7) + search 115.4 ms, 245s
+tome_d128_l4g_dagger5b_ft normal d2: APP 0.901 (APPfull 0.901), died 0/64, pieces 500 avg, TSD 2034, TST 15, quads 934, max height 16, illegal 0, 751.1 ms/move (p90 1058.3) + search 752.8 ms, 394s
+tome_d128_l4g_dagger5b_ft normal g20: APP 0.762 (APPfull 0.550), died 35/64, pieces 361 avg, TSD 860, TST 4, quads 1648, max height 22, illegal 0, 93.8 ms/move (p90 136.4) + search 94.8 ms, 47s
+tome_d128_l4g_dagger5b_ft normal g50: APP 0.506 (APPfull 0.202), died 63/64, pieces 200 avg, TSD 384, TST 1, quads 486, max height 23, illegal 0, 102.8 ms/move (p90 151.7) + search 103.9 ms, 31s
+tome_d128_l4g_dagger5b_ft normal d2g20: APP 0.865 (APPfull 0.760), died 20/64, pieces 439 avg, TSD 1195, TST 6, quads 2215, max height 22, illegal 0, 699.1 ms/move (p90 998.8) + search 700.6 ms, 351s
+tome_d128_l4g_dagger5b_ft normal d2g50: APP 0.592 (APPfull 0.382), died 45/64, pieces 323 avg, TSD 673, TST 5, quads 1034, max height 22, illegal 0, 704.0 ms/move (p90 1068.6) + search 705.4 ms, 281s
+tome_d128_l4g_dagger5b_ft danger g20: APP 0.737 (APPfull 0.693), died 9/64, pieces 470 avg, TSD 1190, TST 6, quads 2176, max height 21, illegal 0, 94.9 ms/move (p90 127.2) + search 96.0 ms, 55s
+tome_d128_l4g_dagger5b_ft danger g50: APP 0.509 (APPfull 0.357), died 40/64, pieces 351 avg, TSD 655, TST 3, quads 931, max height 22, illegal 0, 94.8 ms/move (p90 137.0) + search 95.9 ms, 46s
+tome_d128_l4g_dagger5b_ft danger d2g20: APP 0.801 (APPfull 0.785), died 3/64, pieces 490 avg, TSD 1411, TST 2, quads 2388, max height 21, illegal 0, 644.2 ms/move (p90 889.9) + search 645.8 ms, 335s
+tome_d128_l4g_dagger5b_ft danger d2g50: APP 0.580 (APPfull 0.523), died 15/64, pieces 451 avg, TSD 1019, TST 3, quads 1342, max height 21, illegal 0, 693.3 ms/move (p90 998.0) + search 694.9 ms, 348s
+== APP / VS: v5.1 d128 dagger5b-ft vs ToMe l4g d128 dagger5b-ft (same lineage, same seeds)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_dagger5b_ft_normal_none     0/256      500   0.739    0.739   0.739    0.739         -
+v51_d128_dagger5b_ft_normal_d2       0/64      500   0.832    0.832   0.832    0.832         -
+v51_d128_dagger5b_ft_normal_g20     18/64      414   0.785    0.650   1.112    0.921 8653/9162
+v51_d128_dagger5b_ft_normal_g50     44/64      305   0.555    0.338   0.859    0.523 5917/6780
+v51_d128_dagger5b_ft_danger_g20      4/64      490   0.733    0.718   1.071    1.049 10608/10806
+v51_d128_dagger5b_ft_danger_g50     25/64      404   0.520    0.421   0.844    0.683 8378/8978
+v51_d128_dagger5b_ft_normal_d2g20   10/64      470   0.846    0.795   1.180    1.109 10044/10398
+v51_d128_dagger5b_ft_normal_d2g50   45/64      323   0.610    0.394   0.917    0.593 6360/7232
+v51_d128_dagger5b_ft_danger_d2g20    2/64      493   0.793    0.781   1.132    1.116 10701/10882
+v51_d128_dagger5b_ft_danger_d2g50   11/64      461   0.587    0.542   0.919    0.848 9788/10199
+tome_d128_l4g_dagger5b_ft_normal_none   0/256      500   0.755    0.755   0.755    0.755         -
+tome_d128_l4g_dagger5b_ft_normal_d2   0/64      500   0.901    0.901   0.901    0.901         -
+tome_d128_l4g_dagger5b_ft_normal_g20  35/64      361   0.762    0.550   1.077    0.778 7290/8006
+tome_d128_l4g_dagger5b_ft_normal_g50  63/64      200   0.506    0.202   0.774    0.309 3431/4484
+tome_d128_l4g_dagger5b_ft_danger_g20   9/64      470   0.737    0.693   1.073    1.008 10103/10388
+tome_d128_l4g_dagger5b_ft_danger_g50  40/64      351   0.509    0.357   0.821    0.577 7033/7824
+tome_d128_l4g_dagger5b_ft_normal_d2g20  20/64      439   0.865    0.760   1.195    1.050 9261/9736
+tome_d128_l4g_dagger5b_ft_normal_d2g50  45/64      323   0.592    0.382   0.899    0.581 6355/7214
+tome_d128_l4g_dagger5b_ft_danger_d2g20   3/64      490   0.801    0.785   1.140    1.117 10632/10823
+tome_d128_l4g_dagger5b_ft_danger_d2g50  15/64      451   0.580    0.523   0.910    0.821 9539/10005
+== 64 more games per garbage setting, seeds 53001+ (v51_d128_dagger5b_ft tome_d128_l4g_dagger5b_ft) 13:04
+tome_d128_l4g_dagger5b_ft normal g20 (seeds 53001+): APP 0.762 (APPfull 0.569), died 33/64, pieces 373 avg, TSD 935, TST 3, quads 1690, max height 21, illegal 0, 94.0 ms/move (p90 135.0) + search 95.1 ms, 49s
+tome_d128_l4g_dagger5b_ft normal g50 (seeds 53001+): APP 0.525 (APPfull 0.237), died 57/64, pieces 226 avg, TSD 448, TST 4, quads 607, max height 22, illegal 0, 101.3 ms/move (p90 153.1) + search 102.4 ms, 33s
+tome_d128_l4g_dagger5b_ft normal d2g20 (seeds 53001+): APP 0.851 (APPfull 0.764), died 13/64, pieces 449 avg, TSD 1295, TST 4, quads 2220, max height 23, illegal 0, 717.8 ms/move (p90 1017.2) + search 719.3 ms, 364s
+tome_d128_l4g_dagger5b_ft normal d2g50 (seeds 53001+): APP 0.574 (APPfull 0.319), died 53/64, pieces 277 avg, TSD 591, TST 3, quads 820, max height 22, illegal 0, 687.5 ms/move (p90 1053.0) + search 688.9 ms, 242s
+tome_d128_l4g_dagger5b_ft danger g20 (seeds 53001+): APP 0.731 (APPfull 0.694), died 8/64, pieces 474 avg, TSD 1197, TST 4, quads 2153, max height 20, illegal 0, 94.8 ms/move (p90 124.8) + search 95.9 ms, 55s
+tome_d128_l4g_dagger5b_ft danger g50 (seeds 53001+): APP 0.505 (APPfull 0.369), died 34/64, pieces 366 avg, TSD 635, TST 4, quads 982, max height 22, illegal 0, 93.2 ms/move (p90 132.7) + search 94.3 ms, 46s
+tome_d128_l4g_dagger5b_ft danger d2g20 (seeds 53001+): APP 0.818 (APPfull 0.809), died 2/64, pieces 495 avg, TSD 1504, TST 4, quads 2384, max height 20, illegal 0, 644.6 ms/move (p90 894.3) + search 646.1 ms, 339s
+tome_d128_l4g_dagger5b_ft danger d2g50 (seeds 53001+): APP 0.581 (APPfull 0.521), died 14/64, pieces 448 avg, TSD 1037, TST 4, quads 1315, max height 23, illegal 0, 698.3 ms/move (p90 994.0) + search 699.8 ms, 346s
+paired deaths vs v51_d128_dagger5b_ft (exact McNemar; b = only the ablation died, c = only the baseline died)
+tome_d128_l4g
+  normal_g20    n=128  deaths  38 ->  68  b 48 c 18  p=0.0003
+  normal_g50    n=128  deaths  92 -> 120  b 31 c  3  p=0.0000
+  danger_g20    n=128  deaths  10 ->  17  b 15 c  8  p=0.2100
+  danger_g50    n=128  deaths  47 ->  74  b 39 c 12  p=0.0002
+  normal_d2g20  n=128  deaths  22 ->  33  b 26 c 15  p=0.1173
+  normal_d2g50  n=128  deaths  77 ->  98  b 38 c 17  p=0.0065
+  danger_d2g20  n=128  deaths   5 ->   5  b  5 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  29  b 22 c 11  p=0.0801
+  pooled        b 224 c  89  p=1.4e-14
+ablation more done
+tome d128 done
