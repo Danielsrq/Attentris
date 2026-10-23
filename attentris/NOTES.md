@@ -8,6 +8,7 @@ CEM commit-K) is in "Multi-move (plan) models" below, with its results and the n
 - d128 ablations through the full lineage (FLAT-2D trained off, all overlay tokens off, setup tokens off) all three lose survival under garbage over 128 paired games (pooled McNemar p = 0.0002 / 3e-15 / 0.016; overlays matter most): "Latest results", "Ablations at d = 128".
 - ToMe l4g at d128 through the full lineage (2026-10-22): val equal to v5.1 d128, clean APP above v5.1 (0.755 / d2 0.901 vs 0.739 / 0.832), but loses survival under garbage like removing all overlays (pooled 224 vs 89, p = 1e-14): "ToMe at d = 128".
 - MergeTris (a learned, FiLM-conditioned merge gate in ToMe l4g, d128 full lineage): much worse than ToMe (APP 0.582, pooled deaths vs v5.1 420 vs 29); the straight-through merge signal is the suspect: "MergeTris at d = 128".
+- DTEM on ToMe l4g d128 (2026-10-22): modular no gain; end-to-end the best ToMe (APP 0.760, VSfull 0.795, pooled deaths vs v5.1 214 vs 114) but far from the rule tokens: "DTEM at d = 128". Tetromino merges (inference only) dropped; a piece → slot self-attention head (L2 head 4, own-piece lift ~4-5): "Tetromino merges", "Self-attention".
 - Token SHAP (which tokens drove a move) and a SHAP view on the attention page: "Explainability: token SHAP".
 - All-spin: rule sets documented ("Teachers and styles", "Rule sets"); CEM-allspins-survival (survives only with garbage every 15 pieces); rule variants for game design (`allspin_s1`, `allspin_cash`): "Next plan", item 1. Machine setup and data sync are in `../SETUP.md`; the model and tokenizer in depth in `DESIGN.md`.
 Results live in `results_*.txt` (one file per experiment, appended by the run scripts).
@@ -316,6 +317,32 @@ phi = the group's average marginal effect over all orders of adding the groups (
 - **Recovery** (`data/mtris_d128/`): open slots now above random merges (fit_S/Z/L/J open 0.46-0.48 vs 0.39-0.41; ToMe at random), fit_t 0.44 vs 0.38; but pit1 0.49 (ToMe 0.80). Slightly more recess shape, much worse play: the hypothesis (blobs that keep the holes would survive garbage) is not supported by this version.
 - **Likely cause: the training signal, not the context.** ToMe gets no gradient on its merge choice but keeps a sensible rule (merge what attention treats alike); the gate gets a biased one (straight-through: the gradient of a partial merge that never happens, blind to the matching and to unmatched pairs) plus a strong, uniform budget gradient, and drifts away from the cosine rule. Context pilot (`mtris_reg_pilot.sh`, `--gate-registers R`: R learned register tokens in the self-attention, out of the cross-attention, as FiLM's board context instead of the mean): R = 2 val 0.428 / 0.414, R = 4 0.445 / 0.423, mean 0.450 / 0.430: the context is not the bottleneck.
 - Next, if MergeTris continues: DTEM (Lee & Hong, NeurIPS 2024, arXiv 2412.10569) is the fix for exactly these points: the merge scorer reads detached features, is trained with soft grouping (a differentiable top-r: r rounds of softmax(S / 0.1), picked rows suppressed by log(1 − weight)) and soft merging (A keeps its feature, its mass shrinks; proportional attention), in its own steps (backbone frozen), while the backbone trains with hard merges (~9 : 1). Gains over ToMe there are small (+0.2 to +1% ImageNet top-1 at equal FLOPs).
+
+**DTEM at d = 128** (2026-10-22, `dtem_d128.sh`, `dtem_e2e_d128.sh`, `results_dtem_d128.txt`): DTEM (Lee & Hong, NeurIPS 2024) on the finished ToMe l4g d128 dagger5b-ft. `model_tome.py --tome-metric`: per merging layer a learned merge metric (a linear map of the detached, normed layer input) replaces the key similarity, initialised from the keys each stream used, so it starts exactly as ToMe; soft merges (soft greedy matching + mass-weighted soft merging, tau 0.1 / 0.1) train it, validation and play use hard merges by the learned similarity. Same budget, same matching. Two recipes, 3 epochs of the dagger5b mix each:
+- **modular** (DTEM's released recipe): the backbone frozen (`--freeze-base`), only the metric trains, lr 1e-4 (lr 1e-3 made both the soft and the hard loss worse: val 0.641 → 0.624).
+- **end-to-end** (the paper's alternating recipe, `train.py --soft-every 10`): every 10th batch a soft metric step (only the metric updates), the other 9 hard backbone steps (the metric fixed, lr 3e-4).
+
+| | v5.1 d128 | ToMe l4g d128 | DTEM modular | DTEM end-to-end |
+|---|---|---|---|---|
+| val normal / gate4 / val_dagger5all | 0.645 / 0.629 / 0.483 | 0.641 / 0.632 / 0.478 | 0.642 / 0.627 / 0.475 | 0.644 / 0.632 / 0.480 |
+| APP none (256) / d2 (64) | 0.739 / 0.832 | 0.755 / 0.901 | 0.739 / 0.874 | 0.760 / 0.883 |
+| VSfull, 8 garbage settings (64 games, mean) | 0.855 | 0.780 | 0.753 | 0.795 |
+| pooled deaths vs v5.1, 8 settings x 128 paired | | 224 vs 89, p = 1e-14 | 235 vs 82, p = 3e-18 | **214 vs 114, p = 4e-8** |
+
+- **Modular DTEM changes nothing useful:** with the backbone frozen the learned merges hold ToMe's validation but do not improve it, and play is a little worse.
+- **End-to-end is the best ToMe so far** but still far from the rule tokens: against ToMe pooled 130 vs 165 deaths (p = 0.048), danger 80/20 level with v5.1 (10 vs 10). Confound: 3 more fine-tune epochs than ToMe; the control (ToMe + 3 hard epochs, no metric) was proposed, not run.
+- Blob page of the end-to-end model: `tome_dtem_e2e_viz.html` (`tome_viz.py`).
+
+**Tetromino merges, inference only** (2026-10-23, `model_tome.py` variants for `tome_viz.py` / evaluation: `tetro`, `rounds=K`, `skygap`; as-trained output unchanged). The user's idea: empty cells merge only into blobs of at most 4 cells, after that only multiples of 4 (a 4-cell contiguous blob is a tetromino by construction); the sky never; filled cells as before. `rounds=K`: K extra merge rounds after the budgeted one that only complete small empty blobs; `skygap`: the sky starts one row higher, so the row above the stack is play cells. On ToMe l4g d128 dagger5b-ft:
+- The rule alone is near a no-op (the budget rarely merges empty cells past 4).
+- Rule + 1 round: val 0.607 / 0.587 (as trained 0.641 / 0.632), ~3.2 tetrominoes per position, 45% of the empty play cells left outside one. With `skygap`: 0.609 / 0.597, 4.5 tetrominoes, still 45% left.
+- A best-tiling search (19 fixed tetrominoes, DFS from the first uncovered cell, branch and bound) leaves 10% (4% with the sky gap), so pairwise greedy merging is far from a tiling.
+- **Dropped, at the user's reading:** the best tiling is a search for where the pieces go, which is what the CEM bot does; a tokenizer should enumerate the possible slots (overlapping fit tokens), not choose one tiling. Choosing would need a nested / hierarchical attention. Page: `tome_tetro_viz.html`.
+
+**Self-attention: do pieces look at their own slots?** (2026-10-23, `self_attn_viz.py`, page `self_attn_v51_d128_dagger5b.html`): on v5.1 d128 dagger5b-ft, over val, the "own-piece lift" = attention per `fit_X` token of the query piece's own type / per `fit_X` token of another type (1 = no preference), per layer and head, for the current, hold and preview tokens.
+- **Layer 2, head 4 (1-based) is a piece → slot head:** lift ~4-5 for the current piece and the first previews, fading with preview depth; the layer means are ~2. The other heads sit near 1.
+- The page: pick a layer and head, click a piece (queue chips) or a board cell / token row as the query; rows of the query piece's own slots (and for T, the T structures) are green; the lift table sets layer and head on click.
+- Not yet tested causally (switching L2 head 4 off at play time: offered, not run).
 
 ## Explainability: token SHAP (2026-10-20)
 
@@ -684,4 +711,5 @@ Reading:
 - MisaMino integration (needs a bridge).
 - A guideline spawn rule for fairness vs CC2.
 - A DAgger 4-only ablation.
-- ToMe direction: the merge network (MergeTris, straight-through) failed at d128; next options: a DTEM-style gate (soft grouping, decoupled, alternating steps) or the hybrid (the user is deciding).
+- ToMe direction: MergeTris failed, DTEM end-to-end is the best ToMe but well short of the rule tokens; open: the DTEM e2e control (ToMe + 3 hard epochs), or the hybrid (rule tokens + merges).
+- Causal test of the piece → slot head: L2 head 4 off (or mean-ablated) at play time.

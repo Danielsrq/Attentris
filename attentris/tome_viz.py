@@ -81,7 +81,9 @@ def merge_step(ev, k, layer, st, max_blocked=16):
 def render(net, d, idx, src):
     """Per position: blobs per merging layer (and stream), the final tokens, and the top moves."""
     events = []                                                 # every merge step's inputs and choices (model_tome.MERGE_HOOK)
-    MT.MERGE_HOOK = lambda e: events.append({k: e[k] for k in ("A", "Bs", "S", "sel", "dst", "mask", "cand", "stream", "adj", "r")})
+    # (tetromino completion rounds, e["extra"], are not shown as steps: the layer's blobs include them)
+    MT.MERGE_HOOK = lambda e: None if e.get("extra") else events.append(
+        {k: e[k] for k in ("A", "Bs", "S", "sel", "dst", "mask", "cand", "stream", "adj", "r")})
     try:
         with torch.no_grad():
             out, info = net(TR.batch_of(d, idx, "cpu"), return_attn=True)
@@ -189,7 +191,7 @@ def main():
     net = MT.AtTenTrisToMe(d=a["d"], layers=a["layers"], merge=[float(f) for f in trained.split(",")], sky=a.get("tome_sky", False),
                           pretok=a.get("tome_pretok", False), flat_bias=a.get("tome_flat", False),
                           streams=a.get("tome_streams", 1), budget=MT.budget_of(a.get("tome_budget", "")), split=a.get("tome_split", "token"), pure=a.get("tome_pure", False),
-                          n_teachers=ck["model"]["style.weight"].shape[0])
+                          n_teachers=ck["model"]["style.weight"].shape[0], gate=MT.gate_of(a), metric=a.get("tome_metric", False))
     net.load_state_dict(ck["model"])
     net.eval()
     if args.overrides:

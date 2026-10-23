@@ -1,0 +1,278 @@
+<title>__TITLE__</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root {
+  --bg: #f4f3ee; --panel: #ffffff; --fg: #1d2127; --muted: #5c626b; --line: #d8d5ca;
+  --empty: #ebeae4; --filled: #3a3f47; --grid: #ffffff; --accent: #2c55c9; --accent-fg: #ffffff;
+  --heat: 214, 84, 20; --move: #111418; --pick: #2c55c9; --hover: #0f8a6a; --bar: #e0763a; --own: #0f8a6a; --own-bg: rgba(15, 138, 106, .12);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
+  --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
+  --heat: 255, 140, 70; --move: #f4f5f7; --pick: #7d9cff; --hover: #4fd1a8; --bar: #ff9a5c; --own: #4fd1a8; --own-bg: rgba(79, 209, 168, .14); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15171b; --panel: #1d2026; --fg: #e7e9ec; --muted: #9aa1aa; --line: #343841;
+  --empty: #262a31; --filled: #aab1bb; --grid: #15171b; --accent: #7d9cff; --accent-fg: #0e1220;
+  --heat: 255, 140, 70; --move: #f4f5f7; --pick: #7d9cff; --hover: #4fd1a8; --bar: #ff9a5c; --own: #4fd1a8; --own-bg: rgba(79, 209, 168, .14); color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 14px/1.45 "IBM Plex Sans", system-ui, sans-serif; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; display: grid; gap: 14px; }
+header { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
+h1 { font-size: 18px; margin: 0; text-wrap: balance; } h1 span { color: var(--muted); font-weight: 400; }
+h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 6px 0 4px; font-weight: 600; }
+.nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button, select { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+select { max-width: 100%; }
+button.primary, button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.count { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 64px; text-align: center; }
+.meta .label { font-weight: 600; font-size: 15px; } .meta .sub { color: var(--muted); }
+.main { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 680px) { .main { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; display: grid; gap: 6px; justify-items: center; min-width: 0; }
+figcaption { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); text-align: center; max-width: 260px; }
+svg.board { width: 100%; max-width: 260px; height: auto; display: block; }
+.left { display: grid; gap: 14px; justify-items: center; min-width: 0; }
+.right { display: grid; gap: 10px; min-width: 0; }
+.toggle { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.hlabel { color: var(--muted); font-size: 12px; min-width: 64px; }
+.queue { display: grid; grid-template-columns: repeat(4, auto); gap: 8px 10px; align-items: end; justify-content: center; }
+.qtitle { grid-column: 1 / -1; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; justify-self: start; }
+.qitem { display: grid; gap: 2px; justify-items: center; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums;
+  border: 1px solid transparent; border-radius: 6px; padding: 4px 4px 3px; cursor: pointer; background: none; }
+.qitem:hover { border-color: var(--line); background: var(--panel); }
+.qitem.on { border-color: var(--accent); background: var(--panel); color: var(--muted); font-weight: 400; }
+.qitem b { color: var(--fg); font-weight: 600; }
+.qitem svg { width: 46px; height: 24px; }
+.row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 54px; gap: 8px; align-items: center; padding: 2px 6px; border-radius: 5px; cursor: pointer; }
+.row.head { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; cursor: default; }
+.row:not(.head):hover { background: var(--panel); outline: 1px solid var(--line); }
+.row.q { outline: 1.5px solid var(--accent); background: var(--panel); }
+.row.own { background: var(--own-bg); }
+.row .k { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.row .k .note { color: var(--muted); font-weight: 400; font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 12px; }
+.row .k .tag { color: var(--own); font-weight: 600; font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 11px; }
+.row .bar { height: 10px; border-radius: 3px; background: var(--bar); min-width: 1px; }
+.row.own .bar { background: var(--own); }
+.row .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.note { color: var(--muted); font-size: 12.5px; max-width: 75ch; margin: 0; }
+.tablewrap { overflow-x: auto; max-width: 100%; }
+table.lift { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.lift th, table.lift td { padding: 3px 9px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.lift th { color: var(--muted); font-weight: 600; font-size: 12px; }
+table.lift td:first-child, table.lift th:first-child { text-align: left; }
+table.lift td.c { cursor: pointer; }
+table.lift td.c:hover { background: var(--panel); outline: 1px solid var(--line); }
+table.lift td.on { outline: 1.5px solid var(--accent); background: var(--panel); }
+.summary { display: grid; gap: 6px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); align-items: center; }
+.qline { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 13.5px; }
+.qline b { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+.qline button { padding: 3px 10px; font-size: 12.5px; }
+.howto { color: var(--muted); font-size: 12.5px; margin: 0; max-width: 75ch; }
+svg.board rect.hit { cursor: pointer; }
+.legend i { display: inline-block; width: 18px; height: 0; vertical-align: middle; margin-right: 4px; border-top: 2.5px solid; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+
+<div class="wrap">
+  <header>
+    <h1>AtTenTris self-attention <span>· where each token looks among the board and piece tokens</span></h1>
+    <div class="nav">
+      <button id="prev">← Prev</button><span class="count" id="count"></span><button id="next" class="primary">Next →</button>
+      <select id="jump" aria-label="Jump to position"></select>
+    </div>
+  </header>
+  <section class="summary">
+    <h2 id="lifttitle"></h2>
+    <div class="tablewrap" id="lift"></div>
+    <p class="note">Each cell: the selected layer's lift for that piece token = mean attention per <code>fit_X</code> token of its
+      own piece ÷ mean attention per <code>fit_X</code> token of another piece, over the held-out positions holding both (1 = no preference).
+      "mean" is the 4 heads' attention summed before the ratio. Click a cell to show that layer and head on the board below.
+      The best head is picked after looking, so read its value as an upper end; the mean has no selection.</p>
+  </section>
+  <div class="meta"><div class="label" id="label"></div><div class="sub" id="sub"></div></div>
+  <div class="main">
+    <div class="left">
+      <figure><svg class="board" id="board" viewBox="-20 -6 226 418"></svg><figcaption id="cap"></figcaption></figure>
+      <div class="queue" id="queue"></div>
+      <div class="legend"><span><i style="border-color:var(--pick)"></i>query token</span><span><i style="border-color:var(--hover)"></i>hovered token</span><span><i style="border-color:var(--move);border-top-style:dashed"></i>the bot's move</span></div>
+    </div>
+    <div class="right">
+      <div class="qline" id="qline"></div>
+      <p class="howto">The query is the token whose attention is shown. Change it by clicking a piece in the queue, a token row, or a board cell
+        (it picks the smallest token covering that cell; click the same cell again for the next one). With a slot as the query,
+        "who looks at the query" shows which pieces look at that slot.</p>
+      <div class="toggle" id="layers"></div>
+      <div class="toggle" id="heads"></div>
+      <div class="toggle" id="dir"><span class="hlabel">direction</span><button data-d="out" class="on">where the query looks</button><button data-d="in">who looks at the query</button></div>
+      <div class="toggle"><span class="hlabel">board heat</span><button id="dens" class="on">per-cell density</button><button id="mass">whole-token share</button></div>
+      <h2 id="rowstitle"></h2>
+      <div id="rows"></div>
+    </div>
+  </div>
+  <p class="note"><b>Reading it.</b> Pick a query: click a piece in the queue or any token row. In "where the query looks", the bars are
+    that token's attention weights over all tokens in the chosen layer and head (they sum to 100%, the query itself included); the board paints each
+    board token's weight through its mask. <b>Per-cell density</b> divides a token's weight by its cell count, so a 4-cell slot and the
+    100-cell sky compare fairly; <b>whole-token share</b> paints every cell with the full weight. Overlapping overlays add up.
+    Green rows: <code>fit_X</code> / <code>setup_X</code> tokens of the query's own piece (for a T, also the T structures).
+    "Who looks at the query" shows, for each token, how much of its attention goes to the query (rows do not sum to 100%).
+    Piece tokens have no board position: they appear in the list and the queue, not on the board.
+    Attention shows where information is read from, not proof that it decided the move.</p>
+</div>
+
+<script>
+const DATA = __DATA__;
+const CS = 20, ROWS = 20, COLS = 10;
+const L = DATA.layers, H = DATA.heads;
+let idx = 0, q = null, layer = 1, head = "3", dir = "out", mode = "dens", hover = null;
+const $ = id => document.getElementById(id);
+const X = c => c * CS, Y = r => (ROWS - 1 - r) * CS;
+const rc = i => [Math.floor(i / 10), i % 10];
+const QN = { current: "current", hold: "hold", preview1: "next 1", preview2: "next 2", preview3: "next 3", preview4: "next 4", preview5: "next 5" };
+const T_STRUCT = new Set(["tsd", "fractal", "imperial", "stsd", "cspin", "vertical"]);
+const PIECE_CELLS = { I: [[0,0],[1,0],[2,0],[3,0]], O: [[1,0],[2,0],[1,1],[2,1]], T: [[0,0],[1,0],[2,0],[1,1]],
+  S: [[0,0],[1,0],[1,1],[2,1]], Z: [[1,0],[2,0],[0,1],[1,1]], J: [[0,0],[1,0],[2,0],[0,1]], L: [[0,0],[1,0],[2,0],[2,1]] };
+const SPIN = ["", " mini", " spin"];
+
+function outline(cells, inset) {
+  const set = new Set(cells);
+  let d = "";
+  for (const i of cells) {
+    const [r, c] = rc(i);
+    const x0 = X(c) + inset, x1 = X(c) + CS - inset, y0 = Y(r) + inset, y1 = Y(r) + CS - inset;
+    if (r + 1 >= ROWS || !set.has(i + 10)) d += `M${x0} ${y0}H${x1}`;
+    if (r - 1 < 0 || !set.has(i - 10)) d += `M${x0} ${y1}H${x1}`;
+    if (c - 1 < 0 || !set.has(i - 1)) d += `M${x0} ${y0}V${y1}`;
+    if (c + 1 >= COLS || !set.has(i + 1)) d += `M${x1} ${y0}V${y1}`;
+  }
+  return d;
+}
+// attention row (query qi -> every key) or column (every query -> key qi), for the chosen layer and head ("all" = mean)
+function weights(p, qi) {
+  const n = p.tokens.length, out = new Float64Array(n);
+  const hs = head === "all" ? [...Array(H).keys()] : [+head];
+  for (const h of hs) {
+    const A = p.A[layer][h];
+    for (let j = 0; j < n; j++) out[j] += (dir === "out" ? A[qi][j] : A[j][qi]) / 10000 / hs.length;
+  }
+  return out;
+}
+const tokName = t => `${t.kind in QN ? QN[t.kind] : t.kind}${t.piece ? " " + t.piece : ""}`;
+const ownOf = (qt, t) => {
+  if (!qt || !qt.piece || !(qt.kind in QN)) return false;
+  const m = /^(fit|setup)_([a-z])$/.exec(t.kind);
+  if (m) return m[2].toUpperCase() === qt.piece;
+  return qt.piece === "T" && T_STRUCT.has(t.kind);
+};
+const mini = piece => !piece ? `<svg viewBox="0 0 46 24"><text x="23" y="16" text-anchor="middle" font-size="11" fill="var(--muted)">empty</text></svg>` :
+  `<svg viewBox="0 0 46 24">` + PIECE_CELLS[piece].map(([x, y]) => `<rect x="${3 + x * 10}" y="${13 - y * 10}" width="9" height="9" rx="1.5" fill="var(--fg)" opacity="0.75"/>`).join("") + `</svg>`;
+
+function liftTable() {
+  const lf = DATA.lift;
+  $("lifttitle").textContent = `Own-piece lift over ${DATA.val_n.toLocaleString()} held-out positions · layer ${layer + 1}`;
+  let t = `<table class="lift"><tr><th>piece token</th><th>positions</th><th>mean</th>${[...Array(H).keys()].map(h => `<th>head ${h + 1}</th>`).join("")}</tr>`;
+  lf.queries.forEach((qn, k) => {
+    if (!lf.n[k]) return;
+    const row = lf.head[k][layer], best = Math.max(...row);
+    const cell = (v, h) => `<td class="c${head === h ? " on" : ""}" data-h="${h}"${v === best && h !== "all" ? ' style="font-weight:700"' : ""}>${v.toFixed(2)}</td>`;
+    t += `<tr><td>${QN[qn]}</td><td>${lf.n[k].toLocaleString()}</td>${cell(lf.mean[k][layer], "all")}${row.map((v, h) => cell(v, String(h))).join("")}</tr>`;
+  });
+  $("lift").innerHTML = t + "</table>";
+  $("lift").querySelectorAll("td.c").forEach(td => td.onclick = () => { head = td.dataset.h; controls(); render(); });
+}
+
+function controls() {
+  $("layers").innerHTML = `<span class="hlabel">layer</span>` + [...Array(L).keys()].map(l => `<button data-l="${l}" class="${l === layer ? "on" : ""}">${l + 1}</button>`).join("");
+  $("heads").innerHTML = `<span class="hlabel">head</span><button data-h="all" class="${head === "all" ? "on" : ""}">all (mean)</button>` +
+    [...Array(H).keys()].map(h => `<button data-h="${h}" class="${String(h) === String(head) ? "on" : ""}">${h + 1}</button>`).join("");
+  $("layers").querySelectorAll("button").forEach(b => b.onclick = () => { layer = +b.dataset.l; controls(); render(); });
+  $("heads").querySelectorAll("button").forEach(b => b.onclick = () => { head = b.dataset.h; controls(); render(); });
+  $("dir").querySelectorAll("button").forEach(b => { b.className = b.dataset.d === dir ? "on" : ""; b.onclick = () => { dir = b.dataset.d; controls(); render(); }; });
+  liftTable();
+}
+
+function render() {
+  const p = DATA.positions[idx];
+  const qt = p.tokens[q];
+  const mv = p.move;
+  $("count").textContent = `${idx + 1} / ${DATA.positions.length}`;
+  $("jump").value = idx;
+  $("label").textContent = `${p.why} · ${p.teacher} teacher · seed ${p.seed}, placement ${p.n}`;
+  $("sub").textContent = `Bot played ${mv.piece}${mv.hold ? " (hold)" : ""}${SPIN[mv.spin]}${mv.lines ? `, clears ${mv.lines}` : ""}${mv.attack ? `, sends ${mv.attack}` : ""}. Model: ${DATA.model}.`;
+  const hname = head === "all" ? "mean of heads" : `head ${+head + 1}`;
+  $("cap").textContent = dir === "out" ? `Where ${tokName(qt)} looks · layer ${layer + 1}, ${hname}` : `Who looks at ${tokName(qt)} · layer ${layer + 1}, ${hname}`;
+  const w = weights(p, q);
+
+  // queue (clickable queries), with each piece token's weight
+  const qcell = kind => {
+    const j = p.tokens.findIndex(t => t.kind === kind);
+    if (j < 0) return "";
+    const t = p.tokens[j];
+    return `<button class="qitem${j === q ? " on" : ""}" data-j="${j}">${mini(t.piece)}<b>${QN[kind]}${t.piece ? " " + t.piece : ""}</b><span>${(100 * w[j]).toFixed(1)}%</span></button>`;
+  };
+  $("queue").innerHTML = `<div class="qtitle">Pieces (click to query)</div>` + Object.keys(QN).map(qcell).join("");
+  $("queue").querySelectorAll(".qitem").forEach(b => b.onclick = () => { q = +b.dataset.j; render(); });
+
+  // board heat
+  const heat = new Float64Array(200);
+  p.tokens.forEach((t, j) => { for (const i of t.cells) heat[i] += mode === "dens" ? w[j] / t.cells.length : w[j]; });
+  const mx = Math.max(...heat) || 1;
+  let s = "";
+  for (const r of [0, 4, 9, 14, 19]) s += `<text x="-6" y="${Y(r) + 14}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${r + 1}</text>`;
+  for (let i = 0; i < 200; i++) {
+    const [r, c] = rc(i);
+    s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="var(--empty)" stroke="var(--grid)" stroke-width="1"/>`;
+    if (heat[i] > 0) s += `<rect x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="rgb(var(--heat))" opacity="${(0.06 + 0.86 * heat[i] / mx).toFixed(3)}"/>`;
+    if (p.board[i]) s += `<rect x="${X(c) + 4}" y="${Y(r) + 4}" width="${CS - 8}" height="${CS - 8}" rx="2" fill="var(--filled)" opacity="0.8"/>`;
+  }
+  s += `<path d="${outline(mv.cells, 1.5)}" stroke="var(--move)" stroke-width="2" stroke-dasharray="4 3" fill="none"/>`;
+  if (qt.cells.length) s += `<path d="${outline(qt.cells, 3.5)}" stroke="var(--pick)" stroke-width="2.5" fill="none"/>`;
+  if (hover !== null && p.tokens[hover].cells.length) s += `<path d="${outline(p.tokens[hover].cells, 1)}" stroke="var(--hover)" stroke-width="2.5" fill="none"/>`;
+  for (let i = 0; i < 200; i++) { const [r, c] = rc(i); s += `<rect class="hit" data-i="${i}" x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}" fill="transparent"/>`; }
+  $("board").innerHTML = s;
+  $("board").querySelectorAll("rect.hit").forEach(el => el.onclick = () => {
+    const i = +el.dataset.i;
+    // tokens covering this cell, smallest first (overlays before the base rows / sky); repeated clicks cycle
+    const cover = p.tokens.map((t, j) => [j, t.cells.length, t.cells.includes(i)]).filter(x => x[2]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
+    if (!cover.length) return;
+    const k = cover.indexOf(q);
+    q = cover[k < 0 ? 0 : (k + 1) % cover.length];
+    hover = null;
+    render();
+  });
+  const cur = firstQ(p);
+  $("qline").innerHTML = `<span>Query:</span><b>${tokName(qt)}</b>${qt.note ? `<span class="note">${qt.note}</span>` : ""}` +
+    (qt.cells.length ? `<span class="note">(${qt.cells.length} cell${qt.cells.length > 1 ? "s" : ""}, outlined in blue)</span>` : `<span class="note">(a piece token: no board cells)</span>`) +
+    (q !== cur ? `<button id="backq">back to current piece</button>` : "");
+  if ($("backq")) $("backq").onclick = () => { q = cur; hover = null; render(); };
+
+  // token rows, sorted by weight
+  const rows = p.tokens.map((t, j) => ({ t, j, a: w[j] })).sort((x, y) => y.a - x.a);
+  const top = rows[0].a || 1;
+  $("rowstitle").textContent = dir === "out" ? `${tokName(qt)}'s attention over the tokens (click a row to query it)` : `Each token's attention to ${tokName(qt)} (click a row to query it)`;
+  $("rows").innerHTML = `<div class="row head"><span>token</span><span>${dir === "out" ? "attention weight" : "weight on the query"}</span><span class="v">share</span></div>` +
+    rows.map(({ t, j, a }) => {
+      const own = ownOf(qt, t);
+      return `<div class="row${j === q ? " q" : ""}${own ? " own" : ""}" data-j="${j}"><span class="k">${tokName(t)}${t.note ? ` <span class="note">${t.note}</span>` : ""}${own ? ` <span class="tag">own piece</span>` : ""}${j === q ? ` <span class="note">(query)</span>` : ""}</span>` +
+        `<span class="bar" style="width:${(100 * a / top).toFixed(1)}%"></span><span class="v">${(100 * a).toFixed(1)}%</span></div>`;
+    }).join("");
+  $("rows").querySelectorAll(".row[data-j]").forEach(el => {
+    const j = +el.dataset.j;
+    el.onmouseenter = () => { if (hover !== j) { hover = j; render(); } };
+    el.onmouseleave = () => { if (hover === j) { hover = null; render(); } };
+    el.onclick = () => { q = j; hover = null; render(); };
+  });
+}
+
+const firstQ = p => Math.max(0, p.tokens.findIndex(t => t.kind === "current"));
+function go(dl) { idx = (idx + dl + DATA.positions.length) % DATA.positions.length; q = firstQ(DATA.positions[idx]); hover = null; render(); }
+$("prev").onclick = () => go(-1); $("next").onclick = () => go(1);
+$("jump").innerHTML = DATA.positions.map((p, i) => `<option value="${i}">${i + 1}. ${p.why} · ${p.teacher} · seed ${p.seed} #${p.n}</option>`).join("");
+$("jump").onchange = e => { idx = +e.target.value; q = firstQ(DATA.positions[idx]); hover = null; render(); };
+$("dens").onclick = () => { mode = "dens"; $("dens").className = "on"; $("mass").className = ""; render(); };
+$("mass").onclick = () => { mode = "mass"; $("mass").className = "on"; $("dens").className = ""; render(); };
+document.addEventListener("keydown", e => { if (e.target.tagName === "SELECT") return; if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); });
+{ const m = /^#p(\d+)$/.exec(location.hash); if (m) idx = Math.max(0, Math.min(+m[1], DATA.positions.length) - 1); }
+q = firstQ(DATA.positions[idx]);
+controls();
+render();
+</script>
