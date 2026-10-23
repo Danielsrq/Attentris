@@ -89,7 +89,7 @@ class Player:
                                         merge=[float(f) for f in (merge or ck["args"]["merge"]).split(",")], sky=ck["args"].get("tome_sky", False),
                                         pretok=ck["args"].get("tome_pretok", False), flat_bias=ck["args"].get("tome_flat", False),
                                         streams=ck["args"].get("tome_streams", 1), n_teachers=ck["model"]["style.weight"].shape[0],
-                                        budget=MT.budget_of(ck["args"].get("tome_budget", "")), split=ck["args"].get("tome_split", "token"), pure=ck["args"].get("tome_pure", False), gate=MT.gate_of(ck["args"]))
+                                        budget=MT.budget_of(ck["args"].get("tome_budget", "")), split=ck["args"].get("tome_split", "token"), pure=ck["args"].get("tome_pure", False), gate=MT.gate_of(ck["args"]), metric=ck["args"].get("tome_metric", False))
             self.net.frac_override = MT.override_of(merge_override)
             self.n_styles = ck["model"]["style.weight"].shape[0]
         elif ck["args"].get("plan_variant"):     # attentris-autoreg / -plan: move 1 includes the step-1 embedding

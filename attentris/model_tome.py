@@ -48,6 +48,19 @@ streams, and are kept out of the candidates' cross-attention: their only job is 
 sigmoid(s). The loss adds L x ((board blobs left - T) / board blobs at the first merge)^2, T = the budget's target
 (--tome-budget, as l4g: 20 + (n0 - 36) / 4 per stream): a soft budget on how many, the gate learns which. (A linear
 cost L x blobs left, without T, is all-or-nothing in pilots: L = 0 stops merging, L >= 0.1 merges every matched pair.)
+
+metric=True (DTEM, Lee & Hong, NeurIPS 2024, arXiv 2412.10569; reference code github.com/movinghoon/dtem): the
+merge similarity comes from a learned merge metric per merging layer (a linear map of the layer's normed input,
+detached, so the backbone never learns from it; stream s uses its slice), not from the attention keys. It starts
+as a copy of the key rows each stream used (init_metric_from_keys), so at the start it merges exactly as ToMe.
+At inference (and in hard training steps) the merging is the usual one with this similarity. In training with
+soft_merge=True (train.py --freeze-base: the backbone frozen, only the metric trains, DTEM's modular recipe) the
+merge is relaxed (_soft_merge): soft greedy matching (r rounds of a softmax over the allowed pairs, each round's
+picks suppressed by log(1 - weight) at both their blobs) and soft merging (the source keeps its feature, its mass
+and cell weights shrink by the share it gives; the partner gains them; attention adds log mass), so the task loss
+gives the metric a true gradient. The r blobs per stream that gave the most (lowest share still present) take no
+part in later merges (DTEM's size sort, by share instead of mass since our blobs start at different sizes), which
+rules out merge cycles.
 """
 import math
 
@@ -246,6 +259,15 @@ class RelBias(nn.Module):
         return b.permute(0, 3, 1, 2)
 
 
+def blob_kind(mask, cells):
+    """(B, N) blob kind for pure merges: 0 = all empty, 1 = all filled, 2 = mixed. Relative to the blob's
+    mass, so fractional (soft-merged) masks work; for 0/1 masks the same as nf == 0 / nf == size."""
+    B = mask.shape[0]
+    nf = (mask * cells.float().reshape(B, 1, -1)).sum(-1)
+    ms = mask.sum(-1)
+    return torch.where(nf <= 1e-3 * ms, 0, torch.where(nf >= (1 - 1e-3) * ms, 1, 2))
+
+
 def adjacency(mask):
     """mask (B, N, 200) float -> (B, N, N) bool: some cell of i is 4-adjacent to some cell of j."""
     B, N, _ = mask.shape
@@ -263,12 +285,26 @@ def apply_variant(net, spec):
     """Inference-time merge options from a spec like "split=greedy,pure,6:x2,5:0.3" ('none' or '' = as
     trained): split=token|hash|greedy|col|random, pure (blobs merge only with blobs of the same kind: both
     all-empty or both all-filled), LAYER:xK (that layer merges K times the merges its budget asks for),
-    LAYER:F (that layer merges a fraction F of its board blobs). Returns a readable name."""
+    LAYER:F (that layer merges a fraction F of its board blobs), tetro (tetromino merges, implies pure: two
+    empty blobs of a and b cells merge only if a + b <= 4 or both are multiples of 4, and never with the sky
+    pre-token, so every 4-cell empty blob is a tetromino shape), rounds=K (with tetro: after each merging
+    layer's budgeted merges, up to K more matching rounds of only the a + b <= 4 empty pairs, every matched
+    pair merging, outside the budget). Returns a readable name."""
     net.split = net.trained_split
     net.pure, net.r_scale, net.frac_override = net.trained_pure, {}, {}
+    net.tetro, net.tetro_rounds, net.sky_gap = net.trained_tetro, 0, net.trained_sky_gap
     names = []
     for it in ([] if spec in ("", "none") else spec.split(",")):
-        if it.startswith("split="):
+        if it == "tetro":
+            net.tetro = net.pure = True
+            names.append("tetromino merges")
+        elif it == "skygap":
+            net.sky_gap = True
+            names.append("sky one row higher")
+        elif it.startswith("rounds="):
+            net.tetro_rounds = int(it[7:])
+            names.append("+%d completion rounds per layer" % net.tetro_rounds)
+        elif it.startswith("split="):
             net.split = it[6:]
             names.append({"hash": "hash split", "greedy": "greedy matching", "token": "token split"}.get(net.split, net.split + " split"))
         elif it == "pure":
@@ -300,13 +336,16 @@ def budget_of(s):
 
 class AtTenTrisToMe(nn.Module):
     def __init__(self, d=64, heads=4, layers=4, merge=(0.0, 0.45, 0.45, 0.45), n_teachers=2, sky=False,
-                 pretok=False, flat_bias=False, streams=1, budget=None, split="token", pure=False, gate=None):
+                 pretok=False, flat_bias=False, streams=1, budget=None, split="token", pure=False, gate=None, metric=False):
         super().__init__()
         assert split in ("token", "hash", "greedy")
         self.split = self.trained_split = split
         # pure=True: blobs merge only with blobs of the same kind (both all-empty or both all-filled), so a
         # blob never mixes filled and empty cells (the pre-tokens are all pure)
         self.pure = self.trained_pure = pure
+        self.tetro = self.trained_tetro = False   # tetromino merges (apply_variant "tetro"; _merge sky_cells)
+        self.tetro_rounds = 0
+        self.sky_gap = self.trained_sky_gap = False   # pre-tokens: the sky's lowest row as play cells (apply_variant "skygap")
         self.r_scale = {}              # inference-time: {layer (1-based): factor} on the merges the budget asks for
         # budget (dict or None): a per-position merge plan instead of fixed fractions. The layers with
         # merge > 0 merge; at the first, each position's board-token count n0 sets a budget
@@ -322,6 +361,13 @@ class AtTenTrisToMe(nn.Module):
             if nr:
                 self.registers = nn.Parameter(torch.randn(nr, d) * 0.02)
         self.aux_loss, self.gate_log = None, []
+        # DTEM merge metric: per merging layer a linear map of the (detached) normed layer input; streams > 1:
+        # one head-sized slice per stream (as the key head it replaces), else d numbers (as the full keys)
+        self.soft_merge, self.soft_tau = False, (0.1, 0.1)       # DTEM tau1, tau2 (scores / tau1, softmax / tau2)
+        self.use_metric = metric
+        if metric:
+            mdim = d if streams == 1 else streams * (d // heads)
+            self.metric = nn.ModuleList(nn.Linear(d, mdim) for f in merge if f > 0)
         # inference-time override (analysis): {layer (1-based): fraction} -- that layer merges this share
         # of each stream's board tokens instead of its scheduled / budgeted step. Not saved, not trained.
         self.frac_override = {}
@@ -360,6 +406,18 @@ class AtTenTrisToMe(nn.Module):
         self.qs = nn.Linear(d, 1)
 
     # ---------------------------------------------------------------- merging
+    @torch.no_grad()
+    def init_metric_from_keys(self):
+        """The merge metric starts as the key rows each stream's similarity used (head s for stream s; all keys
+        with one stream), so a fresh metric merges exactly as the ToMe model it is added to."""
+        dh = self.d // self.heads
+        layers = [li for li, f in enumerate(self.merge) if f > 0]
+        for m, li in zip(self.metric, layers):
+            k = self.blocks[li].att.k
+            rows = torch.arange(self.d) if self.streams == 1 else torch.cat([torch.arange(st * dh, (st + 1) * dh) for st in range(self.streams)])
+            m.weight.copy_(k.weight[rows])
+            m.bias.copy_(k.bias[rows])
+
     def budget_plan(self, n0, n_steps):
         """Planned board-token counts after each merging step, per position and stream (n0: (B, S))."""
         bp = self.budget
@@ -372,7 +430,7 @@ class AtTenTrisToMe(nn.Module):
 
     @staticmethod
     def _merge(x, size, mask, box, alive, is_cell, keys, frac, first, adj, par0, stream=None, n_streams=1, heads=4, r_plan=None,
-               split="token", step=0, cells=None, pure=False, gate=None, gstats=None):
+               split="token", step=0, cells=None, pure=False, gate=None, gstats=None, soft=None, sky_cells=None, small_only=False):
         B, N, d = x.shape
         dev = x.device
         split = SPLIT_MODE or split
@@ -380,10 +438,11 @@ class AtTenTrisToMe(nn.Module):
             stream = torch.zeros(B, N, dtype=torch.long, device=dev)
         cand = alive & is_cell
         if n_streams > 1:
-            # stream s judges similarity with head s's keys
-            kh = F.normalize(keys.view(B, N, heads, d // heads), dim=-1)
+            # stream s judges similarity with head s's keys (or its slice of the DTEM merge metric: G = streams)
+            G = keys.shape[-1] // (d // heads)
+            kh = F.normalize(keys.view(B, N, G, d // heads), dim=-1)
             Sh = torch.einsum("bnhd,bmhd->bhnm", kh, kh)
-            S = Sh.gather(1, (stream % heads)[:, None, :, None].expand(B, 1, N, N)).squeeze(1)
+            S = Sh.gather(1, (stream % G)[:, None, :, None].expand(B, 1, N, N)).squeeze(1)
         else:
             kn = F.normalize(keys, dim=-1)
             S = kn @ kn.transpose(1, 2)
@@ -399,9 +458,20 @@ class AtTenTrisToMe(nn.Module):
         same = stream[:, :, None] == stream[:, None, :]
         if pure:
             # only blobs of the same kind merge: kind 0 = all empty, 1 = all filled, 2 = mixed (never paired)
-            nf = (mask * cells.float().reshape(B, 1, -1)).sum(-1)
-            kind = torch.where(nf < 0.5, 0, torch.where(nf > mask.sum(-1) - 0.5, 1, 2))
+            kind = blob_kind(mask, cells)
             same = same & (kind[:, :, None] == kind[:, None, :]) & (kind[:, :, None] < 2)
+            if sky_cells is not None:
+                # tetromino merges: empty + empty only if a + b <= 4 cells or both multiples of 4, never the sky
+                n = mask.sum(-1).round().long()
+                sky = (mask * sky_cells.float()[:, None, :]).sum(-1) > 0.5
+                emp = (kind == 0) & ~sky
+                small = (n[:, :, None] + n[:, None, :]) <= 4
+                four = ((n % 4) == 0)[:, :, None] & ((n % 4) == 0)[:, None, :]
+                ee = (kind == 0)[:, :, None] & (kind == 0)[:, None, :]
+                ok = emp[:, :, None] & emp[:, None, :] & (small | (four & (not small_only)))
+                same = same & (torch.where(ee, ok, torch.zeros_like(ok)) if small_only else torch.where(ee, ok, torch.ones_like(ok)))
+        if soft is not None:
+            return S, cand, same
         r_all = torch.stack([(frac * (cand & (stream == st)).sum(1).float()).floor().long() if r_plan is None else r_plan[:, st]
                              for st in range(n_streams)], 1)                      # (B, streams): merges this step
         if split == "greedy":
@@ -460,7 +530,7 @@ class AtTenTrisToMe(nn.Module):
                 rank = torch.empty_like(order).scatter_(1, order, torch.arange(N, device=dev).expand(B, N))
                 sel = sel | (ok & ins & (rank < r_all[:, st, None]))
         if MERGE_HOOK is not None:
-            MERGE_HOOK(dict(A=A, Bs=Bs, S=S0, dst=dst, sel=sel, mask=mask, size=size, cand=cand, stream=stream, first=first, keys=keys,
+            MERGE_HOOK(dict(extra=small_only, A=A, Bs=Bs, S=S0, dst=dst, sel=sel, mask=mask, size=size, cand=cand, stream=stream, first=first, keys=keys,
                             adj=adj, r=r_all, split=split))
         if gate is not None:
             # straight-through: forward the hard merge (s > 0), backward the weight acts as sigmoid(s)
@@ -491,6 +561,70 @@ class AtTenTrisToMe(nn.Module):
         o = (~alive).int().argsort(dim=1, stable=True)[:, :keep]
         g = lambda t: torch.gather(t, 1, o.view(B, keep, *([1] * (t.dim() - 2))).expand(B, keep, *t.shape[2:]))
         return g(x), g(size), g(mask), g(box), g(alive), g(is_cell), g(par0), g(stream)
+
+    @staticmethod
+    def _soft_merge(x, size, mask, box, cand, S, adj, same, stream, n_streams, r_all, elig, pres, tau):
+        """DTEM's relaxed merge (training only), on our pairs: the allowed pairs are adjacent, same stream (and kind),
+        both eligible board blobs; pair (i, j) with i > j moves weight from i into j (the hard greedy's direction).
+        Soft greedy matching (DTEM _select): per stream r rounds of softmax(S / tau1 / tau2) over all its pairs,
+        after each round log(1 - picked weight) added at both blobs of every pair (each blob is matched once);
+        the weights are then scaled so no blob gives or takes more than 1 (DTEM's row clip, by a detached factor).
+        Soft merge (DTEM _merge_train): the source keeps its feature, its mass and cell weights shrink by the share
+        it gives; the partner's feature becomes the mass-weighted mean, its mass and cells grow. Nothing dies.
+        Then each stream's eligible blobs keep only the (count - r) with the largest share still present (pres x keep;
+        DTEM sorts by mass, the same when every token starts at size 1) for the later merges.
+        (DTEM first keeps each A token's top k2 = 3 B partners; not needed here: our pairs are only adjacent ones.)
+        Returns x, size, mask, box, elig, pres (the share of each blob still present after all soft merges so far)."""
+        B, N, d = x.shape
+        dev = x.device
+        eps = torch.finfo(torch.float32).eps
+        tau1, tau2 = tau
+        lower = torch.ones(N, N, dtype=torch.bool, device=dev).tril(-1)          # i > j
+        valid = cand[:, :, None] & cand[:, None, :] & adj & same & lower
+        A = torch.zeros(B, N, N, device=dev)
+        for st in range(n_streams):
+            vs = valid & (stream == st)[:, :, None]
+            L = (S.float() / tau1).masked_fill(~vs, float("-inf"))
+            for t in range(int(r_all[:, st].max()) if r_all.numel() else 0):
+                on = (t < r_all[:, st]) & vs.flatten(1).any(-1)                  # (B,): positions still merging
+                flat = (L / tau2).flatten(1)
+                P = torch.where(on[:, None], flat.softmax(-1), torch.zeros_like(flat)).nan_to_num(0.0).view(B, N, N)
+                A = A + P
+                used = P.sum(2) + P.sum(1)                                      # this round's pick at each blob
+                lm = torch.log((1 - used).clamp(min=eps))
+                L = L + lm[:, :, None] + lm[:, None, :]
+        tot = (A.sum(2) + A.sum(1)).detach()
+        div = (tot - 1).clamp(min=0) + 1
+        A = A / torch.maximum(div[:, :, None], div[:, None, :])
+        out = A.sum(2)                                                          # share each blob gives
+        keep = 1 - out
+        keep = keep + (keep.clamp(0.0, 1.0) - keep).detach()
+        At = A.transpose(1, 2)                                                  # [j, i]: what j takes from i
+        in_mass = (At @ size[..., None]).squeeze(-1)
+        # the partner's mass-weighted mean, written as x + (inflow - in_mass x) / (mass + in_mass): a blob that takes
+        # nothing stays exactly as it is (also one whose mass already went to 0, which the plain mean would zero)
+        x_new = x + (At @ (size[..., None] * x) - in_mass[..., None] * x) / (size + in_mass).clamp(min=1e-6)[..., None]
+        new_size = size * keep + in_mass
+        new_mask = mask * keep[..., None] + At @ mask
+        # boxes: a partner's box widens over the sources it took a real share from (> 1%)
+        took = At > 0.01
+        big = torch.full_like(box, 1000)
+        bi = box[:, None, :, :].expand(B, N, N, 4)
+        lo = torch.where(took[..., None], bi, big[:, None]).amin(2)
+        hi = torch.where(took[..., None], bi, -big[:, None]).amax(2)
+        box = torch.stack([torch.minimum(box[..., 0], lo[..., 0]), torch.maximum(box[..., 1], hi[..., 1]),
+                           torch.minimum(box[..., 2], lo[..., 2]), torch.maximum(box[..., 3], hi[..., 3])], -1)
+        pres = keep if pres is None else pres * keep
+        # eligibility for the later merges: per stream the (count - r) blobs with the most still present (ties: mass)
+        ne = torch.zeros_like(elig)
+        for st in range(n_streams):
+            cs = cand & (stream == st)
+            k = (cs.sum(1) - r_all[:, st]).clamp(min=0)
+            sc = (pres + 1e-6 * new_size).detach().masked_fill(~cs, float("-inf"))
+            order = sc.argsort(-1, descending=True)
+            rank = torch.empty_like(order).scatter_(1, order, torch.arange(N, device=dev).expand(B, N))
+            ne = ne | (cs & (rank < k[:, None]))
+        return x_new, new_size, new_mask, box, ne, pres
 
     @staticmethod
     def _compact(alive, *ts):
@@ -556,6 +690,12 @@ class AtTenTrisToMe(nn.Module):
             alive, x, size, mask, box, is_cell, par0 = self._compact(alive, x, size, mask, box, is_cell, par0)
         if self.pretok:
             grp = batch["pretok"].long()                                            # (B, 200)
+            if self.sky_gap:
+                # the sky starts one row higher: its lowest row (the first empty row over the stack) becomes play cells
+                rowi = (torch.arange(200, device=dev) // 10).expand(B, 200)
+                low = torch.where(grp == 0, rowi, torch.full_like(rowi, 99)).amin(1, keepdim=True)
+                grp = torch.where((grp == 0) & (rowi == low), torch.full_like(grp, -1), grp)
+            sky_grp = grp
             K = N_GROUPS
             gmask = (grp[:, None, :] == torch.arange(K, device=dev).view(1, K, 1)).float()   # (B, K, 200)
             gsize = gmask.sum(-1)
@@ -581,11 +721,14 @@ class AtTenTrisToMe(nn.Module):
             is_cell = torch.cat([is_cell[:, :200], torch.ones(B, K, dtype=torch.bool, device=dev), is_cell[:, 200:]], 1)
             par0 = torch.cat([par0[:, :200], gpar, par0[:, 200:]], 1)
             alive, x, size, mask, box, is_cell, par0 = self._compact(alive, x, size, mask, box, is_cell, par0)
+        sky_cells = None
+        if self.tetro:
+            sky_cells = (sky_grp == 0) if self.pretok else torch.zeros(B, 200, dtype=torch.bool, device=dev)
         merged_yet = False
         stream = torch.zeros(B, x.shape[1], dtype=torch.long, device=dev)
         attn, trace = [], []
         plan, step, n_steps = None, 0, sum(1 for f in self.merge if f > 0)
-        gstats, n0 = [], None
+        gstats, n0, elig, pres = [], None, None, None         # pres: soft merges, the share of each blob still present
         for li, (blk, frac) in enumerate(zip(self.blocks, self.merge)):
             adj = adjacency(mask)
             if self.flat_bias:
@@ -593,10 +736,12 @@ class AtTenTrisToMe(nn.Module):
             else:
                 bias = self.bias(mask, size, is_cell, adj)
             h = blk.n1(x)
-            y, a, keys = blk.att(h, h, bias, ~alive, torch.log(size.clamp(min=1.0)))
+            y, a, keys = blk.att(h, h, bias, ~alive, torch.log(size.clamp(min=1e-4 if self.soft_merge and self.training else 1.0)))
             x = x + y
             attn.append(a)
             if frac > 0:
+                if self.use_metric:
+                    keys = self.metric[step](h.detach())                   # DTEM: the learned merge metric
                 if self.random_merge:
                     keys = torch.randn_like(keys)
                 if self.streams > 1 and not merged_yet:
@@ -609,6 +754,9 @@ class AtTenTrisToMe(nn.Module):
                     stream = torch.cat([torch.full_like(stream, st) for st in range(K)], 1)
                     alive, x, size, mask, box, is_cell, par0, stream, keys = self._compact(alive, x, size, mask, box, is_cell, par0, stream, keys)
                     adj = adjacency(mask)
+                soft = self.soft_merge and self.training and self.use_metric
+                if soft and elig is None:
+                    elig = alive & is_cell
                 r_plan, gate = None, None
                 if self.gate is not None:
                     gm = self.gates[step]
@@ -619,7 +767,7 @@ class AtTenTrisToMe(nn.Module):
                         T = n0 * 0 if tg is None else torch.minimum(tg["base"] + ((cnt - tg["at"]) * tg["slope"]).clamp(min=0), cnt).sum(1)
                     gate = (gm, gm.context(x, alive, is_cell, torch.where(is_cell, -1, par0 - 10)))
                 elif self.budget is not None or (li + 1) in self.frac_override or (li + 1) in self.r_scale:
-                    cand = alive & is_cell
+                    cand = alive & is_cell & (elig if soft else True)
                     cnt = torch.stack([(cand & (stream == s_)).sum(1) for s_ in range(self.streams)], 1).float()   # (B, S)
                     if (li + 1) in self.frac_override:
                         r_plan = (cnt * self.frac_override[li + 1]).floor().long()
@@ -629,9 +777,26 @@ class AtTenTrisToMe(nn.Module):
                         r_plan = (cnt - plan[..., step]).clamp(min=0).floor().long()
                     if (li + 1) in self.r_scale:
                         r_plan = (r_plan.float() * self.r_scale[li + 1]).floor().long()
-                x, size, mask, box, alive, is_cell, par0, stream = self._merge(
-                    x, size, mask, box, alive, is_cell, keys, frac, not merged_yet, adj, par0, stream, self.streams, self.heads, r_plan,
-                    self.split, step, cells, self.pure, gate, gstats)
+                if soft:
+                    assert r_plan is not None, "soft merging needs a merge budget (--tome-budget)"
+                    S, cand, same = self._merge(x, size, mask, box, alive & elig, is_cell, keys, frac, not merged_yet, adj, par0, stream,
+                                                self.streams, self.heads, r_plan, self.split, step, cells, self.pure, soft=True)
+                    x, size, mask, box, elig, pres = self._soft_merge(x, size, mask, box, cand, S, adj, same, stream, self.streams,
+                                                                      r_plan, elig, pres, self.soft_tau)
+                else:
+                    x, size, mask, box, alive, is_cell, par0, stream = self._merge(
+                        x, size, mask, box, alive, is_cell, keys, frac, not merged_yet, adj, par0, stream, self.streams, self.heads, r_plan,
+                        self.split, step, cells, self.pure, gate, gstats, sky_cells=sky_cells)
+                    for _ in range(self.tetro_rounds if self.tetro else 0):
+                        # completion rounds: only empty pairs with a + b <= 4, every matched pair merges (similarity:
+                        # the keys / metric of the merged blobs' current features, this layer's projection)
+                        full = torch.full((B, self.streams), x.shape[1], dtype=torch.long, device=dev)
+                        n_before = int(alive.sum())
+                        x, size, mask, box, alive, is_cell, par0, stream = self._merge(
+                            x, size, mask, box, alive, is_cell, (self.metric[step](blk.n1(x).detach()) if self.use_metric else blk.att.k(blk.n1(x))), frac, False, adjacency(mask), par0, stream,
+                            self.streams, self.heads, full, "greedy", step, cells, True, sky_cells=sky_cells, small_only=True)
+                        if int(alive.sum()) == n_before:
+                            break
                 step += 1
                 merged_yet = True
             x = x + blk.ff(blk.n2(x))
@@ -664,7 +829,11 @@ class AtTenTrisToMe(nn.Module):
         cmask = torch.zeros(B, cc.shape[1], 200, device=dev)
         cmask.scatter_(2, idx, onb.float())
         cfeats, cboth = M.pair_features(cb, box, cmask, mask)
-        y, ca = self.cross(y, self.c_bias(cfeats, cboth), pad, ctx=hb, ctx_norm=self.c_norm)
+        cbias = self.c_bias(cfeats, cboth)
+        if pres is not None:
+            # soft merges: a hard merge removes the source from the cross-attention; here it fades by its share left
+            cbias = cbias + torch.log(pres.clamp(min=1e-4))[:, None, None, :]
+        y, ca = self.cross(y, cbias, pad, ctx=hb, ctx_norm=self.c_norm)
         logit = self.head(y).squeeze(-1).masked_fill(cpad, float("-inf"))
         out = {"logit": logit, "q1": self.q1(y).squeeze(-1), "qs": self.qs(y).squeeze(-1)} if heads else logit
         if return_attn:

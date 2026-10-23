@@ -1,0 +1,288 @@
+== DTEM (modular) on ToMe l4g d=128 dagger5b-ft 2026-10-22 17:03 (dagger5b mix F=0.6155)
+tome_d128_l4g_dtem: training, --micro 4 17:03
+tome_d128_l4g_dtem: out of GPU memory, again at --micro 8
+tome_d128_l4g_dtem: training, --micro 8 17:07
+== tome_d128_l4g_dtem
+epoch 3: train loss 2.806 | val normal top1 0.624 top3 0.853 | val gate4 top1 0.606 top3 0.833 | | 987s
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.463 top3 0.713 loss 2.683 | argmax Qs top1 0.431 | MAE Qs 8.01
+== tome_d128_l4g_dtem: rule-token recovery
+pinned to 64 performance logical processors (mask 0xffffffffffffffff)
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.22     1%                     0.23     0%            L2:48% L3:15% L4:35%
+  sky                  2000      1.00   100%                     1.00   100%            L2:100%
+  pit2                 1750      0.61    72%                     0.54    59%            L2:25% L3:22% L4:51%
+  well                 1685      0.47    40%                     0.49    43%            L2:91% L3:1% L4:6%
+  pit1                 1385      0.72    87%                     0.61    74%            L2:17% L3:42% L4:40%
+  fit_j open           1289      0.54    77%                     0.49    71%            L2:30% L3:38% L4:30%
+  fit_l open           1284      0.54    79%                     0.49    72%            L2:29% L3:37% L4:33%
+  tsd                  1150      0.51    75%                     0.61    89%            L2:14% L3:42% L4:43%
+  pit3                 1135      0.47    42%                     0.41    31%            L2:19% L3:17% L4:63%
+  fit_z open           1065      0.55    85%                     0.50    75%            L2:28% L3:32% L4:39%
+  fit_s open            993      0.56    85%                     0.51    77%            L2:28% L3:36% L4:35%
+  pit4                  740      0.37    21%                     0.33    14%            L2:11% L3:12% L4:76%
+  fit_j covered         690      0.52    80%                     0.55    86%            L2:11% L3:38% L4:49%
+  fit_l covered         628      0.51    80%                     0.56    86%            L2:14% L3:41% L4:44%
+  fit_t open            590      0.48    65%                     0.48    66%            L2:38% L3:25% L4:35%
+  fit_z covered         328      0.53    89%                     0.55    87%            L2:8% L3:48% L4:42%
+  fit_s covered         272      0.51    85%                     0.54    83%            L2:12% L3:50% L4:37%
+  setup_t               207      0.52    78%                     0.46    71%            L2:39% L3:28% L4:32%
+  fit_i covered         135      0.52    64%                     0.55    83%            L2:17% L3:26% L4:55%
+  fractal                98      0.41    43%                     0.41    34%            L2:2% L3:9% L4:88%
+  setup_j                84      0.49    70%                     0.50    73%            L2:33% L3:30% L4:35%
+  imperial               77      0.45    64%                     0.42    40%            L3:1% L4:98%
+  setup_l                72      0.52    85%                     0.50    78%            L2:30% L3:41% L4:27%
+  setup_s                71      0.51    70%                     0.50    75%            L2:28% L3:25% L4:46%
+  setup_z                60      0.51    82%                     0.52    77%            L2:26% L3:36% L4:36%
+  setup_i                28      0.41    54%                     0.41    54%            L2:60% L3:14% L4:25%
+  rect12                 12      0.36     0%                     0.37     8%            L4:100%
+  vertical               11      0.76   100%                     0.68   100%            L3:27% L4:72%
+  stsd                    8      0.47    88%                     0.39    25%            L2:12% L4:87%
+  cspin                   4      0.47    75%                     0.36     0%            L4:100%
+  band                    4      0.26     0%                     0.27     0%            L2:50% L3:25% L4:25%
+== DTEM (modular, lr 1e-4) on ToMe l4g d=128 dagger5b-ft 2026-10-22 17:55 (dagger5b mix F=0.6155)
+tome_d128_l4g_dtem_lr1e-4: training, --micro 8 17:55
+== tome_d128_l4g_dtem_lr1e-4
+epoch 3: train loss 2.426 | val normal top1 0.642 top3 0.869 | val gate4 top1 0.627 top3 0.851 | | 980s
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.475 top3 0.733 loss 2.590 | argmax Qs top1 0.441 | MAE Qs 7.69
+== DTEM end-to-end (soft metric step every 10th batch) on ToMe l4g d=128 dagger5b-ft 2026-10-22 18:46 (dagger5b mix F=0.6155)
+tome_d128_l4g_dtem_e2e: training, --micro 8 18:46
+== tome_d128_l4g_dtem_lr1e-4: rule-token recovery
+pinned to 64 performance logical processors (mask 0xffffffffffffffff)
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.21     0%                     0.23     0%            L2:64% L3:2% L4:33%
+  sky                  2000      1.00   100%                     1.00   100%            L2:100%
+  pit2                 1750      0.60    72%                     0.54    59%            L2:33% L3:20% L4:45%
+  well                 1685      0.47    40%                     0.49    43%            L2:92% L3:2% L4:5%
+  pit1                 1385      0.77    89%                     0.61    74%            L2:12% L3:25% L4:62%
+  fit_j open           1289      0.51    80%                     0.49    71%            L2:46% L3:33% L4:20%
+  fit_l open           1284      0.51    80%                     0.49    72%            L2:48% L3:32% L4:19%
+  tsd                  1150      0.46    57%                     0.61    89%            L2:38% L3:20% L4:41%
+  pit3                 1135      0.43    33%                     0.41    31%            L2:28% L3:22% L4:48%
+  fit_z open           1065      0.51    85%                     0.50    75%            L2:49% L3:32% L4:18%
+  fit_s open            993      0.51    87%                     0.51    77%            L2:45% L3:37% L4:17%
+  pit4                  740      0.34    12%                     0.33    14%            L2:19% L3:18% L4:62%
+  fit_j covered         690      0.52    80%                     0.55    86%            L2:29% L3:43% L4:27%
+  fit_l covered         628      0.51    79%                     0.56    86%            L2:29% L3:43% L4:27%
+  fit_t open            590      0.45    66%                     0.48    66%            L2:61% L3:23% L4:14%
+  fit_z covered         328      0.53    88%                     0.55    87%            L2:29% L3:46% L4:23%
+  fit_s covered         272      0.51    88%                     0.54    83%            L2:41% L3:36% L4:22%
+  setup_t               207      0.49    78%                     0.46    71%            L2:47% L3:28% L4:24%
+  fit_i covered         135      0.48    53%                     0.55    83%            L2:41% L3:10% L4:48%
+  fractal                98      0.41    29%                     0.41    34%            L2:2% L3:22% L4:75%
+  setup_j                84      0.49    79%                     0.50    73%            L2:50% L3:27% L4:22%
+  imperial               77      0.40    21%                     0.42    40%            L3:9% L4:90%
+  setup_l                72      0.51    88%                     0.50    78%            L2:50% L3:27% L4:22%
+  setup_s                71      0.49    79%                     0.50    75%            L2:45% L3:30% L4:23%
+  setup_z                60      0.52    88%                     0.52    77%            L2:33% L3:46% L4:20%
+  setup_i                28      0.44    57%                     0.41    54%            L2:64% L3:10% L4:25%
+  rect12                 12      0.41    50%                     0.37     8%            L3:25% L4:75%
+  vertical               11      0.77   100%                     0.68   100%            L3:18% L4:81%
+  stsd                    8      0.47    75%                     0.39    25%            L2:12% L3:12% L4:75%
+  cspin                   4      0.50   100%                     0.36     0%            L4:100%
+  band                    4      0.25     0%                     0.27     0%            L2:50% L3:25% L4:25%
+tome_d128_l4g_dtem_lr1e-4 normal none: APP 0.739 (APPfull 0.739), died 0/256, pieces 500 avg, TSD 6906, TST 45, quads 3644, max height 16, illegal 0, 113.8 ms/move (p90 149.7) + search 115.1 ms, 245s
+tome_d128_l4g_dtem_lr1e-4 normal d2: APP 0.874 (APPfull 0.874), died 0/64, pieces 500 avg, TSD 1940, TST 18, quads 984, max height 16, illegal 0, 744.7 ms/move (p90 1058.8) + search 746.3 ms, 390s
+tome_d128_l4g_dtem_lr1e-4 normal g20: APP 0.765 (APPfull 0.523), died 41/64, pieces 342 avg, TSD 806, TST 2, quads 1587, max height 23, illegal 0, 94.9 ms/move (p90 136.8) + search 96.0 ms, 45s
+tome_d128_l4g_dtem_lr1e-4 normal g50: APP 0.509 (APPfull 0.210), died 60/64, pieces 206 avg, TSD 361, TST 2, quads 548, max height 22, illegal 0, 102.1 ms/move (p90 154.5) + search 103.2 ms, 33s
+tome_d128_l4g_dtem_lr1e-4 normal d2g20: APP 0.834 (APPfull 0.710), died 21/64, pieces 426 avg, TSD 1130, TST 6, quads 2139, max height 21, illegal 0, 699.6 ms/move (p90 999.6) + search 701.1 ms, 344s
+tome_d128_l4g_dtem_lr1e-4 normal d2g50: APP 0.564 (APPfull 0.314), died 50/64, pieces 278 avg, TSD 542, TST 2, quads 859, max height 22, illegal 0, 714.2 ms/move (p90 1096.3) + search 715.7 ms, 242s
+tome_d128_l4g_dtem_lr1e-4 danger g20: APP 0.713 (APPfull 0.665), died 10/64, pieces 466 avg, TSD 1116, TST 2, quads 2145, max height 20, illegal 0, 96.9 ms/move (p90 129.3) + search 98.1 ms, 55s
+tome_d128_l4g_dtem_lr1e-4 danger g50: APP 0.503 (APPfull 0.363), died 34/64, pieces 361 avg, TSD 638, TST 0, quads 987, max height 22, illegal 0, 93.1 ms/move (p90 135.6) + search 94.1 ms, 46s
+tome_d128_l4g_dtem_lr1e-4 danger d2g20: APP 0.794 (APPfull 0.789), died 2/64, pieces 497 avg, TSD 1409, TST 8, quads 2403, max height 20, illegal 0, 646.1 ms/move (p90 899.8) + search 647.7 ms, 342s
+tome_d128_l4g_dtem_lr1e-4 danger d2g50: APP 0.564 (APPfull 0.511), died 14/64, pieces 453 avg, TSD 971, TST 2, quads 1344, max height 22, illegal 0, 683.7 ms/move (p90 981.0) + search 685.2 ms, 346s
+== APP / VS: v5.1 d128 vs ToMe l4g d128 vs DTEM on ToMe l4g d128 (same seeds)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_dagger5b_ft_normal_none     0/256      500   0.739    0.739   0.739    0.739         -
+v51_d128_dagger5b_ft_normal_d2       0/64      500   0.832    0.832   0.832    0.832         -
+v51_d128_dagger5b_ft_normal_g20     18/64      414   0.785    0.650   1.112    0.921 8653/9162
+v51_d128_dagger5b_ft_normal_g50     44/64      305   0.555    0.338   0.859    0.523 5917/6780
+v51_d128_dagger5b_ft_danger_g20      4/64      490   0.733    0.718   1.071    1.049 10608/10806
+v51_d128_dagger5b_ft_danger_g50     25/64      404   0.520    0.421   0.844    0.683 8378/8978
+v51_d128_dagger5b_ft_normal_d2g20   10/64      470   0.846    0.795   1.180    1.109 10044/10398
+v51_d128_dagger5b_ft_normal_d2g50   45/64      323   0.610    0.394   0.917    0.593 6360/7232
+v51_d128_dagger5b_ft_danger_d2g20    2/64      493   0.793    0.781   1.132    1.116 10701/10882
+v51_d128_dagger5b_ft_danger_d2g50   11/64      461   0.587    0.542   0.919    0.848 9788/10199
+tome_d128_l4g_dagger5b_ft_normal_none   0/256      500   0.755    0.755   0.755    0.755         -
+tome_d128_l4g_dagger5b_ft_normal_d2   0/64      500   0.901    0.901   0.901    0.901         -
+tome_d128_l4g_dagger5b_ft_normal_g20  35/64      361   0.762    0.550   1.077    0.778 7290/8006
+tome_d128_l4g_dagger5b_ft_normal_g50  63/64      200   0.506    0.202   0.774    0.309 3431/4484
+tome_d128_l4g_dagger5b_ft_danger_g20   9/64      470   0.737    0.693   1.073    1.008 10103/10388
+tome_d128_l4g_dagger5b_ft_danger_g50  40/64      351   0.509    0.357   0.821    0.577 7033/7824
+tome_d128_l4g_dagger5b_ft_normal_d2g20  20/64      439   0.865    0.760   1.195    1.050 9261/9736
+tome_d128_l4g_dagger5b_ft_normal_d2g50  45/64      323   0.592    0.382   0.899    0.581 6355/7214
+tome_d128_l4g_dagger5b_ft_danger_d2g20   3/64      490   0.801    0.785   1.140    1.117 10632/10823
+tome_d128_l4g_dagger5b_ft_danger_d2g50  15/64      451   0.580    0.523   0.910    0.821 9539/10005
+tome_d128_l4g_dtem_lr1e-4_normal_none   0/256      500   0.739    0.739   0.739    0.739         -
+tome_d128_l4g_dtem_lr1e-4_normal_d2   0/64      500   0.874    0.874   0.874    0.874         -
+tome_d128_l4g_dtem_lr1e-4_normal_g20  41/64      342   0.765    0.523   1.077    0.736 6819/7602
+tome_d128_l4g_dtem_lr1e-4_normal_g50  60/64      206   0.509    0.210   0.780    0.322 3574/4622
+tome_d128_l4g_dtem_lr1e-4_danger_g20  10/64      466   0.713    0.665   1.048    0.977 9982/10305
+tome_d128_l4g_dtem_lr1e-4_danger_g50  34/64      361   0.503    0.363   0.819    0.591 7307/8017
+tome_d128_l4g_dtem_lr1e-4_normal_d2g20  21/64      426   0.834    0.710   1.162    0.989 8937/9439
+tome_d128_l4g_dtem_lr1e-4_normal_d2g50  50/64      278   0.564    0.314   0.860    0.478 5263/6207
+tome_d128_l4g_dtem_lr1e-4_danger_d2g20   2/64      497   0.794    0.789   1.133    1.126 10798/10964
+tome_d128_l4g_dtem_lr1e-4_danger_d2g50  14/64      453   0.564    0.511   0.894    0.809 9548/10007
+== 64 more games per garbage setting, seeds 53001+ (v51_d128_dagger5b_ft tome_d128_l4g_dagger5b_ft tome_d128_l4g_dtem_lr1e-4) 19:21
+tome_d128_l4g_dtem_lr1e-4 normal g20 (seeds 53001+): APP 0.747 (APPfull 0.565), died 32/64, pieces 378 avg, TSD 909, TST 3, quads 1705, max height 21, illegal 0, 96.4 ms/move (p90 138.0) + search 97.5 ms, 50s
+tome_d128_l4g_dtem_lr1e-4 normal g50 (seeds 53001+): APP 0.479 (APPfull 0.164), died 62/64, pieces 171 avg, TSD 321, TST 3, quads 395, max height 23, illegal 0, 105.0 ms/move (p90 159.0) + search 106.1 ms, 28s
+tome_d128_l4g_dtem_lr1e-4 normal d2g20 (seeds 53001+): APP 0.832 (APPfull 0.693), died 22/64, pieces 417 avg, TSD 1109, TST 7, quads 2069, max height 21, illegal 0, 676.8 ms/move (p90 986.2) + search 678.3 ms, 332s
+tome_d128_l4g_dtem_lr1e-4 normal d2g50 (seeds 53001+): APP 0.556 (APPfull 0.317), died 50/64, pieces 285 avg, TSD 545, TST 2, quads 833, max height 22, illegal 0, 716.9 ms/move (p90 1093.5) + search 718.4 ms, 252s
+tome_d128_l4g_dtem_lr1e-4 danger g20 (seeds 53001+): APP 0.721 (APPfull 0.685), died 7/64, pieces 475 avg, TSD 1157, TST 4, quads 2170, max height 21, illegal 0, 95.5 ms/move (p90 126.4) + search 96.6 ms, 55s
+tome_d128_l4g_dtem_lr1e-4 danger g50 (seeds 53001+): APP 0.505 (APPfull 0.361), died 39/64, pieces 358 avg, TSD 661, TST 4, quads 981, max height 21, illegal 0, 93.2 ms/move (p90 133.9) + search 94.2 ms, 45s
+tome_d128_l4g_dtem_lr1e-4 danger d2g20 (seeds 53001+): APP 0.796 (APPfull 0.783), died 2/64, pieces 492 avg, TSD 1380, TST 6, quads 2372, max height 20, illegal 0, 636.7 ms/move (p90 886.2) + search 638.3 ms, 334s
+tome_d128_l4g_dtem_lr1e-4 danger d2g50 (seeds 53001+): APP 0.556 (APPfull 0.501), died 16/64, pieces 450 avg, TSD 966, TST 3, quads 1334, max height 21, illegal 0, 683.7 ms/move (p90 971.8) + search 685.2 ms, 347s
+paired deaths vs v51_d128_dagger5b_ft (exact McNemar; b = only the ablation died, c = only the baseline died)
+tome_d128_l4g
+  normal_g20    n=128  deaths  38 ->  68  b 48 c 18  p=0.0003
+  normal_g50    n=128  deaths  92 -> 120  b 31 c  3  p=0.0000
+  danger_g20    n=128  deaths  10 ->  17  b 15 c  8  p=0.2100
+  danger_g50    n=128  deaths  47 ->  74  b 39 c 12  p=0.0002
+  normal_d2g20  n=128  deaths  22 ->  33  b 26 c 15  p=0.1173
+  normal_d2g50  n=128  deaths  77 ->  98  b 38 c 17  p=0.0065
+  danger_d2g20  n=128  deaths   5 ->   5  b  5 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  29  b 22 c 11  p=0.0801
+  pooled        b 224 c  89  p=1.4e-14
+tome_d128_l4g_dtem_lr1e-4
+  normal_g20    n=128  deaths  38 ->  73  b 45 c 10  p=0.0000
+  normal_g50    n=128  deaths  92 -> 122  b 33 c  3  p=0.0000
+  danger_g20    n=128  deaths  10 ->  17  b 15 c  8  p=0.2100
+  danger_g50    n=128  deaths  47 ->  73  b 41 c 15  p=0.0007
+  normal_d2g20  n=128  deaths  22 ->  43  b 34 c 13  p=0.0031
+  normal_d2g50  n=128  deaths  77 -> 100  b 37 c 14  p=0.0018
+  danger_d2g20  n=128  deaths   5 ->   4  b  4 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  30  b 26 c 14  p=0.0807
+  pooled        b 235 c  82  p=2.9e-18
+ablation more done
+== tome_d128_l4g_dtem_e2e
+epoch 3: train loss 2.272 | val normal top1 0.644 top3 0.875 | val gate4 top1 0.632 top3 0.853 | | 718s
+epoch 3: val2 (val_dagger5all.npz, 9832) top1 0.480 top3 0.740 loss 2.550 | argmax Qs top1 0.444 | MAE Qs 7.56
+== tome_d128_l4g_dtem_e2e: rule-token recovery
+pinned to 64 performance logical processors (mask 0xffffffffffffffff)
+
+rule token kind      count   ToMe: mean best IoU, share >= 0.5   random merges: mean, share >= 0.5   best blob's layer (ToMe)
+  play                 9068      0.22     0%                     0.23     0%            L2:57% L3:4% L4:38%
+  sky                  2000      1.00   100%                     1.00   100%            L2:100%
+  pit2                 1750      0.61    75%                     0.54    59%            L2:34% L3:17% L4:47%
+  well                 1685      0.48    41%                     0.49    43%            L2:89% L3:2% L4:7%
+  pit1                 1385      0.80    92%                     0.61    74%            L2:14% L3:28% L4:57%
+  fit_j open           1289      0.50    79%                     0.49    71%            L2:43% L3:34% L4:22%
+  fit_l open           1284      0.49    77%                     0.49    72%            L2:44% L3:33% L4:21%
+  tsd                  1150      0.46    58%                     0.61    89%            L2:39% L3:21% L4:38%
+  pit3                 1135      0.42    32%                     0.41    31%            L2:30% L3:18% L4:51%
+  fit_z open           1065      0.48    82%                     0.50    75%            L2:50% L3:33% L4:15%
+  fit_s open            993      0.48    83%                     0.51    77%            L2:45% L3:37% L4:17%
+  pit4                  740      0.34    12%                     0.33    14%            L2:20% L3:17% L4:61%
+  fit_j covered         690      0.52    81%                     0.55    86%            L2:26% L3:41% L4:31%
+  fit_l covered         628      0.52    83%                     0.56    86%            L2:27% L3:42% L4:29%
+  fit_t open            590      0.43    60%                     0.48    66%            L2:65% L3:20% L4:14%
+  fit_z covered         328      0.52    91%                     0.55    87%            L2:36% L3:40% L4:23%
+  fit_s covered         272      0.51    89%                     0.54    83%            L2:45% L3:33% L4:20%
+  setup_t               207      0.48    74%                     0.46    71%            L2:39% L3:34% L4:26%
+  fit_i covered         135      0.48    56%                     0.55    83%            L2:48% L3:11% L4:40%
+  fractal                98      0.41    22%                     0.41    34%            L2:1% L3:17% L4:81%
+  setup_j                84      0.48    71%                     0.50    73%            L2:46% L3:30% L4:22%
+  imperial               77      0.40    23%                     0.42    40%            L3:3% L4:96%
+  setup_l                72      0.50    79%                     0.50    78%            L2:51% L3:23% L4:25%
+  setup_s                71      0.47    72%                     0.50    75%            L2:40% L3:43% L4:15%
+  setup_z                60      0.50    77%                     0.52    77%            L2:28% L3:38% L4:33%
+  setup_i                28      0.39    54%                     0.41    54%            L2:53% L3:28% L4:17%
+  rect12                 12      0.32     0%                     0.37     8%            L3:33% L4:66%
+  vertical               11      0.77   100%                     0.68   100%            L3:45% L4:54%
+  stsd                    8      0.47    88%                     0.39    25%            L2:12% L4:87%
+  cspin                   4      0.47    75%                     0.36     0%            L2:25% L4:75%
+  band                    4      0.25     0%                     0.27     0%            L2:50% L3:25% L4:25%
+tome_d128_l4g_dtem_e2e normal none: APP 0.760 (APPfull 0.760), died 0/256, pieces 500 avg, TSD 7081, TST 45, quads 3659, max height 17, illegal 0, 112.1 ms/move (p90 143.7) + search 113.3 ms, 240s
+tome_d128_l4g_dtem_e2e normal d2: APP 0.883 (APPfull 0.883), died 0/64, pieces 500 avg, TSD 2017, TST 11, quads 889, max height 16, illegal 0, 725.2 ms/move (p90 1030.6) + search 726.8 ms, 387s
+tome_d128_l4g_dtem_e2e normal g20: APP 0.784 (APPfull 0.644), died 28/64, pieces 411 avg, TSD 1070, TST 7, quads 1934, max height 21, illegal 0, 98.0 ms/move (p90 135.9) + search 99.1 ms, 52s
+tome_d128_l4g_dtem_e2e normal g50: APP 0.523 (APPfull 0.215), died 62/64, pieces 206 avg, TSD 387, TST 1, quads 557, max height 23, illegal 0, 101.3 ms/move (p90 151.4) + search 102.4 ms, 32s
+tome_d128_l4g_dtem_e2e normal d2g20: APP 0.851 (APPfull 0.718), died 16/64, pieces 422 avg, TSD 1118, TST 6, quads 2136, max height 22, illegal 0, 656.7 ms/move (p90 942.9) + search 658.2 ms, 326s
+tome_d128_l4g_dtem_e2e normal d2g50: APP 0.581 (APPfull 0.337), died 48/64, pieces 290 avg, TSD 611, TST 6, quads 897, max height 22, illegal 0, 678.3 ms/move (p90 1050.6) + search 679.7 ms, 247s
+tome_d128_l4g_dtem_e2e danger g20: APP 0.736 (APPfull 0.703), died 7/64, pieces 477 avg, TSD 1162, TST 7, quads 2205, max height 22, illegal 0, 92.4 ms/move (p90 122.9) + search 93.5 ms, 53s
+tome_d128_l4g_dtem_e2e danger g50: APP 0.511 (APPfull 0.393), died 32/64, pieces 385 avg, TSD 680, TST 5, quads 1032, max height 21, illegal 0, 96.0 ms/move (p90 138.3) + search 97.1 ms, 48s
+tome_d128_l4g_dtem_e2e danger d2g20: APP 0.803 (APPfull 0.781), died 3/64, pieces 486 avg, TSD 1401, TST 9, quads 2345, max height 20, illegal 0, 609.9 ms/move (p90 840.8) + search 611.4 ms, 320s
+tome_d128_l4g_dtem_e2e danger d2g50: APP 0.580 (APPfull 0.537), died 10/64, pieces 463 avg, TSD 1018, TST 3, quads 1415, max height 21, illegal 0, 669.2 ms/move (p90 951.6) + search 670.7 ms, 341s
+== APP / VS: v5.1 d128 vs ToMe l4g d128 vs DTEM modular vs DTEM end-to-end (same seeds)
+run                                  died   pieces     APP  APPfull      VS   VSfull    gb clr
+v51_d128_dagger5b_ft_normal_none     0/256      500   0.739    0.739   0.739    0.739         -
+v51_d128_dagger5b_ft_normal_d2       0/64      500   0.832    0.832   0.832    0.832         -
+v51_d128_dagger5b_ft_normal_g20     18/64      414   0.785    0.650   1.112    0.921 8653/9162
+v51_d128_dagger5b_ft_normal_g50     44/64      305   0.555    0.338   0.859    0.523 5917/6780
+v51_d128_dagger5b_ft_danger_g20      4/64      490   0.733    0.718   1.071    1.049 10608/10806
+v51_d128_dagger5b_ft_danger_g50     25/64      404   0.520    0.421   0.844    0.683 8378/8978
+v51_d128_dagger5b_ft_normal_d2g20   10/64      470   0.846    0.795   1.180    1.109 10044/10398
+v51_d128_dagger5b_ft_normal_d2g50   45/64      323   0.610    0.394   0.917    0.593 6360/7232
+v51_d128_dagger5b_ft_danger_d2g20    2/64      493   0.793    0.781   1.132    1.116 10701/10882
+v51_d128_dagger5b_ft_danger_d2g50   11/64      461   0.587    0.542   0.919    0.848 9788/10199
+tome_d128_l4g_dagger5b_ft_normal_none   0/256      500   0.755    0.755   0.755    0.755         -
+tome_d128_l4g_dagger5b_ft_normal_d2   0/64      500   0.901    0.901   0.901    0.901         -
+tome_d128_l4g_dagger5b_ft_normal_g20  35/64      361   0.762    0.550   1.077    0.778 7290/8006
+tome_d128_l4g_dagger5b_ft_normal_g50  63/64      200   0.506    0.202   0.774    0.309 3431/4484
+tome_d128_l4g_dagger5b_ft_danger_g20   9/64      470   0.737    0.693   1.073    1.008 10103/10388
+tome_d128_l4g_dagger5b_ft_danger_g50  40/64      351   0.509    0.357   0.821    0.577 7033/7824
+tome_d128_l4g_dagger5b_ft_normal_d2g20  20/64      439   0.865    0.760   1.195    1.050 9261/9736
+tome_d128_l4g_dagger5b_ft_normal_d2g50  45/64      323   0.592    0.382   0.899    0.581 6355/7214
+tome_d128_l4g_dagger5b_ft_danger_d2g20   3/64      490   0.801    0.785   1.140    1.117 10632/10823
+tome_d128_l4g_dagger5b_ft_danger_d2g50  15/64      451   0.580    0.523   0.910    0.821 9539/10005
+tome_d128_l4g_dtem_lr1e-4_normal_none   0/256      500   0.739    0.739   0.739    0.739         -
+tome_d128_l4g_dtem_lr1e-4_normal_d2   0/64      500   0.874    0.874   0.874    0.874         -
+tome_d128_l4g_dtem_lr1e-4_normal_g20  41/64      342   0.765    0.523   1.077    0.736 6819/7602
+tome_d128_l4g_dtem_lr1e-4_normal_g50  60/64      206   0.509    0.210   0.780    0.322 3574/4622
+tome_d128_l4g_dtem_lr1e-4_danger_g20  10/64      466   0.713    0.665   1.048    0.977 9982/10305
+tome_d128_l4g_dtem_lr1e-4_danger_g50  34/64      361   0.503    0.363   0.819    0.591 7307/8017
+tome_d128_l4g_dtem_lr1e-4_normal_d2g20  21/64      426   0.834    0.710   1.162    0.989 8937/9439
+tome_d128_l4g_dtem_lr1e-4_normal_d2g50  50/64      278   0.564    0.314   0.860    0.478 5263/6207
+tome_d128_l4g_dtem_lr1e-4_danger_d2g20   2/64      497   0.794    0.789   1.133    1.126 10798/10964
+tome_d128_l4g_dtem_lr1e-4_danger_d2g50  14/64      453   0.564    0.511   0.894    0.809 9548/10007
+tome_d128_l4g_dtem_e2e_normal_none   0/256      500   0.760    0.760   0.760    0.760         -
+tome_d128_l4g_dtem_e2e_normal_d2     0/64      500   0.883    0.883   0.883    0.883         -
+tome_d128_l4g_dtem_e2e_normal_g20   28/64      411   0.784    0.644   1.106    0.908 8449/9099
+tome_d128_l4g_dtem_e2e_normal_g50   62/64      206   0.523    0.215   0.795    0.327 3578/4636
+tome_d128_l4g_dtem_e2e_danger_g20    7/64      477   0.736    0.703   1.072    1.023 10244/10547
+tome_d128_l4g_dtem_e2e_danger_g50   32/64      385   0.511    0.393   0.830    0.639 7861/8545
+tome_d128_l4g_dtem_e2e_normal_d2g20  16/64      422   0.851    0.718   1.178    0.994 8828/9317
+tome_d128_l4g_dtem_e2e_normal_d2g50  48/64      290   0.581    0.337   0.879    0.510 5537/6470
+tome_d128_l4g_dtem_e2e_danger_d2g20   3/64      486   0.803    0.781   1.142    1.111 10539/10736
+tome_d128_l4g_dtem_e2e_danger_d2g50  10/64      463   0.580    0.537   0.912    0.845 9832/10237
+== 64 more games per garbage setting, seeds 53001+ (v51_d128_dagger5b_ft tome_d128_l4g_dagger5b_ft tome_d128_l4g_dtem_lr1e-4 tome_d128_l4g_dtem_e2e) 20:46
+tome_d128_l4g_dtem_e2e normal g20 (seeds 53001+): APP 0.768 (APPfull 0.592), died 33/64, pieces 386 avg, TSD 953, TST 3, quads 1785, max height 23, illegal 0, 94.1 ms/move (p90 133.9) + search 95.1 ms, 49s
+tome_d128_l4g_dtem_e2e normal g50 (seeds 53001+): APP 0.516 (APPfull 0.215), died 59/64, pieces 208 avg, TSD 388, TST 2, quads 549, max height 22, illegal 0, 97.0 ms/move (p90 145.0) + search 98.1 ms, 31s
+tome_d128_l4g_dtem_e2e normal d2g20 (seeds 53001+): APP 0.864 (APPfull 0.745), died 19/64, pieces 431 avg, TSD 1284, TST 3, quads 2126, max height 22, illegal 0, 682.4 ms/move (p90 975.2) + search 683.9 ms, 340s
+tome_d128_l4g_dtem_e2e normal d2g50 (seeds 53001+): APP 0.585 (APPfull 0.348), died 44/64, pieces 297 avg, TSD 640, TST 4, quads 902, max height 22, illegal 0, 685.9 ms/move (p90 1045.2) + search 687.3 ms, 251s
+tome_d128_l4g_dtem_e2e danger g20 (seeds 53001+): APP 0.738 (APPfull 0.724), died 3/64, pieces 490 avg, TSD 1269, TST 8, quads 2266, max height 21, illegal 0, 96.9 ms/move (p90 126.6) + search 98.1 ms, 56s
+tome_d128_l4g_dtem_e2e danger g50 (seeds 53001+): APP 0.499 (APPfull 0.386), died 31/64, pieces 387 avg, TSD 694, TST 3, quads 989, max height 22, illegal 0, 93.2 ms/move (p90 133.6) + search 94.3 ms, 48s
+tome_d128_l4g_dtem_e2e danger d2g20 (seeds 53001+): APP 0.811 (APPfull 0.795), died 2/64, pieces 490 avg, TSD 1495, TST 4, quads 2363, max height 18, illegal 0, 616.9 ms/move (p90 852.9) + search 618.4 ms, 324s
+tome_d128_l4g_dtem_e2e danger d2g50 (seeds 53001+): APP 0.584 (APPfull 0.521), died 12/64, pieces 446 avg, TSD 1014, TST 2, quads 1337, max height 23, illegal 0, 646.7 ms/move (p90 933.6) + search 648.2 ms, 329s
+paired deaths vs v51_d128_dagger5b_ft (exact McNemar; b = only the ablation died, c = only the baseline died)
+tome_d128_l4g
+  normal_g20    n=128  deaths  38 ->  68  b 48 c 18  p=0.0003
+  normal_g50    n=128  deaths  92 -> 120  b 31 c  3  p=0.0000
+  danger_g20    n=128  deaths  10 ->  17  b 15 c  8  p=0.2100
+  danger_g50    n=128  deaths  47 ->  74  b 39 c 12  p=0.0002
+  normal_d2g20  n=128  deaths  22 ->  33  b 26 c 15  p=0.1173
+  normal_d2g50  n=128  deaths  77 ->  98  b 38 c 17  p=0.0065
+  danger_d2g20  n=128  deaths   5 ->   5  b  5 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  29  b 22 c 11  p=0.0801
+  pooled        b 224 c  89  p=1.4e-14
+tome_d128_l4g_dtem_lr1e-4
+  normal_g20    n=128  deaths  38 ->  73  b 45 c 10  p=0.0000
+  normal_g50    n=128  deaths  92 -> 122  b 33 c  3  p=0.0000
+  danger_g20    n=128  deaths  10 ->  17  b 15 c  8  p=0.2100
+  danger_g50    n=128  deaths  47 ->  73  b 41 c 15  p=0.0007
+  normal_d2g20  n=128  deaths  22 ->  43  b 34 c 13  p=0.0031
+  normal_d2g50  n=128  deaths  77 -> 100  b 37 c 14  p=0.0018
+  danger_d2g20  n=128  deaths   5 ->   4  b  4 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  30  b 26 c 14  p=0.0807
+  pooled        b 235 c  82  p=2.9e-18
+tome_d128_l4g_dtem_e2e
+  normal_g20    n=128  deaths  38 ->  61  b 45 c 22  p=0.0067
+  normal_g50    n=128  deaths  92 -> 121  b 35 c  6  p=0.0000
+  danger_g20    n=128  deaths  10 ->  10  b 10 c 10  p=1.0000
+  danger_g50    n=128  deaths  47 ->  63  b 34 c 18  p=0.0365
+  normal_d2g20  n=128  deaths  22 ->  35  b 25 c 12  p=0.0470
+  normal_d2g50  n=128  deaths  77 ->  92  b 42 c 27  p=0.0912
+  danger_d2g20  n=128  deaths   5 ->   5  b  5 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  22  b 18 c 14  p=0.5966
+  pooled        b 214 c 114  p=3.6e-08
+ablation more done

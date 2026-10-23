@@ -240,6 +240,11 @@ def main():
                          "hash = a hashed bit per (board, step, stream, first cell), direction-blind; "
                          "greedy = no A/B sets, a greedy matching over all adjacent pairs")
     ap.add_argument("--tome-pure", action="store_true", help="blobs merge only with blobs of the same kind (all empty / all filled)")
+    ap.add_argument("--tome-metric", action="store_true", help="DTEM: a learned merge metric per merging layer (on detached inputs) replaces the key "
+                    "similarity; with --init from a ToMe checkpoint it starts as a copy of its keys; with --freeze-base only the metric "
+                    "trains, through soft merges (DTEM's modular recipe)")
+    ap.add_argument("--soft-every", type=int, default=0, help="DTEM end-to-end (with --tome-metric): every K-th batch is a soft metric step "
+                    "(soft merges, only the merge metric updates), the others hard backbone steps (hard merges, the metric fixed)")
     ap.add_argument("--tome-gate", action="store_true", help="MergeTris: a learned FiLM merge gate decides every merge (no budget; needs --tome-split greedy)")
     ap.add_argument("--gate-lambda", type=float, default=1.0, help="MergeTris: loss weight of the board blobs left / blobs at the first merge")
     ap.add_argument("--gate-registers", type=int, default=0, help="MergeTris: R register tokens as the gate's board context (instead of the mean board blob)")
@@ -345,7 +350,7 @@ def main():
         net = MT.AtTenTrisToMe(d=args.d, layers=args.layers, merge=[float(f) for f in args.merge.split(",")],
                                sky=args.tome_sky, pretok=args.tome_pretok, flat_bias=args.tome_flat,
                                streams=args.tome_streams, n_teachers=args.n_teachers, budget=MT.budget_of(args.tome_budget), split=args.tome_split, pure=args.tome_pure,
-                               gate=MT.gate_of(vars(args))).to(args.device)
+                               gate=MT.gate_of(vars(args)), metric=args.tome_metric).to(args.device)
     elif args.plan_variant:
         net = MP.AtTenTrisPlan(d=args.d, layers=args.layers, cross_layers=args.cross_layers, cross_loops=args.cross_loops,
                                n_teachers=args.n_teachers, variant=args.plan_variant, plan_layers=args.plan_layers).to(args.device)
@@ -359,6 +364,15 @@ def main():
             net.reg_c.fill_(args.reg_bias_init)
     print("device", args.device, torch.cuda.get_device_name(0) if args.device == "cuda" else "", flush=True)
     groups, lrs = [list(net.parameters())], [args.lr]
+    metric_ps = [p_ for n_, p_ in net.named_parameters() if n_.startswith("metric.")]
+    other_ps = [p_ for n_, p_ in net.named_parameters() if not n_.startswith("metric.")]
+    if args.soft_every:
+        if not args.tome_metric or args.freeze_base:
+            raise SystemExit("--soft-every needs --tome-metric and no --freeze-base")
+        print("DTEM end-to-end: every %d-th batch a soft metric step, the rest hard backbone steps" % args.soft_every, flush=True)
+    if args.tome_metric and args.freeze_base:
+        net.soft_merge = True          # DTEM modular: the frozen backbone, soft merges train the metric
+        print("DTEM modular training: soft merges (tau %g, %g); validation with hard merges" % net.soft_tau, flush=True)
     if args.freeze_base:
         # only the parameters the --init checkpoint lacks (a new plan branch) train; the backbone and
         # the move-1 path stay exactly as loaded (move 1 cannot change)
@@ -396,6 +410,12 @@ def main():
             missing = net.load_state_dict(ck0["model"], strict=False).missing_keys
             net.init_from_base()
             print("plan model (%s) from a single-move checkpoint: %d new tensors" % (args.plan_variant, len(missing)), flush=True)
+        elif args.tome_metric and not any(k.startswith("metric.") for k in ck0["model"]):
+            # DTEM merge metric added to a ToMe checkpoint: everything else loads exactly, the metric starts as its keys
+            missing = net.load_state_dict(ck0["model"], strict=False).missing_keys
+            assert missing and all(k.startswith("metric.") for k in missing), missing
+            net.init_metric_from_keys()
+            print("merge metric added (%d tensors), initialised from the keys" % len(missing), flush=True)
         elif args.registers and "reg" not in ck0["model"]:
             # register tokens added to a checkpoint without them: everything else loads exactly
             missing = net.load_state_dict(ck0["model"], strict=False).missing_keys
@@ -462,14 +482,21 @@ def main():
         for bi in range(first, nb):
             idx = np.sort(perm[bi * args.batch:(bi + 1) * args.batch])
             opt.zero_grad()
+            soft_step = bool(args.soft_every) and bi % args.soft_every == args.soft_every - 1
+            if args.soft_every:
+                net.soft_merge = soft_step
             loss = 0.0
             for part in np.array_split(idx, args.micro):        # same batch, less memory: gradients add up
                 o = net(batch_of(tr, part, args.device), heads=True, **({"n_steps": args.plan_steps} if args.plan_variant else {}))
                 lp = compute_loss(o, tr, part, args, args.device)[0].sum() / len(idx)
                 if getattr(net, "aux_loss", None) is not None:      # MergeTris token cost
                     lp = lp + net.aux_loss.sum() / len(idx)
-                lp.backward()
+                if lp.requires_grad:      # DTEM modular: a micro-batch with no merges (small boards) has nothing to train
+                    lp.backward()
                 loss = loss + lp.detach()
+            if args.soft_every:      # DTEM end-to-end: a soft step updates only the metric, a hard step only the backbone
+                for p_ in (other_ps if soft_step else metric_ps):
+                    p_.grad = None
             torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)
             opt.step()
             sched.step()

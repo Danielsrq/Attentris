@@ -567,3 +567,73 @@ mtris_d128
   danger_d2g20  n=128  deaths   5 ->  17  b 15 c  3  p=0.0075
   danger_d2g50  n=128  deaths  18 ->  78  b 66 c  6  p=0.0000
   pooled        b 420 c  29  p=5.5e-90
+== 64 more games per garbage setting, seeds 53001+ (v51_d128_dagger5b_ft tome_d128_l4g_dagger5b_ft tome_d128_l4g_dtem_lr1e-4) 19:21
+tome_d128_l4g_dtem_lr1e-4 normal g20 (seeds 53001+): APP 0.747 (APPfull 0.565), died 32/64, pieces 378 avg, TSD 909, TST 3, quads 1705, max height 21, illegal 0, 96.4 ms/move (p90 138.0) + search 97.5 ms, 50s
+tome_d128_l4g_dtem_lr1e-4 normal g50 (seeds 53001+): APP 0.479 (APPfull 0.164), died 62/64, pieces 171 avg, TSD 321, TST 3, quads 395, max height 23, illegal 0, 105.0 ms/move (p90 159.0) + search 106.1 ms, 28s
+tome_d128_l4g_dtem_lr1e-4 normal d2g20 (seeds 53001+): APP 0.832 (APPfull 0.693), died 22/64, pieces 417 avg, TSD 1109, TST 7, quads 2069, max height 21, illegal 0, 676.8 ms/move (p90 986.2) + search 678.3 ms, 332s
+tome_d128_l4g_dtem_lr1e-4 normal d2g50 (seeds 53001+): APP 0.556 (APPfull 0.317), died 50/64, pieces 285 avg, TSD 545, TST 2, quads 833, max height 22, illegal 0, 716.9 ms/move (p90 1093.5) + search 718.4 ms, 252s
+tome_d128_l4g_dtem_lr1e-4 danger g20 (seeds 53001+): APP 0.721 (APPfull 0.685), died 7/64, pieces 475 avg, TSD 1157, TST 4, quads 2170, max height 21, illegal 0, 95.5 ms/move (p90 126.4) + search 96.6 ms, 55s
+tome_d128_l4g_dtem_lr1e-4 danger g50 (seeds 53001+): APP 0.505 (APPfull 0.361), died 39/64, pieces 358 avg, TSD 661, TST 4, quads 981, max height 21, illegal 0, 93.2 ms/move (p90 133.9) + search 94.2 ms, 45s
+tome_d128_l4g_dtem_lr1e-4 danger d2g20 (seeds 53001+): APP 0.796 (APPfull 0.783), died 2/64, pieces 492 avg, TSD 1380, TST 6, quads 2372, max height 20, illegal 0, 636.7 ms/move (p90 886.2) + search 638.3 ms, 334s
+tome_d128_l4g_dtem_lr1e-4 danger d2g50 (seeds 53001+): APP 0.556 (APPfull 0.501), died 16/64, pieces 450 avg, TSD 966, TST 3, quads 1334, max height 21, illegal 0, 683.7 ms/move (p90 971.8) + search 685.2 ms, 347s
+paired deaths vs v51_d128_dagger5b_ft (exact McNemar; b = only the ablation died, c = only the baseline died)
+tome_d128_l4g
+  normal_g20    n=128  deaths  38 ->  68  b 48 c 18  p=0.0003
+  normal_g50    n=128  deaths  92 -> 120  b 31 c  3  p=0.0000
+  danger_g20    n=128  deaths  10 ->  17  b 15 c  8  p=0.2100
+  danger_g50    n=128  deaths  47 ->  74  b 39 c 12  p=0.0002
+  normal_d2g20  n=128  deaths  22 ->  33  b 26 c 15  p=0.1173
+  normal_d2g50  n=128  deaths  77 ->  98  b 38 c 17  p=0.0065
+  danger_d2g20  n=128  deaths   5 ->   5  b  5 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  29  b 22 c 11  p=0.0801
+  pooled        b 224 c  89  p=1.4e-14
+tome_d128_l4g_dtem_lr1e-4
+  normal_g20    n=128  deaths  38 ->  73  b 45 c 10  p=0.0000
+  normal_g50    n=128  deaths  92 -> 122  b 33 c  3  p=0.0000
+  danger_g20    n=128  deaths  10 ->  17  b 15 c  8  p=0.2100
+  danger_g50    n=128  deaths  47 ->  73  b 41 c 15  p=0.0007
+  normal_d2g20  n=128  deaths  22 ->  43  b 34 c 13  p=0.0031
+  normal_d2g50  n=128  deaths  77 -> 100  b 37 c 14  p=0.0018
+  danger_d2g20  n=128  deaths   5 ->   4  b  4 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  30  b 26 c 14  p=0.0807
+  pooled        b 235 c  82  p=2.9e-18
+== 64 more games per garbage setting, seeds 53001+ (v51_d128_dagger5b_ft tome_d128_l4g_dagger5b_ft tome_d128_l4g_dtem_lr1e-4 tome_d128_l4g_dtem_e2e) 20:46
+tome_d128_l4g_dtem_e2e normal g20 (seeds 53001+): APP 0.768 (APPfull 0.592), died 33/64, pieces 386 avg, TSD 953, TST 3, quads 1785, max height 23, illegal 0, 94.1 ms/move (p90 133.9) + search 95.1 ms, 49s
+tome_d128_l4g_dtem_e2e normal g50 (seeds 53001+): APP 0.516 (APPfull 0.215), died 59/64, pieces 208 avg, TSD 388, TST 2, quads 549, max height 22, illegal 0, 97.0 ms/move (p90 145.0) + search 98.1 ms, 31s
+tome_d128_l4g_dtem_e2e normal d2g20 (seeds 53001+): APP 0.864 (APPfull 0.745), died 19/64, pieces 431 avg, TSD 1284, TST 3, quads 2126, max height 22, illegal 0, 682.4 ms/move (p90 975.2) + search 683.9 ms, 340s
+tome_d128_l4g_dtem_e2e normal d2g50 (seeds 53001+): APP 0.585 (APPfull 0.348), died 44/64, pieces 297 avg, TSD 640, TST 4, quads 902, max height 22, illegal 0, 685.9 ms/move (p90 1045.2) + search 687.3 ms, 251s
+tome_d128_l4g_dtem_e2e danger g20 (seeds 53001+): APP 0.738 (APPfull 0.724), died 3/64, pieces 490 avg, TSD 1269, TST 8, quads 2266, max height 21, illegal 0, 96.9 ms/move (p90 126.6) + search 98.1 ms, 56s
+tome_d128_l4g_dtem_e2e danger g50 (seeds 53001+): APP 0.499 (APPfull 0.386), died 31/64, pieces 387 avg, TSD 694, TST 3, quads 989, max height 22, illegal 0, 93.2 ms/move (p90 133.6) + search 94.3 ms, 48s
+tome_d128_l4g_dtem_e2e danger d2g20 (seeds 53001+): APP 0.811 (APPfull 0.795), died 2/64, pieces 490 avg, TSD 1495, TST 4, quads 2363, max height 18, illegal 0, 616.9 ms/move (p90 852.9) + search 618.4 ms, 324s
+tome_d128_l4g_dtem_e2e danger d2g50 (seeds 53001+): APP 0.584 (APPfull 0.521), died 12/64, pieces 446 avg, TSD 1014, TST 2, quads 1337, max height 23, illegal 0, 646.7 ms/move (p90 933.6) + search 648.2 ms, 329s
+paired deaths vs v51_d128_dagger5b_ft (exact McNemar; b = only the ablation died, c = only the baseline died)
+tome_d128_l4g
+  normal_g20    n=128  deaths  38 ->  68  b 48 c 18  p=0.0003
+  normal_g50    n=128  deaths  92 -> 120  b 31 c  3  p=0.0000
+  danger_g20    n=128  deaths  10 ->  17  b 15 c  8  p=0.2100
+  danger_g50    n=128  deaths  47 ->  74  b 39 c 12  p=0.0002
+  normal_d2g20  n=128  deaths  22 ->  33  b 26 c 15  p=0.1173
+  normal_d2g50  n=128  deaths  77 ->  98  b 38 c 17  p=0.0065
+  danger_d2g20  n=128  deaths   5 ->   5  b  5 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  29  b 22 c 11  p=0.0801
+  pooled        b 224 c  89  p=1.4e-14
+tome_d128_l4g_dtem_lr1e-4
+  normal_g20    n=128  deaths  38 ->  73  b 45 c 10  p=0.0000
+  normal_g50    n=128  deaths  92 -> 122  b 33 c  3  p=0.0000
+  danger_g20    n=128  deaths  10 ->  17  b 15 c  8  p=0.2100
+  danger_g50    n=128  deaths  47 ->  73  b 41 c 15  p=0.0007
+  normal_d2g20  n=128  deaths  22 ->  43  b 34 c 13  p=0.0031
+  normal_d2g50  n=128  deaths  77 -> 100  b 37 c 14  p=0.0018
+  danger_d2g20  n=128  deaths   5 ->   4  b  4 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  30  b 26 c 14  p=0.0807
+  pooled        b 235 c  82  p=2.9e-18
+tome_d128_l4g_dtem_e2e
+  normal_g20    n=128  deaths  38 ->  61  b 45 c 22  p=0.0067
+  normal_g50    n=128  deaths  92 -> 121  b 35 c  6  p=0.0000
+  danger_g20    n=128  deaths  10 ->  10  b 10 c 10  p=1.0000
+  danger_g50    n=128  deaths  47 ->  63  b 34 c 18  p=0.0365
+  normal_d2g20  n=128  deaths  22 ->  35  b 25 c 12  p=0.0470
+  normal_d2g50  n=128  deaths  77 ->  92  b 42 c 27  p=0.0912
+  danger_d2g20  n=128  deaths   5 ->   5  b  5 c  5  p=1.0000
+  danger_d2g50  n=128  deaths  18 ->  22  b 18 c 14  p=0.5966
+  pooled        b 214 c 114  p=3.6e-08
