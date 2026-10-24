@@ -11,9 +11,9 @@ Visualising Attention and SHAP attribution of the played moves show that identif
 
 ---
 
-## The teacher: CEM-tuned search bots
+## Data generation via CEM-tuned bots
 
-Classic Tetris (full random, no-tspin, only survival) was solved using CEM (Cross Entropy Method). I tried extending the same method but instead on modern 7-bag tetris. (Note CMA-ES is also a good algorithm but empirically CEM converges faster). All training data comes from search bots. Each is a linear value function V(s) over hand-made board features (holes, bumpiness, row transitions, wells, T-slot and B2B features, …), tuned with CEM and searched with a beam (depth 6, width 64):
+Classic Tetris (full random, no-tspin, only survival) was 'solved' using CEM (Cross Entropy Method). I tried extending the same method but instead on modern 7-bag tetris. (Note CMA-ES is also a good algorithm but empirically CEM converges faster). All training data comes from search bots. Each is a linear value function V(s) over hand-made board features (holes, bumpiness, row transitions, wells, T-slot and B2B features, …), tuned with CEM and searched with a beam (depth 6, width 64):
 
 | Bot | Tuned for | |
 |---|---|---|
