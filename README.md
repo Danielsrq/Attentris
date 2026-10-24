@@ -1,19 +1,19 @@
 # Attentris
 
-**A transformer that plays modern Tetris and shows its reasoning.** It reads the board as Tetris structures (wells, slots, T-spin setups) instead of raw cells. Every legal move is a token, so one forward pass scores them all. For any move you can see what the model looked at, and test which structures it actually needs.
+**A transformer that plays modern (7-bag) Tetris and shows its reasoning.** It reads the board as Tetris structures (wells, slots, T-spin setups) instead of raw cells. Every legal move is a token, so one forward pass scores them all. For any move you can see what the model looked at, and test which structures it actually needs.
 
 A Tetris bot project that is half fun, half research. It has two parts:
 
 - **Attentris (PyTorch).** A small transformer (1.06M parameters) that learns to play from the search bot. It sees the board as **rule-based structure tokens**, and **every legal move is a token** that attends over the board. That makes it possible to look at what the model attends to for each move, and to measure which board structures it actually relies on.
 - **A search bot (Rust).** A linear board evaluator tuned with the cross-entropy method (CEM), driving a beam search. It is the teacher, and at matched compute it beats [Cold Clear 2](https://github.com/MinusKelvin/cold-clear-2) in our versus harness.
 
-The short version of what we found: **the model survives because it recognises piece-shaped slots.** Remove the slot tokens and it dies more under garbage, in every way we measured. It plays like a good stacker: fit the piece cleanly, keep the stack in shape, and the attack follows.
+Visuallising Attention and SHAP attribution of the played moves show that identifying *harmonious* placement leads to strong play (optimised for VS score). 
 
 ---
 
 ## The teacher: CEM-tuned search bots
 
-All training data comes from search bots. Each is a linear value function V(s) over hand-made board features (holes, bumpiness, row transitions, wells, T-slot and B2B features, …), tuned with CEM and searched with a beam (depth 6, width 64):
+Classic Tetris (full random, no-tspin, only survival) was solved using CEM (Cross Entropy Method). I tried extending the same method but instead on modern 7-bag tetris. (Note CMS-ES is also a good algorithm but emprically CEM converges faster). All training data comes from search bots. Each is a linear value function V(s) over hand-made board features (holes, bumpiness, row transitions, wells, T-slot and B2B features, …), tuned with CEM and searched with a beam (depth 6, width 64):
 
 | Bot | Tuned for | |
 |---|---|---|
@@ -27,8 +27,6 @@ Against **Cold Clear 2**, run unmodified over TBP with one thread, guideline SRS
 | Fixed time per move | CEM-survival beats CC2 **56–8** |
 | Realtime, both thinking ~5 ms per move (~180–200 pieces per second) | CEM-survival at depth 5, beam 12 beats CC2 **45–19**; at depth 4, beam 16, **39–25** |
 | The same, with both forced to the same speed (6 ms per piece) | depth 5, beam 12 still wins **45–19**, so its edge is move quality; depth 4, beam 16 drops to 35–29, so most of its edge was speed |
-
-In realtime the faster bot gains a lot. The full-strength CEM-survival (depth 6, beam 64, ~35 ms per move) loses to CC2 once CC2 thinks for less than ~33 ms. Its own cheaper settings, at CC2's speed, win again.
 
 CC2's weights are published, but not how they were tuned. They were presumably tuned for versus play. We play CC2 under our garbage settings.
 
@@ -56,7 +54,7 @@ Details: `attentris/NOTES.md`, "Versus" and the realtime sections after it.
  attention score(q, k) = Q·K / √d  +  FLAT-2D(q, k)      for each of the 4 heads
 ```
 
-- **Structure tokens.** A rule-based tokenizer cuts the board into Tetris concepts. These are the clean well, the play rows, pits, the open or covered places where each piece fits (`fit_X`), T-spin structures (TSD, STSD, imperial cross, …), and setups one piece away. The piece queue gets tokens too. Each token is pooled from the cells under its mask.
+- **Board tokens.** A rule-based tokenizer cuts the board into Tetris concepts. These are the clean well, the play rows, pits, the open or covered places where each piece fits (`fit_X`), T-spin structures (TSD, STSD, imperial cross, …), and setups one piece away. The piece queue gets tokens too. Each token is pooled from the cells under its mask.
 - **FLAT-2D.** A learned geometry term added to every attention score, inside the softmax, in both attention stages:
   - **The input.** For each pair of tokens there are 9 features: the 4 row offsets and 4 column offsets between the two bounding boxes' edges, plus how many cells the two masks share.
   - **The output.** A small MLP (9 → 32 → 4) turns them into one score per head.
@@ -65,8 +63,12 @@ Details: `attentris/NOTES.md`, "Versus" and the realtime sections after it.
   - Piece tokens have no position, so they get a learned constant per head instead.
   - Content (Q·K) says what a token means; FLAT-2D says where it is relative to the query.
 - **Moves as tokens.** The Rust move generator lists every legal placement. Each one becomes a token that cross-attends over the board tokens and gets a probability. One forward pass scores all moves, in about 4 ms on one CPU core.
-- **Training.** Distilled from the search bots on 1.09M labelled positions, then 3 DAgger rounds on positions where the model itself got into trouble, labelled by CEM-survival. Three style tags (`normal`, `gate4`, `danger`) select the teacher's style at play time.
+- **Training.** Distilled from the search bots on 1.09M labelled positions. Training on pure teacher games wasn't enough because the teacher does not get into poor positions so bad positions were initially out-of-distribution. The solution was to use 3 DAgger rounds on positions where the model itself got into trouble, labelled by CEM-survival. Three style tags (`normal`, `gate4`, `danger`) select the teacher's style at play time.
 
+### Modelling Tetris - Board Tokens + Overlays
+Every game state is the 20x10 play area + current piece + hold + preview pieces. The play area is partitioned into the *sky*, *well*, and individual *play rows*. Additionally there are overlays which are *Tspin hangs*, *setups*, *structures*, *fit-x* . How well modelled is the tetris problem is answered by Ablations and SHAP.
+
+### Play Strength
 Plays 500-piece games at depth 1 (no search), d = 128 (dagger5b-ft):
 
 | | APP, no garbage | Deaths /64, 80/20 garbage | Deaths /64, 50/50 garbage |
@@ -77,13 +79,13 @@ Plays 500-piece games at depth 1 (no search), d = 128 (dagger5b-ft):
 
 Garbage: a batch of 3–4 rows every 10 pieces. "80/20" means 20% of batches are cheese, "50/50" half of them.
 
-## What the model looks at
+## Attention Map: What Attentris looks at
 
 Each candidate move's cross-attention row is a map of what the model read for that move. The four heads take different roles: head 1 is generic, head 2 sits on the cells the piece will fill, head 3 often reads the piece queue, and head 4 looks around the placement. FLAT-2D (panel d) is where a move would look from geometry alone. Token SHAP (panel e) is which tokens actually changed the move's probability. Attention shows where information flows from; SHAP is the check on whether it mattered.
 
 ![Lookahead through the well](docs/img/fig_model_p3_h3.png)
 
-**Two T-spins, and the model picks the "smaller" one.** The T can go in as a T-spin double or as a vertical T-spin single. The model prefers the single (44% vs 26%). For the single, head 3 puts 59% of its attention on the clean **well** (24% for the double). SHAP agrees: the well (+1.77) and the **I piece next in the queue** (+0.90) push toward the single, while the TSD-structure token argues for the double (−1.96). Our reading: the single keeps the well open for the incoming I, so the T-spin is followed by a quad.
+**Two T-spins, and the model picks the "vertical" one.** The T can go in as a T-spin double or as a vertical T-spin single. The model prefers the single (44% vs 26%). For the single, head 3 puts 59% of its attention on the clean **well** (24% for the double). SHAP agrees: the well (+1.77) and the **I piece next in the queue** (+0.90) push toward the single, while the TSD-structure token argues for the double (−1.96). Our reading: the single keeps the well open for the incoming I, so the T-spin is followed by a quad.
 
 ![Fit first, save the T](docs/img/fig_model_p16.png)
 
@@ -104,23 +106,22 @@ Each candidate move's cross-attention row is a map of what the model read for th
 
 The interactive version of these pages (66 positions, every head, geometry vs content, SHAP) is built by `attentris/attn_viz.py` and `shap_page.py`. The README figures come from `attentris/readme_figs.py`.
 
-## What matters: survival comes from the slots
+## What matters? survival comes from the slots
 
 ![Ablations and group SHAP](docs/img/fig_results.png)
 
 There are two complementary ways to ask which parts matter:
 
-- **Ablation (a).** Retrain the whole lineage without one component. Then the ablated model and the baseline play the same 1,024 games (8 garbage settings × 128 seeds). Pairs where both survive or both die say nothing, so the test looks only at the games just one of them lost. Without the overlay tokens, the ablated model alone lost 236 games and the baseline alone lost 94: the bar shows the difference, +142. The p-value is an exact McNemar test: how likely a split that lopsided would be if the two models were equally good. Faded bars are not significant (p > 0.05). This asks whether the model can do without the component.
+- **Ablation (a).** Retrain without one component. Then the ablated model and the baseline play the same 1,024 games (8 garbage settings × 128 seeds). Pairs where both survive or both die say nothing, so the test looks only at the games just one of them lost. Without the overlay tokens, the ablated model alone lost 236 games and the baseline alone lost 94: the bar shows the difference, +142. The p-value is an exact McNemar test: how likely a split that lopsided would be if the two models were equally good. Faded bars are not significant (p > 0.05). This asks whether the model can do without the component.
 - **Group SHAP (b).** Take the one trained model and blank token groups at play time, in all 64 combinations. Fair shares of the deaths prevented follow from that. This asks whether the model relies on the group.
 
 What they say together:
 
-- **Every ablated model still stacks well enough on a clean board.** Clean APP moves by at most ±0.02. The costs show up **under garbage**, where keeping the stack in shape gets hard.
+- **Every ablated model still stacks well enough on a clean board.** The costs show up **under garbage**, where keeping the stack in shape gets hard. The model learns to use other components more when any other component is ablated- Except for fix-X.
 - **The non-T slots (`fit_S/Z/L/J/I`) are the strongest result.** The model relies on them (−52 deaths per 128 games by SHAP), and retrained without them it is worse (+19). It cannot recover them cheaply from the raw cells.
-- **Pits show the difference between relying and needing.** The trained model leans on them (−24 deaths), yet a model retrained without them loses nothing (p = 0.57). The open space above the surface is easy to read from the cells.
 - **T-specific tokens matter little for survival.** The T slot, T structures and setups contribute about 0 deaths by SHAP and small amounts by ablation. That doesn't mean the model ignores T-spins: on 894 T-spin moves, the T structure is the most-attended token 49% of the time (7% by chance), and the positions above show T reasoning. It means it can find them without the hand-made T tokens.
 
-### An interpretation: good short-horizon play compounds
+### Tetris is a Short Credit Horizon game
 
 Tetris has a **short credit horizon**. With a 7-bag and 5 previews, most of a move's value shows up within a bag or two. A clean stack keeps renewing its own chances, and there are no long-term sacrifices like in chess. So a good evaluator plus a short lookahead lands close to the long-horizon optimum: **a well-kept stack keeps producing attack chances, so greedy-plus-lookahead on a good evaluator is near-optimal**. The skill is in harmonious placement, putting each piece where it fits. The slot results above point the same way. This is an interpretation, not something we tested directly.
 
@@ -135,15 +136,15 @@ Tetris has a **short credit horizon**. With a 7-bag and 5 previews, most of a mo
 - **One training run per ablation.** The ablation p-values cover game-to-game noise, not training-seed noise.
 - **Rules.** Guideline SRS for 90° rotations plus an SRS+ table for 180°, on 40 rows with 20 visible. Garbage arrives immediately in single-player tests. TETR.IO's kick tables differ slightly, mainly for the I piece.
 
-## Related work
+## Related
 
 *Classic* Tetris here means the original single-player game, scored by lines cleared: usually no hold, a one-piece preview, and no T-spins, back-to-back or garbage. *Modern* Tetris means guideline versus play as in TETR.IO: SRS rotation, hold, a 5-piece preview, T-spins, back-to-back, combos and garbage.
 
-- **Tetris in machine learning** (classic). Algorta & Şimşek, [*The Game of Tetris in Machine Learning*](https://arxiv.org/abs/1905.01652) (2019), is a history of the field: hand-made controllers, genetic algorithms, reinforcement learning, approximate dynamic programming. Almost all of it is classic single-player Tetris, scored by lines cleared, with no hold, T-spins or garbage.
-- **CEM-tuned evaluators** (classic). Szita & Lőrincz, [*Learning Tetris using the noisy cross-entropy method*](https://cs.utexas.edu/~shivaram/readings/b2hd-SzitaLorincz2006.html) (Neural Computation, 2006): a linear evaluator over hand-made features, tuned with CEM, beat the RL and dynamic-programming methods that used the same features. Our teacher bots follow this line, extended to modern versus rules. Gabillon et al., [*Approximate Dynamic Programming Finally Performs Well in the Game of Tetris*](https://papers.nips.cc/paper_files/paper/2013/file/7504adad8bb96320eb3afdd4df6e1f60-Paper.pdf) (NIPS 2013), closed the gap from the value-function side.
+- **Tetris in machine learning** (classic). Algorta & Şimşek, [*The Game of Tetris in Machine Learning*](https://arxiv.org/abs/1905.01652) (2019), is a history of the field: hand-made controllers, genetic algorithms, reinforcement learning, approximate dynamic programming.
+- **CEM-tuned evaluators** (classic). Szita & Lőrincz, [*Learning Tetris using the noisy cross-entropy method*](https://cs.utexas.edu/~shivaram/readings/b2hd-SzitaLorincz2006.html) (Neural Computation, 2006): a linear evaluator over hand-made features, tuned with CEM, beat the RL and dynamic-programming methods that used the same features. 
 - **Deep RL** (classic). Most public attempts are student projects. [nuno-faria/tetris-ai](https://github.com/nuno-faria/tetris-ai) is the popular reference: deep Q-learning on 4 board features (lines, holes, bumpiness, height), choosing among final placements. A recurring finding is that learning from raw cells and game reward alone rarely gets far.
 - **Search bots** (modern). [Cold Clear 2](https://github.com/MinusKelvin/cold-clear-2) is a search bot (anytime best-first search over a hand-tuned evaluator) and the baseline we play against.
-- **A transformer** (modern). [QTris](https://github.com/m-sher/QTris), a personal project, is a vision transformer for modern versus Tetris. A small CNN cuts the board into patches, and the legal placements are ranked by cross-attention. It is trained by behaviour cloning from a beam-search oracle and DAgger, then refined with AlphaZero-style MCTS self-play. It publishes no weights and no strength numbers. It is the closest project to Attentris that we know of. Attentris differs in its input and its aim: rule-based Tetris structure tokens instead of image patches, a geometric attention bias, and analysis of what the model uses (per-move attention, token SHAP, ablations). QTris adds self-play, which Attentris does not have.
+- **A transformer** (modern). [QTris](https://github.com/m-sher/QTris), a personal project, is a vision transformer for modern versus Tetris. A small CNN cuts the board into patches, and the legal placements are ranked by cross-attention. It is trained by behaviour cloning from a beam-search oracle and DAgger, then refined with AlphaZero-style MCTS self-play. It publishes no weights and no strength numbers. It is the closest project to Attentris that I know of.
 - **Transformers for chess** (the inspiration). Monroe & Chalmers, [*Mastering Chess with a Transformer Model*](https://arxiv.org/abs/2409.12272) (2024), the Chessformer behind Leela Chess Zero's transformer nets, showed that the position representation and attention biases matter more than size. Its follow-up, [*Chessformer: A Unified Architecture for Chess Modeling*](https://arxiv.org/abs/2605.19091) (ICLR 2026), introduces the Geometric Attention Bias (GAB). Attentris started as an attempt to carry these ideas to Tetris: structure tokens instead of squares, and FLAT-2D as a geometric bias for tokens that have irregular shapes instead of fixed squares.
 
 ## Repository
