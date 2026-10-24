@@ -1,2 +1,8 @@
 # Normalize EOL for all files that Git considers text files.
 * text=auto eol=lf
+
+# Generated viewer pages (attention, SHAP, ToMe blobs): a template plus the data embedded as JSON,
+# several MB each. Marked generated so GitHub leaves them out of the language stats and collapses
+# them in diffs; the hand-written templates still count.
+attentris/*.html linguist-generated
+attentris/*_template.html -linguist-generated
