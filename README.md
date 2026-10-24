@@ -7,13 +7,13 @@ A Tetris bot project that is half fun, half research. It has two parts:
 - **Attentris (PyTorch).** A small transformer (1.06M parameters) that learns to play from the search bot. It sees the board as **rule-based structure tokens**, and **every legal move is a token** that attends over the board. That makes it possible to look at what the model attends to for each move, and to measure which board structures it actually relies on.
 - **A search bot (Rust).** A linear board evaluator tuned with the cross-entropy method (CEM), driving a beam search. It is the teacher, and at matched compute it beats [Cold Clear 2](https://github.com/MinusKelvin/cold-clear-2) in our versus harness.
 
-Visuallising Attention and SHAP attribution of the played moves show that identifying *harmonious* placement leads to strong play (optimised for VS score). 
+Visualising Attention and SHAP attribution of the played moves show that identifying *harmonious* placement leads to strong play (optimised for VS score). 
 
 ---
 
 ## The teacher: CEM-tuned search bots
 
-Classic Tetris (full random, no-tspin, only survival) was solved using CEM (Cross Entropy Method). I tried extending the same method but instead on modern 7-bag tetris. (Note CMS-ES is also a good algorithm but emprically CEM converges faster). All training data comes from search bots. Each is a linear value function V(s) over hand-made board features (holes, bumpiness, row transitions, wells, T-slot and B2B features, …), tuned with CEM and searched with a beam (depth 6, width 64):
+Classic Tetris (full random, no-tspin, only survival) was solved using CEM (Cross Entropy Method). I tried extending the same method but instead on modern 7-bag tetris. (Note CMA-ES is also a good algorithm but empirically CEM converges faster). All training data comes from search bots. Each is a linear value function V(s) over hand-made board features (holes, bumpiness, row transitions, wells, T-slot and B2B features, …), tuned with CEM and searched with a beam (depth 6, width 64):
 
 | Bot | Tuned for | |
 |---|---|---|
@@ -117,7 +117,7 @@ There are two complementary ways to ask which parts matter:
 
 What they say together:
 
-- **Every ablated model still stacks well enough on a clean board.** The costs show up **under garbage**, where keeping the stack in shape gets hard. The model learns to use other components more when any other component is ablated- Except for fix-X.
+- **Every ablated model still stacks well enough on a clean board.** The costs show up **under garbage**, where keeping the stack in shape gets hard. The model learns to use other components more when any other component is ablated- Except for fit-X.
 - **The non-T slots (`fit_S/Z/L/J/I`) are the strongest result.** The model relies on them (−52 deaths per 128 games by SHAP), and retrained without them it is worse (+19). It cannot recover them cheaply from the raw cells.
 - **T-specific tokens matter little for survival.** The T slot, T structures and setups contribute about 0 deaths by SHAP and small amounts by ablation. That doesn't mean the model ignores T-spins: on 894 T-spin moves, the T structure is the most-attended token 49% of the time (7% by chance), and the positions above show T reasoning. It means it can find them without the hand-made T tokens.
 
